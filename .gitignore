@@ -1,0 +1,42 @@
+# Nested git repos (treat as content, not submodules)
+**/.git
+
+# Rust / Tauri build
+src-tauri/target/
+target/
+
+# Node
+node_modules/
+dist/
+dist-electron/
+
+# Temp/test worktrees
+.tmp/
+.tmp_test/
+
+# Logs
+*.log
+debug.log
+tauri_*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Tool cache
+.codegraph/
+nul
+**/nul
+# Third-party nested tool (face-eye-tracker upstream)
+fear-ai-sim/.tmp/
+.tmp/
+**/.tmp/
+
+# Coverage reports
+coverage/
+test_output.txt

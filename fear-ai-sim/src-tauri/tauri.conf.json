@@ -1,0 +1,41 @@
+{
+  "productName": "Fear AI Omniverse",
+  "version": "2.0.0",
+  "identifier": "com.fear-ai.omniverse",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Fear AI Omniverse v2.0 - Deterministic Fear Data Collection",
+        "width": 1400,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false,
+        "center": true,
+        "minWidth": 1000,
+        "minHeight": 700
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self';"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "category": "DeveloperTool",
+    "copyright": "Fear AI Research Team",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/icon.ico"
+    ],
+    "longDescription": "High-performance deterministic fear AI testing and data collection suite",
+    "shortDescription": "Fear AI Tester",
+    "targets": ["msi", "dmg", "deb", "appimage"]
+  }
+}

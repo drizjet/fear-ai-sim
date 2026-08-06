@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.skypack.dev; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';" />
+    <title>Fear AI Evolution Simulator</title>
+    <!-- Prevent favicon 404 console errors (T13 refinement) -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" />
+    <link rel="stylesheet" href="./style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "./node_modules/three/build/three.module.js",
+          "@tensorflow/tfjs": "./node_modules/@tensorflow/tfjs/dist/tf.fesm.js"
+        }
+      }
+    </script>
+  </head>
+  <body class="dark-theme">
+    <div id="app">
+      <header>
+        <div class="logo">
+          <span class="glitch" data-text="FEAR_AI">FEAR_AI</span>
+          <span class="version">v0.1.0_PROTOTYPE</span>
+        </div>
+        <nav>
+          <button id="reset-sim" class="btn-secondary">Reset Simulation</button>
+          <button id="add-big-guy" class="btn-primary">Deploy "Big Guy"</button>
+          <button
+            id="add-stalker"
+            class="btn-primary"
+            style="background: linear-gradient(135deg, #9d00ff, #d800ff)"
+          >
+            Deploy "Stalker"
+          </button>
+          <button
+            id="add-swarmer"
+            class="btn-primary"
+            style="background: linear-gradient(135deg, #00aa66, #00ff88)"
+          >
+            Deploy Swarm Pack
+          </button>
+        </nav>
+      </header>
+
+      <main>
+        <section class="simulation-container">
+          <canvas id="sim-canvas"></canvas>
+          <div class="overlay-stats">
+            <div class="stat-item">
+              <label>Population:</label>
+              <span id="pop-count">0</span>
+            </div>
+            <div class="stat-item">
+              <label>MTTK (Stress)</label>
+              <span id="mttk-stat">0.00</span>
+            </div>
+            <div class="stat-item">
+              <label>Generation:</label>
+              <span id="gen-count">1</span>
+            </div>
+            <div class="stat-item">
+              <label>FPS:</label>
+              <span id="fps-counter">60</span>
+            </div>
+            <div class="stat-card">
+              <span class="label">Average Fear</span>
+              <span id="avg-fear" class="value">0.00</span>
+            </div>
+            <div class="stat-card">
+              <span class="label">Average Skill</span>
+              <span id="avg-skill" class="value">0.00</span>
+            </div>
+            <div class="stat-card">
+              <span class="label">Avg Morale</span>
+              <span id="avg-morale" class="value">0.00</span>
+            </div>
+            <div class="stat-card ai-learning-card" title="AI Evolution: P=Predator kills, E=Prey escapes. Color shows who's winning">
+              <span class="label">AI Evolution War</span>
+              <span id="ai-learning-stat" class="value">--</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="controls-panel">
+          <div class="control-section">
+            <h3>Agent Inspector</h3>
+            <div id="inspector-content">
+              <p class="empty-state">
+                Select an agent on the canvas to inspect
+              </p>
+            </div>
+          </div>
+
+          <!-- Data Insights Section -->
+          <div class="control-section">
+            <h3>Data Insights</h3>
+            <div class="chart-container">
+              <canvas id="analytics-chart" width="260" height="120"></canvas>
+            </div>
+            <div class="data-actions">
+              <button id="btn-export-json" class="btn btn-secondary">
+                Export JSON
+              </button>
+              <button id="btn-clear-data" class="btn btn-danger">
+                Clear Logs
+              </button>
+            </div>
+            <div class="data-actions" style="margin-top: 8px;">
+              <button id="btn-export-learning" class="btn btn-ai" title="Export Predator AI Learning Data">
+                Export Predator AI
+              </button>
+              <button id="btn-export-prey-learning" class="btn btn-ai" style="background: linear-gradient(135deg, #00ff88 0%, #00cc66 100%);" title="Export Prey AI Learning Data">
+                Export Prey AI
+              </button>
+              <button id="btn-reset-learning" class="btn btn-danger" title="Reset All AI Learning">
+                Reset AI
+              </button>
+            </div>
+          </div>
+
+          <!-- MASAC RL Control Section -->
+          <div class="control-section masac-section">
+            <h3>🧠 MASAC Deep RL</h3>
+            <div class="masac-status">
+              <div class="stat-row">
+                <span>Status:</span> <span id="masac-status-text" class="status-inactive">Inactive</span>
+              </div>
+              <div class="stat-row">
+                <span>Training Steps:</span> <span id="masac-steps">0</span>
+              </div>
+              <div class="stat-row">
+                <span>Predator α:</span> <span id="masac-pred-alpha">0.20</span>
+              </div>
+              <div class="stat-row">
+                <span>Prey α:</span> <span id="masac-prey-alpha">0.20</span>
+              </div>
+            </div>
+            <div class="masac-metrics">
+              <div class="metric-card">
+                <span class="metric-label">Predator Loss</span>
+                <span id="masac-pred-loss" class="metric-value">--</span>
+              </div>
+              <div class="metric-card">
+                <span class="metric-label">Prey Loss</span>
+                <span id="masac-prey-loss" class="metric-value">--</span>
+              </div>
+            </div>
+            <div class="masac-actions">
+              <button id="btn-masac-init" class="btn btn-primary">
+                Initialize MASAC
+              </button>
+              <button id="btn-masac-toggle" class="btn btn-secondary" disabled>
+                Pause Training
+              </button>
+            </div>
+            <div class="masac-export" style="margin-top: 8px;">
+              <button id="btn-export-masac" class="btn btn-ai" style="background: linear-gradient(135deg, #ff0055 0%, #9d00ff 100%);" title="Export MASAC Research Data">
+                Export MASAC Data
+              </button>
+              <button id="btn-save-models" class="btn btn-secondary" title="Save Trained Models">
+                Save Models
+              </button>
+              <button id="btn-toggle-bridge" class="btn btn-ai" style="background: linear-gradient(135deg, #0088ff 0%, #00f2ff 100%); margin-top: 8px; width: 100%;" title="Start High-Speed Data Bridge (Phase 2)">
+                Start High-Speed Stream
+              </button>
+            </div>
+            <div class="masac-info" style="margin-top: 10px; font-size: 0.75rem; color: var(--text-dim);">
+              <p>Multi-Agent Soft Actor-Critic (MASAC)</p>
+              <p>Based on Qingdao University 2025 Research</p>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3>Tactical Dashboard</h3>
+            <div id="tactical-stats">
+              <div class="stat-row">
+                <span>Panic Chains:</span> <span id="panic-chains-stat">0</span>
+              </div>
+              <div class="stat-row">
+                <span>Active Stress:</span>
+                <span id="active-stress-stat">0</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3>Tactical Overlays</h3>
+            <div class="control-group">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="thermal-toggle" style="accent-color: #00ff88;" />
+                Thermal Vision (IR)
+              </label>
+            </div>
+            <div class="control-group">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="fow-toggle" checked style="accent-color: #00ff88;" />
+                Fog of War (LOS)
+              </label>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3>Omniverse View Modes</h3>
+            <div class="control-group">
+              <label for="view-mode">Active Perspective</label>
+              <select id="view-mode" class="form-select" style="width: 100%; padding: 8px; border-radius: 4px; background: #222; color: #fff; border: 1px solid #444;">
+                <option value="RTS">Tactical RTS Mode</option>
+                <option value="3D">Immersive 3D Mode</option>
+              </select>
+            </div>
+            <div class="control-group" style="margin-top: 12px;">
+              <button id="btn-gen-world" class="btn btn-secondary" style="width: 100%;">
+                🌍 Generate New World
+              </button>
+            </div>
+            <div id="biome-info" style="font-size: 0.75rem; color: #00ff88; margin-top: 8px; font-family: 'JetBrains Mono';">
+              Biome: Grass
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3>Manual Threat Deployment</h3>
+            <div class="control-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <button id="btn-spawn-tank" class="btn btn-danger">Spawn TANK</button>
+              <button id="btn-spawn-stalker" class="btn btn-warning">Spawn STALKER</button>
+              <button id="btn-spawn-swarm" class="btn btn-secondary">Spawn SWARM pack</button>
+              <button id="btn-clear-threats" class="btn btn-secondary">Clear All</button>
+            </div>
+            <div class="control-group" style="margin-top: 12px;">
+              <button id="btn-start-audio" class="btn btn-primary" style="width: 100%;">
+                🎵 Start Affective Audio
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3>🚀 Phase 3: Hardware Engines</h3>
+            <div class="control-group">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="rust-physics-toggle" style="accent-color: #00ff88;" />
+                Enable Rust Physics (Native)
+              </label>
+            </div>
+            <div class="control-group" style="margin-top: 10px;">
+              <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" id="worker-physics-toggle" style="accent-color: #0088ff;" />
+                Enable Parallel CPU Physics
+              </label>
+            </div>
+            <div id="rust-engine-status" style="font-size: 0.7rem; color: var(--text-dim); margin-top: 5px;">
+              Status: Using Main Thread Physics
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3>Simulation Parameters</h3>
+            <div class="control-group">
+              <label for="pop-slider">Target Population: <span id="pop-slider-val">500</span></label>
+              <input
+                type="range"
+                id="pop-slider"
+                min="10"
+                max="3000"
+                value="500"
+              />
+            </div>
+            <div class="control-group">
+              <label for="spawn-rate">Spawn Rate</label>
+              <input
+                type="range"
+                id="spawn-rate"
+                min="1"
+                max="100"
+                value="10"
+              />
+            </div>
+            <div class="control-group">
+              <label for="mutation-rate">Mutation Rate</label>
+              <input
+                type="range"
+                id="mutation-rate"
+                min="0"
+                max="100"
+                value="5"
+              />
+            </div>
+            <div class="control-group">
+              <label for="fear-influence">Fear Influence</label>
+              <input
+                type="range"
+                id="fear-influence"
+                min="0"
+                max="100"
+                value="50"
+              />
+            </div>
+            <div class="control-group">
+              <label for="pheromone-decay">Pheromone Decay</label>
+              <input
+                type="range"
+                id="pheromone-decay"
+                min="90"
+                max="100"
+                value="99"
+              />
+            </div>
+            <div class="control-group">
+              <label for="sound-enabled">
+                <input type="checkbox" id="sound-enabled" checked />
+                Sound Visualization
+              </label>
+            </div>
+            <div class="control-group">
+              <label for="network-viz">
+                <input type="checkbox" id="network-viz" />
+                Show Network Connections
+              </label>
+            </div>
+            <div class="control-group">
+              <label for="low-power-mode">
+                <input type="checkbox" id="low-power-mode" />
+                🔋 Low Power Mode (T12.4)
+              </label>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3>Environmental Events</h3>
+            <div class="control-group">
+              <button id="btn-storm" class="btn btn-primary" style="width: 100%; margin-bottom: 8px;">
+                ⚡ Trigger Storm
+              </button>
+              <button id="btn-resource-boom" class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;">
+                🌱 Resource Boom
+              </button>
+              <button id="btn-quarantine" class="btn btn-danger" style="width: 100%;">
+                🚫 Quarantine Zone
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-card">
+            <h3>Session Management</h3>
+            <div class="control-group">
+              <button id="btn-save" class="btn btn-primary" style="width: 100%; margin-bottom: 8px;">
+                💾 Save State
+              </button>
+              <button id="btn-load" class="btn btn-secondary" style="width: 100%; margin-bottom: 8px;">
+                📂 Load State
+              </button>
+              <button id="btn-export-replay" class="btn btn-secondary" style="width: 100%;">
+                🎬 Export Replay
+              </button>
+            </div>
+          </div>
+
+          <div class="glass-card terminal">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3>System Logs</h3>
+                <button id="btn-clear-terminal" style="background: none; border: 1px solid #444; color: #888; font-size: 0.6rem; padding: 2px 6px; cursor: pointer;">CLEAR</button>
+            </div>
+            <div id="sim-logs" class="log-container">
+              <div class="log-entry system">
+                [SYSTEM]: Environment initialized.
+              </div>
+              <div class="log-entry info">
+                [INFO]: Awaiting population sequence.
+              </div>
+            </div>
+            <div style="margin-top: 10px;">
+                <input type="text" id="live-fix-input" placeholder="Inject live fix (JS)..." style="width: 100%; background: #000; color: #00ff88; border: 1px solid #333; padding: 6px; font-family: 'JetBrains Mono'; font-size: 0.7rem;">
+            </div>
+          </div>
+        </aside>
+      </main>
+
+      <footer>
+        <div class="ticker">
+          <span class="ticker-content"
+            >>>> MONITORING EVOLUTIONARY TRAJECTORY... THREAT LEVEL: STABLE...
+            SYSTEM: NOMINAL...</span
+          >
+        </div>
+      </footer>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

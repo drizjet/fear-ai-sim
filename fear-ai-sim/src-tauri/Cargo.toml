@@ -1,0 +1,31 @@
+[package]
+name = "fear-ai-omniverse"
+version = "2.0.0"
+description = "Fear AI Omniverse - Deterministic Fear Data Collection Suite"
+authors = ["Fear AI Research Team"]
+edition = "2021"
+resolver = "2"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0", features = [] }
+
+[dependencies]
+# Tauri core - use rustls to avoid native TLS issues
+tauri = { version = "2.0.0", features = ["devtools"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time (without default features to avoid issues)
+chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = false
+opt-level = 2
+strip = true
+
+[profile.dev]
+opt-level = 0
