@@ -841,11 +841,10 @@ async function loop() {
         renderAnalytics();
         updateInspector();
         updateAILearningStats();
-        
         // Phase 16: Bio-Feedback Shader Scaling
         if (sim.calibration && !sim.calibration.isCalibrating) {
-            const stats = sim.getStats();
-            const arousal = parseFloat(stats.avgFear);
+            const stats2 = sim.getStats();
+            const arousal = parseFloat(stats2.avgFear);
             const panicRatio = sim.massPanicActive ? 1.0 : 0.0;
 
             // Calculate dynamic filter values
@@ -887,11 +886,12 @@ async function loop() {
                 sim.container3D.style.transform = glitch;
             }
         }
-        requestAnimationFrame(loop);
     } catch (err) {
         addLog(`LOOP_CRASH: ${err.message}`, 'error');
         console.error(err);
     }
+    // Always schedule the next frame, even after an error
+    requestAnimationFrame(loop);
 }
 
 // Initial Boot Sequence

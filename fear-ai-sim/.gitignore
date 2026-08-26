@@ -1,0 +1,8 @@
+node_modules/
+coverage/
+dist/
+target/
+test_output.txt
+null
+*.log
+.DS_Store

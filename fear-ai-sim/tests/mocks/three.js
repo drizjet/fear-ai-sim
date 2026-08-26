@@ -30,14 +30,42 @@ export const PerspectiveCamera = class {
 export const WebGLRenderer = class { 
     constructor() { this.domElement = document.createElement('div'); }
     setSize() {}
+    setPixelRatio() {}
     render() {}
 };
 export const AmbientLight = class {};
 export const DirectionalLight = class { 
     constructor() { this.position = { set: function() {} }; }
 };
+export const FogExp2 = class {
+    constructor(color, density) { this.color = color; this.density = density; }
+};
 export const BoxGeometry = class {};
 export const SphereGeometry = class {};
+export const CylinderGeometry = class {};
+export const IcosahedronGeometry = class {};
+export const PlaneGeometry = class {};
+export const GridHelper = class {};
+export const DynamicDrawUsage = 0;
+export const Object3D = class {
+    constructor() { Object.assign(this, createObject3D()); }
+    updateMatrix() {}
+};
+export const InstancedMesh = class {
+    constructor() {
+        Object.assign(this, createObject3D());
+        this.instanceMatrix = { setUsage: function() {}, setXYZAt: function() {}, needsUpdate: false };
+        this.setColorAt = function() {};
+        this.count = 0;
+    }
+};
+export const MeshPhongMaterial = class {
+    constructor(opts = {}) {
+        this.color = { set: function() {}, setHSL: function() {} };
+        this.emissive = { set: function() {} };
+        Object.assign(this, opts);
+    }
+};
 export const MeshStandardMaterial = class { 
     constructor() { this.color = { setHSL: function() {} }; }
 };

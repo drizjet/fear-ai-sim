@@ -36,6 +36,7 @@ export class Agent {
         this.vx = (Math.random() - 0.5) * 2;
         this.vy = (Math.random() - 0.5) * 2;
         this.maxSpeed = isBigGuy ? 1.5 : 3;
+        this.baseMaxSpeed = this.maxSpeed;
 
         // Engagement Metrics
         this.engagementStartTime = 0;
@@ -264,9 +265,13 @@ export class Agent {
         // Apply Strategic Director Sabotage (ANTI_FLEE)
         // If agents are fleeing too well, the director artificially slows them down via fatigue
         if (counterMeasures && counterMeasures.ANTI_FLEE > 0) {
-            this.maxSpeed = this.emotions.maxSpeed * (1 - (counterMeasures.ANTI_FLEE * 0.4));
+            // Guard: emotions has no maxSpeed field — fall back to the agent's own maxSpeed to avoid NaN poisoning
+            const baseMaxSpeed = (typeof this.emotions?.maxSpeed === 'number' && isFinite(this.emotions.maxSpeed))
+                ? this.emotions.maxSpeed
+                : (isFinite(this.maxSpeed) ? this.maxSpeed : 3);
+            this.maxSpeed = baseMaxSpeed * (1 - (counterMeasures.ANTI_FLEE * 0.4));
         } else {
-            this.maxSpeed = this.emotions.maxSpeed;
+            this.maxSpeed = this.baseMaxSpeed;
         }
 
         // Phase 12.3: LOD 2.0 Intelligence Gating
@@ -452,6 +457,7 @@ export class Agent {
         this.vx = rx * 2;
         this.vy = ry * 2;
         this.maxSpeed = isBigGuy ? 1.5 : 3;
+        this.baseMaxSpeed = this.maxSpeed;
 
         this.engagementStartTime = 0;
         this.isEngaged = false;

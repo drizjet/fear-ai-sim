@@ -648,4 +648,4 @@ export class ScalableTwinCritic {
     dispose() { this.q1.dispose(); this.q2.dispose(); }
 }
 
-export default { TFNetwork, ActorNetwork, CriticNetwork, TwinCritic };
+export default { TFNetwork, ActorNetwork, CriticNetwork, ScalableCriticNetwork, ScalableTwinCritic };

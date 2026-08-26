@@ -94,23 +94,28 @@ export class AdaptiveLearningEngine {
     recordInteraction(interaction) {
         const {
             timestamp = Date.now(),
-            fearLevel,
-            stimulusIntensity,
-            scenarioType,
+            fearLevel = 0,
+            stimulusIntensity = 0.01,
+            scenarioType = 'UNKNOWN',
             playerAction,
             outcome,
-            engagement,
-            duration
+            engagement = 0.5,
+            duration = 0
         } = interaction;
+        
+        // NaN guard: callers may omit fields; never poison learning state with undefined/NaN
+        const safeFear = (typeof fearLevel === 'number' && isFinite(fearLevel)) ? fearLevel : 0;
+        const safeStimulus = (typeof stimulusIntensity === 'number' && isFinite(stimulusIntensity) && stimulusIntensity > 0) ? stimulusIntensity : 0.01;
+        const safeEngagement = (typeof engagement === 'number' && isFinite(engagement)) ? engagement : 0.5;
         
         this.learningState.totalInteractions++;
         
         // Update fear response patterns
         this.learningState.fearResponsePatterns.push({
             timestamp,
-            fearLevel,
-            stimulusIntensity,
-            responseRatio: fearLevel / Math.max(0.01, stimulusIntensity)
+            fearLevel: safeFear,
+            stimulusIntensity: safeStimulus,
+            responseRatio: safeFear / Math.max(0.01, safeStimulus)
         });
         
         // Keep only recent patterns
@@ -121,7 +126,7 @@ export class AdaptiveLearningEngine {
         // Update engagement patterns
         this.learningState.engagementPatterns.push({
             timestamp,
-            engagement,
+            engagement: safeEngagement,
             duration,
             scenarioType
         });

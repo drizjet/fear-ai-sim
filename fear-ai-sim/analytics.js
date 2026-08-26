@@ -34,10 +34,13 @@ export class Analytics {
         this.history.avgMorale.push(metrics.avgMorale);
         this.history.energy.push(metrics.avgEnergy);
 
-        // Keep moving window
+        // Keep moving window — only shift the array fields, never the scalar/counter fields
         if (this.history.timestamps.length > this.maxDataPoints) {
-            for (let key in this.history) {
-                this.history[key].shift();
+            const arrayKeys = ['timestamps', 'population', 'fearIndex', 'avgMorale', 'energy'];
+            for (const key of arrayKeys) {
+                if (Array.isArray(this.history[key])) {
+                    this.history[key].shift();
+                }
             }
         }
 

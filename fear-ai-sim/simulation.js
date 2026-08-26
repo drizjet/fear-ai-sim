@@ -40,6 +40,7 @@ import { EmotionMap } from './emotionmap.js';
 import { FogOfWar } from './fogofwar.js';
 import { MASACIntegration } from './masac_integration_v3.js';
 import { profiler } from './profiler.js';
+import { getTauriExporter } from './tauri-bridge.js';
 
 export class Simulation {
     constructor(canvas, config) {

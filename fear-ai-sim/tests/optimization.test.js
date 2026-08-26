@@ -150,9 +150,11 @@ describe('Optimization Systems', () => {
         let manager;
 
         beforeEach(() => {
-            // Worker is not available in Node.js/Jest by default, 
-            // but our manager has a fallback.
             manager = new BrainWorkerManager(2);
+            // Test environment provides a stubbed global Worker (tests/setup.js),
+            // which cannot answer tasks — empty the pool to exercise the real
+            // no-worker fallback path these tests are about.
+            manager.workers = [];
         });
 
         it('should use fallback when Worker is undefined', async () => {

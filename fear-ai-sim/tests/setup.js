@@ -7,6 +7,17 @@
 
 import { jest } from '@jest/globals';
 
+// Mock Web Workers (jsdom has no Worker implementation)
+if (typeof global.Worker === 'undefined') {
+    global.Worker = class {
+        constructor() { this.onmessage = null; this.onerror = null; }
+        postMessage() {}
+        terminate() {}
+        addEventListener() {}
+        removeEventListener() {}
+    };
+}
+
 // Mock Canvas API for Node.js environment
 global.HTMLCanvasElement.prototype.getContext = jest.fn(() => ({
     fillRect: jest.fn(),
