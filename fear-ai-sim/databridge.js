@@ -71,8 +71,8 @@ export class DataBridge {
             a: this.simulation.agents.filter(a => !a.dead).length,
             fps: Math.round(this.simulation.currentFPS || 0),
             // High-level metrics
-            fear: this.simulation.metrics?.getAverageFear() || 0,
-            panic: this.simulation.metrics?.getPanicCount() || 0,
+            fear: this.simulation.getStats().avgFear || 0,
+            panic: this.simulation.getStats().panicLevel || 0,
             // Sample agents (limit population to prevent massive files)
             agents: this.simulation.agents
                 .filter(a => !a.dead)

@@ -1,7 +1,8 @@
 # Launch-FearAI.ps1
 
 $ErrorActionPreference = "Stop"
-$ProjectDir = "C:\Users\hippo\Desktop\fear-ai-sim"
+# Resolve the project directory relative to this script so it works on any machine.
+$ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 Set-Location $ProjectDir
 

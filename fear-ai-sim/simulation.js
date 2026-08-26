@@ -1667,19 +1667,21 @@ export class Simulation {
     }
 
     getStats() {
-        if (this.agents.length === 0) return { count: 0, avgFear: 0, avgSkill: 0, avgMorale: 0, avgEnergy: 0 };
-        
+        if (this.agents.length === 0) return { count: 0, avgFear: 0, avgSkill: 0, avgMorale: 0, avgEnergy: 0, panicLevel: 0 };
+
         const avgFear = this.agents.reduce((sum, a) => sum + a.brain.currentFear, 0) / this.agents.length;
         const avgSkill = this.agents.reduce((sum, a) => sum + a.brain.traits.skill, 0) / this.agents.length;
         const avgMorale = this.agents.reduce((sum, a) => sum + a.brain.morale, 0) / this.agents.length;
         const avgEnergy = this.agents.reduce((sum, a) => sum + a.energy, 0) / this.agents.length;
-        
+        const panicCount = this.agents.filter(a => a.brain.state === 'PANIC').length;
+
         return {
             count: this.agents.length,
             avgFear: avgFear.toFixed(2),
             avgSkill: avgSkill.toFixed(2),
             avgMorale: avgMorale.toFixed(2),
-            avgEnergy: Math.floor(avgEnergy)
+            avgEnergy: Math.floor(avgEnergy),
+            panicLevel: panicCount / this.agents.length
         };
     }
 

@@ -354,7 +354,8 @@ export class LearningAgent {
         
         this.vx = (Math.random() - 0.5) * 2;
         this.vy = (Math.random() - 0.5) * 2;
-        this.maxSpeed = isBigGuy ? 1.5 : 3;
+        this.baseMaxSpeed = isBigGuy ? 1.5 : 3;
+        this.maxSpeed = this.baseMaxSpeed;
 
         this.engagementStartTime = 0;
         this.isEngaged = false;
@@ -577,10 +578,13 @@ export class LearningAgent {
         if (this.dead) return;
 
         // Apply Strategic Director Sabotage (ANTI_FLEE)
+        // GUARD: emotions.maxSpeed is never initialized (only this.maxSpeed is), so a
+        // missing value would produce NaN and make the agent vanish. Fall back to baseMaxSpeed.
+        const baseMax = isFinite(this.emotions.maxSpeed) ? this.emotions.maxSpeed : this.baseMaxSpeed;
         if (counterMeasures && counterMeasures.ANTI_FLEE > 0) {
-            this.maxSpeed = this.emotions.maxSpeed * (1 - (counterMeasures.ANTI_FLEE * 0.4));
+            this.maxSpeed = baseMax * (1 - (counterMeasures.ANTI_FLEE * 0.4));
         } else {
-            this.maxSpeed = this.emotions.maxSpeed;
+            this.maxSpeed = baseMax;
         }
 
         // Apply Tribal Knowledge (Shared Danger Map)
@@ -761,7 +765,8 @@ export class LearningAgent {
         
         this.vx = (Math.random() - 0.5) * 2;
         this.vy = (Math.random() - 0.5) * 2;
-        this.maxSpeed = isBigGuy ? 1.5 : 3;
+        this.baseMaxSpeed = isBigGuy ? 1.5 : 3;
+        this.maxSpeed = this.baseMaxSpeed;
 
         this.engagementStartTime = 0;
         this.isEngaged = false;
