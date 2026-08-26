@@ -1667,21 +1667,48 @@ export class Simulation {
     }
 
     getStats() {
-        if (this.agents.length === 0) return { count: 0, avgFear: 0, avgSkill: 0, avgMorale: 0, avgEnergy: 0, panicLevel: 0 };
-
-        const avgFear = this.agents.reduce((sum, a) => sum + a.brain.currentFear, 0) / this.agents.length;
-        const avgSkill = this.agents.reduce((sum, a) => sum + a.brain.traits.skill, 0) / this.agents.length;
-        const avgMorale = this.agents.reduce((sum, a) => sum + a.brain.morale, 0) / this.agents.length;
-        const avgEnergy = this.agents.reduce((sum, a) => sum + a.energy, 0) / this.agents.length;
-        const panicCount = this.agents.filter(a => a.brain.state === 'PANIC').length;
-
+        // Use alive-only population for all gameplay metrics (dead agents stay resident in array)
+        const totalCount = this.agents.length;
+        let aliveCount = 0;
+        let sumFear = 0, sumSkill = 0, sumMorale = 0, sumEnergy = 0;
+        let panicCount = 0;
+        for (const a of this.agents) {
+            if (a.dead) continue;
+            aliveCount++;
+            sumFear += a.brain.currentFear;
+            sumSkill += a.brain.traits.skill;
+            sumMorale += a.brain.morale;
+            sumEnergy += a.energy;
+            if (a.brain.state === 'PANIC') panicCount++;
+        }
+        if (aliveCount === 0) {
+            return {
+                count: 0,
+                totalCount,
+                aliveCount: 0,
+                deadCount: totalCount,
+                avgFear: 0,
+                avgSkill: 0,
+                avgMorale: 0,
+                avgEnergy: 0,
+                panicCount: 0,
+                panicRatio: 0,
+                panicLevel: 0
+            };
+        }
+        const panicRatio = panicCount / aliveCount;
         return {
-            count: this.agents.length,
-            avgFear: avgFear.toFixed(2),
-            avgSkill: avgSkill.toFixed(2),
-            avgMorale: avgMorale.toFixed(2),
-            avgEnergy: Math.floor(avgEnergy),
-            panicLevel: panicCount / this.agents.length
+            count: aliveCount,
+            totalCount,
+            aliveCount,
+            deadCount: totalCount - aliveCount,
+            avgFear: sumFear / aliveCount,
+            avgSkill: sumSkill / aliveCount,
+            avgMorale: sumMorale / aliveCount,
+            avgEnergy: sumEnergy / aliveCount,
+            panicCount,
+            panicRatio,
+            panicLevel: panicRatio
         };
     }
 

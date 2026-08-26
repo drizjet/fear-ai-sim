@@ -577,12 +577,14 @@ export class LearningAgent {
     update(width, height, visuals, globalMemory, obstacles, safeHavens, traumaIntensity = 0, mirrorFear = 0, smartObjects = null, heatmap = null, socialDynamics = null, worldEnv = null, calibration = null, lodSystem = null, emotionMap = null, counterMeasures = null, tribalMind = null) {
         if (this.dead) return;
 
-        // Apply Strategic Director Sabotage (ANTI_FLEE)
-        // GUARD: emotions.maxSpeed is never initialized (only this.maxSpeed is), so a
-        // missing value would produce NaN and make the agent vanish. Fall back to baseMaxSpeed.
-        const baseMax = isFinite(this.emotions.maxSpeed) ? this.emotions.maxSpeed : this.baseMaxSpeed;
-        if (counterMeasures && counterMeasures.ANTI_FLEE > 0) {
-            this.maxSpeed = baseMax * (1 - (counterMeasures.ANTI_FLEE * 0.4));
+        // Apply Strategic Director Sabotage (ANTI_FLEE) — clamped and canonical
+        // baseMaxSpeed is the single source of truth (emotions.maxSpeed is a ghost field, never initialized)
+        const DEFAULT_SPEED = 3;
+        const baseMax = Number.isFinite(this.baseMaxSpeed) ? this.baseMaxSpeed : DEFAULT_SPEED;
+        const rawAnti = counterMeasures?.ANTI_FLEE;
+        const antiFlee = Number.isFinite(rawAnti) ? Math.max(0, Math.min(1, rawAnti)) : 0;
+        if (antiFlee > 0) {
+            this.maxSpeed = Math.max(0, baseMax * (1 - antiFlee * 0.4));
         } else {
             this.maxSpeed = baseMax;
         }

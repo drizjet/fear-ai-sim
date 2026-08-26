@@ -32,8 +32,10 @@ function createWindow() {
   // Remove the default menu for a clean software app feel
   win.setMenu(null);
   
-  // Open dev tools automatically for research monitoring
-  win.webContents.openDevTools({ mode: 'detach' });
+  // DevTools — only in development (packaged app = production)
+  if (!app.isPackaged) {
+    win.webContents.openDevTools({ mode: 'detach' });
+  }
 
   // Forward console logs to terminal
   win.webContents.on('console-message', (event, level, message, line, sourceId) => {

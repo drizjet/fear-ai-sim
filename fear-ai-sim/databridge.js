@@ -63,16 +63,19 @@ export class DataBridge {
         this.frameCount++;
         if (this.frameCount % this.sampleRate !== 0) return;
 
-        // Efficient state capture
+        // Efficient state capture — single stats pass (getStats is O(n))
+        const stats = this.simulation.getStats();
         const frameData = {
             f: this.simulation.frameCount,
             t: Date.now(),
             p: this.simulation.predators.length,
-            a: this.simulation.agents.filter(a => !a.dead).length,
+            a: stats.aliveCount,
             fps: Math.round(this.simulation.currentFPS || 0),
-            // High-level metrics
-            fear: this.simulation.getStats().avgFear || 0,
-            panic: this.simulation.getStats().panicLevel || 0,
+            // High-level metrics (numeric — not formatted strings)
+            fear: stats.avgFear || 0,
+            panic: stats.panicRatio || 0,
+            panicCount: stats.panicCount || 0,
+            panicRatio: stats.panicRatio || 0,
             // Sample agents (limit population to prevent massive files)
             agents: this.simulation.agents
                 .filter(a => !a.dead)

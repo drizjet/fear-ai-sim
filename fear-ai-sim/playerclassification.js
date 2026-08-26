@@ -218,7 +218,7 @@ export class PlayerClassifier {
      */
     shouldReclassify() {
         const timeSinceLast = Date.now() - this.currentClassification.timestamp;
-        return timeSinceLast > this.config.classificationCooldown;
+        return timeSinceLast >= this.config.classificationCooldown;
     }
 
     /**

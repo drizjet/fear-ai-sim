@@ -525,7 +525,8 @@ popSlider?.addEventListener('change', (e) => {
     addLog(`Live Population Scale: ${val} agents`, 'system');
 });
 
-// Live Hot-Fix System (T13 refinement)
+// Live Hot-Fix System (dev-only) — excluded from production bundle
+if (import.meta.env.DEV) {
 liveFixInp?.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         const code = e.target.value;
@@ -540,6 +541,7 @@ liveFixInp?.addEventListener('keydown', (e) => {
         }
     }
 });
+}
 
 function renderAnalytics() {
     const ctx = analyticsCtx;
@@ -831,7 +833,7 @@ async function loop() {
         const stats = sim.getStats();
         if (popCountEl) popCountEl.textContent = stats.count;
         if (genCountEl) genCountEl.textContent = sim.generation;
-        if (avgFearEl) avgFearEl.textContent = stats.avgFear;
+        if (avgFearEl) avgFearEl.textContent = Number(stats.avgFear).toFixed(2);
         
         if (sim.generation > lastGen) {
             lastGen = sim.generation;
