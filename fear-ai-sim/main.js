@@ -124,6 +124,20 @@ const saveBtn = document.getElementById('btn-save');
 const loadBtn = document.getElementById('btn-load');
 const exportReplayBtn = document.getElementById('btn-export-replay');
 const inspectorContent = document.getElementById('inspector-content');
+const replayTimeline = document.getElementById('replay-timeline');
+const replayFrameSlider = document.getElementById('replay-frame-slider');
+const replayFrameLabel = document.getElementById('replay-frame-label');
+const replayPrevBtn = document.getElementById('replay-prev');
+const replayPlayBtn = document.getElementById('replay-play');
+const replayNextBtn = document.getElementById('replay-next');
+const replaySpeedSelect = document.getElementById('replay-speed');
+const replayEventMarkers = document.getElementById('replay-event-markers');
+const replayEventFilters = [...document.querySelectorAll('.replay-event-filter')];
+const replaySelectAllBtn = document.getElementById('replay-select-all');
+const replayClearAllBtn = document.getElementById('replay-clear-all');
+const replayEventCounts = [...document.querySelectorAll('[data-event-count]')];
+const replayEventDetails = document.getElementById('replay-event-details');
+let selectedReplayEventIndex = null;
 
 // Tactical Overlays (T14 refinement)
 const thermalToggle = document.getElementById('thermal-toggle');
@@ -566,7 +580,232 @@ function renderAnalytics() {
     ctx.stroke();
 }
 
+function escapeInspectorText(value) {
+    return String(value ?? '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[char]));
+}
+
+function renderFearDecisionTrace(agent) {
+    const replay = sim.replaySystem;
+    const historicalFrame = replay?.frames?.length
+        ? replay.getFrame(replay.isPlaying ? Math.max(0, replay.playbackFrame - 1) : replay.playbackFrame)
+        : null;
+    const selectedId = selectedAgent?.id;
+    const historicalAgent = historicalFrame?.agents?.find(agent => agent.id === selectedId)
+        || historicalFrame?.agents?.[0];
+    const historicalTrace = historicalAgent?.fearTrace || [];
+    const trace = historicalTrace.length > 0
+        ? historicalTrace
+        : (agent.brain.fearCore?.getDecisionTrace?.() || []);
+    if (trace.length === 0) {
+        return '<div class="trace-empty">No FearCore transitions recorded</div>';
+    }
+
+    const recent = trace.slice(-8).reverse();
+    return `
+        <div class="trace-title">FearCore Decision Trace${historicalTrace.length > 0 ? ' · REPLAY' : ''}</div>
+        <div class="trace-list">
+            ${recent.map(entry => `
+                <div class="trace-entry ${entry.changed ? 'trace-transition' : ''}">
+                    <div class="trace-entry-head">
+                        <span>Tick ${entry.tick}: ${escapeInspectorText(entry.previousState)} → ${escapeInspectorText(entry.state)}</span>
+                        <span class="trace-fear">fear ${Number(entry.fear).toFixed(2)}</span>
+                    </div>
+                    <div class="trace-entry-meta">
+                        <span>${escapeInspectorText(entry.reason)}</span>
+                        <span>threshold ${entry.threshold === null ? '—' : Number(entry.threshold).toFixed(2)}</span>
+                        <span class="${entry.panicLocked ? 'trace-locked' : ''}">${entry.panicLocked ? `PANIC LOCK until ${entry.panicLockedUntil}` : 'unlocked'}</span>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function updateReplayTimeline() {
+    const replay = sim?.replaySystem;
+    const hasFrames = Boolean(replay?.frames?.length);
+    if (!replayTimeline || !replayFrameSlider) return;
+    replayTimeline.hidden = !hasFrames;
+    if (!hasFrames) return;
+
+    const frameIndex = replay.isPlaying
+        ? Math.max(0, replay.playbackFrame - 1)
+        : replay.playbackFrame;
+    replayFrameSlider.max = String(replay.frames.length - 1);
+    replayFrameSlider.value = String(Math.min(frameIndex, replay.frames.length - 1));
+    if (replayFrameLabel) {
+        replayFrameLabel.textContent = `${frameIndex + 1} / ${replay.frames.length}`;
+    }
+    if (replayPlayBtn) replayPlayBtn.textContent = replay.isPlaying ? '❚❚' : '▶';
+    if (replayPlayBtn) replayPlayBtn.title = replay.isPlaying ? 'Pause replay' : 'Play replay';
+        if (replaySpeedSelect) {
+            replaySpeedSelect.value = String(replay.playbackSpeed);
+        }
+        if (replayFrameLabel) {
+            replayFrameLabel.textContent = `${frameIndex + 1} / ${replay.frames.length} · ${replay.playbackSpeed}×`;
+        }
+    if (replayEventMarkers) {
+        const allEvents = replay.getEventMarkers();
+        const counts = { PANIC: 0, DEATH: 0, STATE_TRANSITION: 0, CUSTOM: 0 };
+        allEvents.forEach(event => {
+            const type = String(event.type || '').toUpperCase();
+            if (type.includes('PANIC')) counts.PANIC++;
+            else if (type.includes('DEATH')) counts.DEATH++;
+            else if (type.includes('STATE') || type.includes('TRANSITION')) counts.STATE_TRANSITION++;
+            else counts.CUSTOM++;
+        });
+        replayEventCounts.forEach(count => {
+            count.textContent = String(counts[count.dataset.eventCount] || 0);
+        });
+        const enabledFilters = new Set(replayEventFilters.filter(input => input.checked).map(input => input.value));
+        const events = allEvents.filter(event => {
+            const type = String(event.type || '').toUpperCase();
+            if (type.includes('PANIC')) return enabledFilters.has('PANIC');
+            if (type.includes('DEATH')) return enabledFilters.has('DEATH');
+            if (type.includes('STATE') || type.includes('TRANSITION')) return enabledFilters.has('STATE_TRANSITION');
+            return enabledFilters.has('CUSTOM');
+        });
+        replayEventMarkers.innerHTML = events.map(event => {
+            const originalIndex = allEvents.indexOf(event);
+            const left = replay.frames.length > 1 ? (event.frameIndex / (replay.frames.length - 1)) * 100 : 0;
+            const selectedClass = originalIndex === selectedReplayEventIndex ? ' replay-marker-selected' : '';
+            return `<button type="button" class="replay-marker replay-marker-${String(event.type).toLowerCase()}${selectedClass}" style="left: ${left}%" title="${escapeInspectorText(event.type)} — frame ${event.frameIndex + 1}" data-event-index="${originalIndex}" aria-pressed="${originalIndex === selectedReplayEventIndex}">◆</button>`;
+        }).join('');
+        if (selectedReplayEventIndex !== null) renderReplayEventDetails(replay, selectedReplayEventIndex);
+    }
+}
+
+function resetReplay() {
+    const replay = sim?.replaySystem;
+    if (!replay?.frames?.length) return;
+    replay.stopPlayback();
+    replay.seek(0);
+    selectedReplayEventIndex = null;
+    if (replayEventDetails) replayEventDetails.hidden = true;
+    updateReplayTimeline();
+    updateInspector();
+}
+
+function toggleReplayPlayback() {
+    const replay = sim?.replaySystem;
+    if (!replay?.frames?.length) return;
+    if (replay.isPlaying) replay.isPlaying = false;
+    else {
+        if (replay.playbackFrame >= replay.frames.length - 1) replay.seek(0);
+        replay.isPlaying = true;
+    }
+    updateReplayTimeline();
+    updateInspector();
+}
+
+function seekReplay(delta) {
+    const replay = sim?.replaySystem;
+    if (!replay?.frames?.length) return;
+    replay.seek(replay.playbackFrame + delta);
+    replay.isPlaying = false;
+    updateReplayTimeline();
+    updateInspector();
+}
+
+function jumpReplayEvent(direction) {
+    const replay = sim?.replaySystem;
+    const events = replay?.getEventMarkers?.() || [];
+    if (!replay || events.length === 0) return;
+    const current = selectedReplayEventIndex === null ? (direction > 0 ? -1 : events.length) : selectedReplayEventIndex;
+    const next = Math.max(0, Math.min(events.length - 1, current + direction));
+    replay.jumpToEvent(next);
+    replay.isPlaying = false;
+    selectedReplayEventIndex = next;
+    renderReplayEventDetails(replay, next);
+    updateReplayTimeline();
+    updateInspector();
+}
+
+replayEventFilters.forEach(input => input.addEventListener('change', updateReplayTimeline));
+replaySelectAllBtn?.addEventListener('click', () => {
+    replayEventFilters.forEach(input => { input.checked = true; });
+    updateReplayTimeline();
+});
+replayClearAllBtn?.addEventListener('click', () => {
+    replayEventFilters.forEach(input => { input.checked = false; });
+    updateReplayTimeline();
+});
+
+document.addEventListener('keydown', event => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target.isContentEditable) return;
+    if (event.key === ' ') {
+        event.preventDefault();
+        toggleReplayPlayback();
+    } else if (event.key === 'ArrowLeft') {
+        event.preventDefault();
+        seekReplay(-1);
+    } else if (event.key === 'ArrowRight') {
+        event.preventDefault();
+        seekReplay(1);
+    } else if (event.key.toLowerCase() === 'r') {
+        event.preventDefault();
+        resetReplay();
+    } else if (event.key === '[') {
+        event.preventDefault();
+        jumpReplayEvent(-1);
+    } else if (event.key === ']') {
+        event.preventDefault();
+        jumpReplayEvent(1);
+    }
+});
+
+function renderReplayEventDetails(replay, eventIndex) {
+    if (!replayEventDetails) return;
+    const event = replay.interestingEvents[eventIndex];
+    if (!event) {
+        replayEventDetails.hidden = true;
+        return;
+    }
+    selectedReplayEventIndex = eventIndex;
+    replayEventDetails.hidden = false;
+    const frame = replay.getFrame(event.frameIndex);
+    const affectedAgent = event.agentId ?? event.data?.agentId ?? event.data?.agentIndex ?? frame?.agents?.[0]?.id ?? 'unknown';
+    replayEventDetails.innerHTML = `
+        <div class="trace-title">Selected Replay Event</div>
+        <div class="event-detail-row"><span>Type</span><strong>${escapeInspectorText(event.type)}</strong></div>
+        <div class="event-detail-row"><span>Frame</span><strong>${event.frameIndex + 1}</strong></div>
+        <div class="event-detail-row"><span>Timestamp</span><strong>${Number(event.timestamp || 0)} ms</strong></div>
+        <div class="event-detail-row"><span>Agent</span><strong>${escapeInspectorText(affectedAgent)}</strong></div>
+        <pre class="event-payload">${escapeInspectorText(JSON.stringify(event.data ?? {}, null, 2))}</pre>
+    `;
+}
+
+replayEventMarkers?.addEventListener('click', event => {
+    const marker = event.target.closest('[data-event-index]');
+    if (!marker || !sim?.replaySystem) return;
+    const eventIndex = Number(marker.dataset.eventIndex);
+    sim.replaySystem.jumpToEvent(eventIndex);
+    renderReplayEventDetails(sim.replaySystem, eventIndex);
+    sim.replaySystem.isPlaying = false;
+    updateReplayTimeline();
+    updateInspector();
+});
+
+replayPrevBtn?.addEventListener('click', () => seekReplay(-1));
+replayNextBtn?.addEventListener('click', () => seekReplay(1));
+replayPlayBtn?.addEventListener('click', toggleReplayPlayback);
+replaySpeedSelect?.addEventListener('change', event => {
+    sim?.replaySystem?.setPlaybackSpeed(event.target.value);
+});
+
+replayFrameSlider?.addEventListener('input', event => {
+    const frame = sim?.replaySystem?.seek(Number(event.target.value));
+    if (frame && sim?.replaySystem) {
+        sim.replaySystem.isPlaying = false;
+        updateReplayTimeline();
+        updateInspector();
+    }
+});
+
 function updateInspector() {
+    updateReplayTimeline();
     if (!selectedAgent) return;
     
     if (selectedAgent.dead) {
@@ -589,6 +828,10 @@ function updateInspector() {
                 <div class="bar-bg"><div class="bar-fill" style="width: ${selectedAgent.energy}%; background: #00ff88;"></div></div>
             </div>
             
+            <div class="trace-panel">
+                ${renderFearDecisionTrace(selectedAgent)}
+            </div>
+
             <div class="viz-block" style="margin-top: 12px; border-top: 1px solid rgba(0,255,100,0.3); padding-top: 8px;">
                 <label style="color: #00ff88;">👤 Lineage</label>
                 <div style="font-size: 0.75rem; color: var(--text-dim);">

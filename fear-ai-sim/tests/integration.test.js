@@ -8,6 +8,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { Agent } from '../agent.js';
 import { Brain } from '../brain.js';
+import { ExecutePlanNode } from '../behaviortree.js';
 
 describe('Integration Tests', () => {
     beforeEach(() => {
@@ -344,6 +345,40 @@ describe('Integration Tests', () => {
     });
 
     describe('GOAP Plan Execution', () => {
+        it('revalidates planned action preconditions before changing brain state', () => {
+            const agent = new Agent(100, 100);
+            const node = new ExecutePlanNode();
+            agent.brain.currentPlan = [{
+                name: 'hide',
+                checkPreconditions: state => state.nearObstacle === true
+            }];
+            agent.brain.planStep = 0;
+            agent.brain.state = 'CALM';
+
+            const result = node.tick(agent, { threats: [], food: [], neighbors: [] }, null, []);
+
+            expect(result).toBe(2);
+            expect(agent.brain.state).toBe('CALM');
+            expect(agent.brain.currentPlan).toBeNull();
+            expect(agent.brain.actionSuccessStats.get('hide')).toEqual({ success: 0, fail: 1 });
+        });
+
+        it('executes a valid planned action and records success', () => {
+            const agent = new Agent(100, 100);
+            const node = new ExecutePlanNode();
+            agent.brain.currentPlan = [{
+                name: 'hide',
+                checkPreconditions: state => state.nearObstacle === true
+            }];
+            agent.brain.planStep = 0;
+
+            const result = node.tick(agent, { threats: [], food: [], neighbors: [{ familyName: agent.familyName }] }, null, []);
+
+            expect(result).toBe(1);
+            expect(agent.brain.state).toBe('HIDE');
+            expect(agent.brain.actionSuccessStats.get('hide')).toEqual({ success: 1, fail: 0 });
+        });
+
         it('should create and execute a simple plan', () => {
             const agent = new Agent(100, 100);
             agent.brain.traits.skill = 0.8; // High skill enables planning

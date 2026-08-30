@@ -3,6 +3,8 @@
  * Creates 50+ normalized features from raw trajectory data
  */
 
+const clamp01 = value => Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+
 export class FeatureEngineer {
     constructor(config = {}) {
         this.config = {
@@ -119,12 +121,12 @@ export class FeatureEngineer {
         f.push(this._normalize(frame.perception?.nearestAllyDistance || 9999, 0, 500));
         f.push(frame.perception?.inSafeHaven ? 1 : 0);
         
-        // 10. POPULATION FEATURES (4)
-        // These would come from context - using placeholders
-        f.push(0.1); // local_panic_density (placeholder)
-        f.push(0.5); // group_cohesion (placeholder)
-        f.push(0.2); // global_panic_ratio (placeholder)
-        f.push(0); // nearby_deaths (placeholder)
+        // 10. POPULATION FEATURES (4), derived from supplied frame context.
+        const population = frame.population || {};
+        f.push(clamp01(population.localPanicDensity));
+        f.push(clamp01(population.groupCohesion));
+        f.push(clamp01(population.globalPanicRatio));
+        f.push(this._normalize(population.nearbyDeaths || 0, 0, 10));
         
         // 11. DERIVED KINEMATIC FEATURES (4)
         if (prevFrame && nextFrame) {
@@ -165,13 +167,13 @@ export class FeatureEngineer {
             f.push(...new Array(7).fill(0));
         }
         
-        // 13. TRAIT FEATURES (5) - constant across trajectory
-        // These would come from agent traits
-        f.push(0.5); // trait_fear (placeholder)
-        f.push(0.5); // trait_resilience (placeholder)
-        f.push(0.5); // trait_skill (placeholder)
-        f.push(0.5); // trait_curiosity (placeholder)
-        f.push(0.5); // trait_leadership (placeholder)
+        // 13. TRAIT FEATURES (5) - supplied by the trajectory/frame when available.
+        const traits = frame.traits || trajectory.traits || {};
+        f.push(clamp01(traits.fear));
+        f.push(clamp01(traits.resilience));
+        f.push(clamp01(traits.skill));
+        f.push(clamp01(traits.curiosity));
+        f.push(clamp01(traits.leadership));
         
         // 14. CONTEXT FEATURES (3)
         f.push(frame.perception?.nearestPredator ? 1 : 0); // threat_visible
@@ -297,18 +299,12 @@ export class FeatureEngineer {
         return delta;
     }
     
-    /**
-     * Get simulation width (placeholder)
-     */
     _getSimWidth() {
-        return 1000;
+        return Number.isFinite(this.config.simWidth) && this.config.simWidth > 0 ? this.config.simWidth : 1000;
     }
-    
-    /**
-     * Get simulation height (placeholder)
-     */
+
     _getSimHeight() {
-        return 1000;
+        return Number.isFinite(this.config.simHeight) && this.config.simHeight > 0 ? this.config.simHeight : 1000;
     }
     
     /**

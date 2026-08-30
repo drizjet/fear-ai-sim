@@ -1,0 +1,17 @@
+{
+  "mutationId": "MUT-EVID-001",
+  "contractId": "EVIDENCE.SEED.IDEMPOTENT",
+  "description": "Append duplicate evidence despite same claim+dimension+fingerprint",
+  "targetFile": "evidence/receipt.mjs",
+  "preHash": "568123ebc5a4c1c0feb2ba9b0f434759611d97a74a6c4833528a951ff2b3d1af",
+  "postHash": "088658d56db35e7a5a8ed9b400ae5756046dddb7f0e67a8654aedf886c943727",
+  "patchHash": "088658d56db35e7a5a8ed9b400ae5756046dddb7f0e67a8654aedf886c943727",
+  "expectedFailingTest": "evidence-idempotency.test.js > re-seeding the same claim+dimension+fingerprint does not create a duplicate",
+  "observedFailingTests": [],
+  "exitCode": 0,
+  "result": "SURVIVED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-EVID-001-1788059768389",
+  "copyDurationMs": 6117,
+  "verdict": "VERIFIER_WEAKNESS_P0",
+  "recordedAt": "2026-08-30T03:17:07.669Z"
+}

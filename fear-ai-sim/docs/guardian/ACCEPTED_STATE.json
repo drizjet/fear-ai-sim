@@ -1,0 +1,51 @@
+{
+  "acceptedStateVersion": "0.1.0",
+  "campaign": "FEAR_GUARDIAN_CAMPAIGN_V4",
+  "createdAt": "2026-08-29",
+  "owner": "GUARDIAN",
+  "workerNote": "Worker cannot modify this file. Only the Guardian/auditor may advance fields. This is a baseline seal at the start of the V4 round; most fields are PENDING_AUDIT or empty.",
+  "repoHead": "63d76f99101343ff1e92db0ddae482b991737d88",
+  "workspaceFingerprint": "PENDING_AT_SEAL_TIME",
+  "contractRegistryFingerprint": "PENDING_AT_SEAL_TIME",
+  "protectedTestManifestFingerprint": "PENDING_AT_SEAL_TIME",
+  "productionSourceFingerprint": "PENDING_AT_SEAL_TIME",
+  "evidenceLedgerFingerprint": "PENDING_AT_SEAL_TIME",
+  "acceptedAuditIds": [],
+  "acceptedContractIds": [],
+  "acceptedMaturityClaims": {
+    "trade": "PENDING_AUDIT",
+    "demography": "PENDING_AUDIT",
+    "belief": "PENDING_AUDIT",
+    "diplomacy": "PENDING_AUDIT",
+    "ecology": "PENDING_AUDIT",
+    "territory": "PENDING_AUDIT",
+    "statistical-validation": "PENDING_AUDIT",
+    "long-horizon": "PENDING_AUDIT",
+    "runtime": "PENDING_AUDIT",
+    "justice": "PENDING_AUDIT",
+    "memory": "PENDING_AUDIT",
+    "observation": "PENDING_AUDIT",
+    "merchants": "PENDING_AUDIT",
+    "bandits": "PENDING_AUDIT",
+    "patrol": "PENDING_AUDIT",
+    "relationships": "PENDING_AUDIT",
+    "market": "PENDING_AUDIT"
+  },
+  "rejectedClaims": [],
+  "staleClaims": [],
+  "unresolvedP0": [
+    "TRADE.CHAIN.ORDERED_CAUSAL_SEQUENCE (V3 Change 2.1) — toContain weakening in closed-world-chain.test.js",
+    "TRADE.RUNTIME.AUTHORITATIVE_PATH (V3 Change 3.2) — canonical reducer does not emit RUMOR/FACTION_ACTION",
+    "CLOSED_WORLD_SIMULATION.RAID (V3 Change 4.1) — canonical reassess does not produce RAID when forced",
+    "CLOSED_WORLD_SIMULATION.ROUTE (V3 Change 4.2) — brittle hard-coded route assertion",
+    "TRADE.SCENARIO.NATURAL_NO_ATTACKS (V3 Change 6.1) — noObservations fixture instead of natural conditions"
+  ],
+  "unresolvedP1": [
+    "MOVEMENT B2 — real source mutation harness not yet built (V3 planted defect was test-local only)",
+    "MOVEMENT C2 — exact-once tick phase contract not yet formalized",
+    "MOVEMENT D2 — runtime uses DOM shim, not real browser",
+    "MOVEMENT E2 — evidence idempotency race condition + production ledger isolation not yet enforced"
+  ],
+  "lastAcceptedAt": null,
+  "nextPriority": "MOVEMENT B2 — real source mutation harness (V4 §5)"
+}

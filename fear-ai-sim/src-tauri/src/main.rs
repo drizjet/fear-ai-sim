@@ -1,7 +1,6 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -22,6 +21,57 @@ pub struct ExportState {
 // High-speed logging state
 pub struct LoggingState {
     file: Mutex<Option<BufWriter<File>>>,
+}
+
+/// Deterministic RNG state shared with the JS host.
+///
+/// The stream is a Marsaglia xorshift64* generator. The seed is mixed from the
+/// world and scenario seeds supplied by `init_deterministic_rng`, so the same
+/// pair of seeds always produces the same sequence on any platform. No external
+/// dependency is required: this is the spec's "deterministic core first" path
+/// for the Rust lane.
+pub struct RngState {
+    stream: Mutex<u64>,
+}
+
+impl RngState {
+    fn new() -> Self {
+        Self {
+            stream: Mutex::new(0x9E3779B97F4A7C15),
+        }
+    }
+
+    fn seed(&self, world_seed: u64, scenario_seed: u64) {
+        let mixed = mix_seeds(world_seed, scenario_seed);
+        if let Ok(mut guard) = self.stream.lock() {
+            *guard = if mixed == 0 { 0x9E3779B97F4A7C15 } else { mixed };
+        }
+    }
+
+    fn next_u64(&self) -> u64 {
+        let mut guard = match self.stream.lock() {
+            Ok(g) => g,
+            Err(_) => return 0,
+        };
+        let mut x = *guard;
+        if x == 0 {
+            x = 0x9E3779B97F4A7C15;
+        }
+        x ^= x >> 12;
+        x ^= x << 25;
+        x ^= x >> 27;
+        *guard = x;
+        x.wrapping_mul(0x2545F4914F6CDD1D)
+    }
+}
+
+fn mix_seeds(world_seed: u64, scenario_seed: u64) -> u64 {
+    // SplitMix64 finalizer — keeps the state well-distributed even when the
+    // caller passes 0 or simple constants.
+    let mut z = world_seed.wrapping_add(0x9E3779B97F4A7C15);
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D049BB133111EB);
+    z ^ (z >> 31) ^ scenario_seed
 }
 
 impl ExportState {
@@ -110,24 +160,34 @@ fn stop_logging_session(logging_state: State<'_, LoggingState>) -> Result<(), St
     }
 }
 
-/// Initialize deterministic RNG with seeds (simplified - just returns seeds for JS to use)
+/// Initialize deterministic RNG with seeds.
+///
+/// Returns the seeds and the first 8 numbers of the resulting stream so the JS
+/// host can verify it received the expected sequence.
 #[tauri::command]
 fn init_deterministic_rng(
     world_seed: u64,
     scenario_seed: u64,
+    rng_state: State<'_, RngState>,
 ) -> Result<HashMap<String, u64>, String> {
+    rng_state.seed(world_seed, scenario_seed);
     let mut result = HashMap::new();
     result.insert("world_seed".to_string(), world_seed);
     result.insert("scenario_seed".to_string(), scenario_seed);
+    let preview: Vec<u64> = (0..8).map(|_| rng_state.next_u64()).collect();
+    for (i, value) in preview.iter().enumerate() {
+        result.insert(format!("preview_{}", i), *value);
+    }
     Ok(result)
 }
 
-/// Generate deterministic random numbers (simplified)
+/// Generate deterministic random numbers from the seeded stream.
 #[tauri::command]
-fn generate_random_numbers(count: usize) -> Vec<u64> {
-    // Simplified - just return sequential numbers for now
-    // In production, this would use a proper seeded RNG
-    (0..count).map(|i| i as u64 * 12345).collect()
+fn generate_random_numbers(
+    count: usize,
+    rng_state: State<'_, RngState>,
+) -> Vec<u64> {
+    (0..count).map(|_| rng_state.next_u64()).collect()
 }
 
 /// Export trajectory data to JSONL file
@@ -181,17 +241,18 @@ fn export_summary_csv(
 
     // Write headers from first record
     if let Some(first) = summaries.first() {
-        let headers: Vec<&String> = first.keys().collect();
+        let headers: Vec<String> = first.keys().cloned().collect();
         content.push_str(&headers.join(","));
         content.push('\n');
 
         // Write records
+        let empty = String::new();
         for summary in summaries {
             let values: Vec<String> = headers
                 .iter()
                 .map(|h| {
                     // Escape commas in values
-                    let val = summary.get(*h).unwrap_or(&String::new());
+                    let val = summary.get(h).unwrap_or(&empty);
                     if val.contains(',') {
                         format!("\"{}\"", val)
                     } else {
@@ -404,10 +465,11 @@ fn main() {
         .manage(EngineState {
             engine: Mutex::new(SimulationEngine::new(1400.0, 900.0)),
         })
+        .manage(RngState::new())
         .setup(|app| {
             #[cfg(debug_assertions)]
             {
-                let window = app.get_window("main").unwrap();
+                let window = app.get_webview_window("main").unwrap();
                 window.open_devtools();
             }
             Ok(())
@@ -431,4 +493,51 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod rng_tests {
+    use super::{RngState, mix_seeds};
+
+    #[test]
+    fn same_seeds_produce_same_stream() {
+        let a = RngState::new();
+        let b = RngState::new();
+        a.seed(0x1234_5678, 0x9ABC_DEF0);
+        b.seed(0x1234_5678, 0x9ABC_DEF0);
+        for _ in 0..16 {
+            assert_eq!(a.next_u64(), b.next_u64());
+        }
+    }
+
+    #[test]
+    fn different_seeds_diverge() {
+        let a = RngState::new();
+        let b = RngState::new();
+        a.seed(0x1234_5678, 0x9ABC_DEF0);
+        b.seed(0x1234_5678, 0x9ABC_DEF1);
+        let mut diffs = 0u32;
+        for _ in 0..16 {
+            if a.next_u64() != b.next_u64() {
+                diffs += 1;
+            }
+        }
+        assert!(diffs >= 14, "expected streams to diverge, got {} diffs", diffs);
+    }
+
+    #[test]
+    fn zero_seed_does_not_deadlock() {
+        let a = RngState::new();
+        a.seed(0, 0);
+        // xorshift64* must be rescued from a zero state.
+        for _ in 0..8 {
+            assert_ne!(a.next_u64(), 0);
+        }
+    }
+
+    #[test]
+    fn mix_seeds_is_deterministic() {
+        assert_eq!(mix_seeds(1, 2), mix_seeds(1, 2));
+        assert_ne!(mix_seeds(1, 2), mix_seeds(2, 1));
+    }
 }

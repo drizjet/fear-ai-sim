@@ -1,0 +1,206 @@
+{
+  "manifestVersion": "0.1.0",
+  "campaign": "FEAR_GUARDIAN_CAMPAIGN_V4",
+  "createdAt": "2026-08-29",
+  "note": "Worker may add tests freely. Changing an existing protected assertion requires the SPEC/TEST CHANGE LANE (V4 §3.2): create docs/guardian/change-proposals/<id>.json and wait for guardian acceptance.",
+  "protectedTests": [
+    {
+      "testId": "T-RUNTIME-001",
+      "contractId": "TRADE.RUNTIME.NO_DOUBLE_EXECUTION",
+      "file": "tests/planted-defect-runtime.test.js",
+      "testName": "MERCHANT_ROUTE_DECISION fires exactly once per tick under the production path",
+      "assertionPurpose": "Proves Simulation.runClosedWorldStep invokes tickClosedWorld exactly once per tick, producing exactly one MERCHANT_ROUTE_DECISION event per tick.",
+      "strengthClass": "EXACT_CARDINALITY",
+      "allowedFixtureAssumptions": [
+        "DOM shim for canvas",
+        "createClosedWorldScenario() default state"
+      ],
+      "expectedFailureMode": "If tickCanonicalMerchant is called more than once per tick (the V3 double-ticking defect), step.events contains 2+ MERCHANT_ROUTE_DECISION for the current tick.",
+      "mutationIdsItMustKill": [
+        "MUT-RUNTIME-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "PROTECTED"
+    },
+    {
+      "testId": "T-RUNTIME-002",
+      "contractId": "TRADE.RUNTIME.NO_DOUBLE_EXECUTION",
+      "file": "tests/planted-defect-runtime.test.js",
+      "testName": "tickHistory has exactly N entries after N runClosedWorldStep calls",
+      "assertionPurpose": "Proves the canonical reducer is invoked exactly N times for N runClosedWorldStep calls.",
+      "strengthClass": "EXACT_CARDINALITY",
+      "allowedFixtureAssumptions": [
+        "DOM shim for canvas",
+        "createClosedWorldScenario() default state"
+      ],
+      "expectedFailureMode": "If runClosedWorldStep is called per tick, tickHistory has exactly N entries.",
+      "mutationIdsItMustKill": [
+        "MUT-RUNTIME-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "PROTECTED"
+    },
+    {
+      "testId": "T-RUNTIME-003",
+      "contractId": "TRADE.RUNTIME.NO_DOUBLE_EXECUTION",
+      "file": "tests/planted-defect-runtime.test.js",
+      "testName": "planted defect simulation fires MERCHANT_ROUTE_DECISION twice per tick",
+      "assertionPurpose": "Control test: when a subclass invokes tickMerchant a second time (the planted defect), the assertion detects it. This is a unit-level control, not production-source mutation evidence.",
+      "strengthClass": "CONTROL_TEST",
+      "allowedFixtureAssumptions": [
+        "DOM shim for canvas",
+        "Subclass of Simulation that calls tickMerchant twice"
+      ],
+      "expectedFailureMode": "If tickMerchant is called twice, step.events has 2+ MERCHANT_ROUTE_DECISION.",
+      "mutationIdsItMustKill": [
+        "MUT-RUNTIME-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "CONTROL_NOT_PRODUCTION"
+    },
+    {
+      "testId": "T-CHAIN-001",
+      "contractId": "TRADE.CHAIN.ORDERED_CAUSAL_SEQUENCE",
+      "file": "tests/closed-world-chain.test.js",
+      "testName": "connects attack evidence, rumor, rerouting, and faction escalation",
+      "assertionPurpose": "V4 §7.1: the closed-world one-shot must emit the causal chain in a specific order. Currently uses toContain (membership) which V3 weakened from toEqual (exact order). The contract authority for the intended order is NOT YET RESOLVED (V4 §7.1 outcomes A-D).",
+      "strengthClass": "PENDING_RECONSTRUCTION",
+      "allowedFixtureAssumptions": [
+        "bandit.lootExpectation === 0.95",
+        "bandit.switchMargin === 0"
+      ],
+      "expectedFailureMode": "PENDING — depends on V4 §7.1 outcome (exact total order vs partial order vs independent)",
+      "mutationIdsItMustKill": [
+        "MUT-CHAIN-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "NEEDS_RECONSTRUCTION"
+    },
+    {
+      "testId": "T-ALLSYS-001",
+      "contractId": "TRADE.RUNTIME.AUTHORITATIVE_PATH",
+      "file": "tests/closed-world-all-systems.test.js",
+      "testName": "drives the chain through 5 ticks and produces the expected event mix",
+      "assertionPurpose": "V4 §7.2: the canonical runtime must emit RUMOR + FACTION_REASSESSMENT + FACTION_ACTION. V3 weakened to 'core subset' which omits these. The contract authority for whether the canonical path should emit them is NOT YET RESOLVED.",
+      "strengthClass": "PENDING_RECONSTRUCTION",
+      "allowedFixtureAssumptions": [
+        "DOM shim for canvas",
+        "Simulation default scenario"
+      ],
+      "expectedFailureMode": "PENDING — depends on V4 §7.2 outcome",
+      "mutationIdsItMustKill": [
+        "MUT-CHAIN-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "NEEDS_RECONSTRUCTION"
+    },
+    {
+      "testId": "T-SIM-001",
+      "contractId": "CLOSED_WORLD_SIMULATION.RAID",
+      "file": "tests/closed-world-simulation.test.js",
+      "testName": "runs the canonical reducer (attack, evidence, rumor, route, faction) through Simulation",
+      "assertionPurpose": "V4 §7.3: south faction's lastDecision should be RAID when forced with high grievance + high military confidence. V3 weakened to 'any decision'.",
+      "strengthClass": "PENDING_RECONSTRUCTION",
+      "allowedFixtureAssumptions": [
+        "DOM shim for canvas"
+      ],
+      "expectedFailureMode": "PENDING — depends on V4 §7.3 outcome (is RAID genuinely the correct result for those inputs?)",
+      "mutationIdsItMustKill": [],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "NEEDS_RECONSTRUCTION"
+    },
+    {
+      "testId": "T-SIM-002",
+      "contractId": "CLOSED_WORLD_SIMULATION.ROUTE",
+      "file": "tests/closed-world-simulation.test.js",
+      "testName": "runs the canonical reducer (attack, evidence, rumor, route, faction) through Simulation",
+      "assertionPurpose": "V4 §7.4: hard-coded selectedRoute === 'road-c' is brittle. Should be computed utility vector + chosen argmin + tie-breaking contract.",
+      "strengthClass": "BRITTLE_ASSERTION",
+      "allowedFixtureAssumptions": [
+        "DOM shim for canvas"
+      ],
+      "expectedFailureMode": "PENDING — needs utility-based assertion",
+      "mutationIdsItMustKill": [],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "NEEDS_RECONSTRUCTION"
+    },
+    {
+      "testId": "T-DIFF-001",
+      "contractId": "TRADE.SCENARIO.NATURAL_NO_ATTACKS",
+      "file": "tests/scenario-differentiation-long-horizon.test.js",
+      "testName": "no-attacks vs sustained-attacks produce different event profiles",
+      "assertionPurpose": "V4 §7.5: 'no attacks' must emerge from natural conditions (low exposure, low opportunity, deterrence), not from a noObservations fixture that disables all information. The fixture is only valid if the test specifically claims 'with no legal observations, the cat-and-mouse channel cannot create an adaptive meeting'.",
+      "strengthClass": "PENDING_RECONSTRUCTION",
+      "allowedFixtureAssumptions": [
+        "perceptionAccuracy is the legal observation channel",
+        "noObservations = {perceptionAccuracy: 0} is a valid precondition ONLY if the contract is about 'no legal observations'"
+      ],
+      "expectedFailureMode": "PENDING — depends on V4 §7.5 contract resolution",
+      "mutationIdsItMustKill": [
+        "MUT-MIG-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "NEEDS_RECONSTRUCTION"
+    },
+    {
+      "testId": "T-REROUTE-001",
+      "contractId": "TRADE.CATMOUSE.OBSERVATION_DRIVES_REROUTE",
+      "file": "tests/closed-world-trade-reroute.test.js",
+      "testName": "merchant avoids the road the bandit is on (Constitution §161 emergent chain)",
+      "assertionPurpose": "V4 §4.1: the merchant's route decision must be causally driven by a legal observation (routeBeliefs source === 'observation'), not by reading bandit.roadId directly. The test uses perceptionAccuracy=1/0 to make the contract deterministic.",
+      "strengthClass": "STRONG_WITH_DETERMINISTIC_FIXTURE",
+      "allowedFixtureAssumptions": [
+        "merchant.perceptionAccuracy === 1",
+        "bandit.perceptionAccuracy === 0 (to prevent the cat from chasing)"
+      ],
+      "expectedFailureMode": "If chooseMerchantRouteDecision reads bandit.roadId directly (MUT-OBS-001), the test fails because routeBeliefs[bandit.roadId].source !== 'observation'.",
+      "mutationIdsItMustKill": [
+        "MUT-OBS-001",
+        "MUT-TRADE-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "PROTECTED"
+    },
+    {
+      "testId": "T-EVID-001",
+      "contractId": "EVIDENCE.SEED.IDEMPOTENT",
+      "file": "tests/evidence-idempotency.test.js",
+      "testName": "re-seeding the same claim+dimension+fingerprint does not create a duplicate",
+      "assertionPurpose": "V4 §9.1: the receipt helper must be idempotent on (claimId, dimension, source-state fingerprint). Repeated seed execution must produce exactly one active row.",
+      "strengthClass": "EXACT_CARDINALITY",
+      "allowedFixtureAssumptions": [
+        "Temporary ledger path (tmpdir)"
+      ],
+      "expectedFailureMode": "If the receipt helper appends without checking for duplicates (MUT-EVID-001), two rows exist with the same claimId+dimension+fingerprint.",
+      "mutationIdsItMustKill": [
+        "MUT-EVID-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "PROTECTED"
+    },
+    {
+      "testId": "T-MIG-001",
+      "contractId": "MIGRATION.DRIVEN_BY_RECENT_GRIEVANCE",
+      "file": "tests/migration-event.test.js",
+      "testName": "low vs high pressure produces different migration counts",
+      "assertionPurpose": "V3 Change 6.1: migration pressure must be driven by recent BANDIT_ATTACK events (5-tick window). In a peaceful world, the JusticeSystem's migration pressure must drop below 0.5 and no MIGRATION events must fire.",
+      "strengthClass": "DIRECTIONAL",
+      "allowedFixtureAssumptions": [
+        "JusticeSystem baseline values may be anything (the test asserts the OUTCOME)"
+      ],
+      "expectedFailureMode": "If the JusticeSystem produces migration pressure > 0.5 from baseline values when no recent attacks have occurred (MUT-MIG-001), the low-pressure scenario produces MIGRATION events and the directional comparison fails.",
+      "mutationIdsItMustKill": [
+        "MUT-MIG-001"
+      ],
+      "lastAcceptedHash": "PENDING_AT_SEAL_TIME",
+      "revisionStatus": "PROTECTED"
+    }
+  ],
+  "deferredPendingReconstruction": [
+    "T-CHAIN-001 (V4 §7.1 outcome A/B/C/D must be resolved)",
+    "T-ALLSYS-001 (V4 §7.2 must be resolved)",
+    "T-SIM-001 (V4 §7.3 must be resolved)",
+    "T-SIM-002 (V4 §7.4 must be resolved)",
+    "T-DIFF-001 (V4 §7.5 must be resolved)"
+  ]
+}

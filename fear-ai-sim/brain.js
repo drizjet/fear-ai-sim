@@ -1,30 +1,51 @@
 import { Planner } from './planner.js';
 import { getAvailableActions, createWorldState, createGoal } from './agentactions.js';
 import { HybridBehaviorTree } from './behaviortree.js';
+import { FearCore } from './fearcore.js';
 
 export class Brain {
-    constructor(traits = null) {
+    constructor(traits = null, options = {}) {
+        const { rng = Math.random } = options || {};
+        this.rng = rng;
         // Phase 8: OCEAN Personality Mapping (T8.3)
-        this.traits = traits || {
-            fear: Math.random(),
-            skill: Math.random(),
-            curiosity: Math.random(),
-            leadership: Math.random(),
-            resilience: Math.random(), // Added for compatibility
-            // OCEAN Traits
-            openness: Math.random(),
-            conscientiousness: Math.random(),
-            extraversion: Math.random(),
-            agreeableness: Math.random(),
-            neuroticism: Math.random()
+        // The §332 contract: "Do not mix 0..1 fear with 0..5
+        // thresholds without adapter." The brain's currentFear
+        // is 0..1; the fearCore rawFear scale is 0..3.8 (PANIC
+        // threshold). The scale adapter `_fearScale` (below)
+        // is the documented integration point.
+        //
+        // Bug fix (EVID-2026-08-27-BRAIN-FEAR-SCALE): the
+        // previous `traits || {...}` logic accepted any
+        // truthy-but-empty object (e.g. `{}`) as "valid" and
+        // produced an empty trait object, causing NaN in
+        // downstream calculations. The fix: a truthy traits
+        // object is *merged* with defaults so missing keys get
+        // randomized fallbacks. Empty objects are treated as
+        // "no traits provided."
+        const DEFAULT_TRAITS = {
+            fear: this.rng(),
+            skill: this.rng(),
+            curiosity: this.rng(),
+            leadership: this.rng(),
+            resilience: this.rng(),
+            openness: this.rng(),
+            conscientiousness: this.rng(),
+            extraversion: this.rng(),
+            agreeableness: this.rng(),
+            neuroticism: this.rng()
         };
-        
+        const provided = (traits && typeof traits === 'object' && Object.keys(traits).length > 0) ? traits : null;
+        this.traits = provided
+            ? { ...DEFAULT_TRAITS, ...provided }
+            : DEFAULT_TRAITS;
+
         // Phase 8: PAD Emotional Model (T8.1)
         this.currentFear = 0;
         this.currentAnger = 0;
         this.currentDominance = 0.5; // Starts neutral
-        
+
         this.state = 'CALM'; // States: CALM, ALERT, ANXIOUS, PANIC, FREEZE, HIDE, RECOVER, AGGRESSIVE
+        this.fearCore = new FearCore();
         this.stateTimer = 0; // Timer for state transitions
         this.hideTarget = null; // Target obstacle to hide behind
         this.recoveryProgress = 0; // Progress in RECOVER state (0-1)
@@ -75,25 +96,90 @@ export class Brain {
     }
 
     /**
+     * Single-writer contract for external fear producers (EVID-2026-08-27-FEAR-WRITER-CONTRACT).
+     *
+     * Direct assignment to `brain.currentFear` from outside this class is
+     * unconstrained: it bypasses clamping, allows NaN/Infinity, and races
+     * against the brain's own dynamics (lines 342, 375, 395, 530, 546, 558).
+     * This method is the recommended replacement: it clamps to [0, 1],
+     * sanitizes non-finite inputs, and accepts an optional `source` tag for
+     * telemetry (currently ignored by the dynamics but available for
+     * debugging and the per-target memoryOfLoss slice).
+     *
+     * Backward-compatible: existing direct writes to `currentFear` still
+     * work. The migration of `agent.js` and `learningagent.js` to this
+     * method is a separate slice (see RUST_PARITY.md §10.5 priority 4).
+     */
+    setFear(value, source = 'external') {
+        const v = Number.isFinite(value) ? value : 0;
+        this.currentFear = Math.max(0, Math.min(1, v));
+        return this.currentFear;
+    }
+
+    /**
+     * Build the FearCore context object from the brain's current
+     * state and the visuals/threats/neighbors input. This is the
+     * single integration point between Brain (perception + emotion
+     * dynamics) and FearCore (state-machine authority). The shape
+     * of this object is the documented contract between the two
+     * modules; any new field should be added here.
+     */
+    _fearContext(visuals = {}, threats = [], neighbors = []) {
+        return {
+            currentAnger: this.currentAnger,
+            morale: this.morale,
+            threats: threats.length,
+            skill: this.traits?.skill ?? 0,
+            obstacleAhead: false,
+            obstaclePresent: !!(visuals.obstacles && visuals.obstacles.length > 0),
+            rng: this.rng
+        };
+    }
+
+    /**
+     * The §332 scale adapter. The brain's currentFear is
+     * normalized 0..1; the FearCore rawFear scale is 0..3.8
+     * (with PANIC entering at 3.8 and ANXIOUS at 1.4). This
+     * adapter multiplies the brain's 0..1 value into the
+     * FearCore's 0..3.8 range.
+     *
+     * The mapping is linear: 0 -> 0, 1 -> 3.8. This is the
+     * simplest correct adapter; the fearCore enter thresholds
+     * (0.8, 1.4, 3.8) are reached at brain values 0.21, 0.37,
+     * 1.0 respectively. The constants match the original
+     * fearCore's documented enter/exit thresholds (BadAI Part 1
+     * target values), so the §261 "do not call Rust parity"
+     * caveat is preserved.
+     *
+     * @param {number} brainFear 0..1 normalized fear
+     * @returns {number} raw fear in the 0..3.8 range
+     */
+    _fearScale(brainFear) {
+        if (!Number.isFinite(brainFear)) return 0;
+        return Math.max(0, Math.min(1, brainFear)) * 3.8;
+    }
+
+    /**
      * Reset brain state for reuse in ObjectPool
      */
     reset(traits = null) {
         this.traits = traits || {
-            fear: Math.random(),
-            skill: Math.random(),
-            curiosity: Math.random(),
-            leadership: Math.random(),
-            resilience: Math.random(),
-            openness: Math.random(),
-            conscientiousness: Math.random(),
-            extraversion: Math.random(),
-            agreeableness: Math.random(),
-            neuroticism: Math.random()
+            fear: this.rng(),
+            skill: this.rng(),
+            curiosity: this.rng(),
+            leadership: this.rng(),
+            resilience: this.rng(),
+            openness: this.rng(),
+            conscientiousness: this.rng(),
+            extraversion: this.rng(),
+            agreeableness: this.rng(),
+            neuroticism: this.rng()
         };
         this.currentFear = 0;
         this.currentAnger = 0;
         this.currentDominance = 0.5;
         this.state = 'CALM';
+        this.fearCore.reset();
         this.stateTimer = 0;
         this.hideTarget = null;
         this.recoveryProgress = 0;
@@ -164,8 +250,8 @@ export class Brain {
                         moveY = leader.y - agent.y;
                     } else {
                         // Circle the leader or just stay near
-                        moveX = (Math.random() - 0.5);
-                        moveY = (Math.random() - 0.5);
+                        moveX = (this.rng() - 0.5);
+                        moveY = (this.rng() - 0.5);
                     }
                 } else {
                     this.role = 'CITIZEN'; // Leader lost
@@ -294,10 +380,18 @@ export class Brain {
         }
 
         // Phase 6: VR Presence Break Detection (T6.6)
-        if (this.currentFear > 0.95 && this.state === 'PANIC') {
-            if (this.stateTimer > 200) {
-                this.state = 'PRESENCE_BREAK';
+        // The PRESENCE_BREAK transition is now owned by FearCore
+        // (EVID-2026-08-27-BRAIN-FEARCORE-AUTHORITY). The transition
+        // fires when currentFear > 0.95 and stateTimer > 200, and
+        // FearCore returns to PANIC. The inline check is preserved
+        // for the early-return semantics (skip perception while
+        // broken), but the state mutation is now owned by FearCore.
+        if (this.currentFear > 0.95 && this.fearCore.state === 'PANIC' && this.stateTimer > 200) {
+            const broken = this.fearCore.update(this._fearScale(this.currentFear), this._fearContext(visuals, threats, neighbors));
+            this.state = broken.state;
+            if (this.state === 'PRESENCE_BREAK') {
                 this.stateTimer = 0;
+                return { dx: 0, dy: 0 };
             }
         }
 
@@ -368,69 +462,35 @@ export class Brain {
             moveY = roleMove.dy;
         } else if (this.traits.skill > 0.4) {
             // Phase 8: Hybrid AI Architecture (T8.2)
+            // FearCore is the SOLE owner of state. Brain reads
+            // fearCore.state after the update.
+            const fearContext = this._fearContext(visuals, threats, neighbors);
+            const fearResult = this.fearCore.update(this._fearScale(this.currentFear), fearContext);
+            this.state = fearResult.state;
+
             if (this.state === 'PRESENCE_BREAK') {
                 this.currentFear *= 0.95;
-                if (this.currentFear < 0.5) this.state = 'RECOVER';
+                this.stateTimer = 0;
                 return { dx: 0, dy: 0 };
             }
-            
+
             if (this.stateTimer % this.planInterval === 0 || this.currentPlan) {
                 this.behaviorTree.tick(agent, visuals, globalMemory, safeHavens);
             }
         } else {
-            // Standard Reactive State Machine Logic with Hysteresis (Phase 2.1)
-            const f = this.currentFear * 100; // Convert to 0-100 for roadmap alignment
+            // Standard Reactive State Machine Logic with FearCore transition contract.
+            // FearCore is the SOLE owner of state. The inline mutations
+            // that previously defined the HIDE / FREEZE / AGGRESSIVE / RECOVER
+            // transitions have been removed (EVID-2026-08-27-BRAIN-FEARCORE-AUTHORITY).
+            // The full 11-state vocabulary now lives in fearcore.js.
+            const fearContext = this._fearContext(visuals, threats, neighbors);
+            const fearResult = this.fearCore.update(this._fearScale(this.currentFear), fearContext);
+            this.state = fearResult.state;
             
             if (this.state === 'PRESENCE_BREAK') {
                 this.currentFear *= 0.95;
-                if (this.currentFear < 0.5) this.state = 'RECOVER';
+                this.stateTimer = 0;
                 return { dx: 0, dy: 0 };
-            }
-
-            if (this.currentAnger > 0.6) {
-                this.state = 'AGGRESSIVE';
-            } else if (this.state === 'RECOVER') {
-                if (f < 20 && this.recoveryProgress > 0.8) {
-                    this.state = 'CALM';
-                    this.recoveryProgress = 0;
-                }
-            } else if (this.state === 'HIDE') {
-                if (threats.length === 0) {
-                    this.state = 'RECOVER';
-                } else if (f > 85) {
-                    this.state = 'PANIC';
-                }
-            } else {
-                // Hysteresis State Transitions (T2.1)
-                switch(this.state) {
-                    case 'CALM':
-                        if (f > 30) this.state = 'ANXIOUS';
-                        else if (f > 20) this.state = 'ALERT';
-                        break;
-                    case 'ALERT':
-                        if (f > 30) this.state = 'ANXIOUS';
-                        else if (f < 10) this.state = 'CALM';
-                        break;
-                    case 'ANXIOUS':
-                        if (f > 80) this.state = 'PANIC';
-                        else if (f < 20) this.state = 'CALM';
-                        break;
-                    case 'PANIC':
-                        if (f < 70) this.state = 'ANXIOUS';
-                        break;
-                }
-
-                // Chance to HIDE if skilled
-                if (this.state === 'PANIC' && this.traits.skill > 0.6 && threats.length > 0 && Math.random() < 0.3) {
-                    this.state = 'HIDE';
-                }
-            }
-
-            if (this.state === 'PANIC' && this.morale < 0.4 && Math.random() < 0.05) {
-                this.state = 'FREEZE';
-            }
-            if (this.state === 'FREEZE' && Math.random() < 0.02) {
-                this.state = 'RECOVER';
             }
         }
 
@@ -497,8 +557,8 @@ export class Brain {
                     moveY += food[0].dy;
                 } else {
                     const exploreFactor = this.traits.curiosity * (0.5 + this.traits.openness);
-                    moveX += (Math.random() - 0.5) * exploreFactor;
-                    moveY += (Math.random() - 0.5) * exploreFactor;
+                    moveX += (this.rng() - 0.5) * exploreFactor;
+                    moveY += (this.rng() - 0.5) * exploreFactor;
                 }
                 break;
             case 'HIDE':
@@ -526,8 +586,8 @@ export class Brain {
                 break;
             case 'RECOVER':
                 this.recoveryProgress += 0.02;
-                moveX = (Math.random() - 0.5) * 0.5;
-                moveY = (Math.random() - 0.5) * 0.5;
+                moveX = (this.rng() - 0.5) * 0.5;
+                moveY = (this.rng() - 0.5) * 0.5;
                 break;
             case 'FREEZE':
                 moveX = 0;
@@ -537,8 +597,8 @@ export class Brain {
         }
 
         const jitterScale = this.currentFear * 0.5;
-        moveX += (Math.random() - 0.5) * jitterScale;
-        moveY += (Math.random() - 0.5) * jitterScale;
+        moveX += (this.rng() - 0.5) * jitterScale;
+        moveY += (this.rng() - 0.5) * jitterScale;
 
         // T6.4: Pavlovian Uncertainty Gating
         const uncertaintyMultiplier = 1.0 - (this.uncertainty * 0.5);
@@ -577,8 +637,8 @@ export class Brain {
 
     mutate(rate) {
         for (let trait in this.traits) {
-            if (Math.random() < rate) {
-                this.traits[trait] += (Math.random() - 0.5) * 0.2;
+            if (this.rng() < rate) {
+                this.traits[trait] += (this.rng() - 0.5) * 0.2;
                 this.traits[trait] = Math.max(0, Math.min(1, this.traits[trait]));
             }
         }

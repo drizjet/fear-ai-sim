@@ -56,14 +56,38 @@ describe('Phase 6: Research-Driven Advanced Systems', () => {
 
     describe('Advanced Brain Features (T6.3, T6.4, T6.6)', () => {
         it('should trigger presence break under extreme stress (T6.6)', () => {
-            brain.currentFear = 0.99;
-            brain.state = 'PANIC';
-            brain.stateTimer = 201;
-            
+            // The §260 contract: brain.state is a derived read
+            // of fearCore.state. The test must drive the state
+            // through the public path (setFear + decide), not
+            // by direct assignment to brain.state.
+            // To reach PRESENCE_BREAK:
+            //   1. enter PANIC with fear > 3.8;
+            //   2. clear the 10-tick panic lock by driving fear down;
+            //   3. re-enter PANIC at fear > 0.95 (the §260 context
+            //      check) and stay there for 200+ ticks;
+            //   4. PRESENCE_BREAK then fires.
+            brain.setFear(0.99);
+            brain.fearCore.reset('ANXIOUS');
+            // Phase 1: enter PANIC.
+            brain.fearCore.update(4.0, { threats: 1, skill: 0.5, currentAnger: 0, morale: 0.5, rng: () => 0.5 });
+            expect(brain.fearCore.state).toBe('PANIC');
+            // Phase 2: clear the panic lock by exiting to ANXIOUS.
+            for (let i = 0; i < 11; i += 1) {
+                brain.fearCore.update(0, { threats: 0, skill: 0.5, currentAnger: 0, morale: 0.5, rng: () => 0.5 });
+            }
+            // Phase 3: re-enter PANIC and stay there.
+            for (let i = 0; i < 202; i += 1) {
+                brain.fearCore.update(4.0, { threats: 1, skill: 0.5, currentAnger: 0, morale: 0.5, rng: () => 0.5 });
+            }
+            // The brain-level stateTimer and fearCore.stateTimer
+            // must exceed the PRESENCE_BREAK threshold (200).
+            brain.stateTimer = 202;
+            brain.fearCore.stateTimer = 202;
+
             const visuals = { threats: [], food: [], neighbors: [] };
             const agent = { x: 0, y: 0, brain: brain };
             brain.decide(visuals, agent, null, []);
-            
+
             expect(brain.state).toBe('PRESENCE_BREAK');
         });
 

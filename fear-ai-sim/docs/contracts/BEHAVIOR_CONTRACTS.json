@@ -1,0 +1,291 @@
+{
+  "$schema": "https://fear-ai.local/behavior-contracts.schema.json",
+  "version": "1.0.0",
+  "createdAt": "2026-08-29",
+  "campaign": "FEAR_GUARDIAN_CAMPAIGN_V3",
+  "note": "Initial registry. All entries PENDING_AUDIT. Worker may not mark a contract ACCEPTED; only the guardian/auditor can.",
+  "contracts": [
+    {
+      "contractId": "TRADE.CATMOUSE.OBSERVATION_DRIVES_REROUTE",
+      "domain": "trade/cat-and-mouse",
+      "statement": "A merchant's route decision must be causally driven by a legally obtained observation or belief update about route danger. The routeBeliefs for the bandit's road must have been raised by the observation (source === 'observation'), and the merchant's chosen route must avoid the bandit's road from tick 2 onward when the merchant's perceptionAccuracy is 1 and the bandit's is 0.",
+      "rationale": "Constitution §161 EMERGENT CHAIN TEST 4 (BANDIT ADAPTATION) and Guardian V3 §3 require the cat-and-mouse dynamic to be information-driven, not ground-truth-driven. The merchant must react to the bandit's presence via a legal observation channel, not by reading the bandit's authoritative hidden location directly.",
+      "source": {
+        "constitutionalAnchor": "Constitution §161 emergent chain TEST 4; Guardian V3 §3 Movement G",
+        "testChangeGovernance": "docs/evidence/TEST_CHANGES.jsonl (closed-world-trade-reroute test re-audit)",
+        "testOrigin": "tests/closed-world-trade-reroute.test.js (current lines 14-51)"
+      },
+      "preconditions": [
+        "merchant has at least two eligible routes",
+        "merchant.perceptionAccuracy === 1",
+        "bandit.perceptionAccuracy === 0"
+      ],
+      "mechanism": ["observation", "belief update", "route utility", "route decision"],
+      "forbidden": [
+        "merchant reads bandit.roadId directly in chooseMerchantRouteDecision",
+        "merchant route change without a corresponding routeBelief update whose source is 'observation'"
+      ],
+      "observableConsequence": "merchant.selectedRoute !== bandit.roadId for all ticks >= 2; merchant.routeBeliefs[bandit.roadId].source === 'observation'; merchant.routeBeliefs[bandit.roadId].perceivedDanger >= 0.7",
+      "stochastic": false,
+      "requiredEvidenceType": "focused causal test + planted-defect sensitivity",
+      "requiredTestIds": ["closed-world-trade-reroute.test.js#merchant-avoids-bandit-road"],
+      "requiredRuntimePath": "tickClosedWorld step 2.5 (canonical merchant tick)",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "TRADE.CHAIN.ORDERED_CAUSAL_SEQUENCE",
+      "domain": "trade/causal-chain",
+      "statement": "The one-shot closed-world scenario must emit the causal sequence: CONVOY_FORMED, BANDIT_ATTACK, RUMOR, ROUTE_SELECTED, FACTION_REASSESSMENT, FACTION_ACTION, INVASION, BANDIT_RELOCATION — in that order. Membership (toContain) is not sufficient; the order encodes the causal narrative (attack → rumor → route → reassess → action → invasion → relocation).",
+      "rationale": "Constitution §53/§161 require the causal chain to be traceable. A reordered event stream breaks causal provenance. Guardian V3 §1 item #2 explicitly named the weakening from toEqual to toContain.",
+      "source": {
+        "constitutionalAnchor": "Constitution §53 causal trace; Guardian V3 §1 item #2",
+        "testChangeGovernance": "docs/evidence/TEST_CHANGES.jsonl (closed-world-chain test re-audit)",
+        "testOrigin": "tests/closed-world-chain.test.js (current toContain assertions)"
+      },
+      "preconditions": [
+        "runClosedWorldScenario called with world where bandit.lootExpectation === 0.95 and bandit.switchMargin === 0",
+        "perceivedDanger: 0.8"
+      ],
+      "mechanism": ["bandit attack", "survivor evidence", "rumor propagation", "route re-selection", "faction reassess", "faction action", "invasion", "bandit relocation"],
+      "forbidden": [
+        "test asserts membership (toContain) instead of ordered sequence (toEqual)",
+        "test mutates world after runClosedWorldScenario and accepts 'bandit may stay'"
+      ],
+      "observableConsequence": "eventTypes in result.events are exactly [CONVOY_FORMED, BANDIT_ATTACK, RUMOR, ROUTE_SELECTED, FACTION_REASSESSMENT, FACTION_ACTION, INVASION, BANDIT_RELOCATION] in that order",
+      "stochastic": false,
+      "requiredEvidenceType": "ordered sequence assertion + planted-defect (delete BANDIT_RELOCATION from one-shot → test fails)",
+      "requiredTestIds": ["closed-world-chain.test.js#ordered-causal-sequence"],
+      "requiredRuntimePath": "runClosedWorldScenario one-shot",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "TRADE.RUNTIME.AUTHORITATIVE_PATH",
+      "domain": "trade/runtime",
+      "statement": "Simulation.runClosedWorldStep must invoke the canonical reducer (tickClosedWorld) internally. The production runtime path IS the canonical path; no test-only manual bridge is allowed.",
+      "rationale": "Guardian V3 §4 Movement C §C2: 'Prove there is exactly one authoritative simulation advancement path per intended tick. Detect: double ticking, helper + reducer duplicate execution, stale wrappers, test-only entry paths.'",
+      "source": {
+        "constitutionalAnchor": "Guardian V3 §4 Movement C",
+        "testChangeGovernance": "EVID-2026-08-29-RUNTIME-WIRING (runtime-trade-wiring test)",
+        "testOrigin": "tests/runtime-trade-wiring.test.js (line 56-69); tests/closed-world-all-systems.test.js (lines 127, 141, 144, 156, 201)"
+      },
+      "preconditions": ["Simulation instance constructed with valid canvas mock"],
+      "mechanism": ["Simulation.runClosedWorldStep → tickClosedWorld (full step chain)"],
+      "forbidden": [
+        "runClosedWorldStep returns events that omit the canonical step 7.5 (merchant/bandit/patrol)",
+        "test files call tickClosedWorld after runClosedWorldStep (double execution)"
+      ],
+      "observableConsequence": "step.events includes MERCHANT_ROUTE_DECISION from step 2.5 and BANDIT_RELOCATION from step 7.5 without any manual tickClosedWorld call after runClosedWorldStep",
+      "stochastic": false,
+      "requiredEvidenceType": "focused test + planted-defect (remove tickClosedWorld from runClosedWorldStep → MERCHANT_ROUTE_DECISION count drops to 0)",
+      "requiredTestIds": ["runtime-trade-wiring.test.js#runtime-invokes-canonical-reducer", "closed-world-all-systems.test.js#no-double-execution"],
+      "requiredRuntimePath": "Simulation.runClosedWorldStep",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "TRADE.RUNTIME.NO_DOUBLE_EXECUTION",
+      "domain": "trade/runtime",
+      "statement": "No test or production path may call tickClosedWorld more than once per intended tick. Tests that manually call tickClosedWorld after Simulation.runClosedWorldStep are a P0 architecture defect.",
+      "rationale": "Guardian V3 §4 Movement C §C2: 'Detect: double ticking, helper + reducer duplicate execution, stale wrappers.'",
+      "source": {
+        "constitutionalAnchor": "Guardian V3 §4 Movement C",
+        "testChangeGovernance": "EVID-2026-08-29-RUNTIME-WIRING",
+        "testOrigin": "tests/closed-world-all-systems.test.js (lines 127, 141, 144, 156, 201)"
+      },
+      "preconditions": ["Simulation.runClosedWorldStep drives tick N"],
+      "mechanism": ["single tickClosedWorld call per tick"],
+      "forbidden": [
+        "test calls tickClosedWorld after Simulation.runClosedWorldStep for the same tick",
+        "two tickClosedWorld calls within the same runClosedWorldStep"
+      ],
+      "observableConsequence": "world.tickHistory has exactly one entry per runClosedWorldStep call; world.events for tick N are the result of exactly one tickClosedWorld invocation",
+      "stochastic": false,
+      "requiredEvidenceType": "tick count assertion + event count assertion per tick",
+      "requiredTestIds": ["closed-world-all-systems.test.js#no-double-execution"],
+      "requiredRuntimePath": "Simulation.runClosedWorldStep",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "TRADE.SCENARIO.NATURAL_NO_ATTACKS",
+      "domain": "trade/scenario",
+      "statement": "A 'no attacks' scenario must produce 0 BANDIT_ATTACK events through natural causal conditions, not through a noObservations fixture switch. The noObservations flag is a TEST_FIXTURE_ONLY mechanism and must never be the only path to 0 attacks.",
+      "rationale": "Guardian V3 §2 Movement A §A2: 'A test fixture may force a precondition only when the contract is conditional on that precondition. Not allowed: forcing hidden variables until the desired event occurred.' Guardian V3 §1 item #6: 'a noObservations fixture mode was introduced to obtain a zero-attack scenario.'",
+      "source": {
+        "constitutionalAnchor": "Guardian V3 §2 Movement A §A2",
+        "testChangeGovernance": "EVID-2026-08-29-CATMOUSE",
+        "testOrigin": "tests/scenario-differentiation-long-horizon.test.js (lines 27-30, 137-140)"
+      },
+      "preconditions": ["no bandit on any route where a merchant has selectedRoute"],
+      "mechanism": ["bandit stays on a road with no merchant traffic", "encounter engine finds no eligible bandit-ambush", "no BANDIT_ATTACK fires"],
+      "forbidden": [
+        "test forces perceptionAccuracy to 0 to achieve 0 attacks",
+        "noObservations flag is the only path to 0 attacks"
+      ],
+      "observableConsequence": "When the bandit is on a road with no merchant AND the merchant's selectedRoute is a different road, the encounter engine must not fire bandit-ambush and BANDIT_ATTACK must not appear in the event log, without any fixture switch.",
+      "stochastic": false,
+      "requiredEvidenceType": "natural scenario test (no fixture switch) + planted-defect (make merchant pick bandit's road naturally → attacks appear)",
+      "requiredTestIds": ["scenario-differentiation-long-horizon.test.js#natural-no-attacks"],
+      "requiredRuntimePath": "tickClosedWorld full step chain",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "TRADE.SCENARIO.DIFFERENTIATION",
+      "domain": "trade/scenario",
+      "statement": "Different scenario inputs (calm vs nervous, no-attacks vs sustained-attacks) must produce observably different world states. The differentiation must be causally driven, not coincidental.",
+      "rationale": "World-Completion Directive §19: 'Scenario differentiation is mandatory. Every significant decision system must prove that meaningful inputs matter.'",
+      "source": {
+        "constitutionalAnchor": "World-Completion Directive §19",
+        "testChangeGovernance": "EVID-2026-08-29-DIFFERENTIATION",
+        "testOrigin": "tests/scenario-differentiation-long-horizon.test.js"
+      },
+      "preconditions": ["two matched scenarios with single-input difference"],
+      "mechanism": ["scenario input → world state change"],
+      "forbidden": [
+        "test asserts 'either A or B differs' (a non-contract)",
+        "differentiation is coincidental rather than causally driven"
+      ],
+      "observableConsequence": "calm vs nervous must produce at least one metric with a consistent sign-of-difference (e.g., sustainedAttacks → migrationCount >= noAttacks migrationCount)",
+      "stochastic": false,
+      "requiredEvidenceType": "directional comparison + planted-defect (force sustainedAttacks to no-op → differentiation disappears)",
+      "requiredTestIds": ["scenario-differentiation-long-horizon.test.js#directional-differentiation"],
+      "requiredRuntimePath": "tickClosedWorld full step chain",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "TRADE.CATMOUSE.LEGAL_OBSERVATION_ONLY",
+      "domain": "trade/cat-and-mouse",
+      "statement": "The merchant may only learn about the bandit's location through a legal observation channel (perceptionAccuracy on the merchant, observation event with proper provenance). The merchant must never read bandit.roadId directly in chooseMerchantRouteDecision.",
+      "rationale": "Guardian V3 §3: 'actors can be wrong' — the cat-and-mouse is genuinely partial-observable. Direct ground-truth reads are the forbidden shortcut the V3 auditor must catch.",
+      "source": {
+        "constitutionalAnchor": "Guardian V3 §3 Movement G §G1",
+        "testChangeGovernance": "EVID-2026-08-29-CATMOUSE-LEGAL",
+        "testOrigin": "tests/closed-world-trade-reroute.test.js"
+      },
+      "preconditions": ["merchant.perceptionAccuracy is set", "bandit is on a known road"],
+      "mechanism": ["bandit presence → observation event → routeBelief update → route decision"],
+      "forbidden": [
+        "chooseMerchantRouteDecision reads bandit.roadId",
+        "routeBelief source is 'ground_truth' or undefined"
+      ],
+      "observableConsequence": "routeBelief source for the bandit's road is 'observation' (not 'ground_truth') when the merchant's perceptionAccuracy triggered the update",
+      "stochastic": true,
+      "requiredEvidenceType": "planted-defect (replace observation wire with bandit.roadId read → test still passes, contract violated → mark as IMPLEMENTATION_FIX_REQUIRED)",
+      "requiredTestIds": ["closed-world-trade-reroute.test.js#legal-observation-only"],
+      "requiredRuntimePath": "tickMerchant in canonical-trade-system.js",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "EVIDENCE.SEED.IDEMPOTENT",
+      "domain": "evidence/seed",
+      "statement": "Repeated execution of the same evidence seed with the same inputs must produce exactly one active row in the ledger. Idempotency is keyed on (claimId, dimension, source-state fingerprint).",
+      "rationale": "Guardian V3 §5 Movement D §D1 item 4: 'repeated seed script execution → no duplicate active proof.'",
+      "source": {
+        "constitutionalAnchor": "Guardian V3 §5 Movement D",
+        "testChangeGovernance": "EVID-2026-08-29-IDEMPOTENT-SEED",
+        "testOrigin": "tests/evidence-idempotency.test.js (2 tests)"
+      },
+      "preconditions": ["ledger file exists and is parseable", "row with same claimId+dimension+fingerprint may or may not exist"],
+      "mechanism": ["read existing rows", "check for duplicate", "skip if duplicate", "append if new"],
+      "forbidden": [
+        "appendFileSync without duplicate check",
+        "duplicate keying on claimId alone (ignoring fingerprint)"
+      ],
+      "observableConsequence": "running the same seed twice produces exactly one row; running it with a changed fingerprint produces two rows (old becomes stale, new is fresh)",
+      "stochastic": false,
+      "requiredEvidenceType": "idempotency test (1) same inputs → one row, (2) different fingerprint → two rows",
+      "requiredTestIds": ["evidence-idempotency.test.js#no-duplicate-same-fingerprint", "evidence-idempotency.test.js#new-row-changed-fingerprint"],
+      "requiredRuntimePath": "evidence/receipt.mjs#buildReceipt",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "EVIDENCE.SEED.TEST_ISOLATION",
+      "domain": "evidence/seed",
+      "statement": "Automated tests must not mutate production evidence. Tests use a temporary ledger path or equivalent clean-room mechanism. Production ledger hash is unchanged before/after the test suite.",
+      "rationale": "Guardian V3 §5 Movement D §D2: 'Automated tests must not mutate production evidence.'",
+      "source": {
+        "constitutionalAnchor": "Guardian V3 §5 Movement D",
+        "testChangeGovernance": "EVID-2026-08-29-TEST-ISOLATION",
+        "testOrigin": "tests/evidence-idempotency.test.js (uses tmpdir)"
+      },
+      "preconditions": ["production ledger exists"],
+      "mechanism": ["tests write to tempDir, not docs/evidence/"],
+      "forbidden": [
+        "test writes to docs/evidence/EVIDENCE_LEDGER.jsonl",
+        "test creates rows visible to the production ledger"
+      ],
+      "observableConsequence": "sha256 of docs/evidence/EVIDENCE_LEDGER.jsonl is identical before and after the test suite",
+      "stochastic": false,
+      "requiredEvidenceType": "production-ledger-hash test",
+      "requiredTestIds": ["evidence-idempotency.test.js#production-ledger-unchanged (NEW)"],
+      "requiredRuntimePath": "evidence/receipt.mjs#buildReceipt (must accept injectable ledgerPath)",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "EVIDENCE.LINT.PRODUCER_NOT_AUTHORITY",
+      "domain": "evidence/lint",
+      "statement": "A seed script may gather proof but may not decide maturity. Maturity is derived from claim-specific admissible evidence. A maturity label is NOT valid merely because a seed script found a symbol, a test filename, a green exit code, or a matching string.",
+      "rationale": "Guardian V3 §5 Movement D §D5: 'Evidence producer is not evidence authority.'",
+      "source": {
+        "constitutionalAnchor": "Guardian V3 §5 Movement D",
+        "testChangeGovernance": "EVID-2026-08-29-PRODUCER-AUTHORITY",
+        "testOrigin": "tests/evidence-linter.test.js (maturity gate tests)"
+      },
+      "preconditions": ["evidence row with a dimension", "linter run"],
+      "mechanism": ["linter reads ledger", "linter applies maturity gate", "linter derives label"],
+      "forbidden": [
+        "linter labels a domain CROSS_DOMAIN_INTEGRATED merely because 7 seed-script rows exist",
+        "seed script decides maturity"
+      ],
+      "observableConsequence": "A row with dimension CROSS_DOMAIN_INTEGRATED only contributes to the label if it has a real command receipt, a real source-state fingerprint, and no known contradictions.",
+      "stochastic": false,
+      "requiredEvidenceType": "linter test (1) row with no command → not admissible, (2) row with contradiction → label capped",
+      "requiredTestIds": ["evidence-linter.test.js#maturity-gate-derives-label"],
+      "requiredRuntimePath": "evidence/lint.mjs",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "MIGRATION.DRIVEN_BY_RECENT_GRIEVANCE",
+      "domain": "demography/migration",
+      "statement": "Migration pressure must be driven by recent BANDIT_ATTACK events (within a 5-tick window). In a peaceful world with no recent attacks, the JusticeSystem's migration pressure must drop below 0.5 and no MIGRATION events must fire. A periodic MIGRATION from baseline JusticeSystem values is a P0 defect.",
+      "rationale": "Guardian V3 §8 Movement F §F1: 'No invisible duplication. No disappearing cargo.' Guardian V3 §1 item 3: migration fired on a fixed timer with no push factor.",
+      "source": {
+        "constitutionalAnchor": "Guardian V3 §8",
+        "testChangeGovernance": "EVID-2026-08-29-MIGRATION-WINDOW",
+        "testOrigin": "tests/migration-event.test.js"
+      },
+      "preconditions": ["JusticeSystem.resolve() called per tick", "BANDIT_ATTACK events may or may not have occurred recently"],
+      "mechanism": ["BANDIT_ATTACK → reportedCrime (5-tick window) → grievance accumulation → migration pressure"],
+      "forbidden": [
+        "JusticeSystem.resolve() produces migration pressure > 0.5 from baseline values when reportedCrime is false",
+        "reportedCrime is sticky once any attack ever happened"
+      ],
+      "observableConsequence": "low-pressure world produces 0 MIGRATION events; high-pressure world (recent BANDIT_ATTACK within 5 ticks) produces > 0 MIGRATION events",
+      "stochastic": false,
+      "requiredEvidenceType": "directional comparison (low vs high pressure) + planted-defect (remove the 5-tick window → low-pressure fires migrations)",
+      "requiredTestIds": ["migration-event.test.js#driven-by-recent-grievance"],
+      "requiredRuntimePath": "tickClosedWorld step 4 (justice resolution)",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [],
+      "lastAcceptedSourceFingerprint": null
+    }
+  ]
+}

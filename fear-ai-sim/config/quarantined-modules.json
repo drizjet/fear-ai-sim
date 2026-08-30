@@ -1,0 +1,34 @@
+{
+  "$schema": "fear-ai/quarantine-manifest/v1",
+  "description": "Modules that are quarantined from production import. The production-reach audit enforces this list: production code MUST NOT import any module listed here. Use this list to track dead/orphan code that should be either deleted or rehabilitated into production.",
+  "modules": [
+    {
+      "module": "hysteresis.js",
+      "reason": "Test-only HysteresisController with no production caller; FearCore is the production owner of fear-band state.",
+      "owner": "FearCore path",
+      "reviewDate": "2026-08-27",
+      "verdict": "RETAIN_OPTIONAL"
+    },
+    {
+      "module": "habituation.js",
+      "reason": "Test-only habituation controller with no production caller.",
+      "owner": "Brain.calculateHabituatedFear",
+      "reviewDate": "2026-08-27",
+      "verdict": "RETAIN_OPTIONAL"
+    },
+    {
+      "module": "emotions.js",
+      "reason": "Test-only EmotionSystem class; agent.emotions is an inline object.",
+      "owner": "agent.js inline emotions",
+      "reviewDate": "2026-08-27",
+      "verdict": "RETAIN_OPTIONAL"
+    },
+    {
+      "module": "masac_metrics.js",
+      "reason": "Test-only training metrics; masac_worker.js is itself orphan.",
+      "owner": "masac_worker.js (orphan)",
+      "reviewDate": "2026-08-27",
+      "verdict": "RETAIN_OPTIONAL"
+    }
+  ]
+}

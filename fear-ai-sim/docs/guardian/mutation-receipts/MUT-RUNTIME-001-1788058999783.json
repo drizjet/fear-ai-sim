@@ -1,0 +1,17 @@
+{
+  "mutationId": "MUT-RUNTIME-001",
+  "contractId": "TRADE.RUNTIME.NO_DOUBLE_EXECUTION",
+  "description": "Reintroduce second merchant canonical tick in a later phase",
+  "targetFile": "closed-world.js",
+  "preHash": "6c2d7735d288c3669cdd7e776801884f02eee56c08c67b822467a14e82da02fd",
+  "postHash": "216aa03012a07a6c470e98decda86141edf9e4bd1425f04cd64a6ce5e2dbbd75",
+  "patchHash": "216aa03012a07a6c470e98decda86141edf9e4bd1425f04cd64a6ce5e2dbbd75",
+  "expectedFailingTest": "MERCHANT_ROUTE_DECISION fires exactly once per tick under the production path",
+  "observedFailingTests": [],
+  "exitCode": 1,
+  "result": "INVALID",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-RUNTIME-001-1788058980067",
+  "copyDurationMs": 19299,
+  "verdict": "INVALID_MUTANT",
+  "recordedAt": "2026-08-30T03:03:19.783Z"
+}

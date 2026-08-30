@@ -1,0 +1,108 @@
+{
+  "seal": {
+    "producedAt": "2026-08-30T02:39:58.298Z",
+    "gitHead": "63d76f99101343ff1e92db0ddae482b991737d88",
+    "gitDirty": true,
+    "contracts": {
+      "docs/contracts/BEHAVIOR_CONTRACTS.json": {
+        "sha256": "ebb1eefbd04ffd2cc7463935cd6333c7e7c8f62bf762ad1a8ebf885615c129ad",
+        "bytes": 20546
+      },
+      "docs/contracts/BEHAVIOR_CONTRACTS.md": {
+        "sha256": "96c69575d0229018ef0f4b6a5659344de0afa4581a16dd3614c89e5a0f259bc0",
+        "bytes": 3509
+      },
+      "docs/contracts/AUDIT_v1.md": {
+        "sha256": "8673a0d21d14cf0d8cfc97013e4ecefc5b39e05deab5545ac42229ff951496a4",
+        "bytes": 17978
+      }
+    },
+    "protected": {
+      "docs/guardian/ACCEPTED_STATE.json": {
+        "sha256": "532878babdc3dc753b7426a3fe68895b19ae1c82ca9a650438204eaf0a7074f3",
+        "bytes": 2412
+      },
+      "docs/guardian/PROTECTED_TESTS.json": {
+        "error": "ENOENT: no such file or directory, stat 'C:\\tools\\03-Projects\\lains Tools\\lainself\\fear-ai-sim\\fear-ai-sim\\docs\\guardian\\PROTECTED_TESTS.json'"
+      }
+    },
+    "evidence": {
+      "docs/evidence/EVIDENCE_LEDGER.jsonl": {
+        "sha256": "1a5aa16624a9ae311ca906de3bf8781ec9fa99e674c41e77f50fdaebbcaac552",
+        "bytes": 321132
+      },
+      "docs/evidence/CONTRADICTIONS.jsonl": {
+        "sha256": "eaa96a6ae3c29859e11289aa059a792c818fb9b1a133769ab22976bea3ea2f06",
+        "bytes": 3680
+      }
+    },
+    "production": {
+      "closed-world.js": {
+        "sha256": "6c2d7735d288c3669cdd7e776801884f02eee56c08c67b822467a14e82da02fd",
+        "bytes": 119945
+      },
+      "canonical-trade-system.js": {
+        "sha256": "fa3c8e11732782dbf5df4dfd7ad8c884c297974fb431b89bcc5a63c3b27f13a4",
+        "bytes": 24956
+      },
+      "factionrelationship.js": {
+        "sha256": "de137dd667f69882edde3b8edaf2297550815b6b2dd647ab94ac79e4e75801c6",
+        "bytes": 43675
+      },
+      "factioncore.js": {
+        "sha256": "5a42115471f0b7dc5912a7cd83c9fa7e9aabab8e5fc529208b6db6a54cb64447",
+        "bytes": 11535
+      },
+      "beliefs.js": {
+        "sha256": "daccd1e6c199bbfd1ddcbe42aa98e8e1d67d28027c23b50030018dee1b8bca64",
+        "bytes": 4058
+      },
+      "economy.js": {
+        "sha256": "df828d9c164a35a2f00f4952964a790e151548832e33eabd85db7bbeb6f1e29b",
+        "bytes": 5757
+      },
+      "simulation.js": {
+        "sha256": "9cc24653430c585c32b6ebff38f09bacccd37472d0d56e2dfdc6424679a63ae8",
+        "bytes": 92655
+      }
+    },
+    "tests": {
+      "tests/planted-defect-runtime.test.js": {
+        "sha256": "f838915e5596591db553512562cfaa153a683ea97b9dd9142f91834d36b8eed0",
+        "bytes": 4830
+      },
+      "tests/closed-world-trade-reroute.test.js": {
+        "sha256": "a548054fda731389a1354124f96a77af8fded04396b92c26613196a60fb57b25",
+        "bytes": 5200
+      },
+      "tests/closed-world-chain.test.js": {
+        "sha256": "f92a07f3e5837477239f9762e1bf597776d54f04e41087480f98cdb402bb117f",
+        "bytes": 3287
+      },
+      "tests/closed-world-all-systems.test.js": {
+        "sha256": "f443ec89664d97346fdd0dde536f41866cd341a5c0df4424731c5b5c612cf525",
+        "bytes": 11546
+      },
+      "tests/closed-world-simulation.test.js": {
+        "sha256": "6a13c4204507830c7d8ef017df9ec151d64925f9e33dfe33cea43aafd6a22f8d",
+        "bytes": 2883
+      },
+      "tests/runtime-trade-wiring.test.js": {
+        "sha256": "77e1c22611e6d1402cc06d56adae9de5e390536e71ccfb5d929267ba30bf9fee",
+        "bytes": 5384
+      },
+      "tests/scenario-differentiation-long-horizon.test.js": {
+        "sha256": "a2ede9127851c5d854282f56aa5d46b567ecd86960a012a2d593ccb2ba7b6999",
+        "bytes": 8191
+      }
+    }
+  },
+  "workspaceHash": "eaeeec7c297b8f28f78da7c679483ede6eb608f70bf5cdf5583a1b35ca7a4ed9",
+  "summary": {
+    "contracts": 3,
+    "protected": 2,
+    "evidence": 2,
+    "production": 7,
+    "tests": 7
+  }
+}

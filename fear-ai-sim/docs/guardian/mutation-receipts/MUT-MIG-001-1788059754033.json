@@ -1,0 +1,22 @@
+{
+  "mutationId": "MUT-MIG-001",
+  "contractId": "MIGRATION.DRIVEN_BY_RECENT_GRIEVANCE",
+  "description": "Make migration fire periodically independent of causal push pressure",
+  "targetFile": "closed-world.js",
+  "preHash": "6c2d7735d288c3669cdd7e776801884f02eee56c08c67b822467a14e82da02fd",
+  "postHash": "b2e383797c68fc760ff973b79b53eb71cf4ff70a25063dfbc4c3a6d3790a194c",
+  "patchHash": "b2e383797c68fc760ff973b79b53eb71cf4ff70a25063dfbc4c3a6d3790a194c",
+  "expectedFailingTest": "a town can only emit MIGRATION once per cooldown window",
+  "observedFailingTests": [
+    "FAIL tests/migration-cooldown.test.js",
+    "× a town can only emit MIGRATION once per cooldown window (16 ms)",
+    "× the MIGRATION event is suppressed for the cooldown window after a MIGRATION (6 ms)",
+    "FAIL tests/migration-cooldown.test.js"
+  ],
+  "exitCode": 1,
+  "result": "KILLED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-MIG-001-1788059687321",
+  "copyDurationMs": 5683,
+  "verdict": "MUTANT_KILLED",
+  "recordedAt": "2026-08-30T03:15:54.032Z"
+}

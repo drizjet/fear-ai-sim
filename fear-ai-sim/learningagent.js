@@ -594,7 +594,7 @@ export class LearningAgent {
             const tribalFear = tribalMind.getTribalFearAt(this.x, this.y);
             if (tribalFear > 0.5) {
                 // Shared caution: Increase fear awareness
-                this.brain.currentFear = Math.min(1.0, this.brain.currentFear + (tribalFear * 0.1));
+                this.brain.setFear(Math.min(1.0, this.brain.currentFear + (tribalFear * 0.1)), 'tribal-fear-injection');
             }
         }
         
@@ -627,7 +627,7 @@ export class LearningAgent {
             
             this.emotions.energy -= 0.01;
             const e = emotionMap.getEmotionAt(this.x, this.y);
-            this.brain.currentFear = e.fear;
+            this.brain.setFear(e.fear, 'emotion-map');
             
             const margin = 80;
             const repulsionStrength = 2.0;
@@ -683,7 +683,7 @@ export class LearningAgent {
         const tribeId = socialDynamics ? socialDynamics.tribeMap.get(this.id) : null;
         if (tribeId && globalMemory && globalMemory.getTribalFearAt) {
             const tribalFear = globalMemory.getTribalFearAt(this.x, this.y);
-            this.brain.currentFear = Math.max(this.brain.currentFear, tribalFear * 0.8);
+            this.brain.setFear(Math.max(this.brain.currentFear, tribalFear * 0.8), 'tribal-fear-floor');
             
             const strongestMemory = this.memory.getStrongestMemory();
             if (strongestMemory && strongestMemory.strength > 0.8) {
@@ -739,7 +739,7 @@ export class LearningAgent {
         }
         
         if (this.traumaLevel > 0.3 && !this.dead) {
-            this.brain.currentFear = Math.max(this.brain.currentFear, this.traumaLevel * 0.3);
+            this.brain.setFear(Math.max(this.brain.currentFear, this.traumaLevel * 0.3), 'trauma-floor');
         }
         
         // Track panic source

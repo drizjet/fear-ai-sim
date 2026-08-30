@@ -10,6 +10,10 @@ let isTraining = false;
 
 // Import TensorFlow.js dynamically
 self.importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+// Deterministic training metric. The module is a pure ES module that also
+// publishes itself on the global scope via `importScripts` so this classic
+// worker can use the same function that the test suite imports.
+self.importScripts('./masac_metrics.js');
 
 // Configure for CPU
 if (tf) {
@@ -139,13 +143,14 @@ function storeExperience(experience, agentType) {
 }
 
 async function trainStep(batch) {
-    // Simplified training - just return mock metrics for now
-    // Full training would happen here off-thread
-    return {
-        criticLoss: 0.5 + Math.random() * 0.5,
-        actorLoss: 0.3 + Math.random() * 0.3,
-        alpha: 0.2
-    };
+    // Delegate to the shared metric module so the worker's behavior and the
+    // test suite both exercise the same function. The metrics module is loaded
+    // via `importScripts` above and exposes itself on `self.MasacMetrics`.
+    const compute = self.MasacMetrics && self.MasacMetrics.computeTrainingMetric;
+    if (typeof compute !== 'function') {
+        throw new Error('MasacMetrics.computeTrainingMetric unavailable; metrics module not loaded');
+    }
+    return compute(batch, self.replayBuffers, self.config);
 }
 
 function getMetrics() {

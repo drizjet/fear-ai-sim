@@ -260,7 +260,7 @@ export function createWorldState(agent, visuals, safeHavens, inSafeHaven) {
         isSafe: inSafeHaven || threats.length === 0,
         knowsSafeHaven: (safeHavens && safeHavens.length > 0) || agent.brain.traits.skill > 0.8,
         nearFood: food.length > 0,
-        nearObstacle: visuals.neighbors.length > 0, // Simplified for now
+        nearObstacle: detectNearObstacle(agent, visuals),
         hasFamilyNearby: hasFamilyNearby,
         moral_duty: 'PENDING',
         
@@ -299,4 +299,56 @@ export function createGoal(agent, visuals) {
     
     // Default: Be safe
     return { isSafe: true };
+}
+
+/**
+ * Determine whether the agent is actually near an obstacle.
+ *
+ * The previous implementation aliased this to `visuals.neighbors.length > 0`,
+ * which is incorrect in any populated simulation and over-gates the `hide`
+ * GOAP action. The new contract is tiered:
+ *   1. `visuals.obstacles` is the authoritative list of obstacles in the
+ *      agent's perception radius. The agent is "near" if the closest obstacle
+ *      is within `OBSTACLE_NEAR_RADIUS` units.
+ *   2. `visuals.queryObstacleAt(x, y)` is an optional spatial query the caller
+ *      can provide for lazy obstacle lookups.
+ *   3. If neither is supplied, fall back to the legacy neighbor heuristic and
+ *      surface a one-time console warning so the gap is visible. Callers that
+ *      care about correctness must populate `visuals.obstacles`.
+ */
+const OBSTACLE_NEAR_RADIUS = 60;
+let nearObstacleWarned = false;
+
+export { OBSTACLE_NEAR_RADIUS };
+
+function detectNearObstacle(agent, visuals) {
+    const obstacles = visuals && visuals.obstacles;
+    if (Array.isArray(obstacles) && obstacles.length > 0 && agent) {
+        const ax = agent.x;
+        const ay = agent.y;
+        let nearest = Infinity;
+        for (let i = 0; i < obstacles.length; i++) {
+            const o = obstacles[i];
+            if (!o) continue;
+            const ox = Number.isFinite(o.x) ? o.x : (o.position && o.position.x);
+            const oy = Number.isFinite(o.y) ? o.y : (o.position && o.position.y);
+            if (!Number.isFinite(ox) || !Number.isFinite(oy)) continue;
+            const dx = ox - ax;
+            const dy = oy - ay;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < nearest) nearest = d2;
+        }
+        return nearest <= OBSTACLE_NEAR_RADIUS * OBSTACLE_NEAR_RADIUS;
+    }
+
+    if (visuals && typeof visuals.queryObstacleAt === 'function' && agent) {
+        const hit = visuals.queryObstacleAt(agent.x, agent.y, OBSTACLE_NEAR_RADIUS);
+        return Boolean(hit);
+    }
+
+    if (!nearObstacleWarned && typeof console !== 'undefined') {
+        nearObstacleWarned = true;
+        console.warn('[agentactions] createWorldState called without visuals.obstacles; falling back to neighbor heuristic. Populate visuals.obstacles to enable correct hide-gating.');
+    }
+    return !!(visuals && visuals.neighbors && visuals.neighbors.length > 0);
 }

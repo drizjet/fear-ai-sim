@@ -470,20 +470,24 @@ export class RealTimeDashboard {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
         ctx.fillRect(0, 0, width, height);
         
-        // This would draw stacked area chart of state distributions
-        // For now, just draw placeholder
+        const metrics = this.collectMetrics();
+        const total = Math.max(1, metrics.population);
+        const states = ['CALM', 'ALERT', 'ANXIOUS', 'PANIC', 'HIDE', 'RECOVER', 'FREEZE'];
+        this.chartData.stateHistory.push(states.map(state => metrics.stateDist[state] / total));
+        if (this.chartData.stateHistory.length > this.maxDataPoints) this.chartData.stateHistory.shift();
         ctx.strokeStyle = '#00ff88';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(0, height);
         
-        // Draw sample trend line
-        for (let i = 0; i < width; i += 5) {
-            const y = height - (Math.sin(i * 0.05) * 20 + 30);
-            ctx.lineTo(i, y);
+        const history = this.chartData.stateHistory;
+        for (let i = 0; i < history.length; i++) {
+            const x = history.length === 1 ? 0 : i * width / (history.length - 1);
+            const panic = history[i][3] || 0;
+            const y = height - panic * height;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-        
-        ctx.stroke();
+        if (history.length) ctx.stroke();
     }
 
     updateTrendChart() {
@@ -507,18 +511,26 @@ export class RealTimeDashboard {
             ctx.stroke();
         }
         
-        // Draw population trend (would use real data)
+        const metrics = this.collectMetrics();
+        this.chartData.populationHistory.push(metrics.population);
+        this.chartData.fearHistory.push(metrics.avgFear);
+        if (this.chartData.populationHistory.length > this.maxDataPoints) {
+            this.chartData.populationHistory.shift();
+            this.chartData.fearHistory.shift();
+        }
         ctx.strokeStyle = '#00ff88';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(0, height / 2);
         
-        for (let i = 0; i < width; i += 5) {
-            const y = height / 2 + Math.sin(i * 0.03) * 20;
-            ctx.lineTo(i, y);
+        const population = this.chartData.populationHistory;
+        const maxPopulation = Math.max(1, ...population);
+        for (let i = 0; i < population.length; i++) {
+            const x = population.length === 1 ? 0 : i * width / (population.length - 1);
+            const y = height - (population[i] / maxPopulation) * height;
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
-        
-        ctx.stroke();
+        if (population.length) ctx.stroke();
     }
 
     updatePerformance() {

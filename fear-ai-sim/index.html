@@ -96,6 +96,37 @@
               <p class="empty-state">
                 Select an agent on the canvas to inspect
               </p>
+              <div id="replay-timeline" class="replay-timeline" hidden>
+                <label for="replay-frame-slider">Replay frame <span id="replay-frame-label">0 / 0</span></label>
+                <div class="replay-controls">
+                  <button id="replay-prev" class="btn btn-secondary" type="button" title="Previous replay frame">◀</button>
+                  <button id="replay-play" class="btn btn-secondary" type="button" title="Play replay">▶</button>
+                  <button id="replay-next" class="btn btn-secondary" type="button" title="Next replay frame">▶|</button>
+                  <select id="replay-speed" class="replay-speed" aria-label="Replay speed" title="Replay speed">
+                    <option value="0.25">0.25×</option>
+                    <option value="0.5">0.5×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="2">2×</option>
+                    <option value="4">4×</option>
+                  </select>
+                </div>
+                <input id="replay-frame-slider" type="range" min="0" max="0" value="0" step="1" aria-label="Replay frame">
+                <div class="replay-shortcuts" aria-label="Replay keyboard shortcuts">
+                  Space play/pause · ←/→ frame · R reset · [/ ] event
+                </div>
+                <div class="replay-event-filters" role="group" aria-label="Replay event filters">
+                  <label><input type="checkbox" class="replay-event-filter" value="PANIC" checked> Panic <span data-event-count="PANIC">0</span></label>
+                  <label><input type="checkbox" class="replay-event-filter" value="DEATH" checked> Death <span data-event-count="DEATH">0</span></label>
+                  <label><input type="checkbox" class="replay-event-filter" value="STATE_TRANSITION" checked> State <span data-event-count="STATE_TRANSITION">0</span></label>
+                  <label><input type="checkbox" class="replay-event-filter" value="CUSTOM" checked> Custom <span data-event-count="CUSTOM">0</span></label>
+                </div>
+                <div class="replay-event-filter-actions">
+                  <button id="replay-select-all" type="button" class="btn btn-secondary">Select all</button>
+                  <button id="replay-clear-all" type="button" class="btn btn-secondary">Clear all</button>
+                </div>
+                <div id="replay-event-markers" class="replay-event-markers" aria-label="Replay event markers"></div>
+                <div id="replay-event-details" class="replay-event-details" hidden></div>
+              </div>
             </div>
           </div>
 

@@ -258,7 +258,7 @@ export class Agent {
             const tribalFear = tribalMind.getTribalFearAt(this.x, this.y);
             if (tribalFear > 0.5) {
                 // Shared caution: Slow down and increase fear awareness
-                this.brain.currentFear = Math.min(1.0, this.brain.currentFear + (tribalFear * 0.1));
+                this.brain.setFear(Math.min(1.0, this.brain.currentFear + (tribalFear * 0.1)), 'tribal-fear-injection');
             }
         }
         
@@ -311,7 +311,7 @@ export class Agent {
             // Minimal metabolic update
             this.emotions.energy -= 0.01;
             const e = emotionMap.getEmotionAt(this.x, this.y);
-            this.brain.currentFear = e.fear;
+            this.brain.setFear(e.fear, 'emotion-map');
             // Bounds check with Soft Repulsion (Prevent bunching)
             // Phase 15: Strengthened repulsion forces (T15.4)
             const margin = 80;
@@ -365,7 +365,7 @@ export class Agent {
         const tribeId = socialDynamics ? socialDynamics.tribeMap.get(this.id) : null;
         if (tribeId && globalMemory && globalMemory.getTribalFearAt) {
             const tribalFear = globalMemory.getTribalFearAt(this.x, this.y);
-            this.brain.currentFear = Math.max(this.brain.currentFear, tribalFear * 0.8);
+            this.brain.setFear(Math.max(this.brain.currentFear, tribalFear * 0.8), 'tribal-fear-floor');
             
             // Consolidate current individual memory into the tribe
             const strongestMemory = this.memory.getStrongestMemory();
@@ -428,7 +428,7 @@ export class Agent {
         
         // Trauma affects baseline fear - traumatized agents startle more easily
         if (this.traumaLevel > 0.3 && !this.dead) {
-            this.brain.currentFear = Math.max(this.brain.currentFear, this.traumaLevel * 0.3);
+            this.brain.setFear(Math.max(this.brain.currentFear, this.traumaLevel * 0.3), 'trauma-floor');
         }
     }
 

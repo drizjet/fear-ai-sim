@@ -1,0 +1,17 @@
+{
+  "mutationId": "MUT-OBS-001",
+  "contractId": "TRADE.CATMOUSE.LEGAL_OBSERVATION_ONLY",
+  "description": "Merchant route selection reads authoritative bandit location directly",
+  "targetFile": "canonical-trade-system.js",
+  "preHash": "fa3c8e11732782dbf5df4dfd7ad8c884c297974fb431b89bcc5a63c3b27f13a4",
+  "postHash": "623c458b4a6b0be9f62007f994d9389d649bc519c0a466dc61a68e6941955dd9",
+  "patchHash": "623c458b4a6b0be9f62007f994d9389d649bc519c0a466dc61a68e6941955dd9",
+  "expectedFailingTest": "merchant avoids the road the bandit is on",
+  "observedFailingTests": [],
+  "exitCode": 0,
+  "result": "SURVIVED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-OBS-001-1788104986126",
+  "copyDurationMs": 4874,
+  "verdict": "VERIFIER_WEAKNESS_P0",
+  "recordedAt": "2026-08-30T15:50:40.521Z"
+}

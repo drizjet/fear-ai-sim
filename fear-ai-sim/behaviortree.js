@@ -73,48 +73,66 @@ export class ExecutePlanNode extends BTNode {
         }
 
         const currentAction = brain.currentPlan[brain.planStep];
-        
-        // Check if action preconditions are still met (dynamic world)
-        // For simplicity, we just execute. If it fails, we fail the node.
-        const success = this.executeAction(currentAction, agent, visuals);
+        const success = this.executeAction(currentAction, agent, visuals, safeHavens);
 
         if (success) {
-            // Action finished successfully
+            brain.recordActionSuccess?.(currentAction.name, true);
             brain.planStep++;
             if (brain.planStep >= brain.currentPlan.length) {
                 return BT_STATE.SUCCESS;
             }
-            return BT_STATE.RUNNING; // Still executing plan
-        } else {
-            // Action failed (e.g. target moved away)
-            brain.currentPlan = null;
-            brain.planStep = 0;
-            return BT_STATE.FAILURE;
+            return BT_STATE.RUNNING;
         }
+
+        brain.recordActionSuccess?.(currentAction.name, false);
+        brain.currentPlan = null;
+        brain.planStep = 0;
+        return BT_STATE.FAILURE;
     }
 
-    executeAction(action, agent, visuals) {
-        // Simulated execution (in a real game, this would interface with animation/physics)
-        // For our simulation, movement is handled by the state machine (decide method).
-        // The BT here serves as a high-level intent driver.
-        if (action.name === 'move_to_safe_haven') {
-             agent.brain.state = 'RECOVER';
-             return true; // Assume success for this tick
-        } else if (action.name === 'hide') {
-             agent.brain.state = 'HIDE';
-             return true;
-        } else if (action.name === 'flee') {
-             agent.brain.state = 'PANIC';
-             return true;
-        } else if (action.name === 'attack') {
-             agent.brain.state = 'AGGRESSIVE';
-             return true;
-        } else if (action.name === 'eat_food') {
-             agent.brain.state = 'ALERT';
-             return true; // We're trying to eat
-        }
-        
-        return true; 
+    executeAction(action, agent, visuals, safeHavens = []) {
+        if (!action || typeof action.name !== 'string') return false;
+
+        // Revalidate the action against the current world before execution. Planning
+        // happens on an earlier snapshot, so stale plans must not mutate behavior.
+        const state = this.createExecutionState(agent, visuals, safeHavens);
+        if (!action.checkPreconditions(state)) return false;
+
+        // Execution here selects an authoritative Brain mode; movement and resource
+        // mutation remain owned by Agent/Simulation.
+        const states = {
+            move_to_safe_haven: 'RECOVER',
+            hide: 'HIDE',
+            flee: 'PANIC',
+            attack: 'AGGRESSIVE',
+            eat_food: 'ALERT',
+            distract: 'PANIC'
+        };
+        if (states[action.name]) agent.brain.state = states[action.name];
+        return true;
+    }
+
+    createExecutionState(agent, visuals, safeHavens) {
+        const threats = visuals?.threats || [];
+        const food = visuals?.food || [];
+        const neighbors = visuals?.neighbors || [];
+        const inSafeHaven = safeHavens.some(sh =>
+            agent.x > sh.x && agent.x < sh.x + sh.w &&
+            agent.y > sh.y && agent.y < sh.y + sh.h
+        );
+        return {
+            threat: threats.length === 0 ? 'NONE' : threats[0].dist < 100 ? 'IMMEDIATE' : threats[0].dist < 300 ? 'NEARBY' : 'DISTANT',
+            isSafe: inSafeHaven || threats.length === 0,
+            knowsSafeHaven: safeHavens.length > 0,
+            nearFood: food.length > 0,
+            nearObstacle: neighbors.length > 0,
+            hasFamilyNearby: neighbors.some(n => n.familyName === agent.familyName),
+            health: agent.energy > 80 ? 'OPTIMAL' : agent.energy > 40 ? 'STABLE' : agent.energy > 15 ? 'LOW' : 'CRITICAL',
+            social: neighbors.length > 10 ? 'CROWDED' : neighbors.length > 4 ? 'GROUPED' : neighbors.length > 0 ? 'ACCOMPANIED' : 'ISOLATED',
+            skill: agent.brain.traits.skill > 0.6 ? 'high' : 'low',
+            curiosity: agent.brain.traits.curiosity > 0.7 ? 'high' : 'low',
+            moral_duty: 'PENDING'
+        };
     }
 }
 

@@ -8,10 +8,24 @@
  */
 
 export class HysteresisController {
-    constructor() {
+    constructor({ rng = Math.random } = {}) {
         this.currentState = 'CALM';
         this.stateTimer = 0;
         this.minStateDuration = 10; // Minimum frames before state change allowed
+        // Determinism contract: the controller accepts a seeded
+        // `rng` (function returning a float in [0, 1)) instead of
+        // calling `Math.random()` directly. The default is
+        // `Math.random` for backward compatibility, but tests and
+        // production paths that need reproducibility should pass a
+        // seeded RNG. The previous implementation called
+        // `Math.random()` at lines 109 and 138 (the FREEZE check
+        // and the FREEZE-exit check), which made the controller
+        // non-deterministic and surfaced as silent test
+        // flakiness when those code paths were exercised. The
+        // decision-engine code path (the one the rest of the file
+        // implements) was always deterministic, but the FREEZE
+        // roll made the *whole controller* non-deterministic.
+        this.rng = rng;
         
         // Hysteresis thresholds - different for entering vs exiting
         // Format: { enter: threshold_to_enter, exit: threshold_to_exit }
@@ -106,7 +120,7 @@ export class HysteresisController {
                 
             case 'PANIC':
                 // Check for freeze (rare, low morale)
-                if (morale < 0.4 && fearLevel > 0.8 && Math.random() < 0.05) {
+                if (morale < 0.4 && fearLevel > 0.8 && this.rng() < 0.05) {
                     newState = 'FREEZE';
                 } else if (fearLevel > currentThresholds.exitUp && skill > 0.6) {
                     // High skill agents may hide instead of panic
@@ -135,7 +149,7 @@ export class HysteresisController {
                 break;
                 
             case 'FREEZE':
-                if (fearLevel < currentThresholds.exitDown || Math.random() < 0.02) {
+                if (fearLevel < currentThresholds.exitDown || this.rng() < 0.02) {
                     newState = 'RECOVER';
                 }
                 break;

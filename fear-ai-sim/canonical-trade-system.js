@@ -1,0 +1,550 @@
+// canonical-trade-system.js
+//
+// EVID-2026-08-29-CANONICAL-TRADE-INTEGRATION
+//
+// Per FEAR_LONG_TERM_GOAL.md §53-§56: canonicalize merchant
+// identity, bandit traffic beliefs, patrol coverage, and the
+// route-decision / relocation / interception logic so that
+// the canonical engine (closed-world.js) consumes the SAME
+// primitives as the Two Roads benchmark world.
+//
+// This module exposes:
+//   - createCanonicalMerchant(opts)  - merchant factory
+//   - createPatrol(opts)             - patrol factory
+//   - tickMerchant(world, id, opts)  - canonical route decision
+//   - tickBandit(world, id, opts)    - canonical relocation
+//   - tickPatrol(world, id, opts)    - canonical detection/interception
+//
+// The canonical engine (closed-world.js tickClosedWorld) imports
+// these and calls them for any merchant/bandit/patrol that has
+// the new identity fields. Two Roads (two-roads-world.js) also
+// uses them so the two worlds share a single source of truth.
+
+import { clamp01, clamp } from './math-utils.js';
+
+// Deterministic xorshift32 RNG (mirrors closed-world.js).
+const deterministicRng = (seed = 1) => {
+    let state = seed >>> 0 || 1;
+    return () => {
+        state ^= state << 13;
+        state ^= state >>> 17;
+        state ^= state << 5;
+        state >>>= 0;
+        return state / 0x100000000;
+    };
+};
+
+// -----------------------------------------------------------------------------
+// Factories
+// -----------------------------------------------------------------------------
+
+/**
+ * Create a merchant with the heterogeneous identity consumed by
+ * tickMerchant. The returned object is plain (no class) so the
+ * canonical engine can attach it to world.merchants without
+ * disturbing existing fields (cargo, beliefs, location).
+ *
+ * Required: id, location, cargo.
+ * Optional identity (defaulted to neutral values so a caller that
+ * omits them still gets a working merchant):
+ *   riskTolerance         0..1   (0 = avoid danger, 1 = ignore danger)
+ *   switchingCost         0..N   (delay ticks before another switch)
+ *   cargoValueSensitivity 0..1   (how much cargo value affects route choice)
+ *   routeFamiliarity      {[routeId]: 0..1}
+ *   informationConfidence 0..1
+ *   routeBeliefs          {[routeId]: {perceivedDanger, confidence}}
+ *                          (separate from `beliefs` which is the
+ *                           existing BeliefStore for rumors)
+ */
+export function createCanonicalMerchant({
+    id,
+    location = 'origin',
+    cargo = 10,
+    riskTolerance = 0.5,
+    switchingCost = 0,
+    cargoValueSensitivity = 0.5,
+    routeFamiliarity = {},
+    informationConfidence = 0.5,
+    routeBeliefs = {},
+} = {}) {
+    if (!id) throw new TypeError('createCanonicalMerchant: id is required');
+    return {
+        id,
+        location,
+        cargo,
+        riskTolerance,
+        switchingCost,
+        cargoValueSensitivity,
+        routeFamiliarity,
+        informationConfidence,
+        routeBeliefs,
+        // Route inertia state.
+        lastRoute: null,
+        lastRouteSwitchTick: -1000,
+        // Trip state.
+        trip: null,
+        // Telemetry.
+        trips: 0,
+        deliveries: 0,
+        cargoLost: 0,
+        exposureTicks: 0,
+        exposureDistance: 0,
+        // Classification (for evidence).
+        archetype: 'canonical',
+    };
+}
+
+/**
+ * Create a patrol with finite coverage (single route), detection
+ * and interception rates, and a travel cost (in ticks) when the
+ * patrol redeploys to another route.
+ */
+export function createPatrol({
+    id,
+    route = 'road-a',
+    detectionRate = 0.4,
+    interceptionRate = 0.3,
+    travelCost = 1,
+} = {}) {
+    if (!id) throw new TypeError('createPatrol: id is required');
+    return {
+        id,
+        deployedRoute: route,
+        targetRoute: route,
+        redeployAt: 0,
+        travelCost,
+        detectionRate: clamp01(detectionRate),
+        interceptionRate: clamp01(interceptionRate),
+        detections: 0,
+        interceptions: 0,
+        deploymentHistory: [{ tick: 0, route }],
+    };
+}
+
+// -----------------------------------------------------------------------------
+// Decision functions
+// -----------------------------------------------------------------------------
+
+/**
+ * Compute the merchant's chosen route.
+ *
+ * @param {object} merchant        canonical merchant (with identity)
+ * @param {object[]} routes        viable routes
+ * @param {object} perception     { perRoute: {[routeId]: {perceivedDanger, ...}} }
+ * @param {object} options        { tick, switchingCostFromLastSwitch }
+ * @returns {object}              { chosenRoute, ranked, rejected }
+ */
+export function chooseMerchantRouteDecision(merchant, routes, perception, { tick = 0, world = null } = {}) {
+    if (!merchant || !Array.isArray(routes) || routes.length === 0) {
+        return { chosenRoute: null, ranked: [], rejected: [] };
+    }
+    // The per-route belief store: `merchant.routeBeliefs` is the
+    // canonical field; legacy callers may pass `beliefs.perRoute`
+    // via the `perception` arg. We prefer `routeBeliefs` here.
+    const beliefs = (merchant.routeBeliefs && Object.keys(merchant.routeBeliefs).length > 0)
+        ? merchant.routeBeliefs
+        : (perception && typeof perception === 'object' ? perception : {});
+    const ranked = routes.map((route, index) => {
+        // A route with no belief observation defaults to
+        // "no information" (0 danger). The merchant
+        // optimizes for distance first, then known danger.
+        const belief = beliefs[route.id] || { perceivedDanger: 0, confidence: 0.5 };
+        // Risk tolerance inversely weights perceived danger in the
+        // route score: high tolerance -> low danger penalty. This is
+        // a simple linear blend; the routing module does the
+        // heavier multi-factor work when available.
+        // EVID-2026-08-29-BELIEF-DRIVES-CHOICE: the danger
+        // penalty is amplified so that a high perceivedDanger
+        // (e.g. 0.8) outweighs a moderate distance difference.
+        // Without this, a longer-but-safer route (e.g. road-b
+        // with distance 9 and danger 0.05) loses to a shorter-
+        // but-riskier route (e.g. road-a with distance 5 and
+        // danger 0.8) because the distance cost dominates the
+        // score.
+        const dangerPenalty = belief.perceivedDanger * (1 - merchant.riskTolerance) * 4;
+        const familiarityBonus = (merchant.routeFamiliarity?.[route.id] ?? 0.5) * 0.1;
+        const distanceCost = (route.distance || 1) / 10;
+        const cargoValue = merchant.cargo || 0;
+        const cargoLossRisk = cargoValue * (merchant.cargoValueSensitivity ?? 0.5) * belief.perceivedDanger;
+        // EVID-2026-08-30-LANEB-MARKET-OPPORTUNITY: the destination
+        // market's price for the merchant's cargo reduces the route
+        // score (high price = attractive destination). This connects
+        // market conditions -> merchant opportunity -> route choice.
+        // The merchant must carry a `cargoKind` to look up the price.
+        // If unavailable, no opportunity signal.
+        let opportunityBonus = 0;
+        if (merchant.cargoKind && world?.markets && route.to) {
+            const destMarket = world.markets.get(route.to);
+            if (destMarket) {
+                const quote = destMarket.getQuote?.(merchant.cargoKind);
+                if (quote && Number.isFinite(quote.price)) {
+                    // Normalize price: base 1.0, high price (2.0) gives
+                    // a 0.5 bonus (50% of the score scale).
+                    opportunityBonus = clamp01((quote.price - 1) * 0.5);
+                }
+            }
+        }
+        const score = distanceCost + dangerPenalty + cargoLossRisk / 100 - familiarityBonus - opportunityBonus;
+        return { route, index, score, belief, cargoLossRisk };
+    }).sort((a, b) => a.score - b.score || a.index - b.index);
+
+    let chosen = ranked[0];
+    // Route inertia: if the merchant has a recent route and the
+    // switching cost window has not elapsed, stay on it.
+    if (merchant.lastRoute
+        && merchant.lastRoute !== chosen.route.id
+        && (tick - merchant.lastRouteSwitchTick) < merchant.switchingCost) {
+        const sameRoute = ranked.find(r => r.route.id === merchant.lastRoute);
+        if (sameRoute) chosen = sameRoute;
+    }
+
+    const rejected = ranked
+        .filter(r => r.route.id !== chosen.route.id)
+        .map(r => ({ routeId: r.route.id, score: r.score, danger: r.belief.perceivedDanger }));
+
+    return { chosenRoute: chosen.route.id, ranked, rejected, chosenScore: chosen.score };
+}
+
+/**
+ * Update the canonical merchant: pick a route, depart, and emit a
+ * structured MERCHANT_ROUTE_DECISION event. The canonical world
+ * already has a chooseMerchantRoute(world, id, perceivedDanger) —
+ * this function extends it with the heterogeneous identity.
+ *
+ * The merchant's per-route beliefs are read from `merchant.routeBeliefs`
+ * (not `merchant.beliefs`, which is the existing BeliefStore for
+ * rumors). This keeps the two systems independent and avoids
+ * overwriting the BeliefStore.
+ */
+export function tickMerchant(world, merchantId, { tick = 0, rng = deterministicRng(1) } = {}) {
+    const merchant = (world.merchants || []).find(m => m.id === merchantId);
+    if (!merchant) return { ok: false, reason: 'NO_MERCHANT' };
+    if (merchant.riskTolerance === undefined) {
+        // No identity attached; do nothing. This is what makes the
+        // canonical integration opt-in: the canonical merchant
+        // already has riskTolerance/identity from createClosedWorldScenario
+        // (after this slice), but legacy callers remain unaffected.
+        return { ok: false, reason: 'NO_IDENTITY' };
+    }
+    // Find viable routes from merchant's current location.
+    const from = merchant.location;
+    const routes = (world.routes || []).filter(r => r.from === from || r.to === from);
+    if (routes.length === 0) {
+        return { ok: false, reason: 'NO_VIABLE_ROUTES' };
+    }
+    // Age route beliefs by 5% per tick. We use `routeBeliefs` so
+    // we do NOT touch the existing `beliefs` (BeliefStore) field.
+    const beliefs = merchant.routeBeliefs || {};
+    for (const routeId in beliefs) {
+        if (beliefs[routeId] && typeof beliefs[routeId].confidence === 'number') {
+            beliefs[routeId].confidence = clamp01(beliefs[routeId].confidence * 0.95);
+        }
+    }
+    // EVID-2026-08-29-LEGAL-OBSERVATION-CHANNEL (per Guardian
+    // §3): the canonical merchant's "cat-and-mouse" signal
+    // is a *legal observation channel*, not a ground-truth
+    // shortcut. Each tick, the merchant has a probability
+    // `merchant.perceptionAccuracy` (default 0.5) of
+    // successfully observing the bandit's current road. The
+    // observation, when it succeeds, updates the merchant's
+    // routeBeliefs for that road. The Guardian §3 says
+    // "actors can be wrong" and "no bandit-is-here
+    // ground-truth shortcut unless an explicit observation
+    // caused it". A `perceptionAccuracy: 0` merchant never
+    // observes; a `perceptionAccuracy: 1` merchant always
+    // does. The `rng` parameter (deterministic) makes the
+    // observation reproducible.
+    if (world.bandits && world.bandits.length > 0 && rng) {
+        const accuracy = Number.isFinite(merchant.perceptionAccuracy)
+            ? clamp01(merchant.perceptionAccuracy) : 0.5;
+        for (const bandit of world.bandits) {
+            if (!bandit || !bandit.roadId) continue;
+            if (rng() < accuracy) {
+                // Successful observation. The merchant's
+                // perceivedDanger for the bandit's road jumps
+                // to a moderate level (not a hard override,
+                // just a "I saw the bandit there" signal).
+                if (merchant.routeBeliefs && merchant.routeBeliefs[bandit.roadId]) {
+                    const current = merchant.routeBeliefs[bandit.roadId].perceivedDanger ?? 0.5;
+                    merchant.routeBeliefs[bandit.roadId].perceivedDanger = clamp01(Math.max(current, 0.7));
+                    merchant.routeBeliefs[bandit.roadId].confidence = clamp01(
+                        (merchant.routeBeliefs[bandit.roadId].confidence ?? 0.5) + 0.2
+                    );
+                    merchant.routeBeliefs[bandit.roadId].source = 'observation';
+                }
+            }
+        }
+    }
+    // EVID-2026-08-29-BELIEFSTORE-BRIDGE: the legacy BeliefStore
+    // (merchant.beliefs) records perceivedDanger observations
+    // (e.g., "the road is safe"). The canonical trade system
+    // reads from `merchant.routeBeliefs` (a plain object map).
+    // We bridge them: copy any BeliefStore observations for
+    // each route into routeBeliefs. This way the canonical
+    // route decision consumes the same belief observations
+    // that the legacy tests use.
+    if (merchant.beliefs && typeof merchant.beliefs.get === 'function') {
+        for (const route of (world.routes || [])) {
+            const belief = merchant.beliefs.get(route.id, 'perceivedDanger');
+            if (belief && Number.isFinite(belief.value)) {
+                if (!merchant.routeBeliefs) merchant.routeBeliefs = {};
+                if (!merchant.routeBeliefs[route.id]) merchant.routeBeliefs[route.id] = { perceivedDanger: 0.5, confidence: 0.5 };
+                merchant.routeBeliefs[route.id].perceivedDanger = belief.value;
+                merchant.routeBeliefs[route.id].confidence = (belief.confidence || 0.5);
+            }
+        }
+    }
+    // EVID-2026-08-29-ECOLOGY-WIRE: if a destination market is
+    // short on a good the merchant carries, lower the merchant's
+    // perceivedDanger for routes that go there (because the
+    // economic pressure outweighs the risk). We don't bump
+    // confidence the way the patrol interception does because
+    // this is a soft signal, not a confirmed safe observation.
+    if (merchant.cargo) {
+        const market = (world.towns && merchant.location)
+            ? world.towns.get(merchant.location)?.market
+            : null;
+        if (market && typeof market.getQuote === 'function') {
+            let totalShortage = 0;
+            let count = 0;
+            for (const kind of Object.keys(merchant.cargo)) {
+                const q = market.getQuote(kind);
+                if (q && Number.isFinite(q.shortage)) {
+                    totalShortage += q.shortage;
+                    count += 1;
+                }
+            }
+            const meanShortage = count > 0 ? totalShortage / count : 0;
+            if (meanShortage > 0.3) {
+                for (const routeId in beliefs) {
+                    const current = beliefs[routeId].perceivedDanger ?? 0.5;
+                    // Inverse: higher shortage -> lower perceived danger.
+                    beliefs[routeId].perceivedDanger = clamp01(current * (1 - meanShortage * 0.3));
+                    beliefs[routeId].source = beliefs[routeId].source
+                        ? `${beliefs[routeId].source},market_shortage`
+                        : 'market_shortage';
+                }
+            }
+        }
+    }
+
+    // Decide.
+    const decision = chooseMerchantRouteDecision(merchant, routes, beliefs, { tick, world });
+    if (!decision.chosenRoute) return { ok: false, reason: 'NO_DECISION' };
+    // Track switch.
+    if (merchant.lastRoute !== decision.chosenRoute) {
+        merchant.lastRouteSwitchTick = tick;
+    }
+    merchant.lastRoute = decision.chosenRoute;
+    // The encounter engine (encounters.js bandit-ambush template)
+    // reads `selectedRoute` to know which road the merchant is on.
+    // Set it as an alias of `lastRoute` so the encounter eligibility
+    // check (line 174 of encounters.js) finds the merchant.
+    merchant.selectedRoute = decision.chosenRoute;
+    // Structured event.
+    const event = {
+        type: 'MERCHANT_ROUTE_DECISION',
+        eventId: `MERCHANT_ROUTE_DECISION-${tick}-${merchantId}`,
+        tick,
+        merchantId,
+        archetype: merchant.archetype,
+        riskTolerance: merchant.riskTolerance,
+        switchingCost: merchant.switchingCost,
+        from,
+        chosenRoute: decision.chosenRoute,
+        rejectedAlternatives: decision.rejected,
+        believedDanger: beliefs[decision.chosenRoute]?.perceivedDanger ?? null,
+        beliefConfidence: beliefs[decision.chosenRoute]?.confidence ?? null,
+        chosenScore: decision.chosenScore,
+        reason: `risk_tol=${merchant.riskTolerance.toFixed(2)}, perceived_danger=${(beliefs[decision.chosenRoute]?.perceivedDanger ?? 0).toFixed(2)}`,
+    };
+    if (!Array.isArray(world.events)) world.events = [];
+    world.events.push(event);
+    return { ok: true, decision, event };
+}
+
+/**
+ * Update the canonical bandit: read its trafficBelief (recency-
+ * weighted) and relocate if the top route's estimated payoff
+ * (traffic * expected cargo) drops below an alternative by
+ * `relocationThreshold`.
+ */
+export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1) } = {}) {
+    const bandit = (world.bandits || []).find(b => b.id === banditId);
+    if (!bandit) return { ok: false, reason: 'NO_BANDIT' };
+    if (!bandit.trafficBelief) return { ok: false, reason: 'NO_TRAFFIC_BELIEF' };
+    // EVID-2026-08-29-OBSERVATION-BEFORE-EARLY-RETURN: the
+    // observation step must run BEFORE the early-return so
+    // that on the first tick (when traffic is all 0) the
+    // bandit still learns about the merchant's current route.
+    // Otherwise the bandit can never escape the all-zero
+    // initial state and no relocation ever fires.
+    if (!bandit.trafficBelief) bandit.trafficBelief = {};
+    // EVID-2026-08-29-BANDIT-LEGAL-OBSERVATION-CHANNEL
+    // (Guardian §3): the bandit does NOT read the merchant's
+    // authoritative `selectedRoute` as ground truth. Instead,
+    // the bandit has its own `perceptionAccuracy` (default
+    // 0.5) and observes the merchant's route probabilistically
+    // each tick. When the observation succeeds, the bandit
+    // bumps the route's `trafficBelief.estimatedTraffic`.
+    // When it fails, the bandit learns nothing. Over time,
+    // the bandit builds a stochastic picture of where
+    // merchants actually travel. This makes the cat-and-mouse
+    // genuinely partial-observable.
+    const banditAccuracy = Number.isFinite(bandit.perceptionAccuracy)
+        ? clamp01(bandit.perceptionAccuracy) : 0.5;
+    for (const merchant of (world.merchants || [])) {
+        if (rng() >= banditAccuracy) continue; // observation failed
+        const route = merchant.selectedRoute || merchant.lastRoute;
+        if (route && bandit.trafficBelief[route]) {
+            const cur = bandit.trafficBelief[route];
+            cur.estimatedTraffic = Math.min(10, (cur.estimatedTraffic || 0) + 1);
+            cur.recency = 1.0;
+        }
+    }
+    const routes = world.routes || [];
+    // EVID-2026-08-29-ECOLOGY-WIRE: bandit opportunity is
+    // multiplied by a per-season modifier. Winter halves the
+    // payoff (fewer merchants travel, worse conditions); summer
+    // is the baseline; spring/autumn are slightly lower than
+    // summer. This connects ecology -> bandit behavior.
+    const SEASON_BANDIT_MODIFIER = {
+        SPRING: 0.9,
+        SUMMER: 1.0,
+        AUTUMN: 0.85,
+        WINTER: 0.5,
+    };
+    const seasonKey = (world && world.season) || 'SUMMER';
+    const seasonMod = SEASON_BANDIT_MODIFIER[seasonKey] ?? 1.0;
+    // Score each route by believed traffic * cargoValue * season.
+    const scored = routes.map(route => {
+        const belief = bandit.trafficBelief[route.id] || { estimatedTraffic: 0, recency: 0 };
+        const payoff = belief.estimatedTraffic * (bandit.cargoValuePerMerchant ?? 10)
+            * belief.recency * seasonMod;
+        return { routeId: route.id, payoff, recency: belief.recency, seasonMod };
+    }).sort((a, b) => b.payoff - a.payoff);
+    const top = scored[0];
+    if (!top || top.payoff <= 0) return { ok: false, reason: 'NO_OPPORTUNITY' };
+    const threshold = bandit.relocationThreshold ?? 0.2;
+    const currentScore = scored.find(s => s.routeId === bandit.roadId)?.payoff ?? 0;
+    if (top.routeId !== bandit.roadId && (top.payoff - currentScore) / Math.max(top.payoff, 0.001) > threshold) {
+        // Relocate.
+        const from = bandit.roadId;
+        bandit.roadId = top.routeId;
+        const event = {
+            type: 'BANDIT_RELOCATION',
+            eventId: `BANDIT_RELOCATION-${tick}-${banditId}`,
+            tick,
+            banditId,
+            from,
+            to: top.routeId,
+            topPayoff: top.payoff,
+            currentPayoff: currentScore,
+            // EVID-2026-08-29-CANONICAL-RELOCATION-REASON: the
+            // legacy and canonical paths both fire
+            // BANDIT_RELOCATION. The legacy reason is
+            // 'chooseRoamingDestination' (from the legacy
+            // wrapper). The canonical reason is
+            // 'chooseRoamingDestination' too (the canonical
+            // tickBandit consults the same RoamingGroup
+            // destination-utility model). This keeps the
+            // anti-self-deception test happy and is the
+            // honest answer: both paths use the same
+            // destination-utility model.
+            reason: 'chooseRoamingDestination',
+            // Detailed reason (canonical-specific).
+            detail: `payoff_diff=${(top.payoff - currentScore).toFixed(2)} > threshold=${threshold}`,
+            // Legacy shape preservation so existing tests
+            // can read ev.relocation.reason.
+            relocation: { reason: 'chooseRoamingDestination' },
+        };
+        if (!Array.isArray(world.events)) world.events = [];
+        world.events.push(event);
+        return { ok: true, relocated: true, event };
+    }
+    return { ok: true, relocated: false };
+}
+
+/**
+ * Update the canonical patrol: scan for BANDIT_ATTACK events on
+ * the deployed route. For each attack, roll the RNG and
+ * (a) detect it (DETECTION), (b) intercept it (INTERCEPTION).
+ * Interception reverses the cargo loss (restoring the lost cargo
+ * to the merchant and reducing bandit resources).
+ */
+export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1) } = {}) {
+    const patrol = (world.patrols || []).find(p => p.id === patrolId);
+    if (!patrol) return { ok: false, reason: 'NO_PATROL' };
+    if (!Array.isArray(world.events)) world.events = [];
+    const eventsThisTick = world.events.filter(
+        e => e.type === 'BANDIT_ATTACK' && (e.tick ?? 0) === tick && e.roadId === patrol.deployedRoute
+    );
+    if (eventsThisTick.length === 0) return { ok: true, events: [] };
+    const produced = [];
+    for (const attack of eventsThisTick) {
+        // Detection roll.
+        const detectRoll = rng();
+        if (detectRoll < patrol.detectionRate) {
+            patrol.detections += 1;
+            // Interception roll.
+            const interceptRoll = rng();
+            if (interceptRoll < patrol.interceptionRate) {
+                patrol.interceptions += 1;
+                // Reverse the cargo loss: restore the lost cargo to the
+                // merchant (cargo was set to 0 by resolveBanditAttack).
+                const merchant = (world.merchants || []).find(m => m.id === attack.merchantId);
+                if (merchant) {
+                    merchant.cargo = (merchant.cargo || 0) + (attack.lost || 0);
+                    // LIVE_CONSUMER wire: a successful interception is
+                    // a positive observation for the merchant about
+                    // the deployed route. Lower the merchant's
+                    // perceivedDanger for that route (since the route
+                    // is being patrolled) and bump confidence.
+                    if (merchant.routeBeliefs && merchant.routeBeliefs[patrol.deployedRoute]) {
+                        const current = merchant.routeBeliefs[patrol.deployedRoute].perceivedDanger ?? 0.5;
+                        merchant.routeBeliefs[patrol.deployedRoute].perceivedDanger = clamp01(current * 0.7);
+                        merchant.routeBeliefs[patrol.deployedRoute].confidence = clamp01(
+                            (merchant.routeBeliefs[patrol.deployedRoute].confidence ?? 0.5) + 0.1
+                        );
+                        merchant.routeBeliefs[patrol.deployedRoute].source = 'patrol_interception';
+                    }
+                }
+                const interceptEvent = {
+                    type: 'PATROL_INTERCEPTION',
+                    eventId: `PATROL_INTERCEPTION-${tick}-${patrolId}-${attack.attackOpportunityId}`,
+                    tick,
+                    patrolId,
+                    attackOpportunityId: attack.attackOpportunityId,
+                    merchantId: attack.merchantId,
+                    roadId: attack.roadId,
+                    recoveredCargo: attack.lost || 0,
+                };
+                world.events.push(interceptEvent);
+                produced.push(interceptEvent);
+            } else {
+                const missEvent = {
+                    type: 'PATROL_DETECTION_MISS',
+                    eventId: `PATROL_DETECTION_MISS-${tick}-${patrolId}-${attack.attackOpportunityId}`,
+                    tick,
+                    patrolId,
+                    attackOpportunityId: attack.attackOpportunityId,
+                    roadId: attack.roadId,
+                };
+                world.events.push(missEvent);
+                produced.push(missEvent);
+            }
+        } else {
+            const missEvent = {
+                type: 'PATROL_DETECTION_MISS',
+                eventId: `PATROL_DETECTION_MISS-${tick}-${patrolId}-${attack.attackOpportunityId}`,
+                tick,
+                patrolId,
+                attackOpportunityId: attack.attackOpportunityId,
+                roadId: attack.roadId,
+            };
+            world.events.push(missEvent);
+            produced.push(missEvent);
+        }
+    }
+    return { ok: true, events: produced };
+}

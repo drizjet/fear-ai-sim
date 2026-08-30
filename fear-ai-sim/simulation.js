@@ -6,6 +6,7 @@ import { Agent } from './agent.js';
 import { LearningAgent, AgentLearning } from './learningagent.js';
 import { QuadTree, Boundary, Point } from './quadtree.js';
 import { SpatialHash } from './spatialhash.js';
+import { OBSTACLE_NEAR_RADIUS } from './agentactions.js';
 import { ObjectPool } from './objectpool.js';
 import { LODSystem } from './lodsystem.js';
 import { BrainWorkerManager } from './brainworker-manager.js';
@@ -41,6 +42,20 @@ import { FogOfWar } from './fogofwar.js';
 import { MASACIntegration } from './masac_integration_v3.js';
 import { profiler } from './profiler.js';
 import { getTauriExporter } from './tauri-bridge.js';
+import { BeliefStore, Evidence } from './beliefs.js';
+import { Town, Merchant, runTradeTrip, runTradeGraphTick } from './trade.js';
+import {
+    createClosedWorldScenario,
+    resolveBanditAttack,
+    applySurvivorEvidence,
+    chooseMerchantRoute,
+    reassessFaction,
+    formClosedWorldConvoy,
+    tickClosedWorld
+} from './closed-world.js';
+import { planRetaliation } from './escalation.js';
+import { InteractionEngine } from './interactions.js';
+import { JusticeSystem } from './justice.js';
 
 export class Simulation {
     constructor(canvas, config) {
@@ -123,6 +138,15 @@ export class Simulation {
         
         // Phase 6-9: Deep Intelligence Systems
         this.socialDynamics = new SocialDynamicsEngine();
+        // Evidence remains distinct from ground truth; consumers may derive beliefs
+        // and rumors without mutating authoritative simulation state.
+        this.beliefs = new BeliefStore();
+        this.tradeScenario = null;
+        this.lastTradeResult = null;
+        this.closedWorld = null;
+        this.interactions = new InteractionEngine();
+        this.justice = new JusticeSystem();
+        this.lastJusticeResult = null;
         this.director = new StrategicDirector(this);
         this.traumaZones = new TraumaZoneSystem();
         this.markovEngine = new MarkovPredictionEngine(this.width, this.height, 100);
@@ -139,6 +163,10 @@ export class Simulation {
         
         // Phase 5: Optimization Systems (T5.2, T5.3, T5.4, T5.5)
         this.spatialHash = new SpatialHash(this.width, this.height, 100);
+        // Obstacle spatial hash: rebuilt once per frame. Uses the same cell
+        // size as the agent hash so a single query radius covers both
+        // populations, and so cell-boundary misses remain symmetric.
+        this.obstacleSpatialHash = new SpatialHash(this.width, this.height, 100);
         // Use LearningAgent for self-learning AI competition
         this.agentPool = new ObjectPool(() => new LearningAgent(0, 0), this.config.initialPopulation || 2000);
         this.lodSystem = new LODSystem({ x: this.width / 2, y: this.height / 2 });
@@ -217,6 +245,89 @@ export class Simulation {
             dead: a.dead
         }));
         await this.tauriExporter.syncAgentsToRust(rustAgents);
+    }
+
+    /**
+     * Install a deterministic trade scenario without changing the default
+     * population simulation. Callers provide routes and perceptions explicitly.
+     */
+    configureTradeScenario({ originId = 'origin', destinationId = 'destination', towns = null, routes = [], demand = {}, merchants = [] } = {}) {
+        const townList = towns || [{ id: originId }, { id: destinationId }];
+        const townMap = new Map(townList.map(town => [town.id, town instanceof Town ? town : new Town(town.id)]));
+        const destination = townMap.get(destinationId) || townMap.values().next().value;
+        for (const [kind, amount] of Object.entries(demand)) destination.market.setDemand(kind, amount.value ?? amount, amount.basePrice ?? 1);
+        this.tradeScenario = {
+            towns: townMap,
+            routes: routes.map(route => ({ ...route })),
+            merchants: merchants.map(merchant => merchant instanceof Merchant ? merchant : new Merchant(merchant.id, merchant.cargo)),
+            routesByPair: new Map()
+        };
+        return this.tradeScenario;
+    }
+
+    executeInteraction(action, actor, target, world = {}, tick = this.frameCount) {
+        return this.interactions.execute(action, actor, target, world, tick);
+    }
+
+    resolveJustice(input = {}) {
+        this.lastJusticeResult = this.justice.resolve(input);
+        return this.lastJusticeResult;
+    }
+
+    configureClosedWorld() {
+        this.closedWorld = createClosedWorldScenario();
+        this.closedWorld.beliefs = this.beliefs;
+        this.closedWorldTick = 0;
+        return this.closedWorld;
+    }
+
+    runClosedWorldStep({ perceivedDanger = 0.8, attackRoadId = 'road-a' } = {}) {
+        if (!this.closedWorld) this.configureClosedWorld();
+        // EVID-2026-08-29-RUNTIME-AUTHORITATIVE-CANONICAL-PATH
+        // (Guardian §1.2): the production runtime must invoke
+        // the canonical reducer itself. Previously
+        // `runClosedWorldStep` called the individual helpers
+        // (resolveBanditAttack, chooseMerchantRoute,
+        // reassessFaction) and relied on the per-frame loop
+        // in index.js / game.js to call `tickClosedWorld`
+        // separately. This meant the canonical trade-system
+        // step 7.5 (the merchant/bandit/patrol wire) was
+        // NEVER reached from the production runtime path.
+        // Now `runClosedWorldStep` IS the canonical path:
+        // it calls `tickClosedWorld` (which includes the
+        // step chain: 0.5 demography, 1 reassess, 2.5
+        // merchant, 2.4 belief update, 2.7 convoy, 3
+        // produce, 4 justice, 4.5 territory, 5 stance, 6
+        // encounter, 6.5 bandit relocation, 7 faction
+        // action, 7.5 canonical trade system). The
+        // `perceivedDanger` and `attackRoadId` options are
+        // preserved for backward compatibility with tests
+        // that pass them.
+        this.closedWorldTick += 1;
+        const tick = this.closedWorldTick;
+        // Form a convoy the first time the scenario runs.
+        if (tick === 1) {
+            formClosedWorldConvoy(this.closedWorld);
+        }
+        // Invoke the canonical reducer. This is the single
+        // source of truth for the closed-world tick.
+        tickClosedWorld(this.closedWorld, { tick, perceivedDanger });
+        return { ok: true, tick, events: this.closedWorld.events.slice() };
+    }
+
+    runTradeScenario(perception = {}) {
+        if (!this.tradeScenario) return { ok: false, reason: 'NO_TRADE_SCENARIO' };
+        const [origin, destination] = this.tradeScenario.towns.values();
+        const results = this.tradeScenario.merchants.map(merchant => {
+            const merchantPerception = perception[merchant.id] || perception;
+            if (merchant.trip) return merchant.completeTrip(this.tradeScenario.towns, merchantPerception);
+            const graphRoutes = this.tradeScenario.routes.filter(route =>
+                route.from === undefined || (route.from === origin.id && route.to === destination.id)
+            );
+            return runTradeTrip(merchant, origin, destination, graphRoutes, merchantPerception);
+        });
+        this.lastTradeResult = { tick: this.frameCount, results };
+        return this.lastTradeResult;
     }
 
     initSafeHavens() {
@@ -439,7 +550,7 @@ export class Simulation {
         this.adjustAIQuality();
         
         this.spawnFood();
-        this.globalMemory.decay();
+        this.globalMemory.decay();            this.beliefs.decayAll();
         this.pheromoneSystem.update();
         this.acousticSystem.update();
         this.theWired.update();
@@ -475,6 +586,21 @@ export class Simulation {
                 this.spatialHash.insert(agent.x, agent.y, agent);
             }
         });
+
+        // Build obstacle spatial hash once per frame so the agent visuals
+        // builder can pull only the obstacles within perception range.
+        this.obstacleSpatialHash.clear();
+        for (let i = 0; i < this.obstacles.length; i++) {
+            const obs = this.obstacles[i];
+            if (!obs) continue;
+            // Insert at the rectangle center; cell size 100 plus the agent's
+            // 60-unit perception radius guarantees boundary coverage.
+            this.obstacleSpatialHash.insert(
+                obs.x + (obs.w || 0) / 2,
+                obs.y + (obs.h || 0) / 2,
+                obs
+            );
+        }
 
         // Phase 3: Hardware-Level Physics Engines
         if (this.rustPhysicsEnabled) {
@@ -541,7 +667,21 @@ export class Simulation {
                 predator.update(this.agents, this.width, this.height, this.predators, this.spatialHash);
             }
             
+            const deathsBefore = this.agents.filter(agent => agent.dead).length;
             predator.checkKills(this.agents, this.analytics, this.logger, this.spatialHash);
+            const deathsAfter = this.agents.filter(agent => agent.dead).length;
+            if (deathsAfter > deathsBefore) {
+                this.beliefs.observe(new Evidence({
+                    subject: `predator:${predator.id}`,
+                    claim: 'observed_danger',
+                    value: 1,
+                    sourceId: `predator:${predator.id}`,
+                    sourceTrust: 1,
+                    confidence: 1,
+                    tick: this.frameCount
+                }));
+                this.globalMemory.record(predator.x, predator.y, 0.25);
+            }
             
             // Phase 9: Record predator movement for Markov prediction (T9.3)
             this.markovEngine.recordMovement(predator.id, predator.x, predator.y);
@@ -616,7 +756,12 @@ export class Simulation {
                 threats: [],
                 food: [],
                 neighbors: neighbors,
-                center: this._visualCenter  // Reuse cached center object
+                center: this._visualCenter,  // Reuse cached center object
+                // Obstacles within the agent's near-obstacle perception radius.
+                // `detectNearObstacle` in agentactions.js consumes this list to
+                // gate the GOAP `hide` action on real obstacle data, instead of
+                // the legacy `neighbors > 0` heuristic.
+                obstacles: this.queryNearbyObstacles(agent.x, agent.y)
             };
 
             // OPTIMIZED THREAT DETECTION - Full quality, faster execution
@@ -1603,6 +1748,10 @@ export class Simulation {
             this.spatialHash.width = this.width;
             this.spatialHash.height = this.height;
         }
+        if (this.obstacleSpatialHash) {
+            this.obstacleSpatialHash.width = this.width;
+            this.obstacleSpatialHash.height = this.height;
+        }
         
         // Re-init grids if resolution needs to change or bounds shift
         this.heatmap = new ThreatHeatmap(this.width, this.height);
@@ -1748,6 +1897,23 @@ export class Simulation {
             count++;
         }
         return { x: sumX / count, y: sumY / count };
+    }
+
+    /**
+     * Obstacles within the agent's near-obstacle perception radius.
+     *
+     * The radius is the same 60 units that `detectNearObstacle` uses, padded
+     * by the obstacle hash cell size (100) so a cell-boundary obstacle is
+     * still returned. `detectNearObstacle` performs the final fine-grained
+     * distance check; this method is purely a coarse pre-filter.
+     */
+    queryNearbyObstacles(x, y) {
+        if (!this.obstacleSpatialHash || this.obstacles.length === 0) return [];
+        // Pad by the obstacle-hash cell size so cell-boundary obstacles are
+        // still returned; the final distance check happens in
+        // `detectNearObstacle`.
+        const radius = OBSTACLE_NEAR_RADIUS + this.obstacleSpatialHash.cellSize;
+        return this.obstacleSpatialHash.query(x, y, radius);
     }
 
     /**
