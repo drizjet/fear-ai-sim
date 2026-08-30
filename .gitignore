@@ -30,6 +30,8 @@ Thumbs.db
 
 # Tool cache
 .codegraph/
+.freebuff/
+.omx/
 nul
 **/nul
 # Third-party nested tool (face-eye-tracker upstream)
