@@ -28,11 +28,26 @@
       "legalInformationSource": "bandit.trafficBelief[route] (legal observation channel, updated by bandit.perceptionAccuracy)",
       "forbiddenShortcut": "bandit reads merchant.routeBeliefs, merchant.beliefs, merchant.cargo, or future merchant target without legal observation",
       "firstAcceptedRevision": "V5-2026-08-30",
-      "currentRevision": "V6-2026-08-30",
+      "currentRevision": "V8-2026-08-31",
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["ground-truth-shortcut"],
-      "protectedTests": ["PENDING: tests/bandit-merchant-knowledge-shortcut.test.js (to be built per V6 §9.1)"]
+      "protectedTests": [
+        "tests/bandit-merchant-knowledge-shortcut.test.js > A: with bandit perceptionAccuracy=1, bandit observes merchant via legal channel and updates trafficBelief",
+        "tests/bandit-merchant-knowledge-shortcut.test.js > B: with bandit perceptionAccuracy=0, bandit CANNOT observe merchant via legal channel",
+        "tests/bandit-merchant-knowledge-shortcut.test.js > C: with bandit perceptionAccuracy=0 and no trafficBelief signal, bandit does NOT relocate to merchant road"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-08-31",
+        "mutationPatch": "canonical-trade-system.js > tickBandit observation loop: removed `if (rng() >= banditAccuracy) continue; // observation failed`",
+        "observingTestsUnderMutation": [
+          "tests/bandit-merchant-knowledge-shortcut.test.js > B (estimatedTraffic = 0 expected, fails under mutation)",
+          "tests/bandit-merchant-knowledge-shortcut.test.js > C (bandit roadId stays road-a, fails under mutation)"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
     },
     "MUT-OBS-003": {
       "id": "MUT-OBS-003",
@@ -102,12 +117,26 @@
       "preconditions": "matched scenarios: same world, same observations, different riskTolerance",
       "legalInformationSource": "merchant.riskTolerance, merchant.cargo, merchant.routeBeliefs[route].perceivedDanger",
       "forbiddenShortcut": "riskTolerance is replaced with a constant, danger term is removed, all merchants clamped to same effective risk",
-      "firstAcceptedRevision": "PENDING",
-      "currentRevision": "PENDING",
+      "firstAcceptedRevision": "V8-2026-08-31",
+      "currentRevision": "V8-2026-08-31",
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["dead-identity-variable"],
-      "protectedTests": ["PENDING: tests/identity-variable.test.js (to be built per V6 §12)"]
+      "protectedTests": [
+        "tests/identity-variable.test.js > risk-averse merchant (riskTolerance=0.1) avoids dangerous road-a",
+        "tests/identity-variable.test.js > risk-tolerant merchant (riskTolerance=0.9) may choose dangerous road-a",
+        "tests/identity-variable.test.js > discriminating: risk-averse and risk-tolerant merchants may choose differently"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-08-31",
+        "mutationPatch": "canonical-trade-system.js > chooseMerchantRouteDecision > dangerPenalty formula: replaced `(1 - merchant.riskTolerance)` with `0.5` constant",
+        "observingTestsUnderMutation": [
+          "tests/identity-variable.test.js > discriminating: both risk-averse (0.0) and risk-tolerant (1.0) chose road-c, asserting divergence fails"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
     },
     "MUT-CHAIN-001": {
       "id": "MUT-CHAIN-001",
