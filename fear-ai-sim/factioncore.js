@@ -53,10 +53,11 @@ export function decayFromHalfLife(halfLifeTicks) {
 }
 
 export class FactionDecisionModel {
-    constructor({ id, fear = 0, grievance = 0, militaryConfidence = 0.5, riskTolerance = 0.5, townId = null, resources = 1, maxResources = 1, memoryOfLoss = 0, fearHalfLifeTicks = 6.6, griefHalfLifeTicks = 22.8, lastRaidTick = null, informationConfidence = 1.0 } = {}) {
+    constructor({ id, fear = 0, grievance = 0, legitimacy = 0.9, militaryConfidence = 0.5, riskTolerance = 0.5, townId = null, resources = 1, maxResources = 1, memoryOfLoss = 0, fearHalfLifeTicks = 6.6, griefHalfLifeTicks = 22.8, lastRaidTick = null, informationConfidence = 1.0 } = {}) {
         this.id = id;
         this.fear = clamp(fear);
         this.grievance = clamp(grievance);
+        this.legitimacy = clamp(legitimacy);
         this.militaryConfidence = clamp(militaryConfidence);
         this.riskTolerance = clamp(riskTolerance);
         this.escalation = ESCALATION_LEVELS.NORMAL;
@@ -193,7 +194,10 @@ export class FactionDecisionModel {
     // The reducer should call `advanceEmotion` first, then `reassess`.
     reassess({ perceivedDanger = 0, supplyShortage = 0, enemyWeakness = 0, confirmedLoss = 0 } = {}) {
         const memoryBias = clamp(this.memoryOfLoss) * 0.1;
-        const raidScore = clamp(this.grievance + enemyWeakness * 0.4 + this.militaryConfidence * 0.2 - this.fear * (1 - this.riskTolerance) * 0.5 + memoryBias);
+        // Justice legitimacy dampens raid appetite: low legitimacy (failing institutions) makes grievance more potent.
+        // High legitimacy (just institutions) suppresses raidScore.
+        const legitimacyDampener = (1 - clamp(this.legitimacy)) * 0.15;
+        const raidScore = clamp(this.grievance + enemyWeakness * 0.4 + this.militaryConfidence * 0.2 - this.fear * (1 - this.riskTolerance) * 0.5 + memoryBias + legitimacyDampener);
         this.escalation = raidScore >= 0.75 ? ESCALATION_LEVELS.RETALIATORY : raidScore >= 0.55 ? ESCALATION_LEVELS.RAIDING : raidScore >= 0.35 ? ESCALATION_LEVELS.DEFENSIVE : ESCALATION_LEVELS.NORMAL;
         // Resource gate: a faction that has exhausted its resources
         // cannot enter RAID state. Without this gate, the previous

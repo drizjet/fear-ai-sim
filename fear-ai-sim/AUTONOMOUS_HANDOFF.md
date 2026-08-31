@@ -1,9 +1,9 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-08-31-SLICE-B-MIGRATION-DESTINATION-UTILITY
+EVID-2026-08-31-SLICE-C-JUSTICE-TO-FACTION-LEGITIMACY
 
-Test Suites: 140 passed, 140 total
-Tests:       1133 passed, 1133 total
+Test Suites: 141 passed, 141 total
+Tests:       1136 passed, 1136 total
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
 lane: B
@@ -21,29 +21,32 @@ supervisor admitted: no
 - migration fixtures keep sink town and inject via appendWorldEvent, conservation asserted, incidence at saturation ceiling
 - production-default suite sharpened (named fear axis, no >=0)
 - market material loop: deliverCargo→stock→price, BANDIT loss→price delta, conservation, opportunityBonus uses quote (Slice A)
-- migration destination utility: food (shortage), safety (bandit), distance, faction trust (Slice B) — not lowestPop; WHY filled with utilities
+- migration destination utility: food (shortage), safety (bandit), distance, faction trust (Slice B) — not lowestPop; WHY filled
+- justice → faction legitimacy: JUSTICE_RESOLVED lowers owning faction legitimacy (0.85*old+0.15*justice), recovers 0.02/tick when no crime, legitimacy dampens raidScore 0.15*(1-legitimacy) (Slice C)
 
 ## Still false / still open
 - 0/10 frozen core mutation kills
 - evidence ledger stale (0 admissible, linter exit 1)
-- market loop: Slice A done, pending-trip → market delivery still thin
+- market pending-trip → market delivery still thin (save-load pending covers, but not yet market conservation via trip)
 - FearCore vs Brain dual-ownership parked
 - runtime is DOM shim
 - Lane A not operational
 - historical relationshipGate:false isolations still in place
 - build rollup native missing in WSL
 
-## What was done 2026-08-31 Slice A+B (Lane B, unaccepted)
+## What was done 2026-08-31 Slice A+B+C (Lane B, unaccepted)
 - Slice A (market): 8 tests market-material-loop — deliverCargo→price, BANDIT loss→price, conservation, opportunityBonus fallback to town.market (was decorative)
-- Slice B (migration): 4 tests migration-destination-utility — food/safety/distance/trust utility beats lowestPop (south 1 pop starving vs east 20 pop abundant → east wins), bandit safety, 200-tick conservation multi-seed (FIRE==MIG), WHY with utilities
-  - Fix: closed-world.js destination now utility `0.4*(1-shortage)+0.3*(1-danger)+0.2*(1/(1+dist/10))+0.1*trust`, MIGRATION_DECISION.why + MIGRATION.why with rejected sinks
+- Slice B (migration): 4 tests migration-destination-utility — utility beats lowestPop, bandit safety, 200-tick conservation (FIRE==MIG), WHY with utilities
+  - Fix: closed-world.js destination utility `0.4*(1-shortage)+0.3*(1-danger)+0.2*(1/(1+dist/10))+0.1*trust`
+- Slice C (justice): 3 tests justice-faction-legitimacy — JUSTICE_RESOLVED→owning faction legitimacy (blend 0.85/0.15, recover 0.02), legitimacy dampens raidScore `0.15*(1-legitimacy)`; production path crime→justice→faction differs, not unit-only
+  - Fix: factioncore.js legitimacy field (default 0.9) + closed-world.js justice loop updates owning faction
 
 ## Next 5
-1. Pending-trip cargo in transit → scheduled DELIVER_CARGO → market delivery (trip material path)
-2. Justice outcome → faction legitimacy (resolve → faction state)
-3. Drought/season → production → shortage → migration (ecology cascade)
-4. Real pending-state fork + MUT-SAVE-001 held under a two-branch identity test
-5. WHY inspector for merchant route B vs A (observations, beliefs, candidates, utilities, threshold, rng)
+1. Pending-trip cargo → market delivery via trip (materialize trip cargo beyond direct deliverCargo)
+2. Drought/season → production → shortage → migration (ecology cascade, one stock change consumed by decision)
+3. Real pending-state fork + MUT-SAVE-001 held under two-branch identity
+4. WHY inspector for merchant route B vs A
+5. Ecology/season material loop full integration
 
 Do not start another evidence-framework slice unless a P0 ledger write bug reappears.
 
@@ -54,16 +57,17 @@ Do not start another evidence-framework slice unless a P0 ledger write bug reapp
 - Tests patched for WSL path (brain-fearcore-authority, quarantine)
 - Mutation: forced FIRE before population/destination guards; migration-pressure-contracts decision integrity test fails as expected; reverted.
 
-## Verification 2026-08-31 Slice A+B
+## Verification 2026-08-31 Slice A+B+C
 ```
-Test Suites: 140 passed, 140 total
-Tests:       1133 passed, 1133 total
-Time:        32.06s (parallel, all suites)
+Test Suites: 141 passed, 141 total
+Tests:       1136 passed, 1136 total
+Time:        33.99s (parallel, all suites)
 Focused Slice A: 8 passed, 8 total
 Focused Slice B: 4 passed, 4 total
+Focused Slice C: 3 passed, 3 total
 ```
-FOCUSED_GREEN / FULL_GREEN (140/140)
+FOCUSED_GREEN / FULL_GREEN (141/141)
 DEVELOPMENT_VERIFIED_CURRENT_TREE
 SUPERVISOR_ADMITTED = no
 KNOWN_GAPS_PRESENT = yes
-Mutation Slice A: opportunityBonus=0 → high-price test fails (road-a wins, expected road-b). Mutation Slice B: set destination to lowestPop → lower-shortage test fails (south wins, expected east). Restored.
+Mutation Slice C: set legitimacy dampener to 0, low-legitimacy raidScore no longer > high-legitimacy, test fails. Restored.

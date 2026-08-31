@@ -1673,6 +1673,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // matches the doctrine that an idle justice system is a steady state.
         if (!reportedCrime) {
             world.justiceState.set(townId, previous);
+            // Recover faction legitimacy slowly when no crime (idle justice = steady state, legitimacy drifts back toward 0.9)
+            const townIdle = world.towns.get(townId);
+            const idleFaction = world.factions.find(f => f.townId === townId || (townIdle && f.id === townIdle.controlledBy));
+            if (idleFaction) {
+                idleFaction.legitimacy = clamp(idleFaction.legitimacy * 0.98 + 0.9 * 0.02);
+            }
             continue;
         }
         const investigationQuality = 0.4;
@@ -1687,6 +1693,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const changed = result.legitimacy !== previous.legitimacy
             || result.grievance !== previous.grievance;
         world.justiceState.set(townId, result);
+        // Slice C — justice → faction legitimacy (audit §11 Slice C)
+        // The owning faction's legitimacy tracks justice outcomes.
+        // Grievance is left to advanceEmotion's stock-flow (attack flow
+        // + supplyShortage) to avoid double-counting stale attacks. This
+        // makes a later RAID/HOLD decision differ via legitimacy dampener,
+        // not a unit-only reassess call. Blend slowly to preserve stock-flow
+        // and allow recovery when justice recovers (when no crime, legitimacy
+        // will drift back via the same blend if justiceState is re-resolved).
+        const town = world.towns.get(townId);
+        const owningFaction = world.factions.find(f => f.townId === townId || (town && f.id === town.controlledBy));
+        if (owningFaction) {
+            owningFaction.legitimacy = clamp(owningFaction.legitimacy * 0.85 + result.legitimacy * 0.15);
+        }
         let justiceResolvedEvent = null;
         if (changed) {
             // EVID-2026-08-31-MIG-PARENT (MUT-MIG-PARENT-001): use
