@@ -29,6 +29,326 @@ const deterministicRng = (seed = 1) => {
     };
 };
 
+// -----------------------------------------------------------------------------
+// Persistent pending-world protocol.
+// -----------------------------------------------------------------------------
+// Functions and closures are intentionally not persistence state. Pending
+// stochastic work therefore owns a plain numeric xorshift state on the world,
+// alongside monotonic action/event counters and explicit obligation queues.
+// Every field initialized here is JSON data and is consequently covered by the
+// same save/load/fork boundary as the rest of the closed world.
+const DEFAULT_PENDING_RNG_STATE = 0x6D2B79F5;
+
+function ensurePendingWorldState(world) {
+    if (!Number.isSafeInteger(world.nextActionId) || world.nextActionId < 1) {
+        world.nextActionId = 1;
+    }
+    if (!Number.isSafeInteger(world.nextEventId) || world.nextEventId < 1) {
+        world.nextEventId = 1;
+    }
+    if (!world.rngStreams || typeof world.rngStreams !== 'object') {
+        world.rngStreams = {};
+    }
+    const pendingStream = world.rngStreams.pendingEffects;
+    if (!pendingStream || typeof pendingStream !== 'object') {
+        world.rngStreams.pendingEffects = {
+            algorithm: 'xorshift32',
+            state: DEFAULT_PENDING_RNG_STATE,
+            draws: 0,
+        };
+    } else {
+        pendingStream.algorithm = 'xorshift32';
+        pendingStream.state = (pendingStream.state >>> 0) || DEFAULT_PENDING_RNG_STATE;
+        pendingStream.draws = Number.isSafeInteger(pendingStream.draws) && pendingStream.draws >= 0
+            ? pendingStream.draws
+            : 0;
+    }
+    for (const key of [
+        'pendingTrips',
+        'scheduledConsequences',
+        'routeCommitments',
+        'patrolAssignments',
+        'rumorsInTransit',
+        'migrationJourneys',
+    ]) {
+        if (!Array.isArray(world[key])) world[key] = [];
+    }
+    if (!(world.processedFactionAttackEventIds instanceof Set)) {
+        world.processedFactionAttackEventIds = new Set(world.processedFactionAttackEventIds ?? []);
+    }
+    return world;
+}
+
+function allocateWorldActionId(world) {
+    ensurePendingWorldState(world);
+    const id = `WORLD-ACTION-${String(world.nextActionId).padStart(6, '0')}`;
+    world.nextActionId += 1;
+    return id;
+}
+
+function allocateWorldEventId(world) {
+    ensurePendingWorldState(world);
+    const id = `WORLD-EVENT-${String(world.nextEventId).padStart(6, '0')}`;
+    world.nextEventId += 1;
+    return id;
+}
+
+function normalizeParentEventIds(parentEventIds = []) {
+    if (!Array.isArray(parentEventIds)) return [];
+    return [...new Set(parentEventIds.filter(id => typeof id === 'string' && id.length > 0))];
+}
+
+function ensureWorldEventIdentity(world, event, parentEventIds = event?.parentEventIds) {
+    if (!event || typeof event !== 'object') return event;
+    if (typeof event.eventId !== 'string' || event.eventId.length === 0) {
+        event.eventId = allocateWorldEventId(world);
+    }
+    event.parentEventIds = normalizeParentEventIds(parentEventIds);
+    return event;
+}
+
+export function appendWorldEvent(world, event, parentEventIds = event?.parentEventIds) {
+    if (!Array.isArray(world.events)) world.events = [];
+    const emitted = ensureWorldEventIdentity(world, { ...event }, parentEventIds);
+    world.events.push(emitted);
+    return emitted;
+}
+
+function finalizeWorldEventLedger(world) {
+    if (!Array.isArray(world.events)) world.events = [];
+    for (const event of world.events) ensureWorldEventIdentity(world, event);
+    return world.events;
+}
+
+function emitPendingWorldEvent(world, event, parentEventIds = event?.parentEventIds) {
+    return appendWorldEvent(world, event, parentEventIds);
+}
+
+function nextPendingWorldRandom(world) {
+    ensurePendingWorldState(world);
+    const stream = world.rngStreams.pendingEffects;
+    let state = (stream.state >>> 0) || DEFAULT_PENDING_RNG_STATE;
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    stream.state = state >>> 0;
+    stream.draws += 1;
+    return stream.state / 0x100000000;
+}
+
+/**
+ * Commit a cargo-bearing trip whose effects occur on later reducer ticks.
+ * The cargo leaves the merchant immediately, remains owned by the trip while
+ * in transit, and reaches the destination market only when its scheduled
+ * consequence becomes due after arrival.
+ */
+export function schedulePendingTradeTrip(world, {
+    merchantId,
+    routeId,
+    destinationTownId,
+    cargoKind = 'food',
+    cargoAmount,
+    travelTicks = 1,
+    startTick = 0,
+    patrolId = null,
+    parentEventIds = [],
+} = {}) {
+    if (!world || typeof world !== 'object') {
+        throw new TypeError('schedulePendingTradeTrip requires a world object');
+    }
+    ensurePendingWorldState(world);
+    const merchant = (world.merchants ?? []).find(item => item.id === merchantId);
+    const route = (world.routes ?? []).find(item => item.id === routeId);
+    const destinationTown = world.towns?.get?.(destinationTownId);
+    const amount = Number(cargoAmount);
+    if (!merchant) throw new RangeError(`unknown merchant: ${merchantId}`);
+    if (!route) throw new RangeError(`unknown route: ${routeId}`);
+    if (!destinationTown?.market) throw new RangeError(`unknown destination town: ${destinationTownId}`);
+    if (!Number.isFinite(amount) || amount <= 0) {
+        throw new RangeError('cargoAmount must be a positive finite number');
+    }
+    if (!Number.isInteger(travelTicks) || travelTicks < 1) {
+        throw new RangeError('travelTicks must be a positive integer');
+    }
+    if (!Number.isFinite(merchant.cargo) || merchant.cargo < amount) {
+        throw new RangeError('merchant does not own the requested cargo amount');
+    }
+    if (patrolId && !(world.patrols ?? []).some(patrol => patrol.id === patrolId)) {
+        throw new RangeError(`unknown patrol: ${patrolId}`);
+    }
+
+    const actionId = allocateWorldActionId(world);
+    const tripId = `TRIP-${actionId}`;
+    const commitment = emitPendingWorldEvent(world, {
+        type: 'TRIP_COMMITMENT',
+        actionId,
+        tripId,
+        tick: startTick,
+        merchantId,
+        routeId,
+        destinationTownId,
+        cargo: { kind: cargoKind, amount },
+    }, parentEventIds);
+    const trip = {
+        tripId,
+        actionId,
+        merchantId,
+        routeId,
+        destinationTownId,
+        cargo: { kind: cargoKind, amount },
+        startedTick: startTick,
+        lastAdvancedTick: startTick,
+        remainingTicks: travelTicks,
+        status: 'IN_TRANSIT',
+        patrolId,
+        commitmentEventId: commitment.eventId,
+        lastEventId: commitment.eventId,
+        parentEventIds: [commitment.eventId],
+    };
+    merchant.cargo -= amount;
+    world.pendingTrips.push(trip);
+    world.routeCommitments.push({
+        commitmentId: `ROUTE-${actionId}`,
+        actionId,
+        tripId,
+        merchantId,
+        routeId,
+        status: 'ACTIVE',
+        parentEventIds: [commitment.eventId],
+    });
+    if (patrolId) {
+        const patrol = world.patrols.find(item => item.id === patrolId);
+        patrol.deployedRoute = routeId;
+        world.patrolAssignments.push({
+            assignmentId: `PATROL-${actionId}`,
+            actionId,
+            tripId,
+            patrolId,
+            routeId,
+            status: 'ACTIVE',
+            parentEventIds: [commitment.eventId],
+        });
+    }
+    world.scheduledConsequences.push({
+        consequenceId: `CONSEQUENCE-${actionId}`,
+        actionId,
+        tripId,
+        kind: 'DELIVER_CARGO',
+        dueTick: startTick + travelTicks,
+        status: 'PENDING',
+        parentEventIds: [commitment.eventId],
+    });
+    return trip;
+}
+
+/** Advance every persisted obligation exactly once for the supplied tick. */
+export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
+    ensurePendingWorldState(world);
+
+    for (const trip of world.pendingTrips) {
+        if (trip.status !== 'IN_TRANSIT' || tick <= (trip.lastAdvancedTick ?? trip.startedTick ?? -1)) continue;
+        const elapsed = Math.max(1, tick - (trip.lastAdvancedTick ?? tick - 1));
+        const exposureRoll = nextPendingWorldRandom(world);
+        trip.remainingTicks = Math.max(0, trip.remainingTicks - elapsed);
+        trip.lastAdvancedTick = tick;
+        const exposure = emitPendingWorldEvent(world, {
+            type: 'TRIP_EXPOSURE',
+            actionId: trip.actionId,
+            tripId: trip.tripId,
+            tick,
+            routeId: trip.routeId,
+            patrolId: trip.patrolId,
+            exposureRoll,
+        }, [trip.lastEventId]);
+        trip.lastEventId = exposure.eventId;
+        if (trip.remainingTicks === 0) {
+            trip.status = 'ARRIVED';
+            const arrival = emitPendingWorldEvent(world, {
+                type: 'TRIP_ARRIVAL',
+                actionId: trip.actionId,
+                tripId: trip.tripId,
+                tick,
+                destinationTownId: trip.destinationTownId,
+            }, [trip.lastEventId]);
+            trip.arrivalEventId = arrival.eventId;
+            trip.lastEventId = arrival.eventId;
+        }
+    }
+
+    for (const consequence of world.scheduledConsequences) {
+        if (consequence.status !== 'PENDING' || consequence.dueTick > tick) continue;
+        const trip = world.pendingTrips.find(item => item.tripId === consequence.tripId);
+        if (!trip || trip.status !== 'ARRIVED') continue;
+        const destination = world.towns?.get?.(trip.destinationTownId);
+        if (!destination?.market || typeof destination.market.deliverCargo !== 'function') continue;
+        const delivery = destination.market.deliverCargo(trip.cargo.kind, trip.cargo.amount, {
+            routeRisk: 0,
+            confidence: 1,
+        });
+        consequence.status = 'APPLIED';
+        consequence.appliedTick = tick;
+        trip.status = 'DELIVERED';
+        const deliveredEvent = emitPendingWorldEvent(world, {
+            type: 'PENDING_CARGO_DELIVERED',
+            actionId: trip.actionId,
+            tripId: trip.tripId,
+            tick,
+            destinationTownId: trip.destinationTownId,
+            cargo: trip.cargo,
+            delivery,
+        }, [trip.arrivalEventId, ...consequence.parentEventIds]);
+        trip.deliveryEventId = deliveredEvent.eventId;
+        trip.lastEventId = deliveredEvent.eventId;
+        for (const commitment of world.routeCommitments) {
+            if (commitment.tripId === trip.tripId && commitment.status === 'ACTIVE') {
+                commitment.status = 'COMPLETED';
+                commitment.completedTick = tick;
+            }
+        }
+        for (const assignment of world.patrolAssignments) {
+            if (assignment.tripId === trip.tripId && assignment.status === 'ACTIVE') {
+                assignment.status = 'COMPLETED';
+                assignment.completedTick = tick;
+            }
+        }
+    }
+
+    for (const rumor of world.rumorsInTransit) {
+        if (rumor.status !== 'IN_TRANSIT' || rumor.lastAdvancedTick === tick) continue;
+        rumor.remainingTicks = Math.max(0, (rumor.remainingTicks ?? 0) - 1);
+        rumor.lastAdvancedTick = tick;
+        if (rumor.remainingTicks === 0) {
+            rumor.status = 'DELIVERED';
+            const event = emitPendingWorldEvent(world, {
+                type: 'RUMOR_DELIVERED',
+                rumorId: rumor.rumorId,
+                tick,
+                subject: rumor.subject,
+                claim: rumor.claim,
+            }, rumor.parentEventIds);
+            rumor.deliveryEventId = event.eventId;
+        }
+    }
+
+    for (const journey of world.migrationJourneys) {
+        if (journey.status !== 'IN_TRANSIT' || journey.lastAdvancedTick === tick) continue;
+        journey.remainingTicks = Math.max(0, (journey.remainingTicks ?? 0) - 1);
+        journey.lastAdvancedTick = tick;
+        if (journey.remainingTicks === 0) {
+            journey.status = 'ARRIVED';
+            const event = emitPendingWorldEvent(world, {
+                type: 'MIGRATION_ARRIVAL',
+                journeyId: journey.journeyId,
+                factionId: journey.factionId,
+                destinationTownId: journey.destinationTownId,
+                tick,
+            }, journey.parentEventIds);
+            journey.arrivalEventId = event.eventId;
+        }
+    }
+    return world;
+}
+
 export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
     // Per-town economy schema. `consumes` is the demand per population
     // (existing). `produces` is the supply per population — the audit
@@ -183,6 +503,25 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         beliefs: null,
         events: [],
         convoy: null,
+        // Save/load-critical protocol state. These counters, queues, and the
+        // numeric PRNG stream are authoritative pending obligations; unlike
+        // function-backed RNG helpers, every value is serializable.
+        nextActionId: 1,
+        nextEventId: 1,
+        rngStreams: {
+            pendingEffects: {
+                algorithm: 'xorshift32',
+                state: DEFAULT_PENDING_RNG_STATE,
+                draws: 0,
+            },
+        },
+        pendingTrips: [],
+        scheduledConsequences: [],
+        routeCommitments: [],
+        patrolAssignments: [],
+        rumorsInTransit: [],
+        migrationJourneys: [],
+        processedFactionAttackEventIds: new Set(),
         // The §12 diplomacy collection. Treaties are formed
         // by `requestPassage` (and other interactions in a
         // future slice) and live here. Terminated treaties
@@ -384,12 +723,20 @@ export function runClosedWorldScenario({ perceivedDanger = 0.8, world: preBuilt 
  * and defensive defaults for `world.events` if the caller passed an object
  * that had none.
  */
-export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memoryDecayPerTick = 0.05, fearDecayPerTick = 0.10, griefDecayPerTick = 0.03, raidCooldown = 5, relationshipGate = false, encounterRng = null, pinBanditRoadId = null } = {}) {
+export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memoryDecayPerTick = 0.05, fearDecayPerTick = 0.10, griefDecayPerTick = 0.03, raidCooldown = 5, relationshipGate = true, encounterRng = null, pinBanditRoadId = null } = {}) {
     if (!world || typeof world !== 'object') {
         throw new TypeError('tickClosedWorld requires a world object');
     }
     if (!Array.isArray(world.events)) world.events = [];
     if (!world.tickHistory) world.tickHistory = [];
+
+    // Resolve obligations committed on earlier ticks before the ordinary
+    // world passes consume market, route, or information state. This makes a
+    // resumed checkpoint obey the same due work as an uninterrupted world.
+    ensurePendingWorldState(world);
+    finalizeWorldEventLedger(world);
+    world.currentTick = tick;
+    advancePendingWorldObligations(world, { tick });
 
     // 0. EVID-2026-08-29-ECOLOGY: advance the season on the
     //    configured cadence. The season affects town production
@@ -737,13 +1084,27 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // may be stale or false, which is the §8 contract.
     for (const merchant of world.merchants) {
         if (!merchant.beliefs || typeof merchant.beliefs.observe !== 'function') continue;
-        for (const event of world.events) {
+        if (!(merchant.observedEventIds instanceof Set)) {
+            merchant.observedEventIds = new Set(merchant.observedEventIds ?? []);
+        }
+        // Snapshot the source ledger because this loop appends OBSERVATION
+        // and BELIEF_UPDATE children. A one-tick lookback is required: live
+        // encounters emit consequences after this pass, so their witnesses
+        // can legally consume them on the following tick.
+        for (const event of [...world.events]) {
             if (event.type !== 'BANDIT_RELOCATION' && event.type !== 'BANDIT_ATTACK') continue;
-            if ((event.tick ?? 0) !== tick) continue;
+            const sourceTick = event.tick ?? 0;
+            if (sourceTick > tick || sourceTick < tick - 1) continue;
+            ensureWorldEventIdentity(world, event);
+            if (merchant.observedEventIds.has(event.eventId)) continue;
             // The §9 observation boundary. A merchant who cannot
             // observe the event does NOT receive evidence.
             if (!canObserve(merchant, event, world)) continue;
-            const roadId = event.roadId ?? event.relocation?.roadId ?? event.relocation?.fromRoadId;
+            const roadId = event.roadId
+                ?? event.relocation?.roadId
+                ?? event.relocation?.to
+                ?? event.to
+                ?? event.relocation?.fromRoadId;
             if (!roadId) continue;
             const route = world.routes.find(item => item.id === roadId);
             if (!route) continue;
@@ -772,7 +1133,28 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 confidence: strength.confidence,
                 tick,
             });
-            merchant.beliefs.observe(evidence);
+            const observationEvent = appendWorldEvent(world, {
+                type: 'OBSERVATION',
+                tick,
+                merchantId: merchant.id,
+                sourceEventId: event.eventId,
+                sourceEventType: event.type,
+                roadId,
+                evidenceType,
+                observedDanger,
+            }, [event.eventId]);
+            const belief = merchant.beliefs.observe(evidence);
+            const beliefEvent = appendWorldEvent(world, {
+                type: 'BELIEF_UPDATE',
+                tick,
+                merchantId: merchant.id,
+                subject: roadId,
+                claim: 'perceivedDanger',
+                value: belief?.value ?? observedDanger,
+                confidence: belief?.confidence ?? strength.confidence,
+            }, [observationEvent.eventId]);
+            merchant.observedEventIds.add(event.eventId);
+            merchant.latestBeliefUpdateEventId = beliefEvent.eventId;
         }
     }
 
@@ -849,7 +1231,36 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // the canonical route choice.
     for (const merchant of world.merchants) {
         if (!merchant || merchant.riskTolerance === undefined) continue;
-        tickCanonicalMerchant(world, merchant.id, { tick, rng: encounterRng ?? deterministicRng((tick * 0x9E3779B9) >>> 0) });
+        const beliefParentIds = world.events
+            .filter(event => event.type === 'BELIEF_UPDATE'
+                && event.tick === tick
+                && event.merchantId === merchant.id)
+            .map(event => event.eventId);
+        const routeResult = tickCanonicalMerchant(world, merchant.id, {
+            tick,
+            rng: encounterRng ?? deterministicRng((tick * 0x9E3779B9) >>> 0),
+            parentEventIds: beliefParentIds,
+        });
+        if (routeResult?.ok && routeResult.event) {
+            ensureWorldEventIdentity(world, routeResult.event, beliefParentIds);
+            const actionId = allocateWorldActionId(world);
+            const commitment = appendWorldEvent(world, {
+                type: 'TRIP_COMMITMENT',
+                tick,
+                actionId,
+                tripId: `CANONICAL-TRIP-${actionId}`,
+                merchantId: merchant.id,
+                routeId: routeResult.event.chosenRoute,
+                status: 'COMMITTED',
+            }, [routeResult.event.eventId]);
+            merchant.activeTripCommitment = {
+                actionId,
+                tripId: commitment.tripId,
+                routeId: commitment.routeId,
+                commitmentEventId: commitment.eventId,
+                tick,
+            };
+        }
     }
     for (const merchant of world.merchants) {
         if (!merchant) continue;
@@ -1212,10 +1623,18 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // Guardian §8 fix: migration is a *response* to a real
     // grievance, not a periodic event.
     const RECENT_ATTACK_WINDOW = 5;
-    const recentAttacks = world.events.filter(
-        event => event.type === 'BANDIT_ATTACK' && (event.tick ?? 0) > tick - RECENT_ATTACK_WINDOW && (event.tick ?? 0) <= tick
+    // Reported crime is per-town: only attacks whose road
+    // touches the town or whose townId matches the town
+    // count for that town. This makes the isolated fixture
+    // meaningful (an attack on a north road should not
+    // drive south migration unless the road is incident to
+    // south). Global fallback is avoided.
+    const recentAttacksByTown = (townId) => world.events.filter(
+        event => event.type === 'BANDIT_ATTACK'
+            && (event.tick ?? 0) > tick - RECENT_ATTACK_WINDOW
+            && (event.tick ?? 0) <= tick
+            && (event.townId === townId || (event.roadId && world.routes.find(r => r.id === event.roadId && (r.from === townId || r.to === townId))))
     ).length;
-    const attacksUpToTick = recentAttacks;
     // PHASE §156: deferred immigration pass. The MIGRATION
     // step decrements the source town's population in the
     // loop below, and the immigration (adding the emigrant
@@ -1246,7 +1665,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             migrationPressure: 0,
             justiceAccess: 0.5
         };
-        const reportedCrime = attacksUpToTick > 0;
+        const reportedCrime = recentAttacksByTown(townId) > 0;
         // Only resolve justice when there is something to resolve. Without
         // a reported crime, the `JusticeSystem` would still drift legitimacy
         // and grievance from its idle `justiceAccess` baseline; suppressing
@@ -1268,8 +1687,26 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const changed = result.legitimacy !== previous.legitimacy
             || result.grievance !== previous.grievance;
         world.justiceState.set(townId, result);
+        let justiceResolvedEvent = null;
         if (changed) {
-            world.events.push({
+            // EVID-2026-08-31-MIG-PARENT (MUT-MIG-PARENT-001): use
+            // appendWorldEvent so JUSTICE_RESOLVED carries an
+            // eventId and can serve as the causal parent for the
+            // MIGRATION event below.
+            // V8 corrective checkpoint §4: parent
+            // JUSTICE_RESOLVED to the upstream BANDIT_ATTACK
+            // events for the same town within the
+            // reported-crime window. The ledger must
+            // record the actual mechanism that drove the
+            // report, not just a tick stamp.
+            const upstreamAttackIds = world.events
+                .filter(ev => ev.type === 'BANDIT_ATTACK'
+                    && (ev.townId === townId || (world.towns.get(townId) && ev.roadId && world.routes.find(r => r.id === ev.roadId && (r.from === townId || r.to === townId))))
+                    && (ev.tick ?? 0) > tick - RECENT_ATTACK_WINDOW
+                    && (ev.tick ?? 0) <= tick)
+                .map(ev => ev.eventId)
+                .filter(Boolean);
+            justiceResolvedEvent = appendWorldEvent(world, {
                 type: 'JUSTICE_RESOLVED',
                 townId,
                 tick,
@@ -1277,8 +1714,32 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 grievance: result.grievance,
                 migrationPressure: result.migrationPressure,
                 justiceAccess: result.justiceAccess
-            });
+            }, upstreamAttackIds);
         }
+        // V8 corrective checkpoint §4: emit an explicit
+        // MIGRATION_PRESSURE_EVALUATED event when the
+        // justice loop evaluates for this town (reportedCrime
+        // true: attack in RECENT_ATTACK_WINDOW on a road
+        // incident to the town). When reportedCrime is false
+        // the loop is skipped and no evaluation/decision is
+        // emitted for that town on that tick (sparse emit
+        // policy). Its parent is the JUSTICE_RESOLVED for
+        // this tick, or empty when justice did not change.
+        // The chain MIGRATION_PRESSURE_EVALUATED ->
+        // MIGRATION_DECISION -> MIGRATION makes the decision
+        // mechanism observable in the ledger.
+        const evaluationParentIds = justiceResolvedEvent
+            ? [justiceResolvedEvent.eventId]
+            : [];
+        const pressureEvaluation = appendWorldEvent(world, {
+            type: 'MIGRATION_PRESSURE_EVALUATED',
+            townId,
+            tick,
+            pressure: result.migrationPressure,
+            reportedCrime,
+            legitimacy: result.legitimacy,
+            grievance: result.grievance,
+        }, evaluationParentIds);
         // PHASE §164 / §213: emit a MIGRATION event when
         // migrationPressure exceeds the threshold. The audit's
         // row 29: "Add persistent population/faction state
@@ -1292,7 +1753,58 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // found.
         const lastMigrationTick = world.migrationCooldowns.get(townId) ?? -Infinity;
         const withinCooldown = (tick - lastMigrationTick) < MIGRATION_COOLDOWN;
-        if (result.migrationPressure > 0.5 && !withinCooldown) {
+        // FIRE integrity: a FIRE decision must correspond to an
+        // actual migration. Compute destination and population
+        // eligibility BEFORE emitting the decision. If no person
+        // can leave or no destination exists, the decision is
+        // SUPPRESSED with an honest reason and no MIGRATION
+        // event is emitted and no population is moved.
+        const townPop = Number.isFinite(town?.population) ? town.population : 0;
+        let toTownId = null;
+        let lowestPop = Infinity;
+        for (const [otherId, otherTown] of world.towns) {
+            if (otherId === townId) continue;
+            const pop = Number.isFinite(otherTown.population) ? otherTown.population : 0;
+            if (pop < lowestPop) {
+                lowestPop = pop;
+                toTownId = otherId;
+            }
+        }
+        const hasDestination = toTownId !== null;
+        const hasPopulation = townPop > 0;
+        const pressureExceeds = result.migrationPressure > 0.5;
+        const canMigrate = pressureExceeds && !withinCooldown && hasPopulation && hasDestination;
+        let decisionReason;
+        if (withinCooldown) decisionReason = 'WITHIN_COOLDOWN';
+        else if (!hasPopulation) decisionReason = 'NO_POPULATION';
+        else if (!hasDestination) decisionReason = 'NO_DESTINATION';
+        else if (!pressureExceeds) decisionReason = 'PRESSURE_BELOW_THRESHOLD';
+        else decisionReason = 'PRESSURE_EXCEEDS_THRESHOLD';
+        // V8 corrective checkpoint §4: emit the explicit
+        // MIGRATION_DECISION event when the justice loop
+        // evaluates for this town (sparse emit: only when
+        // reportedCrime true for that town). The decision
+        // is FIRE only when pressure exceeds the threshold
+        // AND the per-town cooldown is not active AND a
+        // person exists AND a destination exists.
+        // SUPPRESSED captures every other case (cooldown,
+        // NO_POPULATION, NO_DESTINATION, low pressure).
+        // The decision is parented to the
+        // MIGRATION_PRESSURE_EVALUATED emitted above; the
+        // MIGRATION event below is parented to this
+        // decision. The chain MIGRATION_PRESSURE_EVALUATED
+        // -> MIGRATION_DECISION -> MIGRATION makes the
+        // decision mechanism observable in the ledger.
+        const decision = appendWorldEvent(world, {
+            type: 'MIGRATION_DECISION',
+            townId,
+            tick,
+            decision: canMigrate ? 'FIRE' : 'SUPPRESSED',
+            reason: decisionReason,
+            pressure: result.migrationPressure,
+            lastMigrationTick,
+        }, pressureEvaluation.eventId ? [pressureEvaluation.eventId] : []);
+        if (canMigrate) {
             // ACT on the event: decrement the town's
             // population. The MIGRATION event is the named
             // sink; the population decrement is the
@@ -1303,51 +1815,25 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // single tick. The §156 population balance is
             // closed: emigration + immigration = 0 across the
             // two passes.
-            const town = world.towns.get(townId);
-            // §29 audit fix (2026-08-28): a town with
-            // population 0 must NOT emit a MIGRATION event.
-            // The old code pushed the event and the
-            // pending-immigration entry before checking
-            // `pop > 0`, which meant depopulated towns
-            // could create population from nothing
-            // (source doesn't decrement, destination
-            // does). The guard now wraps the entire
-            // block.
-            if (!town || !Number.isFinite(town.population) || town.population <= 0) {
-                continue;
-            }
-            // Find a destination town: the one with the lowest
-            // population (the most "refugee-receptive" town).
-            // The audit's §69: "Refugees can: seek settlement
-            // entry; create camps; alter labor; increase
-            // demand; bring information; trigger political
-            // tension; join factions; return home later."
-            // Refugees go to where there's the most room.
-            // A future slice can add smarter destination
-            // selection based on trust, trade routes, etc.
-            let toTownId = null;
-            let lowestPop = Infinity;
-            for (const [otherId, otherTown] of world.towns) {
-                if (otherId === townId) continue;
-                const pop = Number.isFinite(otherTown.population) ? otherTown.population : 0;
-                if (pop < lowestPop) {
-                    lowestPop = pop;
-                    toTownId = otherId;
-                }
-            }
-            // The source has at least 1 person. Decrement.
-            town.population = Math.max(0, town.population - 1);
-            // Defer the immigration to the post-loop pass.
-            if (toTownId) {
-                pendingImmigration.push({ fromTownId: townId, toTownId, tick });
-            }
-            world.events.push({
+            const townRef = world.towns.get(townId);
+            townRef.population = Math.max(0, townRef.population - 1);
+            pendingImmigration.push({ fromTownId: townId, toTownId, tick });
+            // V8 corrective checkpoint §4: MIGRATION is now
+            // parented to the MIGRATION_DECISION for the
+            // same town on the same tick. The decision
+            // event already captures the upstream
+            // MIGRATION_PRESSURE_EVALUATED, JUSTICE_RESOLVED,
+            // and BANDIT_ATTACK chain. The MIGRATION
+            // event answers "did this decision execute?"
+            // rather than conflating persistent causal
+            // context with the immediate decision.
+            appendWorldEvent(world, {
                 type: 'MIGRATION',
                 townId,
                 toTownId,
                 tick,
                 pressure: result.migrationPressure
-            });
+            }, decision.eventId ? [decision.eventId] : []);
             // Update the per-town cooldown so the next
             // MIGRATION from this town is suppressed for
             // MIGRATION_COOLDOWN ticks.
@@ -1410,30 +1896,6 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     for (const faction of world.factions) {
         if (faction.lastDecision !== 'RAID') continue;
         if (!(faction.resources > 0)) continue;
-        // Constitution §538: gate the invasion on the relationship
-        // vector's stance. This gate is OPT-IN via the
-        // `relationshipGate` option (default `false` for backward
-        // compat with the existing raid-mechanism tests). When
-        // enabled, a faction can only retaliate if the pair with at
-        // least one neighboring faction has escalated past TOLERANT
-        // (WATCHFUL or higher). The legacy `lastDecision` check
-        // remains as a capability gate (does this faction *want* to
-        // raid?), but the relationship vector now decides *whether*
-        // it should. The threshold is intentionally set to WATCHFUL
-        // (not LIMITED_CONFLICT) so that chronic grievance + bandit
-        // pressure is sufficient — a faction does not need to be in
-        // active war to retaliate. If no relationship vector is
-        // reachable, the legacy gate remains sufficient.
-        if (relationshipGate && world.relationships.size > 0) {
-            let relationshipGatePassed = false;
-            for (const [otherFactionId, pair] of faction.relationships) {
-                if (pair.stance >= StanceLadder.WATCHFUL) {
-                    relationshipGatePassed = true;
-                    break;
-                }
-            }
-            if (!relationshipGatePassed) continue;
-        }
         // Per-faction raid cooldown. A faction that raided in the
         // last `raidCooldown` ticks cannot raid again. The default
         // of 5 ticks is a research-grounded compromise: enough to
@@ -1470,6 +1932,89 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             const memB = getMemoryOfLoss(faction, b.id) ?? 0;
             return memB - memA;
         })[0];
+        // Constitution §15 / §538: the relationship consumer is
+        // directional and target-specific. A faction's desire to raid is an
+        // internal capability signal; authorization comes from *that same
+        // faction's* stance toward the selected target's faction. The legacy
+        // peak `pair.stance` is deliberately not consulted because the target
+        // may be hostile toward the actor while the actor remains tolerant.
+        // The gate is on by default in production. Tests or legacy callers can
+        // explicitly pass `relationshipGate: false`; the bypass remains
+        // visible in the event ledger rather than silently changing behavior.
+        const targetFactionId = typeof candidate.factionId === 'string' && candidate.factionId.length > 0
+            ? candidate.factionId
+            : null;
+        const targetPair = targetFactionId && targetFactionId !== faction.id
+            ? (world.relationships.get(`${faction.id}::${targetFactionId}`)
+                ?? world.relationships.get(`${targetFactionId}::${faction.id}`)
+                ?? null)
+            : null;
+        const targetStance = targetPair && typeof targetPair.stanceFrom === 'function'
+            ? targetPair.stanceFrom(faction.id)
+            : null;
+        const threshold = StanceLadder.WATCHFUL;
+        const why = [
+            'Faction decision is RAID',
+            'Target bandit is reachable',
+        ];
+        const whyNot = [];
+        let gateAllowed = true;
+        let gateReason;
+
+        if (!relationshipGate) {
+            gateReason = 'RELATIONSHIP_GATE_DISABLED';
+            why.push('Explicit relationshipGate=false override permits the action');
+        } else if (!targetFactionId) {
+            gateReason = 'TARGET_HAS_NO_FACTION';
+            why.push('Unaffiliated targets do not require an inter-faction stance');
+        } else if (targetFactionId === faction.id) {
+            gateReason = 'TARGET_IS_SAME_FACTION';
+            why.push('Internal enforcement does not require an inter-faction stance');
+        } else if (!targetPair) {
+            gateAllowed = false;
+            gateReason = 'TARGET_RELATIONSHIP_MISSING';
+            whyNot.push(`No relationship vector exists from ${faction.id} toward ${targetFactionId}`);
+        } else if (!Number.isFinite(targetStance)) {
+            gateAllowed = false;
+            gateReason = 'TARGET_STANCE_UNOBSERVED';
+            whyNot.push(`No directional stance has been observed from ${faction.id} toward ${targetFactionId}`);
+        } else if (targetStance < threshold) {
+            gateAllowed = false;
+            gateReason = 'TARGET_STANCE_BELOW_THRESHOLD';
+            whyNot.push(`${faction.id} stance toward ${targetFactionId} is TOLERANT (${targetStance}), below WATCHFUL (${threshold})`);
+        } else {
+            gateReason = 'TARGET_STANCE_AUTHORIZES_ACTION';
+            why.push(`${faction.id} stance toward ${targetFactionId} is ${targetStance}, meeting WATCHFUL (${threshold})`);
+        }
+
+        const latestStanceEvent = targetPair
+            ? [...world.events].reverse().find(event =>
+                event.type === 'STANCE_TRANSITION'
+                && event.pairId === targetPair.id
+                && event.evaluatorId === faction.id
+            )
+            : null;
+        const stanceParentIds = latestStanceEvent
+            ? [ensureWorldEventIdentity(world, latestStanceEvent).eventId]
+            : [];
+        const gateEvent = appendWorldEvent(world, {
+            type: 'FACTION_ACTION_GATE',
+            actionType: 'RETALIATION',
+            factionId: faction.id,
+            evaluatorId: faction.id,
+            targetId: candidate.id,
+            targetFactionId,
+            pairId: targetPair?.id ?? null,
+            stance: Number.isFinite(targetStance) ? targetStance : null,
+            threshold,
+            relationshipGateEnabled: Boolean(relationshipGate),
+            allowed: gateAllowed,
+            reason: gateReason,
+            why,
+            whyNot,
+            tick,
+        }, stanceParentIds);
+        if (!gateAllowed) continue;
         // The §12 / §28 non-aggression enforcement: if
         // the candidate bandit is associated with a
         // faction that the raider has a non-aggression
@@ -1484,18 +2029,18 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 treaty.participants.includes(candidate.factionId)
             );
             if (blocked) {
-                world.events.push({
+                appendWorldEvent(world, {
                     type: 'TREATY_BLOCKED_RAID',
                     factionId: faction.id,
                     targetFactionId: candidate.factionId,
                     banditId: candidate.id,
                     tick,
-                });
+                }, [gateEvent.eventId]);
                 continue;
             }
         }
         const plan = planRetaliation(faction, candidate, { tick });
-        world.events.push({
+        const actionEvent = appendWorldEvent(world, {
             type: 'FACTION_ACTION',
             factionId: faction.id,
             targetId: candidate.id,
@@ -1503,7 +2048,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             ok: plan.ok,
             reason: plan.reason,
             tick
-        });
+        }, [gateEvent.eventId]);
         if (!plan.ok) continue;
         const retaliation = executeRetaliation(faction, candidate, plan);
         if (retaliation.ok) {
@@ -1514,7 +2059,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // for a fear simulation. The cooldown models the
             // preparation cost of organizing a campaign.
             faction.lastRaidTick = tick;
-            world.events.push({
+            appendWorldEvent(world, {
                 type: 'INVASION',
                 factionId: faction.id,
                 targetId: candidate.id,
@@ -1522,7 +2067,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 causationId: plan.action.actionId,
                 resourcesLeft: faction.resources,
                 tick
-            });
+            }, [actionEvent.eventId]);
         }
     }
     for (const faction of world.factions) {
@@ -1545,9 +2090,24 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // `instantiateEncounter` which mutates the world (e.g. the
     // bandit-ambush encounter debits the merchant's cargo) and
     // pushes an ENCOUNTER event.
+    const routeExposures = [];
+    for (const merchant of world.merchants) {
+        const commitment = merchant?.activeTripCommitment;
+        if (!commitment || commitment.tick !== tick || !commitment.commitmentEventId) continue;
+        const exposure = appendWorldEvent(world, {
+            type: 'ROUTE_EXPOSURE',
+            tick,
+            actionId: commitment.actionId,
+            tripId: commitment.tripId,
+            merchantId: merchant.id,
+            routeId: commitment.routeId,
+        }, [commitment.commitmentEventId]);
+        commitment.exposureEventId = exposure.eventId;
+        routeExposures.push(exposure);
+    }
     const eligibleEncounters = evaluateEncounterEligibility(world, { tick });
     if (eligibleEncounters.length > 0) {
-        world.events.push({
+        const candidateEvent = appendWorldEvent(world, {
             type: 'CANDIDATE_ENCOUNTER',
             tick,
             candidates: eligibleEncounters.map(template => ({
@@ -1555,7 +2115,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 description: template.description,
                 priority: template.priority
             }))
-        });
+        }, routeExposures.map(event => event.eventId));
         // The §95 contract: randomness selects among plausible
         // events. The selector uses a deterministic xorshift32
         // rng seeded by the current tick so the §121 contract
@@ -1584,7 +2144,22 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const eligibleByPriority = eligibleEncounters.slice().sort((a, b) => (b.priority || 0) - (a.priority || 0));
         const selected = selectEncounterCandidates(eligibleByPriority, { rng: activeRng, maxCandidates: 1 });
         for (const template of selected) {
+            const firstCreatedIndex = world.events.length;
             const result = instantiateEncounter(template, world, { tick, rng: activeRng });
+            const createdEvents = world.events.slice(firstCreatedIndex);
+            const encounterEvent = createdEvents.find(event => event.type === 'ENCOUNTER'
+                && event.encounterId === template.id);
+            if (encounterEvent) {
+                ensureWorldEventIdentity(world, encounterEvent, [candidateEvent.eventId]);
+            }
+            const consequenceEvents = createdEvents.filter(event => event.type === 'BANDIT_ATTACK');
+            for (const consequenceEvent of consequenceEvents) {
+                ensureWorldEventIdentity(
+                    world,
+                    consequenceEvent,
+                    encounterEvent ? [encounterEvent.eventId] : [candidateEvent.eventId],
+                );
+            }
             // The §12 treaty-enforcement wire: if the
             // encounter fired and the bandit is associated
             // with a faction, check whether the action
@@ -1607,6 +2182,38 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                         tick,
                     });
                 }
+            }
+
+            // Encounter consequences occur after the reducer's ordinary
+            // faction pass. Consume them here exactly once so memory and
+            // reaction are not silently skipped until a tick that can no
+            // longer see them as current input.
+            for (const consequenceEvent of consequenceEvents) {
+                if (world.processedFactionAttackEventIds.has(consequenceEvent.eventId)) continue;
+                const affectedMerchant = world.merchants.find(item => item.id === consequenceEvent.merchantId);
+                const affectedFaction = world.factions.find(faction => faction.townId === affectedMerchant?.location)
+                    ?? world.factions[0];
+                if (!affectedFaction) continue;
+                const memoryBefore = clamp01(affectedFaction.memoryOfLoss ?? 0);
+                const severity = clamp01((consequenceEvent.lost ?? 0) / 20);
+                recordHarmByActor(affectedFaction, consequenceEvent.banditId ?? 'unknown', {
+                    severity,
+                    tick,
+                    known: Boolean(consequenceEvent.banditId),
+                });
+                affectedFaction.memoryOfLoss = clamp01(memoryBefore + severity);
+                affectedFaction.grievance = clamp01((affectedFaction.grievance ?? 0) + severity * 0.5);
+                appendWorldEvent(world, {
+                    type: 'FACTION_REACTION',
+                    tick,
+                    factionId: affectedFaction.id,
+                    merchantId: consequenceEvent.merchantId,
+                    banditId: consequenceEvent.banditId,
+                    memoryBefore,
+                    memoryAfter: affectedFaction.memoryOfLoss,
+                    grievanceAfter: affectedFaction.grievance,
+                }, [consequenceEvent.eventId]);
+                world.processedFactionAttackEventIds.add(consequenceEvent.eventId);
             }
         }
     }
@@ -1656,6 +2263,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         }))
     });
 
+    finalizeWorldEventLedger(world);
     return world;
 }
 
@@ -1849,7 +2457,10 @@ function sourceIdToEvidenceType(sourceId) {
 export function canObserve(actor, event, world) {
     if (!actor || !event || !world) return false;
     if (event.type !== 'BANDIT_RELOCATION' && event.type !== 'BANDIT_ATTACK') return true; // non-bandit events observable by default
-    const roadId = event.roadId ?? event.relocation?.roadId;
+    const roadId = event.roadId
+        ?? event.relocation?.roadId
+        ?? event.relocation?.to
+        ?? event.to;
     if (!roadId) return false;
     // Proximity: actor's current route, current location, or
     // explicitly-traveled road matches the event's road.
@@ -2053,7 +2664,7 @@ function deepCloneValue(value, seen) {
     if (value && typeof value.serialize === 'function' && typeof value.deserialize === 'function'
         && value.constructor && value.constructor.name === 'BeliefStore') {
         const Bel = value.constructor;
-        return Bel.deserialize(value.serialize());
+        return new Bel().deserialize(value.serialize());
     }
     // Plain object: clone every enumerable property.
     // Use `seen` to break cycles. Preserve the prototype
@@ -2407,10 +3018,17 @@ function reattachPrototypes(world) {
     if (Array.isArray(world.factions)) {
         for (const f of world.factions) {
             if (f && f.relationships instanceof Map) {
-                for (const pair of f.relationships.values()) {
+                for (const [otherFactionId, pair] of f.relationships) {
                     if (pair && typeof pair === 'object' && Array.isArray(pair.events)) {
                         Object.setPrototypeOf(pair, FactionRelationshipVector.prototype);
                     }
+                    // JSON cannot preserve shared object identity. Restore the
+                    // invariant that both faction-local maps reference the
+                    // canonical vector held by world.relationships; otherwise
+                    // one branch can update a different pair after load.
+                    const canonical = world.relationships?.get?.(`${f.id}::${otherFactionId}`)
+                        ?? world.relationships?.get?.(`${otherFactionId}::${f.id}`);
+                    if (canonical) f.relationships.set(otherFactionId, canonical);
                 }
             }
         }
@@ -2467,8 +3085,15 @@ function reattachPrototypes(world) {
     // a plain object — re-instantiate it from the
     // interactions module so the `execute` method is
     // available.
-    if (!world.interactionEngine
-        || typeof world.interactionEngine.execute !== 'function') {
+    if (world.interactionEngine && typeof world.interactionEngine === 'object') {
+        Object.setPrototypeOf(world.interactionEngine, InteractionEngine.prototype);
+        if (!(world.interactionEngine.lastAction instanceof Map)) {
+            world.interactionEngine.lastAction = new Map(Object.entries(world.interactionEngine.lastAction ?? {}));
+        }
+        if (!Number.isFinite(world.interactionEngine.cooldown)) {
+            world.interactionEngine.cooldown = 1;
+        }
+    } else {
         world.interactionEngine = new InteractionEngine({ cooldown: 1 });
     }
     // JusticeSystem: similar to InteractionEngine, the

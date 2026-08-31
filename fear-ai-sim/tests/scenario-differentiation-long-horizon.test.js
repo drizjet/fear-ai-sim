@@ -12,7 +12,7 @@ import { FactionDecisionModel } from '../factioncore.js';
 // runs the closed-world chain under 5 distinct scenarios for
 // 50 ticks each and asserts the outcomes diverge plausibly.
 
-function runScenario({ perceivedDanger, sustainedAttacks, spawnEast, foodShortage, noObservations }) {
+function runScenario({ perceivedDanger, sustainedAttacks, spawnEast, foodShortage, noObservations, relationshipGate = false }) {
     const world = createClosedWorldScenario();
     // Guardian §3: "no attacks" / "no observations" scenarios
     // must produce 0 attacks. The cat-and-mouse wire uses a
@@ -63,7 +63,7 @@ function runScenario({ perceivedDanger, sustainedAttacks, spawnEast, foodShortag
                 delivered: 15
             });
         }
-        tickClosedWorld(world, { tick: t, perceivedDanger });
+        tickClosedWorld(world, { tick: t, perceivedDanger, relationshipGate });
     }
     // Collect the world state at the end.
     return {

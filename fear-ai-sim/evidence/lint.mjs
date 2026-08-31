@@ -92,6 +92,29 @@ function main() {
             report.errors.push(`row ${row?.rowId ?? '?'}: missing domain or dimension`);
             continue;
         }
+        // V8 corrective checkpoint §6: EVIDENCE_SUPERSESSION
+        // rows are audit metadata, not claims to be
+        // evaluated for freshness. They explicitly
+        // invalidate other rows and must not count
+        // against the admissible gate.
+        if (row.dimension === 'EVIDENCE_SUPERSESSION') {
+            row.freshness = 'SUPERSESSION';
+            if (!report.domains[row.domain]) {
+                report.domains[row.domain] = {
+                    rows: 0,
+                    admissible: 0,
+                    stale: 0,
+                    contradicted: 0,
+                    incomplete: 0,
+                    supersession: 0,
+                    derivedLabel: null,
+                };
+            }
+            const d = report.domains[row.domain];
+            d.rows += 1;
+            d.supersession = (d.supersession ?? 0) + 1;
+            continue;
+        }
         const ff = deriveFingerprintFiles(row, rootDir);
         const fresh = computeSourceFingerprint({ rootDir, fingerprintFiles: ff });
         const freshness = compareFingerprints(row.sourceState, fresh);
@@ -112,6 +135,7 @@ function main() {
                 stale: 0,
                 contradicted: 0,
                 incomplete: 0,
+                supersession: 0,
                 derivedLabel: null,
             };
         }
@@ -134,7 +158,7 @@ function main() {
     for (const { domain, declared: declaredLabel } of declared) {
         if (!report.domains[domain]) {
             report.domains[domain] = {
-                rows: 0, admissible: 0, stale: 0, contradicted: 0, incomplete: 0,
+                rows: 0, admissible: 0, stale: 0, contradicted: 0, incomplete: 0, supersession: 0,
                 derivedLabel: null, declaredLabel,
             };
         }
@@ -143,14 +167,16 @@ function main() {
 
     process.stdout.write(JSON.stringify(report, null, 2) + '\n');
 
-    // Exit non-zero if any row is CONTRADICTED or any active
-    // contradiction has no evidence row referencing it.
-    const hasContradicted = ledger.some(r => r.freshness === 'CONTRADICTED');
+    // Exit non-zero unless every recorded row is currently admissible.
+    // Reporting STALE or INCOMPLETE while returning success allows CI and
+    // maturity automation to accept evidence whose declared support has
+    // drifted, which is the MUT-EVID-002 failure mode.
+    const hasInadmissible = ledger.some(r => r.freshness !== 'ADMISSIBLE');
     const activeC = contradictions.filter(c => c.active !== false);
     const hasUntrackedContradiction = activeC.some(c => {
         return !ledger.some(r => r.domain === c.domain && Array.isArray(r.knownContradictions) && r.knownContradictions.includes(c.rowId));
     });
-    if (hasContradicted || hasUntrackedContradiction) {
+    if (hasInadmissible || hasUntrackedContradiction) {
         return 1;
     }
     return 0;

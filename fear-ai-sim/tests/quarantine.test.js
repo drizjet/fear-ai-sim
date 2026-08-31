@@ -11,7 +11,14 @@
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-const root = 'C:/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim';
+const candidatesRoot = [
+    'C:/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim',
+    '/mnt/c/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim',
+    process.cwd(),
+];
+let root = candidatesRoot.find(p => {
+    try { return existsSync(join(p, 'config', 'quarantined-modules.json')); } catch { return false; }
+}) ?? candidatesRoot[0];
 
 function walkReachable(entryFile, maxDepth = 6) {
     const visited = new Set();

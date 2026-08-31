@@ -146,12 +146,25 @@
       "preconditions": "canonical scenario with attack scenario",
       "legalInformationSource": "event causal parents",
       "forbiddenShortcut": "remove or reparent any required causal edge",
+      "v5CoreOrigin": true,
       "firstAcceptedRevision": "PENDING",
-      "currentRevision": "PENDING",
+      "currentRevision": "V8-2026-08-31-DEVELOPMENT-PENDING-ACCEPTANCE",
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["causal-edge-removal"],
-      "protectedTests": ["PENDING: tests/causal-chain.test.js (to be built per V6 §13)"]
+      "protectedTests": [
+        "tests/causal-chain.test.js > observation -> belief -> decision -> trip -> exposure -> encounter -> consequence -> reaction is a valid partial order"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-08-31",
+        "mutationPatch": "closed-world.js > canonical route integration: clear beliefParentIds both when tickMerchant emits the decision and when event identity is finalized",
+        "observingTestsUnderMutation": [
+          "tests/causal-chain.test.js > decision child lookup fails because no MERCHANT_ROUTE_DECISION names the BELIEF_UPDATE parent"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
     },
     "MUT-EVID-001": {
       "id": "MUT-EVID-001",
@@ -171,17 +184,31 @@
     "MUT-EVID-002": {
       "id": "MUT-EVID-002",
       "statement": "EVIDENCE MUST BECOME STALE WHEN ITS DECLARED SUPPORT BOUNDARY CHANGES.",
-      "scope": "evidence/fingerprint.mjs or evidence/receipt.mjs",
+      "scope": "evidence/fingerprint.mjs + evidence/lint.mjs",
       "polarity": "negative",
       "preconditions": "evidence bound to source state S0, then source changes to S1",
       "legalInformationSource": "source file content hash + declared dependency cone",
       "forbiddenShortcut": "fingerprint comparison ignores source changes, wrong source subset hashed, verifier hash omitted",
+      "v5CoreOrigin": true,
       "firstAcceptedRevision": "PENDING",
-      "currentRevision": "PENDING",
+      "currentRevision": "V8-2026-08-31-DEVELOPMENT-PENDING-ACCEPTANCE",
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["stale-evidence-accepted"],
-      "protectedTests": ["PENDING: tests/evidence-staleness.test.js (to be built per V6 §14)"]
+      "protectedTests": [
+        "tests/evidence-staleness.test.js > fresh declared support is admissible",
+        "tests/evidence-staleness.test.js > changing a declared source makes the receipt stale and fails the audit"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-08-31",
+        "mutationPatch": "evidence/lint.mjs > main: accept STALE and INCOMPLETE rows by failing only for CONTRADICTED rows",
+        "observingTestsUnderMutation": [
+          "tests/evidence-staleness.test.js > changing a declared source makes the receipt stale and fails the audit (audit exits 0 under mutation)"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
     },
     "MUT-SAVE-001": {
       "id": "MUT-SAVE-001",
@@ -191,12 +218,128 @@
       "preconditions": "world with active pending state, fork at checkpoint, branch A continues, branch B save->load->continue",
       "legalInformationSource": "JSON serialization of all world state",
       "forbiddenShortcut": "drop any pending component during serialization",
+      "v5CoreOrigin": true,
       "firstAcceptedRevision": "PENDING",
-      "currentRevision": "PENDING",
+      "currentRevision": "V8-2026-08-31-DEVELOPMENT-PENDING-ACCEPTANCE",
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["pending-effect-lost"],
-      "protectedTests": ["PENDING: tests/save-load-pending.test.js (to be built per V6 §15)"]
+      "protectedTests": [
+        "tests/save-load-pending.test.js > save/load preserves pending obligations and resumes to the identical trajectory"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-08-31",
+        "mutationPatch": "closed-world.js > stableValue: omit the scheduledConsequences property during serialization",
+        "observingTestsUnderMutation": [
+          "tests/save-load-pending.test.js > checkpoint assertion fails because resumed.scheduledConsequences is absent"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
+    },
+    "MUT-DIR-001": {
+      "id": "MUT-DIR-001",
+      "statement": "FACTION ACTION CONSUMER MUST READ THE ACTOR'S DIRECTIONAL STANCE TOWARD THE SELECTED TARGET'S FACTION, NEVER THE LEGACY PEAK PAIR STANCE.",
+      "scope": "closed-world.js > tickClosedWorld > retaliation selection (relationship gate step)",
+      "polarity": "negative",
+      "preconditions": "actor faction reaches RAID state with a reachable target bandit",
+      "legalInformationSource": "targetPair.stanceFrom(faction.id) (the actor's own directional observation)",
+      "forbiddenShortcut": "read the symmetric peak pair.stance (which may report the *target's* hostility toward the actor) and use it to authorize a raid by a tolerant actor",
+      "firstAcceptedRevision": "PENDING",
+      "currentRevision": "V8-2026-08-31-DEVELOPMENT",
+      "postV8DevelopmentAddition": true,
+      "supersedes": null,
+      "supersededBy": null,
+      "mutationFamilies": ["wrong-perspective-stance", "peak-pair-stance-leak"],
+      "protectedTests": [
+        "tests/directional-stance-action-gate.test.js > blocks a raid when the attacker is TOLERANT toward the target even if the reverse/legacy stance is hostile",
+        "tests/directional-stance-action-gate.test.js > allows the same target when the attacker perspective is WATCHFUL or higher",
+        "tests/directional-stance-action-gate.test.js > keeps an explicit relationshipGate=false override observable and action-capable"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-08-31",
+        "mutationPatch": "closed-world.js > tickClosedWorld > retaliation: replace `targetPair.stanceFrom(faction.id)` with `targetPair.stance` (the legacy peak pair stance)",
+        "observingTestsUnderMutation": [
+          "tests/directional-stance-action-gate.test.js > tolerant attacker invades south's bandit and reports a hostile stance from the wrong perspective (the discriminating assertion on the actor's own directional value fails)"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
+    },
+    "MUT-RECENCY-001": {
+      "id": "MUT-RECENCY-001",
+      "statement": "BANDIT trafficBelief[route].recency MUST DECAY MULTIPLICATIVELY BY THE ELAPSED-TICK COUNT, NOT BY THE tickBandit INVOCATION COUNT, UNTIL A NEW OBSERVATION RESETS IT TO 1.0. STALE OBSERVATIONS MUST NOT WEIGHT DESTINATION UTILITY AT FULL RESET VALUE. SAVE/LOAD RESUME ACROSS A TICK GAP MUST APPLY THE FULL ELAPSED DECAY.",
+      "scope": "canonical-trade-system.js > tickBandit > recency decay step (precedes observation loop) AND belief.lastDecayTick tracking",
+      "polarity": "negative",
+      "preconditions": "bandit with trafficBelief populated; rng can be controlled to either fail every observation (silent decay path) or succeed (reset path)",
+      "legalInformationSource": "fresh bandit observation (rng() < banditAccuracy for a merchant on a known route); belief.lastDecayTick (the tick at which recency was last set)",
+      "forbiddenShortcut": "skip the decay step; reset recency on every tick regardless of observation outcome; clamp decay coefficient outside [0, 1]; ignore elapsed ticks (per-invocation-only decay loses information on save/load resume)",
+      "firstAcceptedRevision": "PENDING",
+      "currentRevision": "V8-2026-08-31-DEVELOPMENT",
+      "postV8DevelopmentAddition": true,
+      "supersedes": null,
+      "supersededBy": null,
+      "mutationFamilies": ["stale-observation-not-decayed", "memory-only-cat-and-mouse", "per-invocation-not-elapsed-tick-decay"],
+      "protectedTests": [
+        "tests/bandit-recency-decay.test.js > recency on a route strictly decreases over many ticks of silence",
+        "tests/bandit-recency-decay.test.js > recency on every observed route decays, not only the bandit's current road",
+        "tests/bandit-recency-decay.test.js > a fresh observation resets the affected route's recency to 1.0 even after decay",
+        "tests/bandit-recency-temporal.test.js > recency decays by the elapsed tick count, not by the tickBandit invocation count, across a save/load resume"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-08-31",
+        "mutationPatches": [
+          "canonical-trade-system.js > tickBandit: comment out the recency decay loop (the multiplicative `belief.recency *= recencyDecay` step)",
+          "canonical-trade-system.js > tickBandit: replace `Math.pow(recencyDecay, elapsedTicks)` with `recencyDecay` (single-invocation decay loses the elapsed-tick information; the resumed bandit reads 0.95 instead of 0.95^5)"
+        ],
+        "observingTestsUnderMutation": [
+          "tests/bandit-recency-decay.test.js > recency on a route strictly decreases over many ticks of silence (recency stays at 1.0 across 30 silent ticks; expect(<initial) fails)",
+          "tests/bandit-recency-decay.test.js > recency on every observed route decays, not only the bandit's current road (all three routes keep recency=1.0)",
+          "tests/bandit-recency-decay.test.js > a fresh observation resets the affected route's recency to 1.0 even after decay (staleRecency stays at 1.0 because no decay ever ran; the assertion that it has decayed fails)",
+          "tests/bandit-recency-temporal.test.js > recency decays by the elapsed tick count, not by the tickBandit invocation count, across a save/load resume (the resumed bandit reads 0.95 instead of 0.95^5; the assertion that recency <= 0.7738 fails)"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
+    },
+    "MUT-MIG-PARENT-001": {
+      "id": "MUT-MIG-PARENT-001",
+      "statement": "MIGRATION EVENT MUST CARRY eventId AND parentEventIds; THE IMMEDIATE PARENT MUST BE A MIGRATION_DECISION EVENT FOR THE SAME TOWN ON THE SAME TICK. MIGRATION_DECISION IS PARENTED TO A MIGRATION_PRESSURE_EVALUATED EVENT, WHICH IS PARENTED TO A JUSTICE_RESOLVED EVENT (IF ONE FIRED THIS TICK). UPSTREAM BANDIT_ATTACK EVENTS ARE PARENTS OF THE JUSTICE_RESOLVED. THE CHAIN MAKES THE ACTUAL DECISION MECHANISM OBSERVABLE IN THE LEDGER, NOT JUST A HISTORICAL EVENT MATCH.",
+      "scope": "closed-world.js > tickClosedWorld > justice loop > MIGRATION, MIGRATION_DECISION, MIGRATION_PRESSURE_EVALUATED, JUSTICE_RESOLVED emissions",
+      "polarity": "negative",
+      "preconditions": "town has migrationPressure > 0.5 and is not in migration cooldown (for FIRE); town has any migrationPressure value (for SUPPRESSED decision evaluation)",
+      "legalInformationSource": "the MIGRATION_DECISION event for the same town on the same tick (FIRE case); the MIGRATION_PRESSURE_EVALUATED event for the same town on the same tick (DECISION parent); the JUSTICE_RESOLVED event for the same town on the same tick when one fires (EVALUATION parent); the BANDIT_ATTACK events within the reported-crime window (JUSTICE_RESOLVED parents)",
+      "forbiddenShortcut": "push the MIGRATION event via `world.events.push(...)` without `appendWorldEvent`; emit MIGRATION with no eventId or empty parentEventIds; parent MIGRATION directly to a historical JUSTICE_RESOLVED that is not the same-tick decision; collapse the decision and evaluation into a single event that confuses evaluation with decision; emit any of MIGRATION/MIGRATION_DECISION/MIGRATION_PRESSURE_EVALUATED without an eventId",
+      "firstAcceptedRevision": "PENDING",
+      "currentRevision": "V8-2026-08-31-DEVELOPMENT",
+      "postV8DevelopmentAddition": true,
+      "supersedes": null,
+      "supersededBy": null,
+      "mutationFamilies": ["missing-causal-parent", "bare-push-without-eventId", "decision-and-evaluation-conflation"],
+      "protectedTests": [
+        "tests/migration-decision-chain.test.js > MIGRATION_PRESSURE_EVALUATED fires once per town per tick when the justice loop evaluates, and carries a parentEventIds list",
+        "tests/migration-decision-chain.test.js > MIGRATION_DECISION fires once per town per tick and is parented to the MIGRATION_PRESSURE_EVALUATED on the same tick",
+        "tests/migration-decision-chain.test.js > MIGRATION is parented to the MIGRATION_DECISION on the same tick (not to a historical JUSTICE_RESOLVED)",
+        "tests/migration-decision-chain.test.js > the chain answers 'why did these people migrate now?' via MIGRATION_DECISION",
+        "tests/migration-causal-parentage.test.js > a MIGRATION event has a non-empty eventId and a non-empty parentEventIds list (production-emitted, no helper rewrites)",
+        "tests/migration-causal-parentage.test.js > a MIGRATION parentEventIds entry resolves to a MIGRATION_DECISION event for the same town (V8 §4 chain)",
+        "tests/migration-causal-parentage.test.js > all eventIds on the world.events list are distinct (production-emitted, no helper)"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-08-31",
+        "mutationPatch": "closed-world.js > MIGRATION emission: replace `appendWorldEvent(world, {...}, [decision.eventId])` with `world.events.push({...})` (the bare-push path that carried no eventId and no parentEventIds)",
+        "observingTestsUnderMutation": [
+          "tests/migration-decision-chain.test.js > MIGRATION is parented to the MIGRATION_DECISION on the same tick (no parentEventIds means decisionSameTick is not contained in mig.parentEventIds; assertion fails)",
+          "tests/migration-decision-chain.test.js > the chain answers 'why did these people migrate now?' via MIGRATION_DECISION (parentEventIds empty so no MIGRATION_DECISION is found; assertion fails)",
+          "tests/migration-causal-parentage.test.js > a MIGRATION parentEventIds entry resolves to a MIGRATION_DECISION event for the same town (parentEventIds empty so atLeastOneJustified stays false; assertion fails)"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
     }
   },
   "meta": {
@@ -204,7 +347,13 @@
     "v5CoreMatrixFixed": true,
     "v6AdditionalMutants": 1,
     "v6AdditionalMutantIds": ["MUT-OBS-003"],
+    "postV8DevelopmentAdditionalMutants": 3,
+    "postV8DevelopmentAdditionalMutantIds": ["MUT-DIR-001", "MUT-RECENCY-001", "MUT-MIG-PARENT-001"],
+    "v5CorePendingAcceptance": ["MUT-CHAIN-001", "MUT-EVID-002", "MUT-SAVE-001"],
+    "currentCampaign": "V8",
+    "currentCampaignActive": true,
+    "v9CampaignExists": false,
     "denominatorMovable": false,
-    "denominatorNote": "The V5 core matrix denominator of 10 is pinned. MUT-OBS-003 is an additional guardrail, not a replacement. Do not compute a better mutation score on a smaller denominator (V6 §21)."
+    "denominatorNote": "The V5 core matrix denominator of 10 is pinned. v6 additional = [MUT-OBS-003]; v5-core pending acceptance = [MUT-CHAIN-001, MUT-EVID-002, MUT-SAVE-001]; post-V8 development additions = [MUT-DIR-001, MUT-RECENCY-001, MUT-MIG-PARENT-001]. No V9 campaign exists. Total currently-registered contracts = 14 = 10 v5-core (of which 3 await supervisor acceptance) + 1 v6-additional + 3 post-v8-development-additional. Do not compute a better mutation score on a smaller denominator (V6 §21)."
   }
 }

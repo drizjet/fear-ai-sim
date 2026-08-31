@@ -75,6 +75,10 @@ describe('tickClosedWorld', () => {
         // flow. Tick 2 has no new attack — the historical event is in
         // world.events but the flow filter rejects it.
         resolveBanditAttack(world, { tick: 1 });
+        // Remove the live attacker after seeding the one incident under
+        // test. Otherwise the encounter reducer can create a genuinely new
+        // BANDIT_ATTACK on tick 2, invalidating the "stale only" premise.
+        world.bandits = [];
         const faction = world.factions[0];
         faction.grievance = 0;
         // Disable grief decay so we can isolate the flow-vs-stock
@@ -127,6 +131,9 @@ describe('tickClosedWorld', () => {
         // Seed an attack on tick 1. memoryOfLoss after tick 1's reducer
         // = (0 * (1 - decay)) + 0.1 = 0.1 with the default 5% decay.
         resolveBanditAttack(world, { tick: 1 });
+        // This detector measures decay of one historical loss, not losses
+        // from subsequent live encounters.
+        world.bandits = [];
         tickClosedWorld(world, { tick: 1, memoryDecayPerTick: 0.05, perceivedDanger: 0.0 });
         expect(faction.memoryOfLoss).toBeCloseTo(0.1, 8);
         // Tick 2: no new attack, decay applied: 0.1 * 0.95 = 0.095.
@@ -592,4 +599,3 @@ describe('runClosedWorldForTicks', () => {
         expect(a.bandits[0].roadId).toBe(b.bandits[0].roadId);
     });
 });
-

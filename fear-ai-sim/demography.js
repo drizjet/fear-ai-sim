@@ -14,6 +14,7 @@
 // follow-up slice; this is the first link.
 
 import { clamp } from './math-utils.js';
+import { appendWorldEvent } from './closed-world.js';
 
 // Base birth rate per population per tick. Default 0.01 (1% per
 // tick is fast; intended to be tuned). At population=1 this is
@@ -199,7 +200,6 @@ export function tickDemography(world, tick) {
         }
         const popEvent = {
             type: 'POPULATION_CHANGE',
-            eventId: `POPULATION_CHANGE-${tick}-${update.townId}`,
             tick,
             townId: update.townId,
             previousPopulation: oldPop,
@@ -211,20 +211,76 @@ export function tickDemography(world, tick) {
             shortage: update.shortage,
             season: update.season,
         };
-        world.events.push(popEvent);
-        events.push(popEvent);
+        // V8 corrective checkpoint breadth slice
+        // (Slice 9 / Demography, 2026-08-31): route the
+        // POPULATION_CHANGE emission through the canonical
+        // appendWorldEvent helper so it carries an
+        // eventId from allocateWorldEventId and a
+        // non-empty parentEventIds. Pre-fix, demography
+        // used a hand-crafted template literal that
+        // collided under tick reuse and skipped
+        // parentEventIds entirely, breaking the causal
+        // chain MIGRATION -> IMMIGRATION ->
+        // POPULATION_CHANGE.
+        //
+        // Demography runs at step 0.5 — the first
+        // event-emitting step of the tick — so there
+        // are no same-tick upstream events. The
+        // natural parent is the most recent
+        // POPULATION_CHANGE for the same town (the
+        // previous tick's demographic state). This
+        // makes the per-town demographic state
+        // chain MIGRATION -> POPULATION_CHANGE(T-1) ->
+        // POPULATION_CHANGE(T) observable.
+        const previousPopChange = [...world.events].reverse().find(ev =>
+            ev.type === 'POPULATION_CHANGE' && ev.townId === update.townId
+        );
+        const popParentIds = previousPopChange?.eventId
+            ? [previousPopChange.eventId]
+            : [];
+        const emittedPop = appendWorldEvent(world, popEvent, popParentIds);
+        events.push(emittedPop);
         // Emit the immigration event separately for the source/dest
         // pair, so the audit trail can trace the migration.
         if (update.emigration > 0) {
             const destId = pickDestination(update.townId);
             if (destId) {
+                // Honest parentage: demography runs at step 0.5
+                // before justice/migration on the same tick, so
+                // a same-tick MIGRATION_DECISION does not yet
+                // exist. Parent to the most recent FIRE decision
+                // for the source town (tick <= current) and to
+                // the previous POPULATION_CHANGE for the
+                // destination so the chain is never empty after
+                // the first per-town event.
+                const migrationDecision = [...world.events].reverse().find(ev =>
+                    ev.type === 'MIGRATION_DECISION'
+                    && ev.townId === update.townId
+                    && ev.decision === 'FIRE'
+                    && (ev.tick ?? 0) <= tick
+                );
+                const destPreviousPop = [...world.events].reverse().find(ev =>
+                    ev.type === 'POPULATION_CHANGE' && ev.townId === destId
+                );
+                const immParentIds = [];
+                if (destPreviousPop?.eventId) immParentIds.push(destPreviousPop.eventId);
+                if (migrationDecision?.eventId) immParentIds.push(migrationDecision.eventId);
+                // Fallback to source previous POP if dest had no history
+                if (immParentIds.length === 0 && previousPopChange?.eventId) {
+                    immParentIds.push(previousPopChange.eventId);
+                }
+                const destTown = world.towns.get(destId);
+                // The immigration event should reflect the
+                // destination's perspective. Use dest's most
+                // recent POP newPopulation, or current dest
+                // population (old value before its own update).
+                const destOldPop = destPreviousPop ? destPreviousPop.newPopulation : (destTown?.population ?? 0);
                 const immEvent = {
                     type: 'POPULATION_CHANGE',
-                    eventId: `POPULATION_CHANGE-${tick}-${destId}-immigration`,
                     tick,
                     townId: destId,
-                    previousPopulation: newPop - immigration,
-                    newPopulation: newPop,
+                    previousPopulation: destOldPop,
+                    newPopulation: destOldPop + update.emigration,
                     births: 0,
                     deaths: 0,
                     emigration: 0,
@@ -232,9 +288,10 @@ export function tickDemography(world, tick) {
                     sourceTownId: update.townId,
                     shortage: 0,
                     season: update.season,
+                    immigrationKind: 'MIGRATION_DECISION',
                 };
-                world.events.push(immEvent);
-                events.push(immEvent);
+                const emittedImm = appendWorldEvent(world, immEvent, immParentIds);
+                events.push(emittedImm);
             }
         }
     }
