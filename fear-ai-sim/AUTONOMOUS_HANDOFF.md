@@ -71,3 +71,30 @@ DEVELOPMENT_VERIFIED_CURRENT_TREE
 SUPERVISOR_ADMITTED = no
 KNOWN_GAPS_PRESENT = yes
 Mutation Slice C: set legitimacy dampener to 0, low-legitimacy raidScore no longer > high-legitimacy, test fails. Restored.
+
+## Independent verification 2026-08-31 (post-audit)
+An independent audit directive (FEAR-AI-TRUTH-CORRECTION) was issued against a
+pre-repair tree state (HEAD 050d3db, branch co-author-removal, dirty worktree,
+FIRE-without-MIGRATION, demography-causal-parentage red). Reproduction against
+the CURRENT tree (HEAD 99e439a, master, clean except this doc) shows the audit's
+P0-1/P0-2/P1-1/P1-3/P1-4 findings are already resolved by commits e85650d +
+Slice A/B/C:
+- Full Jest: 141 suites / 1136 tests GREEN (audit claimed FAIL — was true on pre-repair tree).
+- One-town probe (audit §3.3): FIRE 0, MIGRATION 0, SUPPRESSED 25, population stays 1,
+  0 null destinations. Audit's "FIRE 16 / MIG 1 / pop 0 / 15 FIRE-without-MIG / null dest"
+  is no longer reproducible — fixed by e85650d.
+- Two-town probe: initial 10 / final 10 (delta 0), FIRE 6 == MIGRATION 6, 0 null dest.
+- demography-causal-parentage.test.js: 3/3 PASS (audit claimed red — fixed by e85650d).
+- reportedCrime is per-town via recentAttacksByTown (roadId incident to townId), not global.
+- migration-pressure-contracts incidence oracle asserts near-ceiling
+  (highMigs >= eligibleOpportunities-1 AND <= eligibleOpportunities), not merely > 0.
+- production-default test uses named-axis direction (nervous.factionFear > calm.factionFear),
+  no vacuous >= 0.
+
+One genuinely-open audit P0 was found and fixed this pass:
+- P0-4 TEST_CHANGES self-approval: all 15 rows had reviewer="agent" reviewStatus="APPROVED"
+  (implementer self-approving its own test changes). Downgraded to reviewStatus="PROPOSED"
+  (implementer-asserted, supervisor admission still pending). Rows remain append-only.
+
+lint:evidence: exit 1, 0 admissible, 267 stale, 0 errors — fingerprints stale against
+HEAD movement; rebuild is a later evidence slice, not a code bug. Honest, not fixed here.
