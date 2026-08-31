@@ -173,13 +173,21 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
         // The merchant must carry a `cargoKind` to look up the price.
         // If unavailable, no opportunity signal.
         let opportunityBonus = 0;
-        if (merchant.cargoKind && world?.markets && route.to) {
-            const destMarket = world.markets.get(route.to);
+        if (merchant.cargoKind && route.to) {
+            // Prefer world.markets (explicit map) but fallback to
+            // world.towns.get(route.to).market so the canonical
+            // closed-world scenario (town.market, no world.markets)
+            // also drives opportunity. Without fallback the bonus is
+            // decorative (always 0 in production).
+            let destMarket = null;
+            if (world?.markets?.get) destMarket = world.markets.get(route.to);
+            if (!destMarket && world?.towns?.get) {
+                const destTown = world.towns.get(route.to);
+                if (destTown?.market?.getQuote) destMarket = destTown.market;
+            }
             if (destMarket) {
                 const quote = destMarket.getQuote?.(merchant.cargoKind);
                 if (quote && Number.isFinite(quote.price)) {
-                    // Normalize price: base 1.0, high price (2.0) gives
-                    // a 0.5 bonus (50% of the score scale).
                     opportunityBonus = clamp01((quote.price - 1) * 0.5);
                 }
             }
