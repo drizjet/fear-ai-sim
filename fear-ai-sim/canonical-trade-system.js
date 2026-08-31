@@ -216,7 +216,11 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
  * rumors). This keeps the two systems independent and avoids
  * overwriting the BeliefStore.
  */
-export function tickMerchant(world, merchantId, { tick = 0, rng = deterministicRng(1) } = {}) {
+export function tickMerchant(world, merchantId, {
+    tick = 0,
+    rng = deterministicRng(1),
+    parentEventIds = [],
+} = {}) {
     const merchant = (world.merchants || []).find(m => m.id === merchantId);
     if (!merchant) return { ok: false, reason: 'NO_MERCHANT' };
     if (merchant.riskTolerance === undefined) {
@@ -357,6 +361,7 @@ export function tickMerchant(world, merchantId, { tick = 0, rng = deterministicR
         beliefConfidence: beliefs[decision.chosenRoute]?.confidence ?? null,
         chosenScore: decision.chosenScore,
         reason: `risk_tol=${merchant.riskTolerance.toFixed(2)}, perceived_danger=${(beliefs[decision.chosenRoute]?.perceivedDanger ?? 0).toFixed(2)}`,
+        parentEventIds: Array.isArray(parentEventIds) ? [...parentEventIds] : [],
     };
     if (!Array.isArray(world.events)) world.events = [];
     world.events.push(event);
@@ -393,6 +398,51 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
     // genuinely partial-observable.
     const banditAccuracy = Number.isFinite(bandit.perceptionAccuracy)
         ? clamp01(bandit.perceptionAccuracy) : 0.5;
+    // EVID-2026-08-31-RECENCY-DECAY (MUT-RECENCY-001): before
+    // any new observation lands, age every existing belief's
+    // recency multiplicatively. Without this step a stale
+    // observation continues to weight the destination utility
+    // at its full reset value indefinitely, which produces a
+    // memory-only "cat-and-mouse" instead of a partial-observable
+    // one. The default coefficient (0.95 per tick) gives a
+    // half-life of ~14 ticks; callers can override via
+    // `bandit.recencyDecayPerTick` for fast-fade scenarios.
+    //
+    // V8 corrective checkpoint §8: recency must decay by
+    // the elapsed tick count, not by the tickBandit
+    // invocation count. The scheduler may skip ticks
+    // (save/load resume, batch replay); a per-invocation
+    // decay loses information about elapsed time. The
+    // `lastDecayTick` field on each belief records the
+    // tick at which `recency` was last set; the effective
+    // recency on the next tickBandit call is
+    // `recency * decayRate^(tick - lastDecayTick)`.
+    // After computing the effective recency, the field
+    // is updated to the current tick so the next
+    // tickBandit call measures from this one.
+    const recencyDecay = Number.isFinite(bandit.recencyDecayPerTick)
+        ? clamp01(bandit.recencyDecayPerTick)
+        : 0.95;
+    for (const routeId of Object.keys(bandit.trafficBelief)) {
+        const belief = bandit.trafficBelief[routeId];
+        if (!belief) continue;
+        if (!Number.isFinite(belief.recency)) belief.recency = 0;
+        // Initialize lastDecayTick to `tick` if absent.
+        // Without this, a fresh belief whose `recency` is
+        // set via initial fixture (recency: 0.5) would be
+        // misinterpreted as 0.5 since tick 0, decaying it
+        // to near 0 by the time the bandit acts. The
+        // first tickBandit call anchors the belief at
+        // `tick`.
+        if (!Number.isFinite(belief.lastDecayTick)) {
+            belief.lastDecayTick = tick;
+        }
+        const elapsedTicks = Math.max(0, tick - belief.lastDecayTick);
+        if (elapsedTicks > 0) {
+            belief.recency = clamp01(belief.recency * Math.pow(recencyDecay, elapsedTicks));
+            belief.lastDecayTick = tick;
+        }
+    }
     for (const merchant of (world.merchants || [])) {
         if (rng() >= banditAccuracy) continue; // observation failed
         const route = merchant.selectedRoute || merchant.lastRoute;
@@ -400,6 +450,7 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
             const cur = bandit.trafficBelief[route];
             cur.estimatedTraffic = Math.min(10, (cur.estimatedTraffic || 0) + 1);
             cur.recency = 1.0;
+            cur.lastDecayTick = tick;
         }
     }
     const routes = world.routes || [];

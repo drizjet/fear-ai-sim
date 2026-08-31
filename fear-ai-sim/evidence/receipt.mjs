@@ -178,6 +178,27 @@ export function buildReceipt({
     if (!domain) throw new Error('buildReceipt: domain is required');
     if (!dimension) throw new Error('buildReceipt: dimension is required');
 
+    const canonicalLedgerPath = resolve(ROOT, 'docs/evidence/EVIDENCE_LEDGER.jsonl');
+    const resolvedLedgerPath = customLedgerPath
+        ? resolve(customLedgerPath)
+        : canonicalLedgerPath;
+    // Tests are evidence consumers, not evidence producers. A Jest run must
+    // never append synthetic rows to the canonical project ledger: doing so
+    // makes the act of verification mutate the evidence being verified and
+    // leaves the worktree dirty. Tests that exercise writes must inject a
+    // disposable ledgerPath.
+    //
+    // Detection uses JEST_WORKER_ID first (always set inside Jest worker
+    // processes regardless of inherited NODE_ENV) and falls back to
+    // NODE_ENV=test for non-Jest test runners. A host shell that has set
+    // NODE_ENV=production must still see Jest writes blocked here, because
+    // the worktree dirty check is part of the evidence-integrity contract.
+    const inTestProcess = typeof process.env.JEST_WORKER_ID === 'string'
+        && process.env.JEST_WORKER_ID.length > 0;
+    if (!dryRun && inTestProcess && resolvedLedgerPath === canonicalLedgerPath) {
+        throw new Error('buildReceipt: test processes must provide an explicit ledgerPath outside the canonical production ledger');
+    }
+
     const declaredDeps = useImportClosure
         ? importClosure(sourceFiles, { depth: dependencyDepth })
         : sortedUniq(sourceFiles);
@@ -237,9 +258,7 @@ export function buildReceipt({
         // The ledger path is injectable to enable test isolation.
         // Production code passes no ledgerPath (defaults to the
         // canonical path). Tests pass a temp directory.
-        const ledgerPath = customLedgerPath
-            ? resolve(customLedgerPath)
-            : resolve(ROOT, 'docs/evidence/EVIDENCE_LEDGER.jsonl');
+        const ledgerPath = resolvedLedgerPath;
         // EVID-2026-08-29-IDEMPOTENT-SEED (Guardian §1.3):
         // repeated seed execution must NOT create duplicate
         // active proof. A row is a duplicate if it has the
@@ -275,8 +294,10 @@ export function assertionExists(testFile, needle) {
 }
 
 /** Read all evidence rows for a domain. */
-export function readDomain(domain) {
-    const ledgerPath = resolve(ROOT, 'docs/evidence/EVIDENCE_LEDGER.jsonl');
+export function readDomain(domain, { ledgerPath: customLedgerPath = null } = {}) {
+    const ledgerPath = customLedgerPath
+        ? resolve(customLedgerPath)
+        : resolve(ROOT, 'docs/evidence/EVIDENCE_LEDGER.jsonl');
     if (!existsSync(ledgerPath)) return [];
     const lines = readJSONL(ledgerPath, 'utf8').trim().split(/\r?\n/).filter(Boolean);
     return lines

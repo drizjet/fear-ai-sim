@@ -1,4 +1,6 @@
-# Continue Fear-AI Development - Ready-to-Use Prompt
+# STALE as of 2026-08-31; ignore; read AUTONOMOUS_HANDOFF.md
+
+# Continue Fear-AI Development - Ready-to-Use Prompt (STALE)
 
 ## Context for Fresh Chat
 

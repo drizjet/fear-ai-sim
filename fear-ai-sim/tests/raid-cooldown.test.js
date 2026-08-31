@@ -21,8 +21,14 @@ describe('Per-faction raid cooldown', () => {
         north.resources = 5;
         north.maxResources = 5;
         north.townId = 'north';
+        // Mechanism isolation: this suite tests the cooldown throttle, not
+        // the directional relationship gate. Disable the gate so the
+        // (grievance-driven) RAID-state path produces invasions regardless
+        // of stance observations; the gate's correctness is owned by
+        // tests/directional-stance-action-gate.test.js.
+        const tickOpts = { perceivedDanger: 0.0, raidCooldown: 5, relationshipGate: false };
         // Tick 2: first raid.
-        tickClosedWorld(world, { tick: 2, perceivedDanger: 0.0, raidCooldown: 5 });
+        tickClosedWorld(world, { tick: 2, ...tickOpts });
         const invasionsAfterFirst = world.events.filter(e =>
             e.type === 'INVASION' && e.factionId === 'north-faction'
         ).length;
@@ -30,7 +36,7 @@ describe('Per-faction raid cooldown', () => {
         // Ticks 3-6 are within the cooldown window (gap = 1, 2, 3, 4
         // all < 5). North must NOT raid in any of these.
         for (let i = 3; i <= 6; i++) {
-            tickClosedWorld(world, { tick: i, perceivedDanger: 0.0, raidCooldown: 5 });
+            tickClosedWorld(world, { tick: i, ...tickOpts });
         }
         const invasionsDuringCooldown = world.events.filter(e =>
             e.type === 'INVASION' && e.factionId === 'north-faction'
@@ -46,13 +52,15 @@ describe('Per-faction raid cooldown', () => {
         north.resources = 5;
         north.maxResources = 5;
         north.townId = 'north';
+        // Mechanism isolation: cooldown throttle, not directional gate.
+        const tickOpts = { perceivedDanger: 0.0, raidCooldown: 5, relationshipGate: false };
         // Tick 2: first raid. Tick 8 (cooldown 5: 3, 4, 5, 6, 7 are
         // blocked; 8 is allowed).
-        tickClosedWorld(world, { tick: 2, perceivedDanger: 0.0, raidCooldown: 5 });
+        tickClosedWorld(world, { tick: 2, ...tickOpts });
         for (let i = 3; i <= 7; i++) {
-            tickClosedWorld(world, { tick: i, perceivedDanger: 0.0, raidCooldown: 5 });
+            tickClosedWorld(world, { tick: i, ...tickOpts });
         }
-        tickClosedWorld(world, { tick: 8, perceivedDanger: 0.0, raidCooldown: 5 });
+        tickClosedWorld(world, { tick: 8, ...tickOpts });
         const invasions = world.events.filter(e =>
             e.type === 'INVASION' && e.factionId === 'north-faction'
         ).length;
@@ -67,8 +75,10 @@ describe('Per-faction raid cooldown', () => {
         north.resources = 5;
         north.maxResources = 5;
         north.townId = 'north';
+        // Mechanism isolation: cooldown throttle, not directional gate.
+        const tickOpts = { perceivedDanger: 0.0, raidCooldown: 0, relationshipGate: false };
         for (let i = 2; i <= 4; i++) {
-            tickClosedWorld(world, { tick: i, perceivedDanger: 0.0, raidCooldown: 0 });
+            tickClosedWorld(world, { tick: i, ...tickOpts });
         }
         // With cooldown=0, every tick the resource gate passes
         // and the cooldown check is `< 0` (always false), so north

@@ -86,10 +86,17 @@ describe('Brain / FearCore single-authority (Constitution §260 / §261)', () =>
         // assignment outside the constructor / reset() /
         // update() is a §260 violation.
         const fs = { readFileSync };
-        const src = fs.readFileSync(
+        const candidates = [
             'C:/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim/brain.js',
-            'utf-8'
-        );
+            '/mnt/c/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim/brain.js',
+            new URL('../brain.js', import.meta.url).pathname,
+            'brain.js',
+        ];
+        let src = null;
+        for (const p of candidates) {
+            try { src = fs.readFileSync(p, 'utf-8'); if (src) break; } catch {}
+        }
+        if (!src) throw new Error('brain.js not found in any candidate path');
         // Find all `this.state = 'X'` assignments and their
         // context. We assert that the only assignments are
         // (a) in the constructor (`this.state = 'CALM'`), and

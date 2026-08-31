@@ -13,7 +13,7 @@
 //   8. A receipt with no commandReceipt still produces a valid row.
 
 import { jest } from '@jest/globals';
-import { writeFileSync, existsSync, unlinkSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { writeFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -26,11 +26,7 @@ import {
 } from '../evidence/receipt.mjs';
 
 const ROOT = resolve(process.cwd());
-
-afterAll(() => {
-    // Best-effort cleanup of any test-created ledger rows.
-    // (We append a unique claimId so cleanup is targeted.)
-});
+const PRODUCTION_LEDGER = resolve(ROOT, 'docs/evidence/EVIDENCE_LEDGER.jsonl');
 
 describe('evidence/receipt.mjs', () => {
     test('sortedUniq dedupes and sorts', () => {
@@ -112,7 +108,10 @@ describe('evidence/receipt.mjs', () => {
         expect(row.transitiveDependencies).toContain('routing.js');
     });
 
-    test('buildReceipt() writes a valid row to the ledger', () => {
+    test('buildReceipt() writes a valid row to an isolated ledger', () => {
+        const tmp = mkdtempSync(join(tmpdir(), 'receipt-ledger-'));
+        const ledgerPath = join(tmp, 'EVIDENCE_LEDGER.jsonl');
+        writeFileSync(ledgerPath, '');
         const claimId = `C-test-write-${Date.now()}`;
         const row = buildReceipt({
             claimId,
@@ -123,8 +122,9 @@ describe('evidence/receipt.mjs', () => {
             sourceFiles: ['routing.js', 'trade.js'],
             useImportClosure: true,
             assertions: ['merchant routeCost returns finite', 'selectRoute returns best route'],
+            ledgerPath,
         });
-        const rows = readDomain('__receipt_test__');
+        const rows = readDomain('__receipt_test__', { ledgerPath });
         const found = rows.find(r => r.claimId === claimId);
         expect(found).toBeDefined();
         expect(found.evidenceId).toContain('EVID-');
@@ -135,6 +135,19 @@ describe('evidence/receipt.mjs', () => {
         expect(found.assertions.length).toBe(2);
         expect(found.sourceState.head).toBeDefined();
         expect(found.sourceState.fingerprint.length).toBeGreaterThan(0);
+        rmSync(tmp, { recursive: true, force: true });
+    });
+
+    test('test processes cannot write the canonical production ledger', () => {
+        const before = readFileSync(PRODUCTION_LEDGER, 'utf8');
+        expect(() => buildReceipt({
+            claimId: `C-test-production-guard-${Date.now()}`,
+            domain: '__receipt_test__',
+            dimension: 'UNIT_VERIFIED',
+            claim: 'test writes must be isolated',
+            sourceFiles: ['routing.js'],
+        })).toThrow(/explicit ledgerPath/i);
+        expect(readFileSync(PRODUCTION_LEDGER, 'utf8')).toBe(before);
     });
 
     test('buildReceipt() without commandReceipt still works', () => {
