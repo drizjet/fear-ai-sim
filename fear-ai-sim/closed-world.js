@@ -1760,16 +1760,59 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // SUPPRESSED with an honest reason and no MIGRATION
         // event is emitted and no population is moved.
         const townPop = Number.isFinite(town?.population) ? town.population : 0;
+        // Slice B — destination utility (not lowest-pop).
+        // For each candidate town, compute a utility score:
+        //   utility = 0.4*(1-shortage) + 0.3*(1-danger) + 0.2*(1/distanceNorm) + 0.1*trust
+        // where shortage is food shortage [0,1], danger is perceived bandit
+        // danger on incident roads, distance is route distance, trust is
+        // faction stance-derived trust. Highest utility wins.
+        // This is the audit §11 Slice B requirement: "destination utility:
+        // food availability, safety belief, distance, faction stance — not lowest population"
         let toTownId = null;
-        let lowestPop = Infinity;
+        let bestUtility = -Infinity;
+        const destinationUtilities = [];
+        const originFaction = world.factions.find(f => f.townId === townId);
         for (const [otherId, otherTown] of world.towns) {
             if (otherId === townId) continue;
-            const pop = Number.isFinite(otherTown.population) ? otherTown.population : 0;
-            if (pop < lowestPop) {
-                lowestPop = pop;
+            // Food availability: 1 - shortage (higher is better)
+            let shortage = 0.5;
+            if (otherTown?.market?.getQuote) {
+                const q = otherTown.market.getQuote('food');
+                if (q && Number.isFinite(q.shortage)) shortage = q.shortage;
+            }
+            const foodScore = 1 - shortage;
+            // Safety: 1 - danger on roads incident to candidate town
+            let danger = 0.3;
+            const incidentRoads = world.routes.filter(r => r.from === otherId || r.to === otherId);
+            if (incidentRoads.length > 0) {
+                // Check if any bandit is on an incident road
+                const banditOnRoad = world.bandits.some(b => incidentRoads.some(r => r.id === b.roadId));
+                danger = banditOnRoad ? 0.7 : 0.2;
+            }
+            const safetyScore = 1 - danger;
+            // Distance: inverse distance (shorter is better), normalized
+            let distance = 5;
+            const directRoute = world.routes.find(r => (r.from === townId && r.to === otherId) || (r.from === otherId && r.to === townId));
+            if (directRoute && Number.isFinite(directRoute.distance)) distance = directRoute.distance;
+            const distanceScore = 1 / (1 + distance / 10);
+            // Faction stance: trust from origin faction to candidate faction
+            let trust = 0.5;
+            if (originFaction && otherTown?.controlledBy) {
+                const candidateFactionId = otherTown.controlledBy;
+                const pair = world.relationships?.get(`${originFaction.id}::${candidateFactionId}`) ?? world.relationships?.get(`${candidateFactionId}::${originFaction.id}`);
+                if (pair && typeof pair.getTrustFrom === 'function') {
+                    trust = pair.getTrustFrom(originFaction.id);
+                }
+            }
+            const utility = foodScore * 0.4 + safetyScore * 0.3 + distanceScore * 0.2 + trust * 0.1;
+            destinationUtilities.push({ townId: otherId, utility, foodScore, safetyScore, distanceScore, trust, shortage, danger, distance });
+            if (utility > bestUtility) {
+                bestUtility = utility;
                 toTownId = otherId;
             }
         }
+        // Sort rejected by utility descending for WHY
+        destinationUtilities.sort((a, b) => b.utility - a.utility);
         const hasDestination = toTownId !== null;
         const hasPopulation = townPop > 0;
         const pressureExceeds = result.migrationPressure > 0.5;
@@ -1795,6 +1838,15 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // decision. The chain MIGRATION_PRESSURE_EVALUATED
         // -> MIGRATION_DECISION -> MIGRATION makes the
         // decision mechanism observable in the ledger.
+        // Enrich WHY: include destination utility and rejected sinks
+        const whyPayload = canMigrate ? {
+            destinationUtility: bestUtility,
+            destinationUtilities,
+            rejectedSinks: destinationUtilities.filter(d => d.townId !== toTownId),
+        } : {
+            destinationUtilities,
+            rejectedSinks: destinationUtilities,
+        };
         const decision = appendWorldEvent(world, {
             type: 'MIGRATION_DECISION',
             townId,
@@ -1803,6 +1855,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             reason: decisionReason,
             pressure: result.migrationPressure,
             lastMigrationTick,
+            ...(canMigrate ? { chosenDestination: toTownId, destinationUtility: bestUtility } : {}),
+            why: whyPayload,
         }, pressureEvaluation.eventId ? [pressureEvaluation.eventId] : []);
         if (canMigrate) {
             // ACT on the event: decrement the town's
@@ -1832,7 +1886,9 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 townId,
                 toTownId,
                 tick,
-                pressure: result.migrationPressure
+                pressure: result.migrationPressure,
+                destinationUtility: bestUtility,
+                why: { destinationUtilities, chosenUtility: bestUtility },
             }, decision.eventId ? [decision.eventId] : []);
             // Update the per-town cooldown so the next
             // MIGRATION from this town is suppressed for
