@@ -1,3 +1,5 @@
+import { appendWorldEvent } from './closed-world.js';
+
 // Constitution §89 / §90 / §91 / §94 / §532.
 //
 // Encounter eligibility catalog. An encounter template describes
@@ -349,7 +351,7 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
                     const kind = merchant.cargoKind ?? 'food';
                     world.transitLoss[kind] = (world.transitLoss[kind] ?? 0) + lost;
                 }
-                world.events.push({
+                const attackEvent = {
                     type: 'BANDIT_ATTACK',
                     attackOpportunityId,
                     banditId: bandit.id,
@@ -361,7 +363,18 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
                     survivor: true,
                     tick,
                     source: 'encounter_engine',
-                });
+                    // RESP-EVENT-ID-AUTHORITY-001: allocator-owned id so
+                    // downstream consumers (patrol detection, faction
+                    // memory) can resolve this attack as a causal parent.
+                    rootReason: 'ATTACK_OPPORTUNITY',
+                };
+                const emittedAttack = appendWorldEvent(world, attackEvent, []);
+                // The encounter event itself is the causal parent of the
+                // attack it produced, when resolvable.
+                if (result && result.eventId) {
+                    emittedAttack.parentEventIds = [result.eventId];
+                    delete emittedAttack.rootReason;
+                }
             }
         }
     }

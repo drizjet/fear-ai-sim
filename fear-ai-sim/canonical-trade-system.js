@@ -21,6 +21,7 @@
 // uses them so the two worlds share a single source of truth.
 
 import { clamp01, clamp } from './math-utils.js';
+import { appendWorldEvent } from './closed-world.js';
 
 // Deterministic xorshift32 RNG (mirrors closed-world.js).
 const deterministicRng = (seed = 1) => {
@@ -353,10 +354,13 @@ export function tickMerchant(world, merchantId, {
     // Set it as an alias of `lastRoute` so the encounter eligibility
     // check (line 174 of encounters.js) finds the merchant.
     merchant.selectedRoute = decision.chosenRoute;
-    // Structured event.
+    // Structured event. RESP-EVENT-ID-AUTHORITY-001: the eventId must
+    // come from the world's single allocator (appendWorldEvent mints
+    // WORLD-EVENT-* IDs); the old template id `MERCHANT_ROUTE_DECISION-
+    // ${tick}-${merchantId}` bypassed the allocator and collided across
+    // forks/replays.
     const event = {
         type: 'MERCHANT_ROUTE_DECISION',
-        eventId: `MERCHANT_ROUTE_DECISION-${tick}-${merchantId}`,
         tick,
         merchantId,
         archetype: merchant.archetype,
@@ -371,9 +375,15 @@ export function tickMerchant(world, merchantId, {
         reason: `risk_tol=${merchant.riskTolerance.toFixed(2)}, perceived_danger=${(beliefs[decision.chosenRoute]?.perceivedDanger ?? 0).toFixed(2)}`,
         parentEventIds: Array.isArray(parentEventIds) ? [...parentEventIds] : [],
     };
-    if (!Array.isArray(world.events)) world.events = [];
-    world.events.push(event);
-    return { ok: true, decision, event };
+    // When no belief event exists to parent to (fresh belief store on the
+    // first tick, or a caller that did not pass parents), the decision is
+    // still causally derived from the merchant's own stored belief state:
+    // declare that root explicitly instead of silently emitting [] parents.
+    if (!Array.isArray(parentEventIds) || parentEventIds.length === 0) {
+        event.rootReason = 'DECISION_FROM_BELIEFS';
+    }
+    const emitted = appendWorldEvent(world, event, parentEventIds);
+    return { ok: true, decision, event: emitted };
 }
 
 /**
@@ -490,9 +500,9 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
         // Relocate.
         const from = bandit.roadId;
         bandit.roadId = top.routeId;
+        // RESP-EVENT-ID-AUTHORITY-001: allocator-owned id (no template ids).
         const event = {
             type: 'BANDIT_RELOCATION',
-            eventId: `BANDIT_RELOCATION-${tick}-${banditId}`,
             tick,
             banditId,
             from,
@@ -516,10 +526,13 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
             // Legacy shape preservation so existing tests
             // can read ev.relocation.reason.
             relocation: { reason: 'chooseRoamingDestination' },
+            // The relocation is derived from the bandit's own roaming
+            // utility; no single causal parent event exists, so the
+            // rootReason makes the root explicit (never a silent []).
+            rootReason: 'ROAMING_UTILITY',
         };
-        if (!Array.isArray(world.events)) world.events = [];
-        world.events.push(event);
-        return { ok: true, relocated: true, event };
+        const emitted = appendWorldEvent(world, event, []);
+        return { ok: true, relocated: true, event: emitted };
     }
     return { ok: true, relocated: false };
 }
@@ -578,39 +591,51 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
                 }
                 const interceptEvent = {
                     type: 'PATROL_INTERCEPTION',
-                    eventId: `PATROL_INTERCEPTION-${tick}-${patrolId}-${attack.attackOpportunityId}`,
                     tick,
                     patrolId,
                     attackOpportunityId: attack.attackOpportunityId,
                     merchantId: attack.merchantId,
                     roadId: attack.roadId,
                     recoveredCargo: attack.lost || 0,
+                    // RESP-EVENT-ID-AUTHORITY-001: allocator-owned id;
+                    // the patrol reaction parents to the attack event when
+                    // its allocator id is resolvable at patrol time.
+                    ...(attack.eventId ? {} : { rootReason: 'PATROL_SWEEP' }),
                 };
-                world.events.push(interceptEvent);
-                produced.push(interceptEvent);
+                const emittedIntercept = appendWorldEvent(
+                    world, interceptEvent,
+                    attack.eventId ? [attack.eventId] : []
+                );
+                produced.push(emittedIntercept);
             } else {
                 const missEvent = {
                     type: 'PATROL_DETECTION_MISS',
-                    eventId: `PATROL_DETECTION_MISS-${tick}-${patrolId}-${attack.attackOpportunityId}`,
                     tick,
                     patrolId,
                     attackOpportunityId: attack.attackOpportunityId,
                     roadId: attack.roadId,
+                    ...(attack.eventId ? {} : { rootReason: 'PATROL_SWEEP' }),
                 };
-                world.events.push(missEvent);
-                produced.push(missEvent);
+                const emittedMiss = appendWorldEvent(
+                    world, missEvent,
+                    attack.eventId ? [attack.eventId] : []
+                );
+                produced.push(emittedMiss);
             }
         } else {
             const missEvent = {
                 type: 'PATROL_DETECTION_MISS',
-                eventId: `PATROL_DETECTION_MISS-${tick}-${patrolId}-${attack.attackOpportunityId}`,
                 tick,
                 patrolId,
                 attackOpportunityId: attack.attackOpportunityId,
                 roadId: attack.roadId,
+                ...(attack.eventId ? {} : { rootReason: 'PATROL_SWEEP' }),
             };
-            world.events.push(missEvent);
-            produced.push(missEvent);
+            const emittedMiss = appendWorldEvent(
+                world, missEvent,
+                attack.eventId ? [attack.eventId] : []
+            );
+            produced.push(emittedMiss);
         }
     }
     return { ok: true, events: produced };

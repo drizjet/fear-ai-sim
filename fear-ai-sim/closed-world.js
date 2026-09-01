@@ -683,10 +683,14 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         delivered: remaining,
         marketResult,
         survivor: true,
-        tick
+        tick,
+        // RESP-EVENT-ID-AUTHORITY-001: the attack opportunity ITSELF is the
+        // root; the allocator id is minted by appendWorldEvent so later
+        // consumers (patrol reactions, faction memory) can parent to it.
+        rootReason: 'ATTACK_OPPORTUNITY',
     };
-    world.events.push(event);
-    return { ok: true, event, attackOpportunityId };
+    const emitted = appendWorldEvent(world, event, []);
+    return { ok: true, event: emitted, attackOpportunityId };
 }
 
 export function applySurvivorEvidence(world, { roadId = 'road-a', tick = 1 } = {}) {
@@ -939,7 +943,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             confirmedLoss: newLoss
         });
         if (faction.escalation !== previousEscalation) {
-            world.events.push({ type: 'FACTION_REASSESSMENT', result, tick });
+            appendWorldEvent(world, {
+                type: 'FACTION_REASSESSMENT', result, tick,
+                // Summary of the faction's own continuous state; no single
+                // causal parent event exists (explicit root, never silent).
+                rootReason: 'WORLD_STATE_DERIVED',
+            }, []);
         }
     }
 
@@ -1037,7 +1046,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             });
             pair.observeFrom(evaluatorId, decision.to, tick);
             if (decision.to !== previousEvaluatorStance) {
-                world.events.push({
+                appendWorldEvent(world, {
                     type: 'STANCE_TRANSITION',
                     pairId,
                     evaluatorId,
@@ -1051,6 +1060,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     blocked: decision.blocked,
                     pressure: pair.pressureFrom(evaluatorId),
                     trust: pair.getTrustFrom(evaluatorId),
+                    // Derived from the pair's own continuous state.
+                    rootReason: 'PAIR_STATE_DERIVED',
                     militaryResources,
                     informationConfidence,
                     tick,
@@ -1126,7 +1137,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     intrusionEvent.context.treatyId = passageTreaty.id;
                 }
                 if (intrusionEvent) {
-                    world.events.push({
+                    appendWorldEvent(world, {
                         type: 'INTRUSION',
                         observerId: observerFaction.id,
                         intruderId: intruder.id,
@@ -1136,6 +1147,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                         tick,
                         severity: intrusionEvent.scaledSeverity,
                         context: intrusionEvent.context,
+                        // Derived from territorial proximity analysis.
+                        rootReason: 'TERRITORY_PROXIMITY',
                     });
                 }
             }
@@ -1164,10 +1177,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // Apply the mutation: the legacy
             // `relocateBandit` in `escalation.js` did this;
             // the new live-wire must too.
-            if (relocation.to) {
-                bandit.roadId = relocation.to;
-            }
-            world.events.push({ type: 'BANDIT_RELOCATION', relocation, tick });
+        if (relocation.to) {
+            bandit.roadId = relocation.to;
+        }
+        appendWorldEvent(world, {
+            type: 'BANDIT_RELOCATION',
+            relocation,
+            tick,
+            // Derived from the roaming group's own destination utility.
+            rootReason: 'ROAMING_UTILITY',
+        }, []);
         }
         tickRoamingGroup(bandit);
     }
@@ -1329,13 +1348,33 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // below still runs for the ROUTE_SELECTED / ROUTE_CHANGED
     // audit trail but only emits events; it does not overwrite
     // the canonical route choice.
+    // RESP-EVENT-ID-AUTHORITY-001: capture each merchant's canonical
+    // decision event so the legacy audit-trail pass below can parent
+    // ROUTE_SELECTED / ROUTE_CHANGED to the decision that caused them.
+    const decisionEventIds = new Map();
     for (const merchant of world.merchants) {
         if (!merchant || merchant.riskTolerance === undefined) continue;
-        const beliefParentIds = world.events
-            .filter(event => event.type === 'BELIEF_UPDATE'
-                && event.tick === tick
-                && event.merchantId === merchant.id)
-            .map(event => event.eventId);
+        // RESP-EVENT-ID-AUTHORITY-001: parent the decision to this tick's
+        // BELIEF_UPDATE events; when no fresh observation happened, fall
+        // back to the merchant's most recent belief event (the decision
+        // still consumes its stored belief state, so a stale belief is a
+        // legitimate causal parent). tickMerchant declares an explicit
+        // rootReason when there is no belief event at all (e.g. tick 1
+        // with an empty belief store).
+        const beliefParentIds = (() => {
+            const sameTick = world.events
+                .filter(event => event.type === 'BELIEF_UPDATE'
+                    && event.tick === tick
+                    && event.merchantId === merchant.id)
+                .map(event => event.eventId);
+            if (sameTick.length > 0) return sameTick;
+            const earlier = world.events
+                .filter(event => event.type === 'BELIEF_UPDATE'
+                    && event.merchantId === merchant.id
+                    && Number.isFinite(event.tick) && event.tick <= tick);
+            earlier.sort((a, b) => (b.tick ?? 0) - (a.tick ?? 0));
+            return earlier.length > 0 ? [earlier[0].eventId] : [];
+        })();
         const routeResult = tickCanonicalMerchant(world, merchant.id, {
             tick,
             rng: encounterRng ?? deterministicRng((tick * 0x9E3779B9) >>> 0),
@@ -1343,6 +1382,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         });
         if (routeResult?.ok && routeResult.event) {
             ensureWorldEventIdentity(world, routeResult.event, beliefParentIds);
+            decisionEventIds.set(merchant.id, routeResult.event.eventId);
             const chosenRoute = routeResult.event.chosenRoute;
             const route = (world.routes ?? []).find(r => r.id === chosenRoute);
             // Roads are undirected for travel: a merchant at `route.to`
@@ -1494,20 +1534,26 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // authoritative route chooser and already set it.
             // We only emit the ROUTE_SELECTED / ROUTE_CHANGED
             // audit-trail events for the legacy tests.
-            world.events.push({
+            // RESP-EVENT-ID-AUTHORITY-001: the audit-trail events parent
+            // to the canonical MERCHANT_ROUTE_DECISION of this tick (or
+            // declare themselves roots for legacy-only merchants).
+            const decisionId = decisionEventIds.get(merchant.id);
+            appendWorldEvent(world, {
                 type: 'ROUTE_SELECTED',
                 merchantId: merchant.id,
                 routeId: merchant.selectedRoute || newRoute,
                 tick,
-            });
+                ...(decisionId ? {} : { rootReason: 'LEGACY_AUDIT_TRAIL' }),
+            }, decisionId ? [decisionId] : []);
             if (previousRoute !== null && previousRoute !== undefined && previousRoute !== newRoute) {
-                world.events.push({
+                appendWorldEvent(world, {
                     type: 'ROUTE_CHANGED',
                     merchantId: merchant.id,
                     fromRouteId: previousRoute,
                     toRouteId: newRoute,
                     tick,
-                });
+                    ...(decisionId ? {} : { rootReason: 'LEGACY_AUDIT_TRAIL' }),
+                }, decisionId ? [decisionId] : []);
             }
         }
     }
@@ -1531,25 +1577,29 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         if ((merchant.cargo ?? 0) > 0 && merchantMaterialized) {
             world.convoy = formConvoy([merchant], world.guards, { escortRatio: 1 });
             world.convoy.routeId = merchant.selectedRoute;
-            world.events.push({
+            appendWorldEvent(world, {
                 type: 'CONVOY_FORMED',
                 convoyId: world.convoy.id,
                 merchantIds: world.convoy.merchantIds,
                 escortIds: world.convoy.escortIds,
                 cargo: world.convoy.cargo,
                 tick,
-            });
+                ...(merchantCommitment?.commitmentEventId
+                    ? {} : { rootReason: 'ESCORT_FORMED' }),
+            }, merchantCommitment?.commitmentEventId
+                ? [merchantCommitment.commitmentEventId] : []);
         }
     } else if (world.convoy) {
         // Update the convoy's route to follow the merchant.
         world.convoy.routeId = world.merchants[0].selectedRoute;
         // If the merchant has no cargo, disband the convoy.
         if ((world.merchants[0].cargo ?? 0) <= 0) {
-            world.events.push({
+            appendWorldEvent(world, {
                 type: 'CONVOY_DISBANDED',
                 convoyId: world.convoy.id,
                 tick,
-            });
+                rootReason: 'CARGO_EXHAUSTED',
+            }, []);
             world.convoy = null;
         }
     }
@@ -1812,10 +1862,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 // can reconstruct the mass balance from this
                 // single event. The cumulative totals are still
                 // available in `world.marketFlows` for audit.
-                flows: { ...tickFlow }
+                flows: { ...tickFlow },
+                // MARKET_TICK summarizes an entire tick of material
+                // flows across multiple producers/consumers; it is a
+                // declared summary root, never a silent orphan.
+                rootReason: 'MARKET_SUMMARY',
             };
-            world.events.push(event);
-            marketEvents.push(event);
+            const emitted = appendWorldEvent(world, event, []);
+            marketEvents.push(emitted);
         }
     }
 
@@ -1974,9 +2028,24 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // The chain MIGRATION_PRESSURE_EVALUATED ->
         // MIGRATION_DECISION -> MIGRATION makes the decision
         // mechanism observable in the ledger.
-        const evaluationParentIds = justiceResolvedEvent
+        // RESP-EVENT-ID-AUTHORITY-001: when justice state did not change,
+        // JUSTICE_RESOLVED is (correctly) absent — the pressure evaluation
+        // must still parent to REAL causal inputs (the recent attacks for
+        // this town) or declare itself a root. Silent parentlessness on
+        // stable-justice ticks was the audit's CHAIN-MIGRATION orphan.
+        let evaluationParentIds = justiceResolvedEvent
             ? [justiceResolvedEvent.eventId]
             : [];
+        if (evaluationParentIds.length === 0) {
+            evaluationParentIds = world.events
+                .filter(ev => ev.type === 'BANDIT_ATTACK'
+                    && Number.isFinite(ev.tick) && ev.tick <= tick
+                    && ev.tick > tick - RECENT_ATTACK_WINDOW
+                    && typeof ev.eventId === 'string')
+                .slice(-3)
+                .map(ev => ev.eventId)
+                .filter(Boolean);
+        }
         const pressureEvaluation = appendWorldEvent(world, {
             type: 'MIGRATION_PRESSURE_EVALUATED',
             townId,
@@ -1985,6 +2054,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             reportedCrime,
             legitimacy: result.legitimacy,
             grievance: result.grievance,
+            ...(evaluationParentIds.length === 0 ? { rootReason: 'WORLD_CONDITIONS' } : {}),
         }, evaluationParentIds);
         // PHASE §164 / §213: emit a MIGRATION event when
         // migrationPressure exceeds the threshold. The audit's
@@ -2185,12 +2255,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tick
         );
         if (report.ok) {
-            world.events.push({
+            appendWorldEvent(world, {
                 type: 'REPORT_FILED',
                 guardId: guard.id,
                 banditId: bandit.id,
-                tick
-            });
+                tick,
+                // A guard's report is its own legal act; declared root.
+                rootReason: 'PATROL_REPORT',
+            }, []);
         }
     }
 

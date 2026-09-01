@@ -1,8 +1,69 @@
 # AUTONOMOUS HANDOFF
 
+EVID-2026-08-31-R2-W1-CAUSAL-DAG-AUTHORITY (V8 Supercampaign R2, Wave 1 lane C)
+
+Test Suites: 145 passed, 145 total (was 144)
+Tests:       1156 passed, 1156 total (+9)
+1000-tick ledger probe: 15,814 events — ids UNIQUE and allocator-shaped
+  (WORLD-EVENT-*), zero unknown parents, zero future parents, maxPendingTrips=1,
+  no NaN (mass identity enforced by in-suite loss-sink tests, unchanged)
+build: fail (rollup native missing in WSL, not related to code)
+lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
+lane: B
+supervisor admitted: no
+
+## LANE C RESULT — one event-ID authority + protected parentage + causal linter
+RESP-EVENT-ID-AUTHORITY-001. Re-anchored on 194f022 (clean tree): all claims
+CONFIRMED_CURRENT — 4 template-ID emitters (canonical-trade-system.js
+MERCHANT_ROUTE_DECISION/BANDIT_RELOCATION/PATROL_INTERCEPTION/PATROL_DETECTION_MISS,
+two-roads-world.js benchmark MERCHANT_ROUTE_DECISION filed as benchmark scope),
+~19 bare world.events.push sites in the reducer path, and the
+MIGRATION_PRESSURE_EVALUATED orphan on stable-justice ticks.
+
+Production changes:
+- appendWorldEvent now the ONLY emission path for protected events in the
+  canonical world: resolveBanditAttack, encounter-engine BANDIT_ATTACK,
+  ROUTE_SELECTED/ROUTE_CHANGED (parented to the canonical
+  MERCHANT_ROUTE_DECISION of the tick via decisionEventIds capture;
+  legacy-only merchants declare rootReason LEGACY_AUDIT_TRAIL),
+  CONVOY_FORMED (parent = TRIP_COMMITMENT) / CONVOY_DISBANDED,
+  FACTION_REASSESSMENT, STANCE_TRANSITION, INTRUSION, BANDIT_RELOCATION,
+  MARKET_TICK, REPORT_FILED.
+- tickMerchant/tickBandit/tickPatrol emit through appendWorldEvent
+  (allocator ids); PATROL_* events parent to the BANDIT_ATTACK they react
+  to (rootReason PATROL_SWEEP when the attack id is not yet allocator-issued).
+- MERCHANT_ROUTE_DECISION parents: this tick's BELIEF_UPDATE events, falling
+  back to the merchant's most recent belief event (stale belief = legitimate
+  causal parent), or explicit rootReason DECISION_FROM_BELIEFS.
+- MIGRATION_PRESSURE_EVALUATED on stable-justice ticks now parents to the
+  town's recent BANDIT_ATTACK events (the real causal inputs) instead of
+  silent []; rootReason WORLD_CONDITIONS only when no attack exists.
+
+New read-only causal-ledger.js linter (no deps, never mutates):
+- EVENT-ID-001: duplicate ids, missing ids, template ids on protected types
+- EVENT-PARENT-001: chain-connector types REQUIRE a parent; derivative types
+  require parent OR explicit rootReason (the silent-[] orphan class)
+- EVENT-PARENT-ORDER-001: future parents
+- CHAIN-MERCHANT-001: decision->commitment->exposure->consequence in the
+  parent/child graph (EVENTUALLY semantics: a consequence existing anywhere
+  without any exposure->consequence path is a broken wire)
+- CHAIN-MIGRATION-001: migration->decision->pressure evaluation
+
+Detectors: tests/w1-causal-ledger.test.js (9 tests) — clean-lint smoke on
+plain AND attack-driven worlds (which also prove real ENCOUNTER + MIGRATION
+events), and mutations KILLED: MUT-EVENT-TEMPLATE-001 (TEMPLATE_EVENT_ID),
+MUT-EVENT-DUP-001 (DUP_EVENT_ID), MUT-EVENT-UNKNOWN-PARENT-001
+(UNKNOWN_PARENT), MUT-EVENT-FUTURE-PARENT-001 (FUTURE_PARENT),
+MUT-EVENT-ORPHAN-001 (MISSING_PARENT), MUT-CHAIN-MERCHANT-001
+(CHAIN_MERCHANT_DECISION), MUT-CHAIN-MIGRATION-001 (CHAIN_MIGRATION +
+MISSING_PARENT).
+
+Filed (benchmark scope): two-roads-world.js:365 MERCHANT_ROUTE_DECISION
+still template-id (its own arena, exempt from closed-world linter).
+
 EVID-2026-08-31-R2-W1-PARTIAL-OBSERVABILITY (V8 Subagent Supercampaign R2, Wave 1 lane B)
 
-Test Suites: 144 passed, 144 total (was 143)
+Test Suites: 144 passed, 144 total (superseded by 145/1156 above)
 Tests:       1147 passed, 1147 total (+4)
 1000-tick direct probe (organic default world): worst mass drift 3.55e-11,
   maxPendingTrips=1, no NaN / negative population; 932 food organically stolen
