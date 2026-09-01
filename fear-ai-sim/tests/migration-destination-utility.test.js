@@ -69,7 +69,28 @@ describe('Slice B — destination utility not lowest-pop', () => {
         const world = createClosedWorldScenario();
         world.ticksPerSeason = 10000;
         world.bandits = [{ id: 'b1', roadId: 'road-a', trafficBelief: {}, roadId: 'road-a' }];
-        world.merchants = []; world.guards = []; world.civilians = []; world.vampires = []; world.convoy = null; world.convoys = [];
+        // Legal information surface (OBS-HIDDEN-001): the traveler's
+        // safety signal derives from the north town's merchant beliefs
+        // (observation/rumor), never from live bandit truth. The old
+        // oracle relied on omniscience baked into the scenario (bandits
+        // array read directly); it now seeds the town's knowledge instead.
+        world.merchants = [{
+            id: 'merchant-1',
+            location: 'north',
+            cargo: 0,
+            riskTolerance: 0.5,
+            switchingCost: 0,
+            cargoValueSensitivity: 0.5,
+            routeBeliefs: {
+                'road-a': { perceivedDanger: 0.8, confidence: 0.9 },
+                'road-b': { perceivedDanger: 0.5, confidence: 0.5 },
+                'road-c': { perceivedDanger: 0.5, confidence: 0.5 },
+                'road-ne': { perceivedDanger: 0.1, confidence: 0.9 },
+            },
+            lastRoute: null,
+            lastRouteSwitchTick: -1000,
+        }];
+        world.guards = []; world.civilians = []; world.vampires = []; world.convoy = null; world.convoys = [];
         // Add east
         const eastMarket = new Market('east');
         eastMarket.setCapacity('food', 200);

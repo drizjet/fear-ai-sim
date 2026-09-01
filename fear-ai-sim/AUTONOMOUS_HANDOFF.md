@@ -1,8 +1,60 @@
 # AUTONOMOUS HANDOFF
 
+EVID-2026-08-31-R2-W1-PARTIAL-OBSERVABILITY (V8 Subagent Supercampaign R2, Wave 1 lane B)
+
+Test Suites: 144 passed, 144 total (was 143)
+Tests:       1147 passed, 1147 total (+4)
+1000-tick direct probe (organic default world): worst mass drift 3.55e-11,
+  maxPendingTrips=1, no NaN / negative population; 932 food organically stolen
+  and booked through the loss sink over the run (world alive under the fixes)
+build: fail (rollup native missing in WSL, not related to code)
+lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
+lane: B
+supervisor admitted: no
+
+## LANE B RESULT — hidden-truth reads killed (OBS-HIDDEN-001 / OBS-LOCALITY-001)
+Re-anchored all §3.2 claims on the current tree (3e93a1f, clean). Three live
+truth-reads CONFIRMED and closed; two fidelity items deferred (not truth reads):
+1. closed-world.js (legacy route pass): missing belief fell back to
+   `world.bandits.some(...) ? route.actualDanger : route.actualDanger*0.1` —
+   hidden truth injected into merchant perception. Now NEUTRAL PRIOR 0.5.
+2. Faction step: confirmedLoss / memoryOfLoss / per-target memory / pair harm
+   counted ALL world attacks for EVERY faction (north learned south-only hits).
+   Now scoped to attacks on roads incident to the faction's home town (helper
+   `incidentRoadsByTown`); factions without a town keep the world aggregate;
+   pair material signal scoped to the pair's towns. Canonical two-town world
+   is unchanged (every road touches both towns) — zero behavior delta there.
+3. Migration destination safety read live `world.bandits.some(...)` (binary
+   0.7/0.2). Now derived from the origin town's merchants' routeBeliefs
+   (legal observation/rumor surface; neutral prior 0.3 with no knowledge).
+DEFERRED (fidelity, not omniscience — filed): exact actualDanger written into
+legal OBSERVATION values without noise (closed-world.js belief wiring), and
+the canObserve town-adjacency panopticon (closed-world.js canObserve). Both
+are legal-observation quality issues; R2.1 accepts legal observation paths.
+
+Detectors (tests/w1-observability-twin.test.js, 4 tests, hidden-vs-visible
+twin worlds, identical RNG):
+- OBS-HIDDEN route twin: bandit on road-a vs road-c → identical ROUTE_SELECTED
+  (neutral-prior outcome road-a) + no belief minted from truth
+- OBS-LOCALITY twin: road-a attack leaves the separate east faction untouched
+  (memory 0 / grief 0 / no per-target entry) while road-ne attack reaches it;
+  canonical two-town guard: both canonical factions still feel road-a
+- OBS-HIDDEN migration twin: bandit present vs absent → identical safety-score
+  vectors, pinned to the belief surface (south 0.2 / east 0.9)
+Mutations KILLED (restored after each):
+- MUT-OBS-FALLBACK-001 (restore truth fallback) → twin route ranking diverges
+  road-a vs road-b
+- MUT-OBS-LOCALITY-001 (global scope) → east faction absorbs road-a attack,
+  memory 0.1 vs expected 0
+- MUT-OBS-MIGRATION-001 (restore bandit truth) → twin safety arrays differ
+Oracle update (truth-honest): migration-destination-utility 'safety avoids
+bandit road' asserted omniscience (world with NO knowledge channel still
+avoided a bandit it could not know about). The traveler now cannot; the test
+seeds the north town's legal belief surface instead — same intent, legal path.
+
 EVID-2026-08-31-R2-W1-MATERIAL-LOSS-SINK (V8 Subagent Supercampaign R2, Wave 1 lane A remainder)
 
-Test Suites: 143 passed, 143 total
+Test Suites: 143 passed, 143 total (superseded by 144/1147 above)
 Tests:       1143 passed, 1143 total
 time (parallel, excl. long-horizon-5000tick): 27.6s
 2000-tick direct probe (season cadence 700): mass residual 0.000000 across all ticks,
@@ -22,8 +74,12 @@ current symbols. Wave 1 lane classification:
   deliveredThisTick bridge, cargoKind:'food' default, prune). LOSS SIDE was open:
   theft/toll/settling/restock were unbooked mass creation/destruction. CLOSED this
   lane (below). Remaining: trip LOST/CANCELLED terminal states only declarative.
-- W1-PARTIAL-OBSERVABILITY: CONFIRMED_CURRENT (SUBAGENT_REPAIR_PLAYBOOK 5 leaks
-  + BeliefStore aliasing + bandit-all-merchants read) — NEXT LANE, not yet executed.
+- W1-PARTIAL-OBSERVABILITY: CONFIRMED_CURRENT at re-anchor (5 leaks + BeliefStore
+  aliasing + bandit-all-merchants read). EXECUTED this lane (see LANE B RESULT
+  above): 3 of the 5 leaks closed with twin-world detectors + triplet of killed
+  mutations; remaining fidelity items (observation noise, canObserve breadth,
+  BeliefStore reference aliasing, bandit-all-merchants topology read) filed for
+  a later information-quality slice.
 - W1-CAUSAL-DAG-AUTHORITY: CONFIRMED_CURRENT — ~25+ bare world.events.push sites
   (canonical-trade-system.js:375/521/581/592/604, closed-world.js:601/644/653/669/
   684/698/702/726/883/970/1059/1100/1423/1430/1460/1474/1539/1561/1718/2077,

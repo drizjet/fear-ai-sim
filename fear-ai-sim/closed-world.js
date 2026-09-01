@@ -840,9 +840,23 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     //    separately. `supplyShortage` is now derived from the town's
     //    market state (mean shortage across consumed goods) so the
     //    economy you built actually feeds the faction model.
-    const newAttacksThisTick = world.events.filter(
+    const allAttacksThisTick = world.events.filter(
         event => event.type === 'BANDIT_ATTACK' && (event.tick ?? 0) === tick
-    ).length;
+    );
+    // OBS-LOCALITY-001 (W1-PARTIAL-OBSERVABILITY): a faction feels
+    // only the attacks its home town can legally know about —
+    // attacks on roads incident to its town. In the default
+    // two-town topology every road touches both towns, so the
+    // canonical world's behavior is unchanged; in multi-town
+    // worlds an unrelated faction no longer absorbs another
+    // town's losses. Factions without a town keep the world-wide
+    // aggregate.
+    const incidentRoadsByTown = new Map();
+    for (const townId of world.towns.keys()) {
+        incidentRoadsByTown.set(townId, new Set(
+            world.routes.filter(r => r.from === townId || r.to === townId).map(r => r.id)
+        ));
+    }
     const factionShortageByTown = new Map();
     for (const [townId, town] of world.towns) {
         if (!town || !town.market || typeof town.market.getQuote !== 'function') continue;
@@ -863,7 +877,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const townShortage = faction.townId && factionShortageByTown.has(faction.townId)
             ? factionShortageByTown.get(faction.townId)
             : 0;
-        const newLoss = newAttacksThisTick * 0.1;
+        const localAttacks = faction.townId && incidentRoadsByTown.has(faction.townId)
+            ? allAttacksThisTick.filter(a => incidentRoadsByTown.get(faction.townId).has(a.roadId))
+            : allAttacksThisTick;
+        const newLoss = localAttacks.length * 0.1;
         // Stock-flow update for fear, grievance, and memoryOfLoss. The
         // reducer hands `advanceEmotion` the current-tick *flow* and the
         // per-tick decay rates (which can be tuned via the option
@@ -897,17 +914,15 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // bandit or every faction." Unknown attackers
         // contribute less to specific memory but the general
         // memoryOfLoss still rises.
-        if (newAttacksThisTick > 0) {
+        if (localAttacks.length > 0) {
             // Record per-target memory for every BANDIT_ATTACK
-            // event at the current tick. The audit (§182): "A
+            // event at the current tick that the faction's town
+            // can legally know about. The audit (§182): "A
             // faction harmed by Bandit A should not automatically
             // attach equal grievance to every bandit." When
             // multiple bandits attack in the same tick, each
             // gets its own memory entry.
-            const tickAttacks = world.events.filter(
-                ev => ev.type === 'BANDIT_ATTACK' && (ev.tick ?? 0) === tick
-            );
-            for (const attack of tickAttacks) {
+            for (const attack of localAttacks) {
                 const banditId = attack.banditId ?? 'unknown';
                 const known = banditId !== 'unknown' && banditId != null;
                 recordHarmByActor(faction, banditId, {
@@ -937,9 +952,21 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // experiences chronic supply shortage. The §23 hysteresis and
     // the §344 explanation live on the vector itself.
     for (const [pairId, pair] of world.relationships) {
-        const isMaterialSignal = newAttacksThisTick > 0;
+        // OBS-LOCALITY-001: the pair's material signal is scoped to
+        // attacks on roads incident to the pair's home towns, matching
+        // the per-faction scoping above. In the canonical two-town
+        // world every road touches both towns, so this is identical to
+        // the previous world-wide signal there.
+        const [fromId, toId] = pairId.split('::');
+        const pairTowns = [fromId, toId]
+            .map(id => world.factions.find(f => f.id === id)?.townId)
+            .filter(Boolean);
+        const pairAttacks = allAttacksThisTick.filter(a =>
+            pairTowns.some(t => incidentRoadsByTown.get(t)?.has(a.roadId))
+        );
+        const isMaterialSignal = pairAttacks.length > 0;
         if (isMaterialSignal) {
-            pair.recordHarm({ severity: clamp01(newAttacksThisTick * 0.5), tick });
+            pair.recordHarm({ severity: clamp01(pairAttacks.length * 0.5), tick });
         }
         // Cross-link from the per-faction supply shortage. A faction
         // whose home town is starving has chronic pressure on the
@@ -947,7 +974,6 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // The trust dampener is *disabled* for material signals:
         // scarcity is objective and should not be papered over by
         // a (possibly-undeserved) political trust.
-        const [fromId, toId] = pairId.split('::');
         const homeFaction = world.factions.find(f => f.id === fromId);
         if (homeFaction && homeFaction.townId && factionShortageByTown.has(homeFaction.townId)) {
             const shortage = factionShortageByTown.get(homeFaction.townId);
@@ -1434,8 +1460,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             if (belief) {
                 routeDanger[route.id] = belief.value;
             } else {
-                const banditOnRoute = world.bandits.some(bandit => bandit.roadId === route.id);
-                routeDanger[route.id] = banditOnRoute ? route.actualDanger : route.actualDanger * 0.1;
+                // OBS-HIDDEN-001 (W1-PARTIAL-OBSERVABILITY): no legal
+                // belief -> neutral prior. Reading world.bandits /
+                // route.actualDanger here would inject hidden truth
+                // into the merchant's perception the moment a belief
+                // is missing.
+                routeDanger[route.id] = 0.5;
             }
         }
         const previousRoute = merchant.selectedRoute;
@@ -2001,9 +2031,21 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             let danger = 0.3;
             const incidentRoads = world.routes.filter(r => r.from === otherId || r.to === otherId);
             if (incidentRoads.length > 0) {
-                // Check if any bandit is on an incident road
-                const banditOnRoad = world.bandits.some(b => incidentRoads.some(r => r.id === b.roadId));
-                danger = banditOnRoad ? 0.7 : 0.2;
+                // OBS-HIDDEN-001 (W1-PARTIAL-OBSERVABILITY): the
+                // traveler's safety signal comes from the origin
+                // town's legal information surface — its merchants'
+                // route beliefs (legally observed/rumored danger) —
+                // never from live bandit truth. Neutral prior 0.3
+                // when the town has no knowledge of the roads.
+                const riskSignals = [];
+                for (const m of world.merchants ?? []) {
+                    if (!m || m.location !== townId || !m.routeBeliefs) continue;
+                    for (const r of incidentRoads) {
+                        const b = m.routeBeliefs[r.id];
+                        if (b && Number.isFinite(b.perceivedDanger)) riskSignals.push(b.perceivedDanger);
+                    }
+                }
+                if (riskSignals.length > 0) danger = Math.min(0.8, Math.max(...riskSignals));
             }
             const safetyScore = 1 - danger;
             // Distance: inverse distance (shorter is better), normalized
