@@ -554,6 +554,14 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
                 const merchant = (world.merchants || []).find(m => m.id === attack.merchantId);
                 if (merchant) {
                     merchant.cargo = (merchant.cargo || 0) + (attack.lost || 0);
+                    // R2-W1: interception reverses the loss-sink booking
+                    // made at attack time — the cargo is recovered, not
+                    // destroyed. Without this the global mass identity
+                    // would double-count the recovered material.
+                    if (world.transitLoss && typeof world.transitLoss === 'object') {
+                        const kind = merchant.cargoKind ?? 'food';
+                        world.transitLoss[kind] = Math.max(0, (Number(world.transitLoss[kind]) || 0) - (attack.lost || 0));
+                    }
                     // LIVE_CONSUMER wire: a successful interception is
                     // a positive observation for the merchant about
                     // the deployed route. Lower the merchant's

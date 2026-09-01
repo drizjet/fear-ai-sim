@@ -1,13 +1,65 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-08-31-PENDING-TRIP-MARKET-LOOP
+EVID-2026-08-31-R2-W1-MATERIAL-LOSS-SINK (V8 Subagent Supercampaign R2, Wave 1 lane A remainder)
 
-Test Suites: 142 passed, 142 total
-Tests:       1139 passed, 1139 total
+Test Suites: 143 passed, 143 total
+Tests:       1143 passed, 1143 total
+time (parallel, excl. long-horizon-5000tick): 27.6s
+2000-tick direct probe (season cadence 700): mass residual 0.000000 across all ticks,
+  maxPendingTrips=1, no NaN / negative inventory / negative population — loss ledger 1709
+  food vs restock ledger 4220 food (auditable destruction vs declared injection)
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
 lane: B
 supervisor admitted: no
+
+## R2 CAMPAIGN STATE (manager-owned; V8 Subagent Supercampaign R2)
+Wave 0 re-anchor against master 566c343 (clean tree) — the R2 doc's §2 "reported
+reality" (99e439a / 141 suites) was stale by two commits; claims re-anchored to
+current symbols. Wave 1 lane classification:
+- W1-MATERIAL-TRADE-CLOSURE: PARTIAL at re-anchor. Booking/delivery/trip sides
+  CONFIRMED_DONE (schedulePendingTradeTrip caller closed-world.js:1334,
+  deliveredThisTick bridge, cargoKind:'food' default, prune). LOSS SIDE was open:
+  theft/toll/settling/restock were unbooked mass creation/destruction. CLOSED this
+  lane (below). Remaining: trip LOST/CANCELLED terminal states only declarative.
+- W1-PARTIAL-OBSERVABILITY: CONFIRMED_CURRENT (SUBAGENT_REPAIR_PLAYBOOK 5 leaks
+  + BeliefStore aliasing + bandit-all-merchants read) — NEXT LANE, not yet executed.
+- W1-CAUSAL-DAG-AUTHORITY: CONFIRMED_CURRENT — ~25+ bare world.events.push sites
+  (canonical-trade-system.js:375/521/581/592/604, closed-world.js:601/644/653/669/
+  684/698/702/726/883/970/1059/1100/1423/1430/1460/1474/1539/1561/1718/2077,
+  ecology.js:127, encounters.js:278/328, treaty.js:95/130/158/226, two-roads-world.js:
+  588/630) + template eventIds (MERCHANT_ROUTE_DECISION-${tick}-${id}, BANDIT_RELOCATION-
+  ${tick}-, PATROL_INTERCEPTION-${tick}-). Inventory done; execution pending.
+- W1-CONTINUITY-RNG: CONFIRMED_CURRENT — encounterRng closure used at 4 production
+  sites (closed-world.js:1271/2337/2434/2438), outside the serializable world;
+  statistical-validation-trade-loop reuses the same closure after "load" (fake
+  restart). Fix: persist rngStreams.encounter.{state,draws} or deprecate param.
+- W1-EVIDENCE-TRUST-ROOT: CONFIRMED_CURRENT — lint.mjs DEFAULT_ROOT C:/ resolution,
+  SUPERSESSION miscounted as inadmissible, EVIDENCE_LEDGER stale vs 566c343.
+  Bounded lane; not started (world lanes get priority per campaign §23).
+
+## What this tree now contains (Lane B, unaccepted)
+- R2-W1 MATERIAL LOSS SINK + GLOBAL MASS IDENTITY (this lane):
+  - world.transitLoss / world.exogenousInflow persistent ledgers (JSON-safe,
+    save/load/fork covered; initialized in ensurePendingWorldState)
+  - theft books at ALL debit sites: resolveBanditAttack, encounter bandit-ambush,
+    convoy ambush (mutation branch), broken-caravan settling cost,
+    patrol-checkpoint toll
+  - patrol interception REVERSES the booking (cargo recovered, not destroyed)
+  - MERCHANT_RESPAWN booked as declared exogenous inflow (was +20 from nowhere)
+  - delivery overflow bookable into marketFlows as deliveryOverflow term
+  - REAL BUG FIX: convoy ambush redistributed merchant cargo from a STALE
+    formation-time snapshot (merchants ship/raid/restock every tick), fabricating
+    or destroying whole cargo units; now syncs convoy.cargo to actual carried
+    material before resolving the ambush. Global mass drifted ±1..3 units on
+    ambush ticks before; 2000-tick residual is 0.000000 after.
+  - detectors: tests/w1-material-loss-sink.test.js (4 tests) — theft booking,
+    interception reversal, 40-tick production identity, exact-once terminal
+  - mutations KILLED: MUT-MARKET-THEFT-001 (unbook resolveBanditAttack → 2 red),
+    MUT-MARKET-THEFT-002 (unbook encounter path → 40-tick identity red),
+    MUT-MARKET-EXACTONCE-001 (open consequence/trip closure → 2 red, incl. the
+    production identity). All restored.
+- parentEventIds chain on merchant path (MUT-CHAIN-001 detector)
 
 ## What this tree now contains (Lane B, unaccepted)
 - parentEventIds chain on merchant path (MUT-CHAIN-001 detector)

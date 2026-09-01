@@ -117,6 +117,14 @@ describe('MUT-SAVE-001 pending-effect preservation', () => {
 
         // Allocate once more after the checkpoint. If the next action/event
         // counters were dropped, the resumed branch would duplicate IDs.
+        // R2-W1: the merchant may legitimately run dry after 3 ticks of
+        // raiding in the now-truthful economy (the convoy no longer
+        // injects stale-snapshot cargo). The contract under test here is
+        // ID allocation across a checkpoint, not cargo possession, so top
+        // the cargo up identically in both twins before scheduling.
+        for (const twin of [uninterrupted, resumed]) {
+            twin.merchants[0].cargo = Math.max(1, Number(twin.merchants[0].cargo) || 0);
+        }
         const nextA = schedulePendingTradeTrip(uninterrupted, {
             merchantId: 'merchant-1', routeId: 'road-b', destinationTownId: 'south',
             cargoKind: 'food', cargoAmount: 1, travelTicks: 1, startTick: 3,

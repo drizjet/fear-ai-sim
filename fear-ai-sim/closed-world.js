@@ -73,10 +73,48 @@ function ensurePendingWorldState(world) {
     ]) {
         if (!Array.isArray(world[key])) world[key] = [];
     }
+    // R2-W1 loss/restock ledgers: material destroyed in transit (theft,
+    // convoy loss) and material injected from declared outside the
+    // system (merchant restock). Plain objects: JSON-safe across
+    // save/load/fork. Both are consumed by the global mass identity
+    // (towns + merchant cargo + in-trip cargo + loss sink - exogenous
+    // inflow), so no material vanishes or appears unexplained.
+    for (const key of ['transitLoss', 'exogenousInflow']) {
+        if (!world[key] || typeof world[key] !== 'object' || Array.isArray(world[key])) {
+            world[key] = {};
+        }
+    }
     if (!(world.processedFactionAttackEventIds instanceof Set)) {
         world.processedFactionAttackEventIds = new Set(world.processedFactionAttackEventIds ?? []);
     }
     return world;
+}
+
+/**
+ * R2-W1 loss sink: book material destroyed in transit (bandit theft,
+ * convoy loss). The loss leaves the conserved material set and lands in
+ * `world.transitLoss[kind]` so the global mass identity stays exact.
+ * Patrol interception reverses the booking (recovered cargo re-enters
+ * the conserved set).
+ */
+function bookTransitLoss(world, kind, amount) {
+    ensurePendingWorldState(world);
+    const amt = Number(amount);
+    if (!kind || !Number.isFinite(amt) || amt <= 0) return;
+    world.transitLoss[kind] = (world.transitLoss[kind] ?? 0) + amt;
+}
+
+/**
+ * R2-W1 declared exogenous injection: material entering the conserved
+ * set from outside the model (e.g. merchant restock at origin). The
+ * global mass identity subtracts this ledger explicitly; without the
+ * declaration, restock would look like unexplained mass creation.
+ */
+function bookExogenousInflow(world, kind, amount) {
+    ensurePendingWorldState(world);
+    const amt = Number(amount);
+    if (!kind || !Number.isFinite(amt) || amt <= 0) return;
+    world.exogenousInflow[kind] = (world.exogenousInflow[kind] ?? 0) + amt;
 }
 
 function allocateWorldActionId(world) {
@@ -297,10 +335,12 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
         // instead of violating by exactly the delivered amount.
         if (!world.deliveredThisTick) world.deliveredThisTick = new Map();
         const delivKey = `${trip.destinationTownId}:${trip.cargo.kind}`;
-        world.deliveredThisTick.set(
-            delivKey,
-            (world.deliveredThisTick.get(delivKey) ?? 0) + (delivery.stored ?? 0)
-        );
+        // R2-W1: carry both stored and capacity-rejected amounts so the
+        // market loop can book delivery overflow into the mass ledger.
+        const priorDelivery = world.deliveredThisTick.get(delivKey) ?? { stored: 0, overflow: 0 };
+        priorDelivery.stored += delivery.stored ?? 0;
+        priorDelivery.overflow += delivery.overflow ?? 0;
+        world.deliveredThisTick.set(delivKey, priorDelivery);
         const deliveredEvent = emitPendingWorldEvent(world, {
             type: 'PENDING_CARGO_DELIVERED',
             actionId: trip.actionId,
@@ -624,6 +664,10 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
     // attack opportunity.)
     const lost = merchant.cargo * clamp(road.actualDanger);
     const remaining = merchant.cargo - lost;
+    // R2-W1: book the theft into the persistent loss sink so the global
+    // mass identity (towns + merchant cargo + in-trip cargo + loss sink)
+    // stays exact. Previously the lost cargo simply vanished.
+    bookTransitLoss(world, merchant.cargoKind ?? 'food', lost);
     const destination = world.towns.get('south');
     const marketResult = destination?.market?.deliverCargo
         ? destination.market.deliverCargo('food', remaining, { disruption: 0 })
@@ -1508,6 +1552,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             );
             const attackOpportunityId = `attack-opp-${tick}-${convoyRoute.id}-${representativeMerchant?.id ?? 'unknown'}`;
             const alreadyConsumed = world.consumedAttackIds.has(attackOpportunityId);
+            // R2-W1: sync the convoy's recorded cargo to the merchants'
+            // ACTUAL carried material before resolving the ambush. The
+            // convoy snapshot was taken at formation, but merchants ship
+            // (and are raided / restocked) every tick, so redistributing
+            // from the stale value would fabricate or destroy material
+            // (the global mass identity drifted by whole cargo units on
+            // ambush ticks). With current cargo as the base, the ambush
+            // loss is a genuine debit of real material and the
+            // redistribution is conserved (sum of shares == cargo − lost).
+            world.convoy.cargo = (world.merchants ?? []).reduce(
+                (sum, merchant) => sum + (Number(merchant.cargo) || 0),
+                0
+            );
             const result = resolveConvoyAmbush(
                 world.convoy,
                 banditOnRoute,
@@ -1523,6 +1580,9 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     // this opportunity. Mark it consumed and
                     // distribute the cargo loss to the merchants.
                     world.consumedAttackIds.add(attackOpportunityId);
+                    // R2-W1: book the convoy's cargo loss into the loss
+                    // sink so the global mass identity stays exact.
+                    bookTransitLoss(world, representativeMerchant?.cargoKind ?? 'food', result.lost);
                     // Distribute the convoy's cargo back to the merchants.
                     if (world.convoy.merchantIds.length > 0) {
                         const perMerchant = world.convoy.cargo / world.convoy.merchantIds.length;
@@ -1556,6 +1616,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     //    merchants, and a town that gets safe deliveries keeps trading.
     for (const merchant of world.merchants) {
         if (merchant.cargo <= 0 && merchant.location) {
+            // R2-W1: restock is a declared exogenous injection; without
+            // the booking the global mass identity would break by ~20
+            // each respawn (unexplained mass creation).
+            bookExogenousInflow(world, merchant.cargoKind ?? 'food', 20 - Math.max(0, merchant.cargo));
             merchant.cargo = 20;
             merchant.selectedRoute = null;
             world.events.push({
@@ -1607,15 +1671,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             //   2. `cumulativeFlow` — total flows for the audit
             //      trail (accumulates across ticks).
             const flowKey = `${townId}:${kind}`;
-            const cumulativeFlow = marketFlows.get(flowKey) ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0 };
-            const tickFlow = { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0 };
+            const cumulativeFlow = marketFlows.get(flowKey) ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0 };
+            const tickFlow = { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0 };
             // PHASE §155: merge deliveries booked by
             // advancePendingWorldObligations earlier in this tick
             // (pending-trip cargo that arrived). Without this the
             // mass-balance identity violates by exactly the delivered
             // amount on delivery ticks.
             if (world.deliveredThisTick?.has(flowKey)) {
-                tickFlow.delivered += world.deliveredThisTick.get(flowKey) ?? 0;
+                const delivery = world.deliveredThisTick.get(flowKey) ?? {};
+                tickFlow.delivered += delivery.stored ?? 0;
+                // R2-W1: capacity-rejected delivery material is destroyed;
+                // booking it keeps the global mass identity exact.
+                tickFlow.deliveryOverflow += delivery.overflow ?? 0;
             }
             // Produce. `population * perCapitaProduction` flows in, capped
             // at the storage capacity set in `createClosedWorldScenario`.
@@ -1680,6 +1748,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             cumulativeFlow.consumed += tickFlow.consumed;
             cumulativeFlow.spoiled += tickFlow.spoiled;
             cumulativeFlow.overflow += tickFlow.overflow;
+            cumulativeFlow.deliveryOverflow += tickFlow.deliveryOverflow;
             marketFlows.set(flowKey, cumulativeFlow);
             if (typeof market.getQuote !== 'function') continue;
             const quote = market.getQuote(kind);

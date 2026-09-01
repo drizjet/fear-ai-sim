@@ -198,6 +198,14 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
             const before = merchant.cargo;
             const settlingCost = Math.max(1, Math.floor(before * 0.2));
             merchant.cargo = Math.max(0, before - settlingCost);
+            // R2-W1: the settling cost leaves the conserved material set
+            // (paid out for shelter/repairs); book it so the global mass
+            // identity stays exact.
+            if (settlingCost > 0) {
+                if (!world.transitLoss || typeof world.transitLoss !== 'object') world.transitLoss = {};
+                const kind = merchant.cargoKind ?? 'food';
+                world.transitLoss[kind] = (world.transitLoss[kind] ?? 0) + settlingCost;
+            }
             result.merchantId = merchant.id;
             result.settlingCost = settlingCost;
             result.delivered = merchant.cargo;
@@ -218,6 +226,14 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
                 const toll = Math.max(1, Math.floor(before * 0.1));
                 merchant.cargo = Math.max(0, before - toll);
                 guardFaction.resources = (guardFaction.resources ?? 0) + toll;
+                // R2-W1: the toll transfers material OUT of the trade set
+                // into faction coffers (abstract resources); book the
+                // outflow so the global mass identity stays exact.
+                if (toll > 0) {
+                    if (!world.transitLoss || typeof world.transitLoss !== 'object') world.transitLoss = {};
+                    const kind = merchant.cargoKind ?? 'food';
+                    world.transitLoss[kind] = (world.transitLoss[kind] ?? 0) + toll;
+                }
                 result.merchantId = merchant.id;
                 result.toll = toll;
                 result.guardFactionId = guardFaction.id;
@@ -325,6 +341,14 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
                 // shape.
                 const lost = result.stolen || 0;
                 const remaining = merchant.cargo || 0;
+                // R2-W1 loss sink: the encounter engine stole this cargo;
+                // book it so it does not vanish from the global mass
+                // identity (patrol interception reverses the booking).
+                if (lost > 0) {
+                    if (!world.transitLoss || typeof world.transitLoss !== 'object') world.transitLoss = {};
+                    const kind = merchant.cargoKind ?? 'food';
+                    world.transitLoss[kind] = (world.transitLoss[kind] ?? 0) + lost;
+                }
                 world.events.push({
                     type: 'BANDIT_ATTACK',
                     attackOpportunityId,
