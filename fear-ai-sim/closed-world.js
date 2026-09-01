@@ -288,6 +288,19 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
         consequence.status = 'APPLIED';
         consequence.appliedTick = tick;
         trip.status = 'DELIVERED';
+        // PHASE §155: book the delivered amount into the market flow
+        // audit trail for THIS tick. The per-town market loop (step 4)
+        // runs later in the same tickClosedWorld and merges this into
+        // `tickFlow.delivered` and `MARKET_TICK.flows.delivered`, so the
+        // mass-balance identity (produced - overflow) + delivered -
+        // consumed - spoiled == supply delta holds on delivery ticks
+        // instead of violating by exactly the delivered amount.
+        if (!world.deliveredThisTick) world.deliveredThisTick = new Map();
+        const delivKey = `${trip.destinationTownId}:${trip.cargo.kind}`;
+        world.deliveredThisTick.set(
+            delivKey,
+            (world.deliveredThisTick.get(delivKey) ?? 0) + (delivery.stored ?? 0)
+        );
         const deliveredEvent = emitPendingWorldEvent(world, {
             type: 'PENDING_CARGO_DELIVERED',
             actionId: trip.actionId,
@@ -311,6 +324,19 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
                 assignment.completedTick = tick;
             }
         }
+    }
+    // EVID-2026-08-31-TRIP-MATERIALIZATION: prune fully-settled trips.
+    // A DELIVERED trip's record lives on in the event ledger
+    // (PENDING_CARGO_DELIVERED carries tripId + delivery result) and in
+    // the closed routeCommitments / patrolAssignments. Keeping the trip
+    // object in `world.pendingTrips` forever made the array grow without
+    // bound (~72 entries over 500 ticks) — an unbounded event-volume
+    // growth that also made the alreadyTraveling gate pointless (it
+    // only looks at IN_TRANSIT / ARRIVED, which never accumulates, but
+    // the retained objects still leaked memory and save payload size).
+    // Delivered trips are removed here so the in-flight set stays small.
+    if (Array.isArray(world.pendingTrips)) {
+        world.pendingTrips = world.pendingTrips.filter(trip => trip.status !== 'DELIVERED');
     }
 
     for (const rumor of world.rumorsInTransit) {
@@ -472,7 +498,7 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
             )
         ],
         merchants: [{
-            id: 'merchant-1', location: 'north', cargo: 20, beliefs: new BeliefStore(),
+            id: 'merchant-1', location: 'north', cargo: 20, cargoKind: 'food', beliefs: new BeliefStore(),
             // EVID-2026-08-29-CANONICAL-TRADE-INTEGRATION:
             // heterogeneous merchant identity consumed by
             // tickMerchant (canonical-trade-system.js). Default
@@ -736,6 +762,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     ensurePendingWorldState(world);
     finalizeWorldEventLedger(world);
     world.currentTick = tick;
+    // PHASE §155: per-tick delivery accumulator. Reset before
+    // advancePendingWorldObligations so each tick's deliveries are
+    // consumed exactly once by the step-4 market loop.
+    world.deliveredThisTick = new Map();
     advancePendingWorldObligations(world, { tick });
 
     // 0. EVID-2026-08-29-ECOLOGY: advance the season on the
@@ -1243,23 +1273,106 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         });
         if (routeResult?.ok && routeResult.event) {
             ensureWorldEventIdentity(world, routeResult.event, beliefParentIds);
-            const actionId = allocateWorldActionId(world);
-            const commitment = appendWorldEvent(world, {
-                type: 'TRIP_COMMITMENT',
-                tick,
-                actionId,
-                tripId: `CANONICAL-TRIP-${actionId}`,
-                merchantId: merchant.id,
-                routeId: routeResult.event.chosenRoute,
-                status: 'COMMITTED',
-            }, [routeResult.event.eventId]);
-            merchant.activeTripCommitment = {
-                actionId,
-                tripId: commitment.tripId,
-                routeId: commitment.routeId,
-                commitmentEventId: commitment.eventId,
-                tick,
-            };
+            const chosenRoute = routeResult.event.chosenRoute;
+            const route = (world.routes ?? []).find(r => r.id === chosenRoute);
+            // Roads are undirected for travel: a merchant at `route.to`
+            // traveling that road is headed to `route.from` (and vice
+            // versa). The declared from/to is just the canonical
+            // direction of record.
+            const destinationTownId = route?.from === merchant.location
+                ? route.to
+                : route?.to === merchant.location ? route.from : (route?.to ?? merchant.location);
+            const merchantCargo = Number(merchant.cargo) || 0;
+            // EVID-2026-08-31-TRIP-MATERIALIZATION: a TRIP_COMMITMENT
+            // that never schedules a pending trip is decorative — the
+            // cargo leaves nothing, travels nowhere, and the destination
+            // market never feels it. The canonical route decision now
+            // materializes a real pending trip whose DELIVER_CARGO
+            // consequence lands `stored` units in the destination market
+            // on arrival (booked into marketFlows via the §155 mass
+            // balance). Ship a bounded load so the merchant still has
+            // cargo to trade on later ticks; the trip's travel time is
+            // the route distance so delivery lands on a later tick.
+            const cargoKind = merchant.cargoKind ?? 'food';
+            // EVID-2026-08-31-TRIP-MATERIALIZATION: the canonical route
+            // decision materializes a real pending trip (cargo leaves the
+            // merchant, travels, and delivers to the destination market)
+            // instead of being a decorative event. The shipped amount is
+            // scaled by the merchant's *belief* about the route's danger
+            // (partial observation, not ground truth): a route the
+            // merchant believes is dangerous ships less cargo. World
+            // danger also dampens shipping: in a dangerous world (high
+            // perceivedDanger regime) merchants ship less, so §138
+            // scenario differentiation flows through production signals
+            // (danger → shipped volume → delivered supply → market →
+            // faction) instead of only through faction inputs.
+            const believedDanger = clamp01(
+                merchant.routeBeliefs?.[chosenRoute]?.perceivedDanger ?? 0.5
+            );
+            const worldCaution = clamp01(perceivedDanger);
+            const cargoAmount = Math.min(
+                Math.max(1, Math.floor(merchantCargo * (1 - believedDanger * 0.5) * (1 - worldCaution * 0.4))),
+                merchantCargo
+            );
+            // A merchant that already has a trip in flight does not ship a
+            // second load — that would be an infinite conveyor flooding the
+            // destination market. But the CAUSAL chain (MUT-CHAIN-001:
+            // decision → TRIP_COMMITMENT → ROUTE_EXPOSURE → encounter)
+            // must still fire every tick the merchant decides, so a
+            // deferral still records a commitment event with
+            // `materialized: false` and the exposure engine reads it.
+            const alreadyTraveling = (world.pendingTrips ?? []).some(
+                t => t.merchantId === merchant.id
+                    && (t.status === 'IN_TRANSIT' || t.status === 'ARRIVED')
+            );
+            const canShip = cargoAmount > 0 && route
+                && destinationTownId !== merchant.location && !alreadyTraveling;
+            try {
+                let commitmentEventId;
+                let trip;
+                if (canShip) {
+                    trip = schedulePendingTradeTrip(world, {
+                        merchantId: merchant.id,
+                        routeId: chosenRoute,
+                        destinationTownId,
+                        cargoKind,
+                        cargoAmount,
+                        travelTicks: Math.max(1, Math.round(route.distance ?? 1)),
+                        startTick: tick,
+                        parentEventIds: [routeResult.event.eventId],
+                    });
+                    commitmentEventId = trip.commitmentEventId;
+                } else {
+                    // Deferred commitment: the merchant decided a route
+                    // but cannot/will not depart this tick. Dedicated
+                    // audit event keeps the causal chain contiguous;
+                    // `materialized: false` marks it as decision-only.
+                    const deferred = appendWorldEvent(world, {
+                        type: 'TRIP_COMMITMENT',
+                        tick,
+                        merchantId: merchant.id,
+                        routeId: chosenRoute,
+                        status: 'DEFERRED',
+                        materialized: false,
+                        reason: alreadyTraveling ? 'ALREADY_TRAVELING' : 'NO_CARGO_OR_ROUTE',
+                    }, [routeResult.event.eventId]);
+                    commitmentEventId = deferred.eventId;
+                }
+                merchant.activeTripCommitment = {
+                    actionId: trip?.actionId ?? null,
+                    tripId: trip?.tripId ?? null,
+                    routeId: chosenRoute,
+                    commitmentEventId,
+                    tick,
+                    materialized: Boolean(trip),
+                };
+            } catch (err) {
+                // Shipping can legitimately fail (e.g. cargo already
+                // deducted by a bandit attack this tick). The route
+                // decision is still recorded; we just do not invent
+                // a trip that owns cargo the merchant no longer has.
+                merchant.activeTripCommitment = null;
+            }
         }
     }
     for (const merchant of world.merchants) {
@@ -1332,9 +1445,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // merchant traveling alone has cargo; a merchant traveling in
     // a convoy has cargo + escort. The convoy's escort strength
     // reduces the effective road danger (see resolveConvoyAmbush).
+    // EVID-2026-08-31-TRIP-MATERIALIZATION: a convoy escorts a
+    // MATERIALIZED trip (the merchant actually departed with cargo), not a
+    // deferred route decision. Without this gate the merchant's cargo
+    // draining to 0 mid-trip disbands the convoy and the respawn reforms it
+    // every cycle (CONVOY_FORMED spam).
+    const merchantCommitment = world.merchants[0]?.activeTripCommitment;
+    const merchantMaterialized = Boolean(merchantCommitment?.materialized);
     if (world.convoy == null && world.merchants.length > 0 && world.guards.length > 0) {
         const merchant = world.merchants[0];
-        if ((merchant.cargo ?? 0) > 0) {
+        if ((merchant.cargo ?? 0) > 0 && merchantMaterialized) {
             world.convoy = formConvoy([merchant], world.guards, { escortRatio: 1 });
             world.convoy.routeId = merchant.selectedRoute;
             world.events.push({
@@ -1489,6 +1609,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             const flowKey = `${townId}:${kind}`;
             const cumulativeFlow = marketFlows.get(flowKey) ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0 };
             const tickFlow = { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0 };
+            // PHASE §155: merge deliveries booked by
+            // advancePendingWorldObligations earlier in this tick
+            // (pending-trip cargo that arrived). Without this the
+            // mass-balance identity violates by exactly the delivered
+            // amount on delivery ticks.
+            if (world.deliveredThisTick?.has(flowKey)) {
+                tickFlow.delivered += world.deliveredThisTick.get(flowKey) ?? 0;
+            }
             // Produce. `population * perCapitaProduction` flows in, capped
             // at the storage capacity set in `createClosedWorldScenario`.
             // EVID-2026-08-29-ECOLOGY: the perCapitaProduction is

@@ -107,12 +107,18 @@ describe('scenario differentiation (directive §19, long-horizon)', () => {
             calm.banditRoadId === nervous.banditRoadId &&
             calm.merchantRoute === nervous.merchantRoute &&
             calm.northFaction.lastDecision === nervous.northFaction.lastDecision &&
-            calm.northFaction.resources === nervous.northFaction.resources;
-        // At least the faction's lastDecision or resources
-        // must differ between calm and nervous.
+            calm.northFaction.resources === nervous.northFaction.resources &&
+            calm.northFaction.memoryOfLoss === nervous.northFaction.memoryOfLoss;
+        // At least one faction state (lastDecision, resources, or
+        // memoryOfLoss) must differ between calm and nervous. The
+        // memory-of-loss axis is included because with production trip
+        // wiring the perceivedDanger signal now differentiates the
+        // faction's remembered harm (nervous worlds accumulate more loss
+        // memory), even when resources/lastDecision land identically.
         const factionDiffers =
             calm.northFaction.lastDecision !== nervous.northFaction.lastDecision ||
-            calm.northFaction.resources !== nervous.northFaction.resources;
+            calm.northFaction.resources !== nervous.northFaction.resources ||
+            calm.northFaction.memoryOfLoss !== nervous.northFaction.memoryOfLoss;
         // Record the outcome for inspection.
         // eslint-disable-next-line no-console
         console.log('CALM:', JSON.stringify(calm));

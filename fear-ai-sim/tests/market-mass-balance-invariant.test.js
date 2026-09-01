@@ -47,12 +47,17 @@ describe('per-good mass-balance invariant (Constitution §155 strict)', () => {
             const after = event.supply;
             const actualDelta = after - before;
             // The mass-balance invariant: the actual supply
-            // change equals (produced - overflow) - consumed -
-            // spoiled. `produced` is the *attempted* amount;
-            // `overflow` is the capacity-rejected amount; so
-            // `produced - overflow` is the *stored* amount.
+            // change equals (produced - overflow) + delivered -
+            // consumed - spoiled. `produced` is the *attempted*
+            // amount; `overflow` is the capacity-rejected amount;
+            // so `produced - overflow` is the *stored* amount.
+            // `delivered` is pending-trip cargo that arrived this
+            // tick (booked into tickFlow by the §155 delivery
+            // merge); without it the identity violates by exactly
+            // the delivered amount on delivery ticks.
             const stored = (event.flows.produced ?? 0) - (event.flows.overflow ?? 0);
             const expectedDelta = stored
+                + (event.flows.delivered ?? 0)
                 - (event.flows.consumed ?? 0)
                 - (event.flows.spoiled ?? 0);
             // The per-tick invariant: the actual supply change

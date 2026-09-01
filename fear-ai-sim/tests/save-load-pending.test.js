@@ -88,8 +88,16 @@ describe('MUT-SAVE-001 pending-effect preservation', () => {
         }
 
         // The pending cargo becomes a material market delivery, while every
-        // associated obligation reaches the same terminal state.
-        expect(resumed.pendingTrips[0].status).toBe('DELIVERED');
+        // associated obligation reaches the same terminal state. The trip
+        // itself is pruned from pendingTrips once delivered (its durable
+        // record is the PENDING_CARGO_DELIVERED ledger event, and its
+        // route commitment / patrol assignment close out below) — so the
+        // in-flight set stays small instead of growing without bound.
+        // (The merchant auto-ships a fresh trip once idle, which is why
+        // pendingTrips is not empty — it holds that NEW in-flight trip,
+        // never the delivered seed trip.)
+        expect(resumed.pendingTrips.some(t => t.tripId === trip.tripId)).toBe(false);
+        expect(resumed.pendingTrips.length).toBeLessThanOrEqual(1);
         expect(resumed.scheduledConsequences[0].status).toBe('APPLIED');
         expect(resumed.routeCommitments[0].status).toBe('COMPLETED');
         expect(resumed.patrolAssignments[0].status).toBe('COMPLETED');
@@ -103,6 +111,9 @@ describe('MUT-SAVE-001 pending-effect preservation', () => {
         expect(delivered.eventId).toBeDefined();
         expect(delivered.actionId).toBe(trip.actionId);
         expect(delivered.parentEventIds.length).toBeGreaterThan(0);
+        // The delivery actually booked into the §155 market flow audit
+        // trail (the production trade axis this slice activates).
+        expect((resumed.marketFlows?.get('south:food')?.delivered ?? 0)).toBeGreaterThan(0);
 
         // Allocate once more after the checkpoint. If the next action/event
         // counters were dropped, the resumed branch would duplicate IDs.

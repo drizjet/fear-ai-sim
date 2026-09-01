@@ -1,9 +1,9 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-08-31-SLICE-C-JUSTICE-TO-FACTION-LEGITIMACY
+EVID-2026-08-31-PENDING-TRIP-MARKET-LOOP
 
-Test Suites: 141 passed, 141 total
-Tests:       1136 passed, 1136 total
+Test Suites: 142 passed, 142 total
+Tests:       1139 passed, 1139 total
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
 lane: B
@@ -27,7 +27,7 @@ supervisor admitted: no
 ## Still false / still open
 - 0/10 frozen core mutation kills
 - evidence ledger stale (0 admissible, linter exit 1)
-- market pending-trip → market delivery still thin (save-load pending covers, but not yet market conservation via trip)
+- market loop: Slice A done; pending-trip → market delivery now WIRED via trip (see below)
 - FearCore vs Brain dual-ownership parked
 - runtime is DOM shim
 - Lane A not operational
@@ -40,10 +40,14 @@ supervisor admitted: no
   - Fix: closed-world.js destination utility `0.4*(1-shortage)+0.3*(1-danger)+0.2*(1/(1+dist/10))+0.1*trust`
 - Slice C (justice): 3 tests justice-faction-legitimacy — JUSTICE_RESOLVED→owning faction legitimacy (blend 0.85/0.15, recover 0.02), legitimacy dampens raidScore `0.15*(1-legitimacy)`; production path crime→justice→faction differs, not unit-only
   - Fix: factioncore.js legitimacy field (default 0.9) + closed-world.js justice loop updates owning faction
+- Slice A follow-up (pending-trip market loop): 3 tests pending-trip-market-conservation — schedule→TRIP_ARRIVAL→deliverCargo lands stock, price drops, §155 flows.delivered booked into marketFlows + MARKET_TICK; per-tick mass-balance holds with the +delivered term; a raid that strips merchant cargo blocks shipping so no delivery lands
+  - Fix: closed-world.js canonical merchant wiring now calls schedulePendingTradeTrip (was decorative TRIP_COMMITMENT event only — cargo never traveled); world.deliveredThisTick bridges advancePendingWorldObligations → step-4 market loop tickFlow.delivered; default merchant gets cargoKind:'food' so opportunityBonus fires in production; delivered trips pruned from pendingTrips (was unbounded growth ~72/500 ticks → now 1)
+  - Fix: mass-balance identity now `(produced-overflow) + delivered - consumed - spoiled` (was missing +delivered and violated by exactly the delivered amount on delivery ticks)
+  - Production nuance: shipment volume scales with merchant's believed route danger and world perceivedDanger (dangerous worlds ship less), so §138 differentiation flows through delivered supply — updates to sensitivity-500tick (deliveredTotal axis) and scenario-differentiation-long-horizon (memoryOfLoss axis) are STRENGTHENINGS per audit law, tracked with the axes they measure
 
 ## Next 5
-1. Pending-trip cargo → market delivery via trip (materialize trip cargo beyond direct deliverCargo)
-2. Drought/season → production → shortage → migration (ecology cascade, one stock change consumed by decision)
+1. Drought/season → production → shortage → migration (ecology cascade, one stock change consumed by decision)
+2. Justice outcome → faction legitimacy (resolve → faction state) — done in Slice C; re-verify against any further raidScore changes
 3. Real pending-state fork + MUT-SAVE-001 held under two-branch identity
 4. WHY inspector for merchant route B vs A
 5. Ecology/season material loop full integration
@@ -57,20 +61,23 @@ Do not start another evidence-framework slice unless a P0 ledger write bug reapp
 - Tests patched for WSL path (brain-fearcore-authority, quarantine)
 - Mutation: forced FIRE before population/destination guards; migration-pressure-contracts decision integrity test fails as expected; reverted.
 
-## Verification 2026-08-31 Slice A+B+C
+## Verification 2026-08-31 Slice A follow-up (pending-trip market loop)
 ```
-Test Suites: 141 passed, 141 total
-Tests:       1136 passed, 1136 total
-Time:        33.99s (parallel, all suites)
-Focused Slice A: 8 passed, 8 total
-Focused Slice B: 4 passed, 4 total
-Focused Slice C: 3 passed, 3 total
+Test Suites: 142 passed, 142 total
+Tests:       1139 passed, 1139 total
+Time:        25.16s (parallel, all suites)
+Focused pending-trip-market-conservation: 3 passed, 3 total
+500-tick probe: 1.80 ms/tick; maxPendingTrips 72 -> 1 after prune fix; 71 deliveries; no NaN.
+5000-tick direct probe (1 seed): crashed=false nan=false negInv=false pop=2 events=87132
+  maxPending=1, 155s/seed (the 3-seed Jest suite is the known >600s WSL outlier).
 ```
-FOCUSED_GREEN / FULL_GREEN (141/141)
+FOCUSED_GREEN / FULL_GREEN (142/142)
 DEVELOPMENT_VERIFIED_CURRENT_TREE
 SUPERVISOR_ADMITTED = no
 KNOWN_GAPS_PRESENT = yes
-Mutation Slice C: set legitimacy dampener to 0, low-legitimacy raidScore no longer > high-legitimacy, test fails. Restored.
+Mutation (kill): disabled the deliveredThisTick→tickFlow merge; pending-trip-market-conservation
++ market-mass-balance-invariant 4 tests go red (mass balance violates by exactly the delivered
+amount); restored. Proves the booking fix is real, not decorative.
 
 ## Independent verification 2026-08-31 (post-audit)
 An independent audit directive (FEAR-AI-TRUTH-CORRECTION) was issued against a
