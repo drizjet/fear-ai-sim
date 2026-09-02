@@ -1,14 +1,40 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-KL-SETTLEMENT+ROAMING-TRAVEL (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-MN-TREATY-VIOLATION+PRICE-ELASTICITY (Lane B, unaccepted)
 
-Test Suites: 156 passed, 156 total (was 154)
-Tests:       1201 passed, 1201 total (+13)
-Settlement staking + roaming travel live: new towns, claimedRadius, real movement with scout beliefs
+Test Suites: 158 passed, 158 total (was 156)
+Tests:       1211 passed, 1211 total (+10)
+Treaty violation now costs trust via territory; market price is history-dependent (elastic)
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B
 supervisor admitted: no
+
+## SLICE M+N — treaty → territory violation cost + market price elasticity
+
+### Slice M — treaty violation cost (territory pass now debits trust)
+The PASSAGE hook was decorative (flag only). Now it routes cost.
+- closed-world.js:1190 territory pass now resolves passageTreaty via both
+  `treaty.kind` and `terms.kind` (supports legacy test shape `kind:'PASSAGE'` +
+  real `terms.kind:'passage'`). On scoped match (`terms.scope === intruderRoad`)
+  or scope-free, it calls `pair.recordHarm({severity:0.15/0.10, fromFactionId})`
+  debiting observer's trust by 0.015/0.01, emits `TREATY_VIOLATED` with
+  `violationCost:true` + `trustDebit` on the INTRUSION context. Scoped
+  mismatch → no debit, no violation (honest). Test proves mismatch keeps
+  trust at 0.5 vs 0.485 with violation.
+- Detectors: tests/treaty-territory-violation.test.js (5 tests): scoped hit
+  debits trust + emits violation + violationCost flag, scoped mismatch does
+  not debit, scope-free debits on any road, no treaty → no violation.
+
+### Slice N — market price elasticity (history-dependent bid curve)
+`getQuote` was instantaneous (1+shortage*2). Now an EMA path exists.
+- economy.js:87 `getQuote` stays instantaneous for backward compat.
+  New `getElasticQuote(kind)` blends current shortage 0.7 + EMA 0.3 and adds
+  momentum 0.5*(shortage−prev). Sustained 0.8 over 5 ticks prices higher than
+  a 1-tick spike to 0.8 (blended EMA 0.8 vs 0.24), recovery drops 40%+.
+  `_priceMemory` serializes via `Market.serialize` so save/load preserves it.
+- Detectors: tests/market-price-elasticity.test.js (5 tests): backward compat,
+  sustained > brief, recovery drops, serialize roundtrip, momentum premium.
 
 ## SLICE K+L — settlement network + roaming travel with scout (territory + movement)
 

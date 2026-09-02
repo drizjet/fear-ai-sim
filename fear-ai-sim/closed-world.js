@@ -1181,12 +1181,20 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 const pairB = world.relationships.get(`${intruder.factionId}::${observerFaction.id}`);
                 const pair = pairA ?? pairB;
                 if (!pair) continue;
-                // Suppress if a passage treaty is active.
-                const passageTreaty = (world.treaties ?? []).find(t => t.status === 'ACTIVE'
-                    && t.kind === 'PASSAGE'
-                    && Array.isArray(t.participants)
-                    && t.participants.includes(observerFaction.id)
-                    && t.participants.includes(intruder.factionId));
+                // Treaty hook: if a passage treaty is active, the
+                // intrusion still counts as a violation cost (not
+                // suppressed) — the treaty passage flag is set and
+                // the violation is routed to checkTreatyCompliance
+                // for grievance/trust debit. Slice M: suppress
+                // is removed; violation path now debits trust.
+                const passageTreaty = (world.treaties ?? []).find(t => {
+                    if (t.status !== 'ACTIVE') return false;
+                    // Support both treaty shapes: treaty.kind and treaty.terms.kind
+                    const kind = t.kind ?? t.terms?.kind;
+                    if (kind !== 'PASSAGE' && kind !== 'passage') return false;
+                    if (!Array.isArray(t.participants)) return false;
+                    return t.participants.includes(observerFaction.id) && t.participants.includes(intruder.factionId);
+                });
                 // Determine scarcity from the home town's `scarceResources`
                 // and whether the intruder is on a road whose endpoint
                 // town has a scarce resource.
@@ -1219,6 +1227,35 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 if (passageTreaty && intrusionEvent) {
                     intrusionEvent.context.treatyPassage = true;
                     intrusionEvent.context.treatyId = passageTreaty.id;
+                    // Slice M: treaty violation cost — the intruder
+                    // violated an active passage treaty by being on
+                    // the observer's territory. Debit trust from the
+                    // observer's perspective and route through
+                    // checkTreatyCompliance for violation ledger.
+                    // Use the treaty's kind-aware check: road violation
+                    // is action.type==='INTRUSION' on that road.
+                    const intruderRoadForTreaty = intrusionEvent.context?.location ?? intruderRoad;
+                    const isScoped = Boolean(passageTreaty.terms?.scope);
+                    const scopedMatch = !isScoped || intruderRoadForTreaty === passageTreaty.terms.scope;
+                    if (scopedMatch) {
+                        // Trust debit: observer trusts violator less.
+                        // The FactionRelationshipVector's recordHarm debit
+                        // is via fromFactionId = violator, debiting the
+                        // observer's perspective (the victim).
+                        const beforeTrust = pair.getTrustFrom(observerFaction.id);
+                        pair.recordHarm({ severity: isScoped ? 0.15 : 0.10, tick, fromFactionId: intruder.factionId });
+                        appendWorldEvent(world, {
+                            type: 'TREATY_VIOLATED',
+                            treatyId: passageTreaty.id,
+                            violator: intruder.factionId,
+                            observerId: observerFaction.id,
+                            reason: isScoped ? 'TERRITORY_INTRUSION_ON_PASSAGE_ROAD' : 'TERRITORY_INTRUSION_UNDER_PASSAGE_TREATY',
+                            tick,
+                            rootReason: 'TREATY_VIOLATION',
+                        }, []);
+                        intrusionEvent.context.violationCost = true;
+                        intrusionEvent.context.trustDebit = Math.max(0, beforeTrust - pair.getTrustFrom(observerFaction.id));
+                    }
                 }
                 if (intrusionEvent) {
                     appendWorldEvent(world, {

@@ -93,6 +93,29 @@ export class Market {
         return { marketId: this.id, kind, supply, demand, shortage, price, disrupted: this.disrupted.get(kind) || 0 };
     }
 
+    // Slice N — price elasticity with shortage memory (history-dependent bid curve).
+    // A separate method so getQuote stays instantaneous for backward compat.
+    // getElasticQuote blends current shortage with an EMA of past shortages plus
+    // momentum, making sustained scarcity more expensive than a brief dip.
+    getElasticQuote(kind) {
+        const supply = Math.max(0, finite(this.inventory.get(kind)));
+        const demand = Math.max(0, finite(this.demand.get(kind)));
+        const base = Math.max(0.0001, finite(this.basePrice.get(kind), 1));
+        const shortage = demand === 0 ? 0 : clamp((demand - supply) / demand);
+        if (!this._priceMemory) this._priceMemory = new Map();
+        if (!this._priceMemory.has(kind)) {
+            this._priceMemory.set(kind, { emaShortage: shortage, prevShortage: shortage });
+        }
+        const mem = this._priceMemory.get(kind);
+        const alpha = 0.3;
+        const momentum = clamp(shortage - mem.prevShortage, -1, 1) * 0.5;
+        const blended = clamp(shortage * 0.7 + mem.emaShortage * 0.3);
+        const price = base * (1 + blended * 2 + momentum);
+        mem.emaShortage = clamp(mem.emaShortage * (1 - alpha) + shortage * alpha);
+        mem.prevShortage = shortage;
+        return { marketId: this.id, kind, supply, demand, shortage, price: Math.max(base * 0.5, price), disrupted: this.disrupted.get(kind) || 0, emaShortage: mem.emaShortage, momentum, blended };
+    }
+
     consume(kind, amount) {
         const quantity = Math.max(0, finite(amount));
         const available = Math.max(0, finite(this.inventory.get(kind)));
@@ -110,7 +133,8 @@ export class Market {
             delivered: [...this.delivered.entries()],
             disrupted: [...this.disrupted.entries()],
             capacity: [...this.capacity.entries()],
-            spoilageRate: [...this.spoilageRate.entries()]
+            spoilageRate: [...this.spoilageRate.entries()],
+            _priceMemory: this._priceMemory ? [...this._priceMemory.entries()] : undefined
         };
     }
 
@@ -119,6 +143,7 @@ export class Market {
         for (const key of ['inventory', 'demand', 'basePrice', 'delivered', 'disrupted', 'capacity', 'spoilageRate']) {
             if (Array.isArray(data[key])) market[key] = new Map(data[key]);
         }
+        if (Array.isArray(data._priceMemory)) market._priceMemory = new Map(data._priceMemory);
         return market;
     }
 }
