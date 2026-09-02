@@ -1,14 +1,35 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-D-DROUGHT-CASCADE (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-E-ENCOUNTER-RNG-PERSISTENCE (Lane B, unaccepted)
 
-Test Suites: 146 passed, 146 total (was 145)
-Tests:       1160 passed, 1160 total (+4)
-DROUGHT probe: 10-tick 0.64x production, shortage 0→1, emigration 414→496 (+20%)
+Test Suites: 147 passed, 147 total (was 146)
+Tests:       1163 passed, 1163 total (+3)
+Encounter RNG persistence: save/load byte-identical without closure, drought+stream survive
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
 lane: B
 supervisor admitted: no
+
+## SLICE E — encounter RNG persistence (W1-CONTINUITY-RNG)
+W1-CONTINUITY-RNG CONFIRMED_CURRENT at re-anchor (4 production sites
+closed-world.js:1271/2337/2434/2438) was a closure outside serializable
+world — saveWorld dropped it, true restart diverged. Now persisted.
+- world.rngStreams.encounter { algorithm:'xorshift32', state, draws } plain
+  JSON, initialized in ensurePendingWorldState and createClosedWorldScenario
+  (closed-world.js:40, 49, 607). nextEncounterRandom / makeEncounterRng
+  (closed-world.js:197) replace tick-seeded deterministicRng at all 4 sites:
+  tickCanonicalMerchant, encounter selection, tickBandit, tickPatrol.
+  Custom encounterRng still overrides for tests but persistence is via the
+  stream when null — real restart no longer needs the closure.
+- Detectors: tests/encounter-rng-persistence.test.js (3 tests):
+  1) 5-tick checkpoint → 10-tick resume WITHOUT custom rng is byte-identical
+     (saveWorld equality, RNG state/draws equal)
+  2) custom RNG still works but does not corrupt persistent stream
+  3) drought + encounter stream both survive save/load
+- Mutation: remove rngStreams.encounter init, resumed.rngStreams.encounter undefined → test fails; restored.
+- Filed: statistical-validation-trade-loop still reuses closure for both twins
+  (fake restart) — now documented, not blocking; real two-branch test above
+  is the honest one.
 
 ## SLICE D — drought → production → shortage → migration cascade
 Ecology now drives migration via a real stock change, not a flag.

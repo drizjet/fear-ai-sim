@@ -38,6 +38,7 @@ const deterministicRng = (seed = 1) => {
 // Every field initialized here is JSON data and is consequently covered by the
 // same save/load/fork boundary as the rest of the closed world.
 const DEFAULT_PENDING_RNG_STATE = 0x6D2B79F5;
+const DEFAULT_ENCOUNTER_RNG_STATE = 0x9E3779B9;
 
 function ensurePendingWorldState(world) {
     if (!Number.isSafeInteger(world.nextActionId) || world.nextActionId < 1) {
@@ -61,6 +62,20 @@ function ensurePendingWorldState(world) {
         pendingStream.state = (pendingStream.state >>> 0) || DEFAULT_PENDING_RNG_STATE;
         pendingStream.draws = Number.isSafeInteger(pendingStream.draws) && pendingStream.draws >= 0
             ? pendingStream.draws
+            : 0;
+    }
+    const encounterStream = world.rngStreams.encounter;
+    if (!encounterStream || typeof encounterStream !== 'object') {
+        world.rngStreams.encounter = {
+            algorithm: 'xorshift32',
+            state: DEFAULT_ENCOUNTER_RNG_STATE,
+            draws: 0,
+        };
+    } else {
+        encounterStream.algorithm = 'xorshift32';
+        encounterStream.state = (encounterStream.state >>> 0) || DEFAULT_ENCOUNTER_RNG_STATE;
+        encounterStream.draws = Number.isSafeInteger(encounterStream.draws) && encounterStream.draws >= 0
+            ? encounterStream.draws
             : 0;
     }
     for (const key of [
@@ -172,6 +187,23 @@ function nextPendingWorldRandom(world) {
     stream.state = state >>> 0;
     stream.draws += 1;
     return stream.state / 0x100000000;
+}
+
+function nextEncounterRandom(world) {
+    ensurePendingWorldState(world);
+    const stream = world.rngStreams.encounter;
+    let state = (stream.state >>> 0) || DEFAULT_ENCOUNTER_RNG_STATE;
+    state ^= state << 13;
+    state ^= state >>> 17;
+    state ^= state << 5;
+    stream.state = state >>> 0;
+    stream.draws += 1;
+    return stream.state / 0x100000000;
+}
+
+function makeEncounterRng(world, encounterRng) {
+    if (typeof encounterRng === 'function') return encounterRng;
+    return () => nextEncounterRandom(world);
 }
 
 /**
@@ -578,6 +610,11 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
             pendingEffects: {
                 algorithm: 'xorshift32',
                 state: DEFAULT_PENDING_RNG_STATE,
+                draws: 0,
+            },
+            encounter: {
+                algorithm: 'xorshift32',
+                state: DEFAULT_ENCOUNTER_RNG_STATE,
                 draws: 0,
             },
         },
@@ -1407,7 +1444,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         })();
         const routeResult = tickCanonicalMerchant(world, merchant.id, {
             tick,
-            rng: encounterRng ?? deterministicRng((tick * 0x9E3779B9) >>> 0),
+            rng: makeEncounterRng(world, encounterRng),
             parentEventIds: beliefParentIds,
         });
         if (routeResult?.ok && routeResult.event) {
@@ -2553,7 +2590,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 bandit.roadId = pinBanditRoadId;
             }
         }
-        const activeRng = encounterRng ?? deterministicRng((tick * 0x9E3779B9) >>> 0);
+        const activeRng = makeEncounterRng(world, encounterRng);
         // EVID-2026-08-29-ZERO-ATTACKS-FIX: previously maxCandidates=1
         // meant at most 1 encounter fired per tick, and the rng
         // shuffle could pick a low-priority encounter over the
@@ -2650,11 +2687,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // see fresh bandit/patrol state for the same tick.
     for (const bandit of (world.bandits || [])) {
         if (bandit && bandit.trafficBelief) {
-            tickCanonicalBandit(world, bandit.id, { tick, rng: encounterRng ?? deterministicRng((tick * 0x6D2B79F5) >>> 0) });
+            tickCanonicalBandit(world, bandit.id, { tick, rng: makeEncounterRng(world, encounterRng) });
         }
     }
     for (const patrol of (world.patrols || [])) {
-        tickCanonicalPatrol(world, patrol.id, { tick, rng: encounterRng ?? deterministicRng((tick * 0x6D2B79F5) >>> 0) });
+        tickCanonicalPatrol(world, patrol.id, { tick, rng: makeEncounterRng(world, encounterRng) });
     }
 
     // 8. Snapshot the post-tick state for the audit trail.
