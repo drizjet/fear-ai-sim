@@ -1,14 +1,22 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-J-PATROL-RESOURCE-GATING (Lane B, unaccepted)
+EVID-2026-09-01-R3-INFO-QUALITY+MIGRATION-CALIBRATION (Lane B, unaccepted)
 
-Test Suites: 151 passed, 151 total (was 150)
-Tests:       1178 passed, 1178 total (+4)
-Patrol needs faction resources: deployment costs 1, toll refunds capped, interception gated
+Test Suites: 153 passed, 153 total (was 151)
+Tests:       1186 passed, 1186 total (+8)
+R3 deep round: BeliefStore aliasing fixed, panopticon removed, noisy observation, migration weights calibrated
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B
 supervisor admitted: no
+
+## R3 — info quality + migration calibration (deep round)
+Two deferred fidelity items from R2 now closed with detectors.
+- beliefs.js:38 BeliefStore aliasing fixed — get returns deep copy, observe stores copy and returns deep copy, mutating returned belief/evidence no longer corrupts store (tests/info-quality.test.js:8).
+- closed-world.js:2933 canObserve panopticon removed — town adjacency no longer grants free observation of all incident roads; only selectedRoute === roadId is observable. Merchant at north without route sees nothing, with road-a sees only road-a (tests/info-quality.test.js:33).
+- canonical-trade-system.js:289 noisy observation — 0.7 ± 0.1 (rng() *0.2) so actualDanger not injected exactly; WHY shows observedDanger 0.6-0.8, not exact 0.7 (tests/info-quality.test.js:51).
+- tests/migration-weight-calibration.test.js (2 tests): weight jitter ±0.05 still chooses east over starving south (stable, not knife-edge), and trust is decisive when shortage/danger/distance equal (east 0.9 vs west 0.1).
+- Mutation: revert aliasing to shallow copy, alias test fails; revert canObserve to adjacency, panopticon test fails; set noise to 0, noise test fails (unique size 1); restored.
 
 ## SLICE J — patrol resource gating (faction resources → patrol cost → safety → market)
 Trade profits fund security, security enables trade — closed loop, not decorative.

@@ -44,19 +44,21 @@ export class BeliefStore {
 
     observe(evidenceLike) {
         const evidence = evidenceLike instanceof Evidence ? evidenceLike : new Evidence(evidenceLike);
-        const key = `${evidence.subject}:${evidence.claim}`;
+        // Deep copy evidence to prevent external mutation of stored evidence
+        const evidenceCopy = new Evidence({ ...evidence });
+        const key = `${evidenceCopy.subject}:${evidenceCopy.claim}`;
         const prior = this.beliefs.get(key);
-        const weight = evidence.weight();
+        const weight = evidenceCopy.weight();
         const priorWeight = prior?.weight || 0;
         const totalWeight = priorWeight + weight;
         const value = !prior || totalWeight === 0
-            ? evidence.value
-            : this.combine(prior.value, evidence.value, weight / totalWeight);
+            ? evidenceCopy.value
+            : this.combine(prior.value, evidenceCopy.value, weight / totalWeight);
         const confidence = clamp(totalWeight / (1 + totalWeight));
-        const belief = { layer: INFORMATION_LAYERS.AGENT_BELIEF, subject: evidence.subject, claim: evidence.claim, value, confidence, weight: totalWeight, lastTick: evidence.tick };
-        this.beliefs.set(key, belief);
-        this.evidence.push(evidence);
-        return { ...belief };
+        const belief = { layer: INFORMATION_LAYERS.AGENT_BELIEF, subject: evidenceCopy.subject, claim: evidenceCopy.claim, value, confidence, weight: totalWeight, lastTick: evidenceCopy.tick };
+        this.beliefs.set(key, { ...belief });
+        this.evidence.push(evidenceCopy);
+        return JSON.parse(JSON.stringify(belief));
     }
 
     combine(a, b, ratio) {
@@ -66,7 +68,9 @@ export class BeliefStore {
 
     get(subject, claim) {
         const belief = this.beliefs.get(`${subject}:${claim}`);
-        return belief ? { ...belief } : null;
+        if (!belief) return null;
+        // Deep copy to prevent aliasing: returned belief must not share refs with store
+        return JSON.parse(JSON.stringify(belief));
     }
 
     decayAll() {

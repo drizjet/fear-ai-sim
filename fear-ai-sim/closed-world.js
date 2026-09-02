@@ -2938,22 +2938,14 @@ export function canObserve(actor, event, world) {
         ?? event.relocation?.to
         ?? event.to;
     if (!roadId) return false;
-    // Proximity: actor's current route, current location, or
-    // explicitly-traveled road matches the event's road.
+    // Slice K — remove panopticon: only the actor's currently selected
+    // route is observable. The previous town-adjacency fallback made a
+    // merchant at 'north' see both road-a and road-b simultaneously,
+    // which is omniscience. Now legal observation requires the actor to
+    // be on the road (selectedRoute === roadId). Town adjacency no
+    // longer grants free observation of all incident roads.
     const actorRoute = actor.selectedRoute;
-    const actorLocation = actor.location;
     if (actorRoute === roadId) return true;
-    // The actor is at a town (e.g. 'north') that has multiple
-    // outgoing routes. By default, an actor at a town
-    // intersection observes events on all outgoing routes of
-    // that town. This is a coarse proxy; a future slice can
-    // add a perception radius.
-    if (actorLocation) {
-        const adjacent = world.routes
-            .filter(route => route.from === actorLocation || route.to === actorLocation)
-            .map(route => route.id);
-        if (adjacent.includes(roadId)) return true;
-    }
     return false;
 }
 

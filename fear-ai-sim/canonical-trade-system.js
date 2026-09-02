@@ -287,12 +287,16 @@ export function tickMerchant(world, merchantId, {
                 // just a "I saw the bandit there" signal).
                 if (merchant.routeBeliefs && merchant.routeBeliefs[bandit.roadId]) {
                     const current = merchant.routeBeliefs[bandit.roadId].perceivedDanger ?? 0.5;
-                    merchant.routeBeliefs[bandit.roadId].perceivedDanger = clamp01(Math.max(current, 0.7));
+                    // Add observation noise: 0.7 ± 0.1 so actualDanger not injected exactly
+                    const noise = (rng() - 0.5) * 0.2;
+                    whyRngDraws.push({ banditId: bandit.id, roadId: bandit.roadId, draw: noise, kind: 'noise' });
+                    const observedDanger = clamp01(0.7 + noise);
+                    merchant.routeBeliefs[bandit.roadId].perceivedDanger = clamp01(Math.max(current, observedDanger));
                     merchant.routeBeliefs[bandit.roadId].confidence = clamp01(
                         (merchant.routeBeliefs[bandit.roadId].confidence ?? 0.5) + 0.2
                     );
                     merchant.routeBeliefs[bandit.roadId].source = 'observation';
-                    whyObservations.push({ banditId: bandit.id, roadId: bandit.roadId, observedDanger: 0.7 });
+                    whyObservations.push({ banditId: bandit.id, roadId: bandit.roadId, observedDanger });
                 }
             }
         }
