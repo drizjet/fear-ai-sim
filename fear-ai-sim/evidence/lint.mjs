@@ -16,11 +16,12 @@
 //   node scripts/audit-evidence.mjs [--root <repo-root>]
 
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { computeSourceFingerprint, compareFingerprints } from '../evidence/fingerprint.mjs';
 import { maturityGate, readLedger } from '../evidence/maturity.mjs';
 
-const DEFAULT_ROOT = 'C:/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim';
+const DEFAULT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 function parseArgs(argv) {
     const args = { root: DEFAULT_ROOT };
@@ -171,7 +172,8 @@ function main() {
     // Reporting STALE or INCOMPLETE while returning success allows CI and
     // maturity automation to accept evidence whose declared support has
     // drifted, which is the MUT-EVID-002 failure mode.
-    const hasInadmissible = ledger.some(r => r.freshness !== 'ADMISSIBLE');
+    // SUPERSESSION rows are audit metadata, not claims — exclude them.
+    const hasInadmissible = ledger.some(r => r.freshness !== 'ADMISSIBLE' && r.freshness !== 'SUPERSESSION' && r.dimension !== 'EVIDENCE_SUPERSESSION');
     const activeC = contradictions.filter(c => c.active !== false);
     const hasUntrackedContradiction = activeC.some(c => {
         return !ledger.some(r => r.domain === c.domain && Array.isArray(r.knownContradictions) && r.knownContradictions.includes(c.rowId));

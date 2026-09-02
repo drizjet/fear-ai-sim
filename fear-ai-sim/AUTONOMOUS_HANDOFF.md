@@ -1,14 +1,20 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-F-MERCHANT-WHY-INSPECTOR (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-G-LINTER-GATE-FIX (Lane B, unaccepted)
 
-Test Suites: 148 passed, 148 total (was 147)
-Tests:       1167 passed, 1167 total (+4)
-Merchant WHY inspector: B vs A ranked, observations, threshold, rng draws
+Test Suites: 148 passed, 148 total (lint gate fix — no test count change, linter now honest)
+Tests:       1167 passed, 1167 total
+evidenceRows: 270 (was 0 vacuous before fix), lint exit 1 honest (stale), not vacuous 0
 build: fail (rollup native missing in WSL, not related to code)
-lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
+lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — now with correct 270-row count, not vacuous)
 lane: B
 supervisor admitted: no
+
+## SLICE G — evidence linter gate fix (W1-EVIDENCE-TRUST-ROOT)
+Vacuous green was worse than honest red. Now honest red.
+- evidence/lint.mjs:18 DEFAULT_ROOT was hardcoded `C:/tools/...` which under WSL resolves to `/mnt/c/C:/...` and reads 0 rows → exit 0 vacuously. Fixed to `resolve(dirname(fileURLToPath(import.meta.url)), '..')` so root is the inner package where docs/evidence lives (evidence/lint.mjs:18). Now finds 270 rows, not 0.
+- evidence/lint.mjs:174 hasInadmissible now excludes SUPERSESSION (`freshness !== 'ADMISSIBLE' && freshness !== 'SUPERSESSION' && dimension !== 'EVIDENCE_SUPERSESSION'`). Before, a ledger with 1 ADMISSIBLE + 1 SUPERSESSION exited 1 incorrectly. Now synthetic ADMISSIBLE+SUPERSESSION exits 0, STALE still exits 1. Mutation: revert each predicate, synthetic test fails → restored.
+- Verified: `node ./evidence/lint.mjs` now reports 270 rows in  ~30s (was 0 in ~0.1s) and exits 1; `node ./evidence/lint.mjs --help` still fast; `evidence-linter.test.js` 15/15 green.
 
 ## SLICE F — merchant WHY inspector (route B vs A)
 WHY that just said "chosen route" was decorative. Now it names the belief that mattered.
