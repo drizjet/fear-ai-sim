@@ -72,14 +72,14 @@ describe('directional stance governs the selected production target', () => {
             stance: StanceLadder.TOLERANT,
             threshold: StanceLadder.WATCHFUL,
             allowed: false,
-            reason: 'TARGET_STANCE_BELOW_THRESHOLD',
+            reason: 'STRUCTURED_STANCE_BLOCKS_RAID',
         });
         expect(northGate(world).why).toEqual(expect.arrayContaining([
             'Faction decision is RAID',
             'Target bandit is reachable',
         ]));
         expect(northGate(world).whyNot).toHaveLength(1);
-        expect(northGate(world).whyNot[0]).toContain('below WATCHFUL');
+        expect(northGate(world).whyNot[0]).toContain('structured decision');
     });
 
     it('allows the same target when the attacker perspective is WATCHFUL or higher', () => {
@@ -99,7 +99,7 @@ describe('directional stance governs the selected production target', () => {
             stance: pair.stanceFrom(NORTH),
             threshold: StanceLadder.WATCHFUL,
             allowed: true,
-            reason: 'TARGET_STANCE_AUTHORIZES_ACTION',
+            reason: expect.stringMatching(/^STRUCTURED_STANCE_AUTHORIZES_ACTION:/),
         });
         expect(northGate(world).whyNot).toEqual([]);
     });

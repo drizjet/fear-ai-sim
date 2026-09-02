@@ -2470,6 +2470,15 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 ?? world.relationships.get(`${targetFactionId}::${faction.id}`)
                 ?? null)
             : null;
+        // Treaties are hard action constraints, independent of whether the
+        // relationship vector is present or the optional stance gate is
+        // disabled. Resolve this before the structured stance decision so the
+        // ledger explains the treaty constraint rather than a lower-priority
+        // stance result.
+        const blockingTreaty = targetFactionId && targetFactionId !== faction.id
+            ? activeTreatiesFor(faction.id, world, { kind: 'non-aggression' })
+                .find(treaty => treaty.participants.includes(targetFactionId))
+            : null;
         // Slice P: structured stance decision routing.
         // The raid gate now consumes the FactionRelationshipVector's
         // chooseStance intent (pair.pressureFrom + trust + perceivedGroupSize)
@@ -2479,22 +2488,30 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const structuredDecision = (() => {
             if (!targetPair || typeof targetPair.stanceFrom !== 'function') return null;
             try {
-                // Use the pair's own directed pressure/trust for the evaluator
+                // Use the pair's own directed pressure/trust for the evaluator.
+                // Keep the same material-signal policy as the relationship pass:
+                // an invasion decision must not let political trust erase an
+                // observed territorial threat.
                 const pressure = targetPair.pressureFrom(faction.id);
                 const trust = targetPair.getTrustFrom(faction.id);
                 const prev = targetPair.stanceFrom(faction.id) ?? StanceLadder.TOLERANT;
                 const groupSize = targetPair.lastObservedGroupSizeFrom?.(faction.id, tick, 50) ?? 1;
                 const incidents = targetPair.intrusionCount?.(tick, 50) ?? 0;
-                // Reuse evaluate via chooseStance to get structured reason
-                // Duplicate import guard: chooseStance already imported at top
+                const militaryResources = Math.min(1, (faction.resources ?? 0) / Math.max(1, faction.maxResources ?? 1));
+                const informationConfidence = clamp01(faction.informationConfidence ?? 1);
                 return chooseStance({
                     pressure,
                     trust,
                     previous: prev,
-                    militaryResources: Math.min(1, (faction.resources ?? 0) / Math.max(1, faction.maxResources ?? 1)),
-                    informationConfidence: clamp01(faction.informationConfidence ?? 1),
+                    militaryResources,
+                    informationConfidence,
                     perceivedGroupSize: groupSize,
                     previousIncidentsCount: incidents,
+                    // Let chooseStance apply its incident-sensitive trust
+                    // damping. Reusing the default political damping here is
+                    // intentional: previousIncidentsCount must change the
+                    // action authorization, not merely the explanation.
+                    dampenByTrust: true,
                 });
             } catch { return null; }
         })();
@@ -2502,7 +2519,21 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             ? targetPair.stanceFrom(faction.id)
             : null;
         const threshold = StanceLadder.WATCHFUL;
-        const structuredAllows = structuredDecision ? (structuredDecision.to >= threshold) : null;
+        // A low-confidence stance is not sufficient evidence for a raid,
+        // even when the prior directional stance is already WATCHFUL or
+        // higher. chooseStance owns the evidence gate; the action consumer
+        // must honor its active uncertainty status rather than looking only
+        // at the scalar `to` value.
+        const structuredEvidenceBlocksAction = Boolean(
+            structuredDecision
+            && structuredDecision.evidence?.gateActive
+            && structuredDecision.to >= threshold
+        );
+        const structuredAllows = structuredDecision
+            ? (structuredDecision.to >= threshold
+                && !structuredDecision.blocked
+                && !structuredEvidenceBlocksAction)
+            : null;
         const why = [
             'Faction decision is RAID',
             'Target bandit is reachable',
@@ -2511,7 +2542,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         let gateAllowed = true;
         let gateReason;
 
-        if (!relationshipGate) {
+        if (blockingTreaty) {
+            gateAllowed = false;
+            gateReason = 'TREATY_BLOCKED_RAID';
+            whyNot.push(`Active non-aggression treaty ${blockingTreaty.id} blocks action against ${targetFactionId}`);
+        } else if (!relationshipGate) {
             gateReason = 'RELATIONSHIP_GATE_DISABLED';
             why.push('Explicit relationshipGate=false override permits the action');
         } else if (!targetFactionId) {
@@ -2531,7 +2566,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         } else if (structuredAllows === false) {
             gateAllowed = false;
             gateReason = 'STRUCTURED_STANCE_BLOCKS_RAID';
-            whyNot.push(`${faction.id} structured decision ${structuredDecision.from}->${structuredDecision.to} blocks raid (reason ${structuredDecision.reason})`);
+            const structuredBlockReason = structuredDecision.blocked
+                ? structuredDecision.reason
+                : structuredEvidenceBlocksAction
+                    ? 'BLOCKED: uncertain information is not sufficient evidence for a raid'
+                    : structuredDecision.reason;
+            whyNot.push(`${faction.id} structured decision ${structuredDecision.from}->${structuredDecision.to} blocks raid (reason ${structuredBlockReason})`);
         } else if (targetStance < threshold) {
             gateAllowed = false;
             gateReason = 'TARGET_STANCE_BELOW_THRESHOLD';
@@ -2566,33 +2606,32 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             reason: gateReason,
             why,
             whyNot,
+            structuredDecision: structuredDecision ? {
+                from: structuredDecision.from,
+                to: structuredDecision.to,
+                reason: structuredDecision.reason,
+                evidence: structuredDecision.evidence,
+                capability: structuredDecision.capability,
+                blocked: structuredDecision.blocked,
+                actionBlocked: structuredEvidenceBlocksAction,
+            } : null,
+            structuredAllows,
+            structuredEvidenceBlocksAction,
+            treatyId: blockingTreaty?.id ?? null,
             tick,
         }, stanceParentIds);
-        if (!gateAllowed) continue;
-        // The §12 / §28 non-aggression enforcement: if
-        // the candidate bandit is associated with a
-        // faction that the raider has a non-aggression
-        // treaty with, the raid is blocked. A
-        // `TREATY_BLOCKED_RAID` event is emitted and the
-        // invasion is suppressed. Without this gate, a
-        // faction with a non-aggression pact would
-        // happily raid its treaty partner's bandits.
-        if (candidate.factionId) {
-            const nonAggressionPacts = activeTreatiesFor(faction.id, world, { kind: 'non-aggression' });
-            const blocked = nonAggressionPacts.some(treaty =>
-                treaty.participants.includes(candidate.factionId)
-            );
-            if (blocked) {
-                appendWorldEvent(world, {
-                    type: 'TREATY_BLOCKED_RAID',
-                    factionId: faction.id,
-                    targetFactionId: candidate.factionId,
-                    banditId: candidate.id,
-                    tick,
-                }, [gateEvent.eventId]);
-                continue;
-            }
+        if (blockingTreaty) {
+            appendWorldEvent(world, {
+                type: 'TREATY_BLOCKED_RAID',
+                factionId: faction.id,
+                targetFactionId: candidate.factionId,
+                banditId: candidate.id,
+                treatyId: blockingTreaty.id,
+                tick,
+            }, [gateEvent.eventId]);
+            continue;
         }
+        if (!gateAllowed) continue;
         const plan = planRetaliation(faction, candidate, { tick });
         const actionEvent = appendWorldEvent(world, {
             type: 'FACTION_ACTION',

@@ -2,13 +2,21 @@
 
 EVID-2026-09-01-SLICE-OP-ELASTIC-TRADE+STANCE-GATE (Lane B, unaccepted)
 
-Test Suites: 160 passed, 160 total (was 158)
-Tests:       1215 passed, 1215 total (+4)
-Elastic price now drives merchant opportunity; structured stance now gates invasion
+Test Suites: 156 passed, 159 total in the non-long-horizon regression run
+Tests:       1204 passed, 1209 total in that run
+Focused O/P + related regression: 6 suites, 27 tests passed
+Elastic price drives merchant opportunity; structured stance now gates invasion
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B
 supervisor admitted: no
+
+Known broader baseline failures (not caused by the final Slice P amendment):
+- closed-world-all-systems.test.js: 7/8 pass; the canonical runtime expectation still
+  misses BANDIT_ATTACK and JUSTICE_RESOLVED in its first chain assertion.
+- fork-independence.test.js: 2/4 pass, fork-api.test.js: 5/6 pass, and
+  encounter-rng-persistence.test.js: 1/3 pass; persistent fork/save byte-identity
+  remains an existing follow-up outside this gate slice.
 
 ## SLICE O+P — elastic price → trade bid curve + stance → invasion routing
 
@@ -30,8 +38,15 @@ the gate blocks with `STRUCTURED_STANCE_BLOCKS_RAID`, else allows with
 blocks raids even when raw stance meets threshold.
 - closed-world.js:2460 structuredDecision built from pair.pressureFrom/trust,
   lastObservedGroupSizeFrom, intrusionCount; gate checks structuredAllows first.
-- Detectors: tests/stance-invasion-gate.test.js (2 tests): low confidence blocks,
-  high trust + low pressure stays TOLERANT (no raid).
+- Detectors: tests/stance-invasion-gate.test.js (4 tests): low confidence blocks
+  despite a raw hostile stance, directed trust/pressure blocks a stale hostile peak,
+  supported evidence authorizes an invasion, and a non-aggression treaty has priority
+  even when the relationship-gate override is disabled.
+- The pre-existing directional detector was updated to assert the new structured
+  reason and positive authorization contract rather than the superseded raw reason.
+- Mutation check: removing `!structuredEvidenceBlocksAction` produced an unauthorized
+  invasion in the Slice P detector; the guard was restored and the detector returned
+  green.
 
 ## SLICE M+N — treaty → territory violation cost + market price elasticity
 build: fail (rollup native missing in WSL, not related to code)
