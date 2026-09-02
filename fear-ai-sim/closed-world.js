@@ -824,6 +824,36 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     //    advances this tick.
     tickSeason(world, tick);
 
+    // 0.1 Slice D — drought shock (ecology → production → shortage → migration)
+    // A drought is a transient ecology modifier on food production for a
+    // single town. It is stored on world.drought { active, severity, kind,
+    // townId, remainingTicks, startedTick, startEventId }. Severity in [0,1],
+    // production multiplier is (1 - severity*0.6) clamped to [0.1,1] so a
+    // 0.6 drought leaves 64% production, 1.0 leaves 40%.
+    // The modifier is applied in the step-4 market loop below (production
+    // already multiplies by getSeasonModifier). RemainingTicks decrements each
+    // tick; when it reaches 0 the drought ends and DROUGHT_ENDED is emitted
+    // parented to the DROUGHT_STARTED event.
+    if (world.drought && world.drought.active) {
+        const remaining = Math.max(0, (world.drought.remainingTicks ?? 0) - 1);
+        world.drought.remainingTicks = remaining;
+        if (remaining <= 0) {
+            world.drought.active = false;
+            const parentIds = world.drought.startEventId ? [world.drought.startEventId] : [];
+            // Try to find DROUGHT_STARTED eventId if not stored
+            if (parentIds.length === 0) {
+                const startEv = [...world.events].reverse().find(e => e.type === 'DROUGHT_STARTED' && e.townId === world.drought.townId);
+                if (startEv?.eventId) parentIds.push(startEv.eventId);
+            }
+            appendWorldEvent(world, {
+                type: 'DROUGHT_ENDED',
+                townId: world.drought.townId,
+                kind: world.drought.kind ?? 'food',
+                tick,
+            }, parentIds);
+        }
+    }
+
     // 0.5. EVID-2026-08-29-DEMOGRAPHY: per-town population
     //    update driven by ecology (season), scarcity (food
     //    shortage), and the demographic rates in demography.js.
@@ -1774,7 +1804,13 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // (see ecology.js / tickSeason).
             const basePerCapitaProduction = Number(produces[kind]) || 0;
             const seasonModifier = getSeasonModifier(world.season, kind);
-            const perCapitaProduction = basePerCapitaProduction * seasonModifier;
+            let perCapitaProduction = basePerCapitaProduction * seasonModifier;
+            // Slice D: drought reduces food production for the affected town
+            if (world.drought?.active && world.drought.townId === townId && (world.drought.kind ?? 'food') === kind) {
+                const sev = clamp01(Number(world.drought.severity) || 0);
+                const droughtMultiplier = Math.max(0.1, 1 - sev * 0.6);
+                perCapitaProduction *= droughtMultiplier;
+            }
             if (Number.isFinite(perCapitaProduction) && perCapitaProduction > 0 && population > 0) {
                 const prodResult = market.produce(kind, population * perCapitaProduction);
                 if (prodResult) {

@@ -1,5 +1,27 @@
 # AUTONOMOUS HANDOFF
 
+EVID-2026-09-01-SLICE-D-DROUGHT-CASCADE (Lane B, unaccepted)
+
+Test Suites: 146 passed, 146 total (was 145)
+Tests:       1160 passed, 1160 total (+4)
+DROUGHT probe: 10-tick 0.64x production, shortage 0→1, emigration 414→496 (+20%)
+build: fail (rollup native missing in WSL, not related to code)
+lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
+lane: B
+supervisor admitted: no
+
+## SLICE D — drought → production → shortage → migration cascade
+Ecology now drives migration via a real stock change, not a flag.
+- world.drought { active, severity, kind, townId, remainingTicks, startEventId } transient ecology modifier on food production for a single town. Severity [0,1] → production multiplier max(0.1, 1 - severity*0.6) clamped so 0.6 severity = 0.64x, 1.0 = 0.4x. Applied in step-4 market loop after season modifier (closed-world.js:1776). Plain JSON: save/load/fork safe.
+- Tick lifecycle: decrements remainingTicks each tick in step 0.1, emits DROUGHT_ENDED parented to DROUGHT_STARTED when reaching 0 (closed-world.js:819).
+- Detectors: tests/drought-shortage-migration.test.js (4 tests):
+  1) drought produces 0.64x vs control and shortage 0→1 while non-drought town unaffected
+  2) drought shortage drives demography emigration 414→496 over 30 ticks (north pop 100, south 100)
+  3) mass conservation holds (no NaN, no negative, market mass-balance invariant still green)
+  4) DROUGHT_STARTED → DROUGHT_ENDED parent chain correct
+- Mutation: set drought multiplier to 1, ratio goes 0.64→1.00, shortage test fails — restored.
+- Wiring: drought → perCapitaProduction → marketFlows.produced → shortage/price → demography emigration (POPULATION_CHANGE) and faction supplyShortage. One stock change consumed by a decision, per §11 Slice D.
+
 EVID-2026-08-31-R2-W1-CAUSAL-DAG-AUTHORITY (V8 Supercampaign R2, Wave 1 lane C)
 
 Test Suites: 145 passed, 145 total (was 144)
@@ -196,7 +218,7 @@ current symbols. Wave 1 lane classification:
 ## Still false / still open
 - 0/10 frozen core mutation kills
 - evidence ledger stale (0 admissible, linter exit 1)
-- market loop: Slice A done; pending-trip → market delivery now WIRED via trip (see below)
+- market loop: Slice A done; pending-trip → market delivery WIRED via trip; drought cascade WIRED (Slice D)
 - FearCore vs Brain dual-ownership parked
 - runtime is DOM shim
 - Lane A not operational
@@ -215,11 +237,11 @@ current symbols. Wave 1 lane classification:
   - Production nuance: shipment volume scales with merchant's believed route danger and world perceivedDanger (dangerous worlds ship less), so §138 differentiation flows through delivered supply — updates to sensitivity-500tick (deliveredTotal axis) and scenario-differentiation-long-horizon (memoryOfLoss axis) are STRENGTHENINGS per audit law, tracked with the axes they measure
 
 ## Next 5
-1. Drought/season → production → shortage → migration (ecology cascade, one stock change consumed by decision)
-2. Justice outcome → faction legitimacy (resolve → faction state) — done in Slice C; re-verify against any further raidScore changes
-3. Real pending-state fork + MUT-SAVE-001 held under two-branch identity
-4. WHY inspector for merchant route B vs A
-5. Ecology/season material loop full integration
+1. Real pending-state fork + MUT-SAVE-001 held under two-branch identity (encounterRng persistence still open)
+2. WHY inspector for merchant route B vs A (observations, beliefs, candidates, utilities, threshold, rng)
+3. Justice → legitimacy re-verify after drought changes supplyShortage feeding faction reassess
+4. Ecology/season material loop full integration (drought done; next: season→trade→migration multi-season)
+5. Evidence linter gate fix (SUPERSESSION + WSL DEFAULT_ROOT) — bounded, not another framework
 
 Do not start another evidence-framework slice unless a P0 ledger write bug reappears.
 
