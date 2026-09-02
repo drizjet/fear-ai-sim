@@ -288,16 +288,33 @@ export function schedulePendingTradeTrip(world, {
     });
     if (patrolId) {
         const patrol = world.patrols.find(item => item.id === patrolId);
-        patrol.deployedRoute = routeId;
-        world.patrolAssignments.push({
-            assignmentId: `PATROL-${actionId}`,
-            actionId,
-            tripId,
-            patrolId,
-            routeId,
-            status: 'ACTIVE',
-            parentEventIds: [commitment.eventId],
-        });
+        // Slice J — deployment costs faction resources; if none, patrol not assigned
+        const faction = patrol?.factionId ? world.factions?.find(f => f.id === patrol.factionId) : world.factions?.find(f => f.id === 'north-faction');
+        const cost = Number(patrol?.travelCost) || 1;
+        if (faction && (faction.resources ?? 0) >= cost) {
+            faction.resources = Math.max(0, (faction.resources ?? 0) - cost);
+            patrol.deployedRoute = routeId;
+            world.patrolAssignments.push({
+                assignmentId: `PATROL-${actionId}`,
+                actionId,
+                tripId,
+                patrolId,
+                routeId,
+                status: 'ACTIVE',
+                parentEventIds: [commitment.eventId],
+            });
+        } else {
+            // No resources: patrol not assigned, trip still ships unescorted
+            // Emit a gated assignment for audit trail
+            appendWorldEvent(world, {
+                type: 'PATROL_ASSIGNMENT_GATED',
+                patrolId,
+                tripId,
+                tick: startTick,
+                reason: 'NO_RESOURCES',
+                factionId: faction?.id ?? null,
+            }, [commitment.eventId]);
+        }
     }
     world.scheduledConsequences.push({
         consequenceId: `CONSEQUENCE-${actionId}`,

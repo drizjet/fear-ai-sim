@@ -1,14 +1,30 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-I-SEASON-TRADE-INTEGRATION (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-J-PATROL-RESOURCE-GATING (Lane B, unaccepted)
 
-Test Suites: 150 passed, 150 total (was 149)
-Tests:       1174 passed, 1174 total (+2)
-Season→production→price→opportunity→route choice closed loop
+Test Suites: 151 passed, 151 total (was 150)
+Tests:       1178 passed, 1178 total (+4)
+Patrol needs faction resources: deployment costs 1, toll refunds capped, interception gated
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B
 supervisor admitted: no
+
+## SLICE J — patrol resource gating (faction resources → patrol cost → safety → market)
+Trade profits fund security, security enables trade — closed loop, not decorative.
+- canonical-trade-system.js:103 createPatrol now has factionId, tickPatrol gates on
+  faction.resources <=0 → no detection/interception (canonical-trade-system.js:591).
+- closed-world.js:289 schedulePendingTradeTrip deducts travelCost from faction
+  resources (Math.min cap, Math.max 0) and emits PATROL_ASSIGNMENT_GATED when
+  insufficient — trip still ships unescorted, audit trail honest.
+- encounters.js:230 patrol toll now capped via Math.min(cap, resources+toll) so
+  ALWAYS(resources ≤ max) holds; long-horizon-invariant-health caught uncapped 2→3.
+- Detectors: tests/patrol-resource-gating.test.js (4 tests):
+  1) patrol 0 resources cannot detect (gated) vs 2 resources can intercept
+  2) scheduling trip with patrol deducts 1 and gates when empty (PATROL_ASSIGNMENT_GATED)
+  3) toll restores but respects cap (0→2 ≤ max 2)
+  4) tickClosedWorld interception gated via refill-aware 0/max 0 → 0 interceptions
+- Mutation: remove resource gate, 0-resource test fails (still intercepts); restored.
 
 ## SLICE I — season→trade integration (ecology→market→trade closed loop)
 Season already drove production, but trade loop was not proven end-to-end.

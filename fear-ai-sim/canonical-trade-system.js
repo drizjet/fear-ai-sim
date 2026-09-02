@@ -106,6 +106,7 @@ export function createPatrol({
     detectionRate = 0.4,
     interceptionRate = 0.3,
     travelCost = 1,
+    factionId = 'north-faction',
 } = {}) {
     if (!id) throw new TypeError('createPatrol: id is required');
     return {
@@ -114,6 +115,7 @@ export function createPatrol({
         targetRoute: route,
         redeployAt: 0,
         travelCost,
+        factionId,
         detectionRate: clamp01(detectionRate),
         interceptionRate: clamp01(interceptionRate),
         detections: 0,
@@ -589,6 +591,11 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
 export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1) } = {}) {
     const patrol = (world.patrols || []).find(p => p.id === patrolId);
     if (!patrol) return { ok: false, reason: 'NO_PATROL' };
+    // Slice J — resource-constrained patrol: needs faction resources to operate
+    const patrolFaction = world.factions?.find(f => f.id === (patrol.factionId ?? 'north-faction'));
+    if (patrolFaction && (patrolFaction.resources ?? 0) <= 0) {
+        return { ok: true, events: [], reason: 'NO_RESOURCES', gated: true };
+    }
     if (!Array.isArray(world.events)) world.events = [];
     const eventsThisTick = world.events.filter(
         e => e.type === 'BANDIT_ATTACK' && (e.tick ?? 0) === tick && e.roadId === patrol.deployedRoute
