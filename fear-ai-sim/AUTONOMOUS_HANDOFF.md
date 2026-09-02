@@ -1,14 +1,24 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-R3-INFO-QUALITY+MIGRATION-CALIBRATION (Lane B, unaccepted)
+EVID-2026-09-01-R3-JUSTICE-RECOVERY (Lane B, unaccepted)
 
-Test Suites: 153 passed, 153 total (was 151)
-Tests:       1186 passed, 1186 total (+8)
-R3 deep round: BeliefStore aliasing fixed, panopticon removed, noisy observation, migration weights calibrated
+Test Suites: 154 passed, 154 total (was 153)
+Tests:       1188 passed, 1188 total (+2)
+JusticeState now recovers with faction, not frozen scar
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B
 supervisor admitted: no
+
+## R3 — justice recovery drift (institution + faction heal together)
+Frozen justiceState while faction healed was a time bomb: next crime pulled
+stale-low justice via 0.15 blend, grievance stayed 1. Now both drift.
+- closed-world.js:2045 justiceState recovers when !reportedCrime: legitimacy
+  0.98→0.9 and grievance 0.98→0.1 lerp, not frozen. Faction already did;
+  now they stay in sync (Δ<0.15 after 50 idle ticks).
+- tests/justice-recovery.test.js (2 tests): scar then 50 idle ticks both
+  recover >0.5 and stay in sync; grievance also drifts down when idle.
+- Mutation: revert to frozen, recoveredJustice stays 0.12, test fails (Δ>0.15); restored.
 
 ## R3 — info quality + migration calibration (deep round)
 Two deferred fidelity items from R2 now closed with detectors.

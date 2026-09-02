@@ -2042,8 +2042,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // and grievance from its idle `justiceAccess` baseline; suppressing
         // the call keeps the audit trail focused on actual responses and
         // matches the doctrine that an idle justice system is a steady state.
+        // Slice K fix: justiceState must also recover when no crime, otherwise
+        // it stays scarred while faction heals, and next crime pulls stale-low
+        // justice via 0.15 blend. Drift both together.
         if (!reportedCrime) {
-            world.justiceState.set(townId, previous);
+            const recovered = {
+                ...previous,
+                legitimacy: clamp(previous.legitimacy * 0.98 + 0.9 * 0.02),
+                grievance: clamp(previous.grievance * 0.98 + 0.1 * 0.02),
+            };
+            world.justiceState.set(townId, recovered);
             // Recover faction legitimacy slowly when no crime (idle justice = steady state, legitimacy drifts back toward 0.9)
             const townIdle = world.towns.get(townId);
             const idleFaction = world.factions.find(f => f.townId === townId || (townIdle && f.id === townIdle.controlledBy));
