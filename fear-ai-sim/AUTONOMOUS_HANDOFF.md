@@ -1,14 +1,25 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-E-ENCOUNTER-RNG-PERSISTENCE (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-F-MERCHANT-WHY-INSPECTOR (Lane B, unaccepted)
 
-Test Suites: 147 passed, 147 total (was 146)
-Tests:       1163 passed, 1163 total (+3)
-Encounter RNG persistence: save/load byte-identical without closure, drought+stream survive
+Test Suites: 148 passed, 148 total (was 147)
+Tests:       1167 passed, 1167 total (+4)
+Merchant WHY inspector: B vs A ranked, observations, threshold, rng draws
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible)
 lane: B
 supervisor admitted: no
+
+## SLICE F — merchant WHY inspector (route B vs A)
+WHY that just said "chosen route" was decorative. Now it names the belief that mattered.
+- canonical-trade-system.js:138 ranked now carries distanceCost, dangerPenalty, familiarityBonus, opportunityBonus, cargoLossRisk, perceivedDanger, confidence per route. TickMerchant captures WHY: observations (bandit road observations with rng draws), beliefSnapshotBefore/After, ranked with breakdown, threshold {switchingCost, ticksSinceSwitch, inertiaApplied}, chosenRoute/Score (canonical-trade-system.js:270, 352).
+- MERCHANT_ROUTE_DECISION event now has `why` with observations, beliefSnapshot, ranked, threshold, rngDraws, rejected (closed-world.js via tickMerchant). Toggling one belief flips choice and WHY shows which belief (score breakdown diff).
+- Detectors: tests/merchant-why-inspector.test.js (4 tests):
+  1) toggle road-a 0.8→0.1 + road-b 0.1→0.8 flips road-b→road-a and WHY shows dangerPenalty diff
+  2) WHY contains ranked breakdown, observations, beliefSnapshot, threshold, rngDraws
+  3) inertia threshold captured (switchingCost 10, 1 tick ago → stays on road-b, WHY inertiaApplied true; cost 0 → flips)
+  4) tickClosedWorld ledger populates WHY
+- Mutation: set ranked dangerPenalty to 0 → toggle test fails (ranked diff 0); restored.
 
 ## SLICE E — encounter RNG persistence (W1-CONTINUITY-RNG)
 W1-CONTINUITY-RNG CONFIRMED_CURRENT at re-anchor (4 production sites

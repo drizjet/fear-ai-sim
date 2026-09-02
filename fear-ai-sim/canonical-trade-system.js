@@ -194,7 +194,7 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
             }
         }
         const score = distanceCost + dangerPenalty + cargoLossRisk / 100 - familiarityBonus - opportunityBonus;
-        return { route, index, score, belief, cargoLossRisk };
+        return { route, index, score, belief, cargoLossRisk, distanceCost, dangerPenalty, familiarityBonus, opportunityBonus };
     }).sort((a, b) => a.score - b.score || a.index - b.index);
 
     let chosen = ranked[0];
@@ -267,12 +267,18 @@ export function tickMerchant(world, merchantId, {
     // observes; a `perceptionAccuracy: 1` merchant always
     // does. The `rng` parameter (deterministic) makes the
     // observation reproducible.
+    // Slice F — capture observation rng draws and belief snapshot for WHY
+    const whyObservations = [];
+    const whyRngDraws = [];
+    const beliefsSnapshotBefore = JSON.parse(JSON.stringify(merchant.routeBeliefs || {}));
     if (world.bandits && world.bandits.length > 0 && rng) {
         const accuracy = Number.isFinite(merchant.perceptionAccuracy)
             ? clamp01(merchant.perceptionAccuracy) : 0.5;
         for (const bandit of world.bandits) {
             if (!bandit || !bandit.roadId) continue;
-            if (rng() < accuracy) {
+            const draw = rng();
+            whyRngDraws.push({ banditId: bandit.id, roadId: bandit.roadId, draw, accuracy, observed: draw < accuracy });
+            if (draw < accuracy) {
                 // Successful observation. The merchant's
                 // perceivedDanger for the bandit's road jumps
                 // to a moderate level (not a hard override,
@@ -284,10 +290,12 @@ export function tickMerchant(world, merchantId, {
                         (merchant.routeBeliefs[bandit.roadId].confidence ?? 0.5) + 0.2
                     );
                     merchant.routeBeliefs[bandit.roadId].source = 'observation';
+                    whyObservations.push({ banditId: bandit.id, roadId: bandit.roadId, observedDanger: 0.7 });
                 }
             }
         }
     }
+    const whyBeliefSnapshot = JSON.parse(JSON.stringify(merchant.routeBeliefs || {}));
     // EVID-2026-08-29-BELIEFSTORE-BRIDGE: the legacy BeliefStore
     // (merchant.beliefs) records perceivedDanger observations
     // (e.g., "the road is safe"). The canonical trade system
@@ -344,6 +352,10 @@ export function tickMerchant(world, merchantId, {
     // Decide.
     const decision = chooseMerchantRouteDecision(merchant, routes, beliefs, { tick, world });
     if (!decision.chosenRoute) return { ok: false, reason: 'NO_DECISION' };
+    // Slice F — inertia threshold for WHY (before updating lastRoute so we capture the decision-time state)
+    const ticksSinceSwitchBefore = merchant.lastRoute ? (tick - (merchant.lastRouteSwitchTick ?? -1000)) : Infinity;
+    const inertiaWouldApply = merchant.lastRoute && merchant.lastRoute !== decision.ranked[0]?.route?.id && ticksSinceSwitchBefore < merchant.switchingCost;
+    const inertiaApplied = inertiaWouldApply && decision.chosenRoute === merchant.lastRoute;
     // Track switch.
     if (merchant.lastRoute !== decision.chosenRoute) {
         merchant.lastRouteSwitchTick = tick;
@@ -354,6 +366,7 @@ export function tickMerchant(world, merchantId, {
     // Set it as an alias of `lastRoute` so the encounter eligibility
     // check (line 174 of encounters.js) finds the merchant.
     merchant.selectedRoute = decision.chosenRoute;
+
     // Structured event. RESP-EVENT-ID-AUTHORITY-001: the eventId must
     // come from the world's single allocator (appendWorldEvent mints
     // WORLD-EVENT-* IDs); the old template id `MERCHANT_ROUTE_DECISION-
@@ -374,6 +387,35 @@ export function tickMerchant(world, merchantId, {
         chosenScore: decision.chosenScore,
         reason: `risk_tol=${merchant.riskTolerance.toFixed(2)}, perceived_danger=${(beliefs[decision.chosenRoute]?.perceivedDanger ?? 0).toFixed(2)}`,
         parentEventIds: Array.isArray(parentEventIds) ? [...parentEventIds] : [],
+        // Slice F — WHY inspector: full ranked candidates with score breakdown,
+        // belief snapshot, observations, inertia threshold, rng draws
+        why: {
+            observations: whyObservations,
+            beliefSnapshotBefore: beliefsSnapshotBefore,
+            beliefSnapshot: whyBeliefSnapshot,
+            rngDraws: whyRngDraws,
+            ranked: decision.ranked.map(r => ({
+                routeId: r.route.id,
+                score: r.score,
+                distanceCost: r.distanceCost,
+                dangerPenalty: r.dangerPenalty,
+                familiarityBonus: r.familiarityBonus,
+                opportunityBonus: r.opportunityBonus,
+                cargoLossRisk: r.cargoLossRisk,
+                perceivedDanger: r.belief.perceivedDanger,
+                confidence: r.belief.confidence,
+            })),
+            rejected: decision.rejected,
+            threshold: {
+                switchingCost: merchant.switchingCost,
+                ticksSinceSwitch: ticksSinceSwitchBefore,
+                inertiaApplied,
+                lastRoute: decision.ranked[0]?.route?.id ?? null,
+                chosenViaInertia: inertiaApplied,
+            },
+            chosenRoute: decision.chosenRoute,
+            chosenScore: decision.chosenScore,
+        },
     };
     // When no belief event exists to parent to (fresh belief store on the
     // first tick, or a caller that did not pass parents), the decision is
