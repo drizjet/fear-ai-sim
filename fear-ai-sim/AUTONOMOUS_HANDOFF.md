@@ -1,14 +1,22 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-H-LONG-HORIZON-INVARIANT-HEALTH (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-I-SEASON-TRADE-INTEGRATION (Lane B, unaccepted)
 
-Test Suites: 149 passed, 149 total (was 148)
-Tests:       1172 passed, 1172 total (+5)
-Long-horizon ALWAYS/SUSTAIN/EVENTUALLY over 500 ticks, resource cap fixed
+Test Suites: 150 passed, 150 total (was 149)
+Tests:       1174 passed, 1174 total (+2)
+Season→production→price→opportunity→route choice closed loop
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B
 supervisor admitted: no
+
+## SLICE I — season→trade integration (ecology→market→trade closed loop)
+Season already drove production, but trade loop was not proven end-to-end.
+- tests/season-trade-integration.test.js (2 tests):
+  1) winter shortage 1.0 price 3.0 vs summer 0 price 1.0, merchant at south choosing north vs east: winter opportunityBonus 1.0 vs 0 flips road-c vs road-east, WHY shows opportunityBonus diff
+  2) winter+drought price >= winter alone (drought cannot lower winter price)
+- Wiring was already via drought/season multiplier → marketFlows.produced → shortage → price → opportunityBonus (canonical-trade-system.js:176). No new production code — integration proof that existing wiring composes.
+- Mutation: set opportunityBonus to 0, winter still prefers road-c test fails (ranked diff 0); restored.
 
 ## SLICE H — long-horizon invariant health (temporal contracts)
 500 ticks is not a smoke test. Now it has temporal teeth.
