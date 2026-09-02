@@ -189,7 +189,9 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
                 if (destTown?.market?.getQuote) destMarket = destTown.market;
             }
             if (destMarket) {
-                const quote = destMarket.getQuote?.(merchant.cargoKind);
+                // Slice O: prefer elastic price if market supports it (history-dependent bid curve)
+                const elastic = typeof destMarket.getElasticQuote === 'function' ? destMarket.getElasticQuote(merchant.cargoKind) : null;
+                const quote = elastic ?? destMarket.getQuote?.(merchant.cargoKind);
                 if (quote && Number.isFinite(quote.price)) {
                     opportunityBonus = clamp01((quote.price - 1) * 0.5);
                 }

@@ -1,10 +1,39 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-MN-TREATY-VIOLATION+PRICE-ELASTICITY (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-OP-ELASTIC-TRADE+STANCE-GATE (Lane B, unaccepted)
 
-Test Suites: 158 passed, 158 total (was 156)
-Tests:       1211 passed, 1211 total (+10)
-Treaty violation now costs trust via territory; market price is history-dependent (elastic)
+Test Suites: 160 passed, 160 total (was 158)
+Tests:       1215 passed, 1215 total (+4)
+Elastic price now drives merchant opportunity; structured stance now gates invasion
+build: fail (rollup native missing in WSL, not related to code)
+lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
+lane: B
+supervisor admitted: no
+
+## SLICE O+P — elastic price → trade bid curve + stance → invasion routing
+
+### Slice O — elastic price into merchant opportunity (sustained > spike)
+- canonical-trade-system.js:192 opportunityBonus now prefers `market.getElasticQuote`
+  when available, falling back to `getQuote`. Sustained 0.8 over 5 ticks prices
+  0.80 bonus vs brief spike 0.76 (+0.04 gap) proving EMA matters.
+- economy.js:87 `getQuote` stays instant 1+shortage*2 for backward compat;
+  `getElasticQuote` is history-dependent (blended 0.7 current + 0.3 EMA + momentum).
+- Detectors: tests/elastic-price-trade-integration.test.js (2 tests): sustained > brief,
+  getQuote not leaked.
+
+### Slice P — structured chooseStance routes into invasion gate (faction → action)
+The gate was raw `stance >= WATCHFUL`. Now it also evaluates the structured
+`chooseStance({pressure, trust, militaryResources, informationConfidence, perceivedGroupSize, previousIncidentsCount})`
+derived from the pair's directed state. When structured decision `to < WATCHFUL`
+the gate blocks with `STRUCTURED_STANCE_BLOCKS_RAID`, else allows with
+`STRUCTURED_STANCE_AUTHORIZES_ACTION:reason`. Low informationConfidence now
+blocks raids even when raw stance meets threshold.
+- closed-world.js:2460 structuredDecision built from pair.pressureFrom/trust,
+  lastObservedGroupSizeFrom, intrusionCount; gate checks structuredAllows first.
+- Detectors: tests/stance-invasion-gate.test.js (2 tests): low confidence blocks,
+  high trust + low pressure stays TOLERANT (no raid).
+
+## SLICE M+N — treaty → territory violation cost + market price elasticity
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B

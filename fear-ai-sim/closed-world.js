@@ -2470,10 +2470,39 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 ?? world.relationships.get(`${targetFactionId}::${faction.id}`)
                 ?? null)
             : null;
+        // Slice P: structured stance decision routing.
+        // The raid gate now consumes the FactionRelationshipVector's
+        // chooseStance intent (pair.pressureFrom + trust + perceivedGroupSize)
+        // when available, falling back to the raw stance comparison.
+        // This makes the invasion gate sensitive to trust dampening and
+        // group-size capability, not just the scalar stance.
+        const structuredDecision = (() => {
+            if (!targetPair || typeof targetPair.stanceFrom !== 'function') return null;
+            try {
+                // Use the pair's own directed pressure/trust for the evaluator
+                const pressure = targetPair.pressureFrom(faction.id);
+                const trust = targetPair.getTrustFrom(faction.id);
+                const prev = targetPair.stanceFrom(faction.id) ?? StanceLadder.TOLERANT;
+                const groupSize = targetPair.lastObservedGroupSizeFrom?.(faction.id, tick, 50) ?? 1;
+                const incidents = targetPair.intrusionCount?.(tick, 50) ?? 0;
+                // Reuse evaluate via chooseStance to get structured reason
+                // Duplicate import guard: chooseStance already imported at top
+                return chooseStance({
+                    pressure,
+                    trust,
+                    previous: prev,
+                    militaryResources: Math.min(1, (faction.resources ?? 0) / Math.max(1, faction.maxResources ?? 1)),
+                    informationConfidence: clamp01(faction.informationConfidence ?? 1),
+                    perceivedGroupSize: groupSize,
+                    previousIncidentsCount: incidents,
+                });
+            } catch { return null; }
+        })();
         const targetStance = targetPair && typeof targetPair.stanceFrom === 'function'
             ? targetPair.stanceFrom(faction.id)
             : null;
         const threshold = StanceLadder.WATCHFUL;
+        const structuredAllows = structuredDecision ? (structuredDecision.to >= threshold) : null;
         const why = [
             'Faction decision is RAID',
             'Target bandit is reachable',
@@ -2499,13 +2528,17 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             gateAllowed = false;
             gateReason = 'TARGET_STANCE_UNOBSERVED';
             whyNot.push(`No directional stance has been observed from ${faction.id} toward ${targetFactionId}`);
+        } else if (structuredAllows === false) {
+            gateAllowed = false;
+            gateReason = 'STRUCTURED_STANCE_BLOCKS_RAID';
+            whyNot.push(`${faction.id} structured decision ${structuredDecision.from}->${structuredDecision.to} blocks raid (reason ${structuredDecision.reason})`);
         } else if (targetStance < threshold) {
             gateAllowed = false;
             gateReason = 'TARGET_STANCE_BELOW_THRESHOLD';
             whyNot.push(`${faction.id} stance toward ${targetFactionId} is TOLERANT (${targetStance}), below WATCHFUL (${threshold})`);
         } else {
-            gateReason = 'TARGET_STANCE_AUTHORIZES_ACTION';
-            why.push(`${faction.id} stance toward ${targetFactionId} is ${targetStance}, meeting WATCHFUL (${threshold})`);
+            gateReason = structuredDecision ? `STRUCTURED_STANCE_AUTHORIZES_ACTION:${structuredDecision.reason}` : 'TARGET_STANCE_AUTHORIZES_ACTION';
+            why.push(`${faction.id} stance toward ${targetFactionId} is ${targetStance}, meeting WATCHFUL (${threshold})${structuredDecision ? ` structured ${structuredDecision.to}` : ''}`);
         }
 
         const latestStanceEvent = targetPair
