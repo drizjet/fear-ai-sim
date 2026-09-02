@@ -3582,3 +3582,222 @@ function reattachPrototypes(world) {
         world.justiceSystem = new JusticeSystem();
     }
 }
+
+// =============================================================================
+// Settlement staking (Slice K) + Roaming travel exposure (Slice L)
+// =============================================================================
+//
+// Slice K: settleAttempt + stakeTerritory
+//   A roaming group can stake a claim by founding a new town if
+//   (1) the location is not already a town, (2) the group's
+//   currentLocation is adjacent to or at the location, OR the
+//   group has a belief about the location (scouted), and
+//   (3) the group's faction has resources to fund the settlement.
+//   The new town inherits a market with capacity/spoilage from
+//   the staging schema, a default consumes/produces, and the
+//   staking faction as controlledBy with homeRadius/claimedRadius.
+//   The claimedRadius is authoritative — canObserveTerritory
+//   already uses it. The event is SETTLEMENT_FOUNDED.
+//
+// Slice L: roaming travel exposure → bandit belief
+//   When a bandit is IN_TRANSIT (startTravel/advanceTravel), each
+//   advanceTravel exposure tick mints a scout observation via
+//   recordObservation into the bandit's own belief map. The
+//   chooseRoamingDestination live-wire already synthesizes
+//   beliefs from lootExpectation; Slice L adds the *observed*
+//   belief path so a bandit that was exposed to a high-resource
+//   midway location will bias toward it on a later tick.
+//
+
+/**
+ * Attempt to found a new settlement at `locationId` by `group`.
+ * The group must be AT_LOCATION (not IN_TRANSIT) and the
+ * location must not already be a town. The staking faction
+ * (group.factionId or its id) must have resources > 0 to pay
+ * the founding cost (1 resource unit).
+ *
+ * @param {object} world - closed world
+ * @param {object} group - roaming group (bandit, merchant group, etc.)
+ * @param {string} locationId - new town id
+ * @param {object} options
+ *   - tick: current tick for event
+ *   - cost: resource cost (default 1)
+ *   - townTemplate: { produces, storageCapacity, spoilageRate, consumes, population }
+ * @returns {{ok: boolean, reason?: string, town?: object, event?: object}}
+ */
+export function settleAttempt(world, group, locationId, { tick = 0, cost = 1, townTemplate = null } = {}) {
+    if (!world || typeof world !== 'object') throw new TypeError('settleAttempt requires world');
+    if (!group || typeof group !== 'object') throw new TypeError('settleAttempt requires group');
+    if (!locationId || typeof locationId !== 'string') throw new TypeError('settleAttempt requires locationId string');
+    if (world.towns?.has?.(locationId)) {
+        return { ok: false, reason: 'ALREADY_EXISTS' };
+    }
+    if (group.travelState === 'IN_TRANSIT') {
+        return { ok: false, reason: 'IN_TRANSIT' };
+    }
+    // Knowledge gate: group must either be at the location, adjacent via route, or have a belief about it
+    const hasBelief = Boolean(group.beliefs?.[locationId]);
+    const atLocation = group.currentLocation === locationId;
+    let adjacent = false;
+    if (!atLocation && !hasBelief && group.currentLocation) {
+        const routes = world.routes ?? [];
+        adjacent = routes.some(r => (r.from === group.currentLocation && r.to === locationId) || (r.from === locationId && r.to === group.currentLocation));
+    }
+    if (!atLocation && !adjacent && !hasBelief) {
+        return { ok: false, reason: 'NO_KNOWLEDGE' };
+    }
+    const factionId = group.factionId ?? group.id;
+    const faction = world.factions?.find(f => f.id === factionId);
+    if (faction && (faction.resources ?? 0) < cost) {
+        return { ok: false, reason: 'NO_RESOURCES' };
+    }
+    // Pay cost
+    if (faction) {
+        faction.resources = Math.max(0, (faction.resources ?? 0) - cost);
+    }
+    const template = townTemplate ?? {
+        produces: { food: 1.0, tools: 0.1 },
+        storageCapacity: { food: 50, tools: 30 },
+        spoilageRate: { food: 0.05, tools: 0 },
+        consumes: { food: 1, tools: 0.2 },
+        population: 1,
+        controlledBy: factionId,
+        homeRadius: 1,
+        claimedRadius: 3,
+        contestedRadius: 0,
+        scarceResources: { food: true, tools: false },
+    };
+    const market = new Market(locationId);
+    for (const [kind, cap] of Object.entries(template.storageCapacity ?? { food: 50 })) {
+        market.setCapacity(kind, cap);
+    }
+    for (const [kind, rate] of Object.entries(template.spoilageRate ?? { food: 0.05 })) {
+        market.setSpoilageRate(kind, rate);
+    }
+    if (template.population != null) {
+        // leave population as template
+    }
+    const newTown = {
+        id: locationId,
+        market,
+        population: template.population ?? 1,
+        consumes: template.consumes ?? { food: 1, tools: 0.2 },
+        produces: template.produces ?? { food: 1.0, tools: 0.1 },
+        controlledBy: template.controlledBy ?? factionId,
+        homeRadius: template.homeRadius ?? 1,
+        claimedRadius: template.claimedRadius ?? 3,
+        contestedRadius: template.contestedRadius ?? 0,
+        scarceResources: template.scarceResources ?? { food: true, tools: false },
+    };
+    if (!world.towns || !(world.towns instanceof Map)) {
+        world.towns = new Map(Object.entries(world.towns ?? {}));
+    }
+    world.towns.set(locationId, newTown);
+    // Create route stub so graph stays connected: connect from group currentLocation if a location
+    if (group.currentLocation && group.currentLocation !== locationId && Array.isArray(world.routes)) {
+        const alreadyConnected = world.routes.some(r => (r.from === group.currentLocation && r.to === locationId) || (r.from === locationId && r.to === group.currentLocation));
+        if (!alreadyConnected) {
+            world.routes.push({ id: `road-${group.currentLocation}-${locationId}`, from: group.currentLocation, to: locationId, distance: 5, actualDanger: 0.2 });
+        }
+    }
+    // Ensure a FactionRelationshipVector exists for the new faction if new
+    if (factionId && !world.factions.find(f => f.id === factionId)) {
+        const newFaction = { id: factionId, townId: locationId, resources: 1, maxResources: 2, legitimacy: 0.9, grievance: 0.1, escalation: 0, lastDecision: 'HOLD', relationships: new Map() };
+        Object.setPrototypeOf(newFaction, FactionDecisionModel.prototype);
+        world.factions.push(newFaction);
+    }
+    // Emit SETTLEMENT_FOUNDED
+    let parentIds = [];
+    if (group.travelState === 'AT_LOCATION' && group.observations?.length) {
+        const lastObs = group.observations[group.observations.length - 1];
+        // parent to last observation event if any
+        const lastObsEvent = [...(world.events ?? [])].reverse().find(e => e.type === 'SCOUT_OBSERVATION' || e.type === 'BANDIT_RELOCATION');
+        if (lastObsEvent?.eventId) parentIds = [lastObsEvent.eventId];
+    }
+    const event = appendWorldEvent(world, {
+        type: 'SETTLEMENT_FOUNDED',
+        locationId,
+        factionId,
+        groupId: group.id,
+        tick,
+        cost,
+        claimedRadius: newTown.claimedRadius,
+        rootReason: parentIds.length === 0 ? 'SETTLEMENT_STAKE' : undefined,
+    }, parentIds);
+    // Update group currentLocation to the new settlement
+    group.currentLocation = locationId;
+    return { ok: true, town: newTown, event };
+}
+
+
+
+/**
+ * Stake or extend a town's claimed territory.
+ * Increases claimedRadius by `delta` (default 1) up to `maxRadius` (default 5).
+ * Emits TERRITORY_STAKED. The radius is authoritative for canObserveTerritory.
+ *
+ * @param {object} world
+ * @param {string} townId
+ * @param {object} options { delta, maxRadius, tick, factionId }
+ * @returns {{ok: boolean, reason?: string, event?: object, previousRadius?: number, newRadius?: number}}
+ */
+export function stakeTerritory(world, townId, { delta = 1, maxRadius = 5, tick = 0, factionId = null } = {}) {
+    if (!world || !(world.towns instanceof Map)) throw new TypeError('stakeTerritory requires world with towns Map');
+    const town = world.towns.get(townId);
+    if (!town) return { ok: false, reason: 'NO_TOWN' };
+    const faction = factionId ? world.factions?.find(f => f.id === factionId) : (world.factions?.find(f => f.id === town.controlledBy) ?? world.factions?.find(f => f.townId === townId));
+    if (faction && (faction.resources ?? 0) < 1) {
+        return { ok: false, reason: 'NO_RESOURCES' };
+    }
+    const previousRadius = town.claimedRadius ?? 3;
+    if (previousRadius >= maxRadius) {
+        return { ok: false, reason: 'AT_MAX_RADIUS' };
+    }
+    const newRadius = Math.min(maxRadius, previousRadius + delta);
+    if (faction) faction.resources = Math.max(0, (faction.resources ?? 0) - 1);
+    town.claimedRadius = newRadius;
+    const event = appendWorldEvent(world, {
+        type: 'TERRITORY_STAKED',
+        townId,
+        factionId: faction?.id ?? town.controlledBy,
+        previousRadius,
+        newRadius,
+        delta,
+        tick,
+        rootReason: 'TERRITORY_STAKE',
+    }, []);
+    return { ok: true, event, previousRadius, newRadius };
+}
+
+/**
+ * Slice L helper: advance a roaming group's travel and record
+ * exposure as a scout observation into the group's belief map.
+ * This is the glue that makes `bandit.beliefs` grow via travel,
+ * not just via synthetic lootExpectation in relocateBanditViaRoaming.
+ *
+ * @param {object} group - roaming group (must be IN_TRANSIT)
+ * @param {number} ticks - ticks to advance
+ * @param {object} options { exposure: { locationId, resourceEstimate, dangerEstimate, confidence }, world, tick }
+ * @returns {string} resulting travelState
+ */
+export function advanceRoamingTravel(group, ticks, { exposure = null, world = null, tick = 0 } = {}) {
+    if (!group) throw new TypeError('advanceRoamingTravel requires group');
+    if (group.travelState !== 'IN_TRANSIT') return group.travelState;
+    // Use roaming.js advanceTravel under the hood
+    const result = advanceTravel(group, ticks, exposure ? { exposure } : {});
+    // Additionally emit a SCOUT_OBSERVATION event for audit trail if world provided and exposure given
+    if (world && exposure?.locationId) {
+        const obs = group.beliefs?.[exposure.locationId];
+        appendWorldEvent(world, {
+            type: 'SCOUT_OBSERVATION',
+            observerId: group.id,
+            locationId: exposure.locationId,
+            resourceEstimate: exposure.resourceEstimate ?? obs?.resourceValue ?? 0,
+            dangerEstimate: exposure.dangerEstimate ?? obs?.danger ?? 0,
+            confidence: exposure.confidence ?? obs?.confidence ?? 0.6,
+            tick,
+            sourceType: 'TRAVEL_EXPOSURE',
+        }, []);
+    }
+    return result;
+}

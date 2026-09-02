@@ -1,14 +1,47 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-R3-JUSTICE-RECOVERY (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-KL-SETTLEMENT+ROAMING-TRAVEL (Lane B, unaccepted)
 
-Test Suites: 154 passed, 154 total (was 153)
-Tests:       1188 passed, 1188 total (+2)
-JusticeState now recovers with faction, not frozen scar
+Test Suites: 156 passed, 156 total (was 154)
+Tests:       1201 passed, 1201 total (+13)
+Settlement staking + roaming travel live: new towns, claimedRadius, real movement with scout beliefs
 build: fail (rollup native missing in WSL, not related to code)
 lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B
 supervisor admitted: no
+
+## SLICE K+L — settlement network + roaming travel with scout (territory + movement)
+
+### Slice K — settlement staking + territory staking (the §531 third-settlement frontier)
+A town is now a fundable claim, not a static fixture.
+- closed-world.js:3595 settleAttempt(world, group, locationId, {tick, cost, townTemplate}):
+  • Requires group AT_LOCATION (IN_TRANSIT → IN_TRANSIT gate), not already a town (ALREADY_EXISTS),
+    with knowledge (at location / adjacent via route / belief about location) else NO_KNOWLEDGE.
+  • Deducts faction.resources (cost 1) → NO_RESOURCES gate, creates Market + town record
+    (controlledBy, homeRadius/claimedRadius/contestedRadius, scarceResources), pushes
+    connecting road, emits SETTLEMENT_FOUNDED. New town immediately participates in
+    market/demography/territory (tests/settlement-staking.test.js:1 live tick).
+- closed-world.js:3695 stakeTerritory(world, townId, {delta, maxRadius, tick}):
+  • Increases claimedRadius (3→4→5), deducts 1 resource, emits TERRITORY_STAKED.
+    Caps at maxRadius (AT_MAX_RADIUS), gates on NO_RESOURCES/NO_TOWN. The radius is
+    authoritative for canObserveTerritory (territory-vertical-slice already proves it).
+- Detectors: tests/settlement-staking.test.js (8 tests): NO_KNOWLEDGE gate, belief creates
+  town+route+resource debit, ALREADY_EXISTS/IN_TRANSIT, adjacency without belief, NO_RESOURCES,
+  live tick with new town, staking inc + resource debit, at-max + no-resources.
+
+### Slice L — roaming travel is real movement, exposure → belief (not teleport)
+Bandit roadId was instant before; now it travels and learns.
+- roaming.js already had startTravel/advanceTravel (PHASE 11) with IN_TRANSIT
+  (currentLocation unchanged until arrival, exposure mints belief via recordObservation).
+  Slice L wires it into the live bandit: closed-world.js:3725 advanceRoamingTravel(group, ticks, {exposure, world, tick})
+  wraps advanceTravel and emits SCOUT_OBSERVATION for the audit trail. The
+  bandit's chooseRoamingDestination live-wire (relocateBanditViaRoaming) already
+  synthesizes beliefs from lootExpectation; now travel exposure also grows
+  bandit.beliefs via the same observation adapter (shareObservation/recordObservation).
+- Mutation: comment out exposure belief, bandit never learns midway → destination choice unchanged.
+- Detectors: tests/roaming-travel-exposure.test.js (5 tests): no teleport (road-a→road-b
+  5 ticks with 3+2), exposure mints belief+event, scout makes unknown eligible
+  (paradise 0→>0 wins), belief persists across ticks, idempotent while IN_TRANSIT.
 
 ## R3 — justice recovery drift (institution + faction heal together)
 Frozen justiceState while faction healed was a time bomb: next crime pulled
