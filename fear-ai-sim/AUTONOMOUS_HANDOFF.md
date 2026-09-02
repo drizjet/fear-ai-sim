@@ -1,14 +1,27 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-01-SLICE-G-LINTER-GATE-FIX (Lane B, unaccepted)
+EVID-2026-09-01-SLICE-H-LONG-HORIZON-INVARIANT-HEALTH (Lane B, unaccepted)
 
-Test Suites: 148 passed, 148 total (lint gate fix — no test count change, linter now honest)
-Tests:       1167 passed, 1167 total
-evidenceRows: 270 (was 0 vacuous before fix), lint exit 1 honest (stale), not vacuous 0
+Test Suites: 149 passed, 149 total (was 148)
+Tests:       1172 passed, 1172 total (+5)
+Long-horizon ALWAYS/SUSTAIN/EVENTUALLY over 500 ticks, resource cap fixed
 build: fail (rollup native missing in WSL, not related to code)
-lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — now with correct 270-row count, not vacuous)
+lint:evidence: exit 1 expected (stale fingerprints, 0 admissible — 270 rows honest)
 lane: B
 supervisor admitted: no
+
+## SLICE H — long-horizon invariant health (temporal contracts)
+500 ticks is not a smoke test. Now it has temporal teeth.
+- tests/long-horizon-invariant-health.test.js (5 tests):
+  ALWAYS faction.resources ∈ [0, maxResources] caught an uncapped patrol toll
+    (encounters.js:230 guardFaction.resources + toll without cap → north 2→3 > max 2 at tick 1).
+    Fixed: Math.min(cap, resources + toll) with cap = maxResources.
+  ALWAYS market mass-balance per tick holds (reuses §155 strict invariant over 30 ticks)
+  ALWAYS event parentEventIds refer to earlier events or declared roots (100 ticks, checks future parents and missing parents)
+  SUSTAIN drought recovery: 20-tick drought then 30-tick recovery, final supply > drought low and stays above
+  EVENTUALLY every materialized TRIP_COMMITMENT reaches PENDING_CARGO_DELIVERED or stays IN_TRANSIT within 50 ticks (deferred commitments excluded)
+- Fix: tests/encounter-apply-functions.test.js guard resources set to 0/max 5 so toll can increase within cap (was 2/2, would fail with cap fix).
+- Mutation: remove cap on toll, ALWAYS test fails at tick 1 (3 > 2); remove deferred filter, EVENTUALLY fails on deferred commitments; restored.
 
 ## SLICE G — evidence linter gate fix (W1-EVIDENCE-TRUST-ROOT)
 Vacuous green was worse than honest red. Now honest red.

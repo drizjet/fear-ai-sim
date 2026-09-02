@@ -69,6 +69,9 @@ describe('encounter apply functions (Constitution §89 / §96 / §532)', () => {
         const merchant = world.merchants[0];
         merchant.cargo = 20;
         const guardFaction = world.factions[0]; // north-faction
+        // Ensure guard not at cap so toll can increase within ALWAYS cap
+        guardFaction.resources = 0;
+        guardFaction.maxResources = 5;
         const beforeFactionResources = guardFaction.resources;
         const beforeMerchantCargo = merchant.cargo;
         const result = instantiateEncounter(template, world, { tick: 1, rng: () => 0.5 });

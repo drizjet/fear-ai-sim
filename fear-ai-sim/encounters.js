@@ -227,7 +227,8 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
                 const before = merchant.cargo;
                 const toll = Math.max(1, Math.floor(before * 0.1));
                 merchant.cargo = Math.max(0, before - toll);
-                guardFaction.resources = (guardFaction.resources ?? 0) + toll;
+                const cap = Math.max(0, Number(guardFaction.maxResources) || 0);
+                guardFaction.resources = Math.min(cap, (guardFaction.resources ?? 0) + toll);
                 // R2-W1: the toll transfers material OUT of the trade set
                 // into faction coffers (abstract resources); book the
                 // outflow so the global mass identity stays exact.
