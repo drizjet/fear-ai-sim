@@ -1,6 +1,12 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-PREAUDIT-4-FRESH-CLONE (Lane B, unaccepted)
+EVID-2026-09-03-PREAUDIT-5-MUTATION-REPLAY (Lane B, unaccepted)
+
+## PRE-AUDIT 5 — mutation-kill replay script (11/11 killed, zero residue)
+
+- New evidence/replay-mutations.mjs mechanically re-applies 11 sampled production mutations (storm pricing, bandit/patrol weather factors, storm production, scheduler cadence, wagon wear, investigation ratchet, routing base, stance gate, retaliation clamp, ledger content-match guard), runs the named detectors, requires exit-nonzero plus failed tests for the kill, restores each file, and verifies restoration by sha256 equality. Exit 0 iff all kill and all restore.
+- Measured: 11/11 KILLED (31 detector failures total, each the mutation's own suite), 11/11 byte-identical restores, worktree clean after. Kill accounting is now re-runnable evidence, not testimony.
+- Process note: the first run reported a false RESIDUE-WARNING on storm-pricing — the residue heuristic searched for the replacement string `? 0`, which occurs naturally. The restore was byte-perfect (verified by hash + status); the check is now sha-equality only. Same run also caught an edit-tool range collision that spliced the new finally block into the mutation table; repaired by re-reading and re-anchoring, verified by node --check and the clean rerun.
 
 ## PRE-AUDIT 4 — fresh-clone reproduction (line-ending determinism fixed)
 
