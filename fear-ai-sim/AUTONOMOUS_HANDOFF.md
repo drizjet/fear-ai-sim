@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-PREAUDIT-3-ROADMAP-HONESTY (Lane B, unaccepted)
+EVID-2026-09-03-PREAUDIT-4-FRESH-CLONE (Lane B, unaccepted)
+
+## PRE-AUDIT 4 — fresh-clone reproduction (line-ending determinism fixed)
+
+- Fresh clone at 1ac7f07 reproduced the suite (176/1316), all 4 long-horizon suites (15 tests), and the build — but the evidence gate failed wholesale (0 admissible) and authority reported MODIFIED on frozen-mutants/V5_PROPOSED_MUTATION_MATRIX.json.
+- Root cause (environmental, not code): no .gitattributes, so checkout bytes depend on core.autocrlf. The worktree carries LF in tool-written files and CRLF elsewhere; a fresh clone checks out CRLF everywhere (economy.js 7781 vs 7943 bytes, identical lines). Byte fingerprints cannot survive that. The authority snapshot likewise binds checkout bytes.
+- Fix: repo-root .gitattributes (`* text=auto eol=lf`) plus `git add --renormalize` (89 files, 36315+/36315-, `git diff --ignore-cr-at-eol` EMPTY — pure normalization). One amend was needed: the first commit missed the untracked .gitattributes itself (caught by status check, amended pre-push).
+- Authority snapshot refreshed via the checker's own --snapshot (explicit justification: normalization changed snapshot bytes with zero semantic change, proven by the empty non-whitespace diff; pre-normalization snapshot stays in git history; without refresh --verify compares LF worktree against CRLF snapshot). --verify CLEAN after.
+- Full ledger re-proved against normalized bytes (all seeds + specified + coverage): lint exit 0, 949 rows, same 8 explained divergences as item 3. Fresh-clone re-verification (suite + build + lint + authority) runs after this commit pushes.
 
 ## PRE-AUDIT 3 — roadmap honesty (37 divergences to 8 explained)
 
