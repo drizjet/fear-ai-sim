@@ -169,6 +169,31 @@ const MUTATIONS = [
         detectors: 'rumor-auto-share',
         note: 'R1b rumor gate reverted to cross-town teleport; exclusion must fail',
     },
+    {
+        id: 'season-chain',
+        file: 'ecology.js',
+        target: `const priorSeason = [...world.events].reverse().find(event =>
+        event.type === 'SEASON_CHANGE' && typeof event.eventId === 'string');`,
+        replacement: 'const priorSeason = null;',
+        detectors: 'event-parentage',
+        note: 'R2 season chain severed; chained parentage must fail',
+    },
+    {
+        id: 'treaty-chain',
+        file: 'treaty.js',
+        target: "if (typeof event.eventId === 'string') return event.eventId;",
+        replacement: 'if (false) return event.eventId;',
+        detectors: 'event-parentage',
+        note: 'R2 treaty chain severed; FORMED->VIOLATED->TERMINATED must fail',
+    },
+    {
+        id: 'encounter-parent',
+        file: 'closed-world.js',
+        target: 'parentEventIds: [candidateEvent.eventId]',
+        replacement: 'parentEventIds: []',
+        detectors: 'event-parentage',
+        note: 'R2 encounter parent dropped; candidate parentage must fail',
+    },
 ];
 
 function runDetectors(pattern) {

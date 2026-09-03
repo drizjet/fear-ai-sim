@@ -155,7 +155,7 @@ export function selectEncounterCandidates(eligible, { rng = Math.random, maxCand
  *   - rng: deterministic rng (for any stochastic outcome)
  * @returns {object} the encounter result
  */
-export function instantiateEncounter(template, world, { tick = 0, rng = Math.random } = {}) {
+export function instantiateEncounter(template, world, { tick = 0, rng = Math.random, parentEventIds = [] } = {}) {
     if (!template || !world) return null;
     // Build the result. The result is the encounter
     // record that the ENCOUNTER event will carry.
@@ -293,13 +293,23 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
     if (!applied) return null;
     // Push the ENCOUNTER event onto the world for the
     // §7 "Causal Ledger" contract. The event carries the
-    // result so the audit trail is reconstructable.
-    world.events.push({
+    // R2 (V8 audit F7): allocator-owned id with the caller's
+    // parentage (the reducer passes its CANDIDATE_ENCOUNTER).
+    // Direct callers get a declared root. The emitted id is
+    // wired back onto result.eventId so the bandit-ambush
+    // BANDIT_ATTACK child below parents to a real id instead
+    // of undefined.
+    // Normalized once: a caller passing [undefined] (the old
+    // rewrite-on-undefined-id shape) must not silently orphan
+    // or smuggle a junk parent id.
+    const parents = (parentEventIds ?? []).filter(id => typeof id === 'string');
+    const emitted = appendWorldEvent(world, {
         type: 'ENCOUNTER',
         encounterId: template.id,
         tick,
-        result
-    });
+        result,
+        ...(parents.length === 0 ? { rootReason: 'ENCOUNTER_TRIGGERED' } : {}),
+    }, parents);
     // EVID-2026-08-29-BANDIT-ATTACK-WIRE: when the encounter
     // engine runs a bandit-ambush, also push a BANDIT_ATTACK
     // event with the same shape as resolveBanditAttack so

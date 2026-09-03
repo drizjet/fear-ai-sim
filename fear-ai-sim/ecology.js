@@ -26,6 +26,11 @@
 // can be added in later slices without changing this contract.
 
 import { clamp } from './math-utils.js';
+// R2: season changes flow through the allocator (chain parentage).
+// ESM-cycle safe: closed-world.js already imports ecology.js, but
+// appendWorldEvent is used at call time only (same pattern as
+// canonical-trade-system.js and encounters.js).
+import { appendWorldEvent } from './closed-world.js';
 
 // The canonical season cycle. Order matters: nextSeason walks
 // through this list cyclically.
@@ -115,15 +120,19 @@ export function tickSeason(world, tick) {
     if (next === previous) return null;
     world.season = next;
     if (!Array.isArray(world.events)) world.events = [];
-    const event = {
+    // R2 (V8 audit F7): allocator-owned id chained to the previous
+    // season change (no template ids — they collide on tick reuse
+    // and forks). The chain head declares its root.
+    const priorSeason = [...world.events].reverse().find(event =>
+        event.type === 'SEASON_CHANGE' && typeof event.eventId === 'string');
+    appendWorldEvent(world, {
         type: 'SEASON_CHANGE',
-        eventId: `SEASON_CHANGE-${tick}-${previous}-${next}`,
         tick,
         from: previous,
         to: next,
         cadence,
         spoilageModifier: getSpoilageModifier(next),
-    };
-    world.events.push(event);
-    return event;
+        ...(!priorSeason ? { rootReason: 'SEASON_CHAIN_START' } : {}),
+    }, priorSeason ? [priorSeason.eventId] : []);
+    return world.events[world.events.length - 1];
 }

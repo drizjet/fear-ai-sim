@@ -29,6 +29,24 @@
 // determinism contract holds.
 
 import { recordLawfulnessViolation } from './reputation.js';
+// R2: treaty events flow through the allocator with per-treaty chain
+// parentage. ESM-cycle safe: closed-world.js already imports treaty.js,
+// but appendWorldEvent is used at call time only (same pattern as
+// canonical-trade-system.js and encounters.js).
+import { appendWorldEvent } from './closed-world.js';
+
+// Latest allocator-owned event id for a treaty (chain parent). Ignores
+// pre-allocator bare events (no eventId) so chains start clean.
+function latestTreatyEventId(world, treatyId, maxTick) {
+    if (!world || !Array.isArray(world.events)) return null;
+    for (let index = world.events.length - 1; index >= 0; index -= 1) {
+        const event = world.events[index];
+        if (event?.treatyId !== treatyId) continue;
+        if (Number.isFinite(maxTick) && Number.isFinite(event?.tick) && event.tick > maxTick) continue;
+        if (typeof event.eventId === 'string') return event.eventId;
+    }
+    return null;
+}
 
 /**
  * Create a treaty record. Pure function.
@@ -125,14 +143,16 @@ export function requestPassage({ actor, target, scope, world, tick = 0 } = {}) {
     world.treaties.push(treaty);
     // The §7 "Causal Ledger" contract: every world-state
     // mutation is recorded as an event.
-    world.events.push({
+    // R2: allocator-owned id; formation heads the treaty chain.
+    appendWorldEvent(world, {
         type: 'TREATY_FORMED',
         treatyId: treaty.id,
         treaty: { ...treaty, participants: treaty.participants.slice() },
         participants: treaty.participants.slice(),
         terms: { ...treaty.terms },
         tick,
-    });
+        rootReason: 'TREATY_SIGNED',
+    }, []);
     return { ok: true, treaty };
 }
 
@@ -168,14 +188,17 @@ export function violateTreaty({ treaty, violator, reason, world, tick = 0 } = {}
         tick,
     });
     if (world && Array.isArray(world.events)) {
-        world.events.push({
+        // R2: allocator-owned id chained to the treaty's prior event.
+        const parentId = latestTreatyEventId(world, treaty.id, tick);
+        appendWorldEvent(world, {
             type: 'TREATY_VIOLATED',
             treatyId: treaty.id,
             violator,
             reason: violation.reason,
             tick,
             ...(reputation.length > 0 ? { reputation } : {}),
-        });
+            ...(!parentId ? { rootReason: 'TREATY_VIOLATION' } : {}),
+        }, parentId ? [parentId] : []);
     }
     return treaty;
 }
@@ -197,12 +220,15 @@ export function terminateTreaty({ treaty, reason, world, tick = 0 } = {}) {
     treaty.status = 'TERMINATED';
     treaty.termination = { reason: reason ?? 'unspecified', endTick: tick };
     if (world && Array.isArray(world.events)) {
-        world.events.push({
+        // R2: allocator-owned id chained to the treaty's prior event.
+        const parentId = latestTreatyEventId(world, treaty.id, tick);
+        appendWorldEvent(world, {
             type: 'TREATY_TERMINATED',
             treatyId: treaty.id,
             reason: treaty.termination.reason,
             tick,
-        });
+            ...(!parentId ? { rootReason: 'TREATY_TERMINATION' } : {}),
+        }, parentId ? [parentId] : []);
     }
     return treaty;
 }
@@ -265,14 +291,16 @@ export function requestNonAggression({ actor, target, world, tick = 0 } = {}) {
         startTick: tick,
     });
     world.treaties.push(treaty);
-    world.events.push({
+    // R2: allocator-owned id; formation heads the treaty chain.
+    appendWorldEvent(world, {
         type: 'TREATY_FORMED',
         treatyId: treaty.id,
         treaty: { ...treaty, participants: treaty.participants.slice() },
         participants: treaty.participants.slice(),
         terms: { ...treaty.terms },
         tick,
-    });
+        rootReason: 'TREATY_SIGNED',
+    }, []);
     return { ok: true, treaty };
 }
 

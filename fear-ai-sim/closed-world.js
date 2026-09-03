@@ -937,7 +937,7 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
 export function formClosedWorldConvoy(world) {
     world.convoy = formConvoy(world.merchants, world.guards);
     world.convoys.push(world.convoy);
-    world.events.push({ type: 'CONVOY_FORMED', convoyId: world.convoy.id });
+    appendWorldEvent(world, { type: 'CONVOY_FORMED', convoyId: world.convoy.id, rootReason: 'SCENARIO_SETUP' }, []);
     return world.convoy;
 }
 // Law slice V: a LAW_VIOLATED event is not terminal audit only. The violated
@@ -1123,7 +1123,7 @@ export function applySurvivorEvidence(world, { roadId = 'road-a', tick = 1 } = {
     const evidence = new Evidence({ subject: roadId, claim: 'danger', value: 1, sourceId: 'survivor', sourceTrust: 0.9, confidence: 0.9, tick });
     const belief = world.beliefs.observe(evidence);
     const rumor = world.beliefs.createRumor(roadId, 'danger', 'survivor', { tick, distortion: 0.05 });
-    world.events.push({ type: 'RUMOR', rumor });
+    appendWorldEvent(world, { type: 'RUMOR', rumor, rootReason: 'SCENARIO_SETUP' }, []);
     return { ok: true, evidence, belief, rumor };
 }
 
@@ -1139,7 +1139,7 @@ export function reassessFaction(world, factionId = 'south-faction', { perceivedD
         faction.advanceEmotion({ perceivedDanger, supplyShortage, confirmedLoss: newLoss, newMemoryLoss: newLoss });
     }
     const result = faction.reassess({ perceivedDanger, supplyShortage, enemyWeakness, confirmedLoss: newLoss });
-    world.events.push({ type: 'FACTION_REASSESSMENT', result });
+    appendWorldEvent(world, { type: 'FACTION_REASSESSMENT', result, rootReason: 'SCENARIO_SETUP' }, []);
     return { ok: true, ...result };
 }
 
@@ -1154,7 +1154,7 @@ export function chooseMerchantRoute(world, merchantId = 'merchant-1', perceivedD
     const path = { routes: [decision.route] };
     if (!path) return { ok: false, reason: 'NO_ROUTE' };
     merchant.selectedRoute = path.routes[0].id;
-    world.events.push({ type: 'ROUTE_SELECTED', merchantId, routeId: merchant.selectedRoute });
+    appendWorldEvent(world, { type: 'ROUTE_SELECTED', merchantId, routeId: merchant.selectedRoute, rootReason: 'SCENARIO_SETUP' }, []);
     return { ok: true, routeId: merchant.selectedRoute, path: path.routes.map(route => route.id) };
 }
 
@@ -1168,19 +1168,20 @@ export function runClosedWorldScenario({ perceivedDanger = 0.8, world: preBuilt 
     const factionResult = reassessFaction(world, 'south-faction', { perceivedDanger: 0.1, supplyShortage: 0.9, enemyWeakness: 0.9 });
     const faction = world.factions.find(item => item.id === 'south-faction');
     const plan = planRetaliation(faction, world.bandits[0], { tick: 1 });
-    world.events.push({ type: 'FACTION_ACTION', action: plan.action, ok: plan.ok, tick: 1 });
+    appendWorldEvent(world, { type: 'FACTION_ACTION', action: plan.action, ok: plan.ok, tick: 1, rootReason: 'SCENARIO_SETUP' }, []);
     if (plan.ok) {
         const retaliation = executeRetaliation(faction, world.bandits[0], plan);
         if (retaliation.ok) {
-            world.events.push({
+            appendWorldEvent(world, {
                 type: 'INVASION',
                 factionId: faction.id,
                 targetId: world.bandits[0].id,
                 action: retaliation.action,
                 causationId: plan.action.actionId,
                 resourcesLeft: faction.resources,
-                tick: 1
-            });
+                tick: 1,
+                rootReason: 'SCENARIO_SETUP',
+            }, []);
         }
     }
     // Directive §6: the closed-world's bandit relocation
@@ -1196,7 +1197,7 @@ export function runClosedWorldScenario({ perceivedDanger = 0.8, world: preBuilt 
     // `escalation.js` did this; the new live-wire must too.
     if (relocation && relocation.relocated && relocation.to) {
         world.bandits[0].roadId = relocation.to;
-        world.events.push({ type: 'BANDIT_RELOCATION', relocation, tick: 1 });
+        appendWorldEvent(world, { type: 'BANDIT_RELOCATION', relocation, tick: 1, rootReason: 'SCENARIO_SETUP' }, []);
     }
     return world;
 }
@@ -2288,17 +2289,28 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 // Record the CONVOY_AMBUSH event with the
                 // shared attackOpportunityId. The event is
                 // emitted regardless of who fired first, but
-                // the cargo mutation happens only once.
-                world.events.push({
+                // R2 (V8 audit F6): allocator-owned id. The ambush is
+                // parented to the BANDIT_ATTACK for the same opportunity
+                // when the direct path fired first; otherwise it declares
+                // its root (convoy-first debit or derived view). Bare
+                // push left orphans.
+                // R2b: the sibling lookup is intentionally absent — the
+                // convoy block runs before any same-tick direct attack
+                // can exist (and opportunity namespaces differ), so a
+                // live sibling is unreachable; claiming the search would
+                // be theatre. The rootReason names the actual case.
+                appendWorldEvent(world, {
                     type: 'CONVOY_AMBUSH',
                     attackOpportunityId,
                     convoyId: world.convoy.id,
                     lost: result.lost,
                     survivors: result.survivors,
                     roadId: result.roadId,
+                    merchantIds: [...world.convoy.merchantIds],
                     derived: alreadyConsumed, // true = derived/child view, no mutation
                     tick,
-                });
+                    rootReason: alreadyConsumed ? 'CONVOY_DERIVED_VIEW' : 'CONVOY_FIRST_DEBIT',
+                }, []);
             }
         }
     }
@@ -2315,13 +2327,22 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             bookExogenousInflow(world, merchant.cargoKind ?? 'food', 20 - Math.max(0, merchant.cargo));
             merchant.cargo = 20;
             merchant.selectedRoute = null;
-            world.events.push({
+            // R2 (V8 audit F6): allocator-owned id. The natural
+            // parent is the loss event that emptied this merchant's
+            // cargo (attack or ambush naming it); without one, the
+            const lossEvent = (world.events ?? []).filter(event =>
+                ((event.type === 'BANDIT_ATTACK' && event.merchantId === merchant.id)
+                    || (event.type === 'CONVOY_AMBUSH' && Array.isArray(event.merchantIds) && event.merchantIds.includes(merchant.id)))
+                && Number.isFinite(event.tick) && event.tick <= tick
+                && typeof event.eventId === 'string').pop();
+            appendWorldEvent(world, {
                 type: 'MERCHANT_RESPAWN',
                 merchantId: merchant.id,
                 location: merchant.location,
                 cargo: merchant.cargo,
-                tick
-            });
+                tick,
+                ...(!lossEvent ? { rootReason: 'EXOGENOUS_RESTOCK' } : {}),
+            }, lossEvent ? [lossEvent.eventId] : []);
         }
     }
 
@@ -3324,6 +3345,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     }
     const eligibleEncounters = evaluateEncounterEligibility(world, { tick });
     if (eligibleEncounters.length > 0) {
+        // R2b: the candidate heads the encounter chain. Its parents
+        // are the route exposures that motivated consideration; with
+        // none, it declares its root (candidate consideration starts
+        // from eligibility, not from a prior event).
+        const exposureParents = routeExposures.map(event => event.eventId);
         const candidateEvent = appendWorldEvent(world, {
             type: 'CANDIDATE_ENCOUNTER',
             tick,
@@ -3332,8 +3358,9 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 id: template.id,
                 description: template.description,
                 priority: template.priority
-            }))
-        }, routeExposures.map(event => event.eventId));
+            })),
+            ...(exposureParents.length === 0 ? { rootReason: 'ENCOUNTER_CONSIDERATION' } : {}),
+        }, exposureParents);
         // The §95 contract: randomness selects among plausible
         // events. The selector uses a deterministic xorshift32
         // rng seeded by the current tick so the §121 contract
@@ -3371,13 +3398,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             : selectEncounterCandidates(eligibleByPriority, { rng: activeRng, maxCandidates: 1 });
         for (const template of selected) {
             const firstCreatedIndex = world.events.length;
-            const result = instantiateEncounter(template, world, { tick, rng: activeRng });
+            const result = instantiateEncounter(template, world, { tick, rng: activeRng, parentEventIds: [candidateEvent.eventId] });
             const createdEvents = world.events.slice(firstCreatedIndex);
             const encounterEvent = createdEvents.find(event => event.type === 'ENCOUNTER'
                 && event.encounterId === template.id);
-            if (encounterEvent) {
-                ensureWorldEventIdentity(world, encounterEvent, [candidateEvent.eventId]);
-            }
+            // (R2: the ENCOUNTER already carries its candidate parent
+            // from instantiateEncounter's parentEventIds — no post-hoc
+            // fixup. A single parentage path keeps the mutation gate
+            // honest: dropping the parent must fail the detector.)
             const consequenceEvents = createdEvents.filter(event => event.type === 'BANDIT_ATTACK');
             for (const consequenceEvent of consequenceEvents) {
                 ensureWorldEventIdentity(

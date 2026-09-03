@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-R1-PANOPTICON-CLOSURE (Lane B, unaccepted)
+EVID-2026-09-04-R2-EVENT-PARENTAGE (Lane B, unaccepted)
+
+## R2 — event parentage authority (F6 + re-audit round)
+
+- Migrated all 9 bare world.events.push sites + 7 one-shot helpers to appendWorldEvent: CONVOY_AMBUSH (sibling-attack parent search, then simplified to always-root when the search proved unreachable-by-construction + merchantIds added), MERCHANT_RESPAWN (loss-event parent or EXOGENOUS_RESTOCK), SEASON_CHANGE (prior-season chain, template ids dropped), ENCOUNTER (candidate parent via new parentEventIds option + result.eventId wiring so the BANDIT_ATTACK child parents correctly), TREATY_FORMED/VIOLATED/TERMINATED (per-treaty chain), one-shot helpers (SCENARIO_SETUP roots). Only the allocator's internal push remains.
+- Detectors: tests/event-parentage.test.js (6 tests, 5 red pre-fix). Re-audit FAIL found: rootless CANDIDATE head, dead sibling search (removed as theatre), ambush missing merchantIds (added + pinned), fragile [undefined] guard (normalized), plus non-blocking notes. All addressed; second review of the delta is folded into the R1/R2 re-audit passes (no live-tick leak constructible).
+- Replay extended to 20 (season-chain, treaty-chain, encounter-parent + prior 17); one entry exposed a redundant post-hoc fixup masking the mutation — removed so the single parentage path stays honest. 20/20 killed, clean restores.
+- Self-caught tooling error: a mis-anchored seed edit swapped out the markets LIVE_CONSUMER row (lint caught it: markets derived UNIT); restored + verified row-set equality vs HEAD. Lesson: diff row sets, not just counts, after seed-script edits.
+- Validation: 177/1333 suite, 4/15 long-horizon, build green, authority CLEAN, lint exit 0 (1942 rows, 8 explained divergences), full reseed campaign.
 
 ## R1 — panopticon closure (F1/F2 + re-audit FAIL + R1b bypass round)
 
