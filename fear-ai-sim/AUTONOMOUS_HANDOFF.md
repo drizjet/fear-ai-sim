@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-Y-MULTITOWN-APPORTIONMENT (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-Z-ROAD-CONDITION (Lane B, unaccepted)
+
+## SLICE Z — road condition → route choice + travel time
+
+- Infrastructure leaves SPECIFIED: routes carry plain-number `condition` (default 1, floored at 0.5). `createClosedWorldScenario` initializes it; the per-tick maintenance pass recovers +0.01 toward 1 (migrating legacy roads without the field); `schedulePendingTradeTrip` applies −0.01 wear per materialized shipment and audits the pre-wear snapshot as `roadCondition` on `TRIP_COMMITMENT`. No new event types — the existing commitment carries the audit.
+- Two live consumers plus one shared primitive: merchant route scoring (`distanceCost = distance / (10 * condition)`), shipment travel time (`round(distance / condition)`, worst case 2x), and `routing.routeCost` (`distance * (1/condition − 1)` surcharge, exactly 0 when condition is absent). A degraded short road (5 @ 0.5 → 1.16) loses to a pristine long road (9 @ 1 → 1.06) at equal danger; `routeCost` stays 5 without condition and doubles to 10 at the floor.
+- Wagon-capacity上限 was deliberately not built: capping shipment volume would break existing 12-unit shipment contracts. Wear-and-recovery models the same logistics pressure (busy roads degrade and slow down) without changing shipment volume semantics.
+- `tests/road-condition.test.js`: 6 tests cover pristine init with legacy migration (1 minus at most one wear step, since maintenance runs before shipment wear on tick 1), wear with pre-wear snapshot, recovery with 0.5 floor, degraded reroute with pristine control, `routeCost` compatibility with floor doubling, and 50-tick boundedness with save/load equality.
+- Mutation check: `distanceCost` condition divisor removed → reroute test fails (degraded short road wins again); restored, adjacent trade/pending suites 32/32 green.
+- Validation: non-long-horizon 166 suites / 1252 tests green, `long-horizon-5000tick` 3 seeds green (~16.4s, faster than baseline — no regression), production build green.
+- Remaining infrastructure boundary: no road upgrade investment or per-segment conditions; wear/recovery 0.01 rates are heuristic.
 
 ## SLICE Y — every violated town emits; sentence apportioned, total conserved
 

@@ -12,8 +12,14 @@ export function routeCost(route, perception = {}) {
     const expectedCargoLoss = nonNegative(perception.expectedCargoLoss ?? cargoValue * nonNegative(perception.perceivedAmbushProbability));
     const perceivedDanger = nonNegative(perception.perceivedDanger);
     const informationUncertainty = Math.max(0, 1 - Math.max(0, Math.min(1, finite(perception.confidence, 0))));
+    // Slice Z (infrastructure): degraded roads cost more to traverse.
+    // Absent condition means pristine (factor 0); floored at 0.5 so the
+    // surcharge stays bounded at 1x distance.
+    const roadCondition = Number.isFinite(route.condition) ? Math.max(0.5, route.condition) : 1;
+    const conditionSurcharge = distance * (1 / roadCondition - 1);
 
     return distance
+        + conditionSurcharge
         + nonNegative(route.travelTime)
         + nonNegative(route.tollCost)
         + nonNegative(route.weatherCost)

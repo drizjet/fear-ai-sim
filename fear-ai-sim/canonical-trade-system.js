@@ -187,8 +187,9 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
         // danger 0.8) because the distance cost dominates the
         // score.
         const dangerPenalty = belief.perceivedDanger * (1 - merchant.riskTolerance) * 4;
+        const roadCondition = Number.isFinite(route.condition) ? Math.max(0.5, route.condition) : 1;
         const familiarityBonus = (merchant.routeFamiliarity?.[route.id] ?? 0.5) * 0.1;
-        const distanceCost = (route.distance || 1) / 10;
+        const distanceCost = (route.distance || 1) / (10 * roadCondition);
         const cargoValue = merchant.cargo || 0;
         const cargoLossRisk = cargoValue * (merchant.cargoValueSensitivity ?? 0.5) * belief.perceivedDanger;
         const destinationTownId = route.from === merchant.location

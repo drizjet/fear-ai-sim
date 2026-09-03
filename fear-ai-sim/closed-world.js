@@ -441,6 +441,8 @@ export function schedulePendingTradeTrip(world, {
         routeId,
         destinationTownId,
         cargo: { kind: cargoKind, amount },
+        // Slice Z: road condition at departure (pre-wear snapshot).
+        roadCondition: Number.isFinite(route.condition) ? route.condition : 1,
     }, parentEventIds);
     const trip = {
         tripId,
@@ -459,6 +461,10 @@ export function schedulePendingTradeTrip(world, {
         parentEventIds: [commitment.eventId],
     };
     merchant.cargo -= amount;
+    // Slice Z: usage wear. Every materialized shipment degrades the road;
+    // the per-tick maintenance pass recovers it. Floored so travel time
+    // stays bounded (worst case 2x at condition 0.5).
+    route.condition = Math.max(0.5, (Number.isFinite(route.condition) ? route.condition : 1) - 0.01);
     world.pendingTrips.push(trip);
     world.routeCommitments.push({
         commitmentId: `ROUTE-${actionId}`,
@@ -731,9 +737,9 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         ensureTownLaws(towns.get(id));
     }
     const routes = [
-        { id: 'road-a', from: 'north', to: 'south', distance: 5, actualDanger: 0.8 },
-        { id: 'road-b', from: 'north', to: 'south', distance: 9, actualDanger: 0.1 },
-        { id: 'road-c', from: 'south', to: 'north', distance: 5, actualDanger: 0.4 }
+        { id: 'road-a', from: 'north', to: 'south', distance: 5, actualDanger: 0.8, condition: 1 },
+        { id: 'road-b', from: 'north', to: 'south', distance: 9, actualDanger: 0.1, condition: 1 },
+        { id: 'road-c', from: 'south', to: 'north', distance: 5, actualDanger: 0.4, condition: 1 }
     ];
     const world = {
         // PHASE 20: passive world property. Season is a
@@ -1219,7 +1225,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     //    emits a SEASON_CHANGE event when the season actually
     //    advances this tick.
     tickSeason(world, tick);
-
+    // Slice Z (infrastructure): road maintenance. Each route's condition
+    // drifts back toward 1 (upkeep abstraction) up to the cap. Usage wear
+    // is applied at shipment time in schedulePendingTradeTrip; this pass
+    // only recovers. Plain numbers: save/load/fork-safe by construction.
+    // Missing fields on older saves are migrated to pristine condition.
+    for (const route of world.routes ?? []) {
+        if (!route || typeof route !== 'object') continue;
+        const current = Number.isFinite(route.condition) ? route.condition : 1;
+        route.condition = Math.min(1, Math.max(0.5, current + 0.01));
+    }
     // 0.1 Slice D — drought shock (ecology → production → shortage → migration)
     // A drought is a transient ecology modifier on food production for a
     // single town. It is stored on world.drought { active, severity, kind,
@@ -1925,7 +1940,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                         destinationTownId,
                         cargoKind,
                         cargoAmount,
-                        travelTicks: Math.max(1, Math.round(route.distance ?? 1)),
+                        travelTicks: Math.max(1, Math.round((route.distance ?? 1) / (Number.isFinite(route.condition) ? route.condition : 1))),
                         startTick: tick,
                         parentEventIds: [routeResult.event.eventId],
                     });
