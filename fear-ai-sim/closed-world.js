@@ -930,6 +930,33 @@ function observeLawViolation(world, { townId, roadId, actorId, tick, lawViolatio
             reason: `LAW_VIOLATED:${lawViolation.lawType}:${townId}:${roadId}`,
         });
     }
+    // Slice X: penalty-funded restitution. The violator faction transfers
+    // penalty units (1:1) to the observer faction, zero-sum and clamped:
+    // the violator cannot go below 0, the observer cannot exceed its cap
+    // (same cap semantics as the per-tick refill). Non-faction violators,
+    // missing observers, and self-loops skip the transfer honestly.
+    let restitution = null;
+    const violatorFaction = (world.factions ?? []).find(faction => faction.id === violatorFactionId) ?? null;
+    if (observerFaction && violatorFaction && observerFaction.id !== violatorFaction.id) {
+        const amount = clamp01(lawViolation.penalty);
+        const violatorBefore = Math.max(0, Number(violatorFaction.resources) || 0);
+        const observerBefore = Math.max(0, Number(observerFaction.resources) || 0);
+        const transferred = Math.min(violatorBefore, amount);
+        const observerCap = Math.max(0, Number(observerFaction.maxResources) || 0);
+        violatorFaction.resources = Math.max(0, violatorBefore - transferred);
+        observerFaction.resources = Math.min(observerCap, observerBefore + transferred);
+        restitution = {
+            from: violatorFaction.id,
+            to: observerFaction.id,
+            amount,
+            transferred,
+            credited: Math.min(observerCap, observerBefore + transferred) - observerBefore,
+            violatorBefore,
+            violatorAfter: violatorFaction.resources,
+            observerBefore,
+            observerAfter: observerFaction.resources,
+        };
+    }
     const lawEvent = appendWorldEvent(world, {
         type: 'LAW_VIOLATED',
         lawId: lawViolation.lawId,
@@ -942,10 +969,11 @@ function observeLawViolation(world, { townId, roadId, actorId, tick, lawViolatio
         violatorFactionId,
         observerFactionId: observerFaction?.id ?? null,
         lawfulness: observation ? { score: observation.score, outcome: observation.lastOutcome } : null,
+        restitution,
         attackEventId: parentEventId,
         tick,
     }, [parentEventId]);
-    return { lawEvent, observation, observerFactionId: observerFaction?.id ?? null, violatorFactionId };
+    return { lawEvent, observation, restitution, observerFactionId: observerFaction?.id ?? null, violatorFactionId };
 }
 
 export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId = 'road-a', tick = 1 } = {}) {
