@@ -1,0 +1,9 @@
+# Pre-audit item 4 (2026-09-03): byte-deterministic checkouts.
+#
+# Without this file, checkout bytes depend on each machine's
+# core.autocrlf: the same commit checks out as CRLF on some machines
+# and LF on others. The evidence ledger fingerprints file bytes, so a
+# fresh clone failed the evidence gate (and the authority baseline)
+# on an otherwise identical tree. Forcing LF makes every checkout
+# byte-identical everywhere, which is what content fingerprints assume.
+* text=auto eol=lf
