@@ -8,7 +8,7 @@
 // CHAIN TEST 4 (BANDIT ADAPTATION) requires.
 
 import { describe, expect, it } from '@jest/globals';
-import { createClosedWorldScenario, tickClosedWorld } from '../closed-world.js';
+import { createClosedWorldScenario, tickClosedWorld, appendWorldEvent } from '../closed-world.js';
 
 describe('closed-world trade rerouting (Constitution §409 / §161)', () => {
     it('merchant avoids the road the bandit is on (Constitution §161 emergent chain)', () => {
@@ -16,28 +16,29 @@ describe('closed-world trade rerouting (Constitution §409 / §161)', () => {
         // contract: the merchant observes the bandit (via
         // a legal observation channel, not a ground-truth
         // shortcut — per Guardian §3) and switches roads.
-        // Per Guardian §3: "actors can be wrong" — the
-        // cat-and-mouse is genuinely partial-observable, so
-        // the merchant and bandit may occasionally meet on
-        // the same road. The contract is: the merchant
-        // REACTS to observations (the routeBeliefs for the
-        // bandit's road rise), and the merchant's chosen
-        // route is CAUSALLY DRIVEN by the observation (not
-        // ground truth). To make this test deterministic,
-        // we set the bandit's perceptionAccuracy to 0 (the
-        // bandit never observes, so it never relocates to
-        // the merchant's road), and the merchant's to 1 (the
-        // merchant always observes). Then the merchant
-        // ALWAYS avoids the bandit's road from tick 2 onward.
+        // R1 (V8 audit F1): quiet bandits are hidden by design — a
+        // merchant that never meets the bandit never learns its road.
+        // Avoidance therefore requires contact: the merchant travels
+        // the bandit's road, an attack is witnessed, and the legal
+        // observation drives the reroute. The staged BANDIT_ATTACK is
+        // the meeting that just happened, not omniscience.
         const world = createClosedWorldScenario();
         world.merchants[0].perceptionAccuracy = 1;
         world.bandits[0].perceptionAccuracy = 0; // bandit cannot chase
-        for (let tick = 1; tick <= 5; tick += 1) {
+        world.bandits[0].roadId = 'road-a';
+        const merchant = world.merchants[0];
+        merchant.selectedRoute = 'road-a';
+        merchant.lastRoute = 'road-a';
+        merchant.routeBeliefs = {
+            'road-a': { perceivedDanger: 0.05, confidence: 0.9 },
+            'road-b': { perceivedDanger: 0.4, confidence: 0.5 },
+            'road-c': { perceivedDanger: 0.4, confidence: 0.5 },
+        };
+        appendWorldEvent(world, { type: 'BANDIT_ATTACK', roadId: 'road-a', tick: 1, banditId: 'bandit-1', merchantId: merchant.id });
+        for (let tick = 1; tick <= 3; tick += 1) {
             tickClosedWorld(world, { tick, perceivedDanger: 0.0, relationshipGate: true });
-            const merchant = world.merchants[0];
-            const bandit = world.bandits[0];
             if (tick >= 2) {
-                expect(merchant.selectedRoute).not.toBe(bandit.roadId);
+                expect(merchant.selectedRoute).not.toBe(world.bandits[0].roadId);
             }
         }
         // Additionally: the merchant's routeBeliefs for the
@@ -49,7 +50,6 @@ describe('closed-world trade rerouting (Constitution §409 / §161)', () => {
         expect(world.merchants[0].routeBeliefs[banditRoad].source).toBe('observation');
         expect(world.merchants[0].routeBeliefs[banditRoad].perceivedDanger).toBeGreaterThanOrEqual(0.7);
     });
-
     it('mechanism check: with perceptionAccuracy=0, the merchant picks the initial-best road (no ground-truth shortcut)', () => {
         // Guardian V4 §5 MUT-OBS-001 mechanism-level assertion.
         // Setup: make road-a (the bandit's road) the initial-best road
@@ -57,6 +57,9 @@ describe('closed-world trade rerouting (Constitution §409 / §161)', () => {
         // the merchant should pick road-a (the best road). With the
         // MUT-OBS-001 mutation (ground-truth shortcut), the merchant
         // avoids road-a regardless of perceptionAccuracy.
+        // R1b: perceptionAccuracy now governs ALL merchant observation
+        // (canonical channel + step-2.4 formation), so accuracy 0 is
+        // blind everywhere and the original 5-tick horizon holds again.
         const world = createClosedWorldScenario();
         // Set up: road-a is the safest (lowest danger), road-b and
         // road-c are dangerous. The bandit is on road-a. Without
@@ -72,7 +75,6 @@ describe('closed-world trade rerouting (Constitution §409 / §161)', () => {
         for (let tick = 1; tick <= 5; tick += 1) {
             tickClosedWorld(world, { tick, perceivedDanger: 0.0, relationshipGate: true });
         }
-        // The merchant should pick road-a (the initial-best road).
         // With the MUT-OBS-001 mutation, the merchant avoids road-a
         // (the bandit's road) and picks road-b or road-c.
         if (world.merchants[0].selectedRoute !== 'road-a') {

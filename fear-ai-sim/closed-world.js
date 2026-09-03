@@ -1810,6 +1810,17 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // The §9 observation boundary. A merchant who cannot
             // observe the event does NOT receive evidence.
             if (!canObserve(merchant, event, world)) continue;
+            // R1b (V8 audit finding 3): perceptionAccuracy governs
+            // ALL merchant observation, not just the canonical
+            // event channel. A merchant with accuracy 0 is blind
+            // everywhere; without this flip, accuracy-0 merchants
+            // learned via BeliefStore formation while the
+            // routeBeliefs channel stayed shut — two contradictory
+            // blindnesses. Draws come from the serializable
+            // encounter stream so save/load stays exact.
+            const accuracy = Number.isFinite(merchant.perceptionAccuracy)
+                ? clamp01(merchant.perceptionAccuracy) : 0.5;
+            if (nextEncounterRandom(world) >= accuracy) continue;
             const roadId = event.roadId
                 ?? event.relocation?.roadId
                 ?? event.relocation?.to
@@ -1894,14 +1905,22 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             if (!belief || belief.lastTick !== tick) continue;
             // Build a shared observation.
             const sharedConfidence = belief.confidence * 0.5;
-            // Share with every non-witness merchant.
+            // Share with every merchant that could hear it: gossip
+            // spreads at shared locations (same town), not across
+            // the map by teleport. R1b (V8 audit finding 2): the old
+            // rule shared with every merchant NOT at the witness's
+            // location, so a distant accuracy-0 merchant learned an
+            // attack it could never observe. Cross-town spread needs
+            // a carrier (traveler/rumor-chain), which does not exist
+            // yet — same-town gossip is the honest channel.
             for (const recipient of world.merchants) {
                 if (!recipient || recipient === witness) continue;
                 if (!recipient.beliefs) continue;
                 if (typeof recipient.beliefs.observe !== 'function') continue;
-                // Skip if the recipient is on the same
-                // route (they would observe directly).
-                if (recipient.location === witness.location) continue;
+                // Gossip is heard, not broadcast: only merchants at
+                // the witness's location hear it. (Recipients on the
+                // same route would observe directly.)
+                if (recipient.location !== witness.location) continue;
                 // Create an Evidence with reduced
                 // confidence (TRUSTED_REPORT) and record
                 // it on the recipient's BeliefStore.

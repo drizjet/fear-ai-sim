@@ -16,6 +16,11 @@ describe('closed-world all-systems integration', () => {
     it('drives the chain through 5 ticks and produces the expected event mix', () => {
         const simulation = makeSimulation();
         const world = simulation.configureClosedWorld();
+        // R1: the bandit's trafficBelief is prior observation history.
+        // With the panopticon closed, an idle bandit acquires no new
+        // distant beliefs on its own; seed a lawful prior (scouted road-c
+        // traffic) so the relocation leg of the mix can fire.
+        world.bandits[0].trafficBelief['road-c'] = { estimatedTraffic: 3, recency: 1.0, lastDecayTick: 1 };
         const eventTypesSeen = new Set();
         const collect = () => {
             for (const event of world.events) eventTypesSeen.add(event.type);

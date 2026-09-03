@@ -41,22 +41,25 @@ const PERCEPTION_ACCURACY = (m) =>
 
 describe('V5 §4 MUT-OBS-002 — bandit ground-truth shortcut', () => {
     it('A: with bandit perceptionAccuracy=1, the bandit observes the merchant route via the legal channel', () => {
+        // R1 (V8 audit F2): co-location is the legal channel (see the
+        // twin test in bandit-merchant-knowledge-shortcut.test.js).
         const world = createClosedWorldScenario();
         world.bandits[0].perceptionAccuracy = 1; // legal observation always succeeds
         world.bandits[0].roadId = 'road-a';
-        // Force the merchant onto a specific route.
-        world.merchants[0].selectedRoute = 'road-b';
+        // Force the merchant onto the bandit's own road (observable).
+        world.merchants[0].selectedRoute = 'road-a';
+        world.merchants[0].lastRoute = 'road-a';
         world.merchants[0].routeBeliefs = {
-            'road-a': { perceivedDanger: 0.5, confidence: 0.5 },
-            'road-b': { perceivedDanger: 0.1, confidence: 0.9 },
-            'road-c': { perceivedDanger: 0.3, confidence: 0.5 },
+            'road-a': { perceivedDanger: 0.05, confidence: 0.9 },
+            'road-b': { perceivedDanger: 0.6, confidence: 0.5 },
+            'road-c': { perceivedDanger: 0.6, confidence: 0.5 },
         };
         // Run one tick.
         tickClosedWorld(world, { tick: 1, perceivedDanger: 0.0, relationshipGate: true });
-        // The bandit's trafficBelief for road-b should be > 0
-        // (the bandit observed the merchant on road-b).
-        const roadBBelief = world.bandits[0].trafficBelief?.['road-b'];
-        expect(roadBBelief?.estimatedTraffic).toBeGreaterThan(0);
+        // The bandit's trafficBelief for road-a should be > 0
+        // (the bandit observed the merchant on road-a).
+        const roadABelief = world.bandits[0].trafficBelief?.['road-a'];
+        expect(roadABelief?.estimatedTraffic).toBeGreaterThan(0);
     });
 
     it('B: with bandit perceptionAccuracy=0, the bandit does NOT observe the merchant route', () => {

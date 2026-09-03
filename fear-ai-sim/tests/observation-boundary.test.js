@@ -1,25 +1,151 @@
-// Constitution §9 (PARTIAL OBSERVABILITY) / §87 (RUMOR) / §533
-// (INFORMATION MVP) / §8 (STATE vs EVENT vs OBSERVATION).
-//
-// The §9 contract: "No major intelligent actor should
-// automatically know the whole world. Knowledge comes through
-// vision, hearing, scouts, travel, trade, rumor, messengers,
-// maps, spies, institutions, historical memory, communication
-// networks."
-//
-// The §8 contract: "An agent may believe something false. A
-// rumor may cause a real war. The engine must preserve the
-// difference between factual causality and perceived causality."
-//
-// The previous run broadcast every BANDIT event into every
-// merchant's BeliefStore — sideways omniscience. This slice
-// installs an explicit observation boundary:
-// canObserve(actor, event, world) returns true iff the actor
-// could plausibly perceive the event.
+import { createClosedWorldScenario, tickClosedWorld, appendWorldEvent, canObserve } from '../closed-world.js';
+import { tickMerchant, tickBandit, createCanonicalMerchant } from '../canonical-trade-system.js';
 
-import { createClosedWorldScenario, tickClosedWorld, canObserve } from '../closed-world.js';
-import { tickClosedWorld as _tickAlias } from '../closed-world.js';
+// R1 (V8 audit F1/F2) — OBS-BOUNDARY-001/002 twin detectors.
+//
+// OBS-BOUNDARY-001: with no legal observation source, changing hidden
+// truth must not change beliefs or decisions.
+// OBS-BOUNDARY-002: with legal visibility, changing visible truth may.
 
+function merchantWorld({ accuracy = 1, merchantRoad = 'road-a', banditRoad = 'road-b' } = {}) {
+    const world = createClosedWorldScenario();
+    const merchant = world.merchants[0];
+    merchant.perceptionAccuracy = accuracy;
+    merchant.selectedRoute = merchantRoad;
+    merchant.lastRoute = merchantRoad;
+    merchant.routeBeliefs = {
+        'road-a': { perceivedDanger: 0.2, confidence: 0.9 },
+        'road-b': { perceivedDanger: 0.2, confidence: 0.9 },
+        'road-c': { perceivedDanger: 0.2, confidence: 0.9 },
+    };
+    world.bandits[0].roadId = banditRoad;
+    return { world, merchant };
+}
+
+function attackOn(world, roadId, tick) {
+    return appendWorldEvent(world, { type: 'BANDIT_ATTACK', roadId, tick, banditId: 'bandit-1', merchantId: 'merchant-1' });
+}
+
+describe('OBS-BOUNDARY panopticon closure (R1)', () => {
+    test('twin worlds differing only in distant bandit road hold identical beliefs', () => {
+        const a = merchantWorld({ accuracy: 1, merchantRoad: 'road-a', banditRoad: 'road-b' });
+        const b = merchantWorld({ accuracy: 1, merchantRoad: 'road-a', banditRoad: 'road-c' });
+        tickMerchant(a.world, a.merchant.id, { tick: 1, rng: () => 0 });
+        tickMerchant(b.world, b.merchant.id, { tick: 1, rng: () => 0 });
+        // Neither distant road may enter beliefs: the stores stay identical.
+        expect(JSON.stringify(a.merchant.routeBeliefs)).toBe(JSON.stringify(b.merchant.routeBeliefs));
+        expect(a.merchant.routeBeliefs['road-b'].perceivedDanger).toBe(0.2);
+        expect(a.merchant.routeBeliefs['road-c'].perceivedDanger).toBe(0.2);
+    });
+
+
+    test('accuracy 0 learns nothing even from a legal attack event', () => {
+        const { world, merchant } = merchantWorld({ accuracy: 0, merchantRoad: 'road-a' });
+        attackOn(world, 'road-a', 1);
+        tickMerchant(world, merchant.id, { tick: 1, rng: () => 0 });
+        expect(merchant.routeBeliefs['road-a'].perceivedDanger).toBe(0.2);
+    });
+
+    test('accuracy 1 learns from a BANDIT_ATTACK on its own road', () => {
+        const { world, merchant } = merchantWorld({ accuracy: 1, merchantRoad: 'road-a' });
+        attackOn(world, 'road-a', 1);
+        tickMerchant(world, merchant.id, { tick: 1, rng: () => 0 });
+        expect(merchant.routeBeliefs['road-a'].perceivedDanger).toBeGreaterThan(0.5);
+        expect(merchant.routeBeliefs['road-a'].source).toContain('observation');
+    });
+
+    test('attack on another road teaches nothing', () => {
+        const { world, merchant } = merchantWorld({ accuracy: 1, merchantRoad: 'road-a' });
+        attackOn(world, 'road-b', 1);
+        tickMerchant(world, merchant.id, { tick: 1, rng: () => 0 });
+        expect(merchant.routeBeliefs['road-b'].perceivedDanger).toBe(0.2);
+    });
+
+    test('bandit learns merchants on its own road, never distant ones', () => {
+        const world = createClosedWorldScenario();
+        const bandit = world.bandits[0];
+        bandit.perceptionAccuracy = 1;
+        bandit.roadId = 'road-a';
+        bandit.trafficBelief = {
+            'road-a': { estimatedTraffic: 0, recency: 0.5 },
+            'road-b': { estimatedTraffic: 0, recency: 0.5 },
+        };
+        world.merchants[0].selectedRoute = 'road-a';
+        world.merchants[0].lastRoute = 'road-a';
+        // Second merchant travels a distant road the bandit cannot see.
+        const far = createCanonicalMerchant({ id: 'merchant-far', location: 'south' });
+        far.selectedRoute = 'road-b';
+        far.lastRoute = 'road-b';
+        world.merchants.push(far);
+        tickBandit(world, bandit.id, { tick: 1, rng: () => 0 });
+        expect(bandit.trafficBelief['road-a'].estimatedTraffic).toBeGreaterThan(0);
+        expect(bandit.trafficBelief['road-b'].estimatedTraffic).toBe(0);
+    });
+
+    test('bandit accuracy 0 learns nothing even co-located', () => {
+        const world = createClosedWorldScenario();
+        const bandit = world.bandits[0];
+        bandit.perceptionAccuracy = 0;
+        bandit.roadId = 'road-a';
+        bandit.trafficBelief = { 'road-a': { estimatedTraffic: 0, recency: 0.5 } };
+        world.merchants[0].selectedRoute = 'road-a';
+        world.merchants[0].lastRoute = 'road-a';
+        tickBandit(world, bandit.id, { tick: 1, rng: () => 0 });
+        expect(bandit.trafficBelief['road-a'].estimatedTraffic).toBe(0);
+    });
+
+    test('reducer: attack on merchant road elevates belief next tick, distant attack does not', () => {
+        const { world, merchant } = merchantWorld({ accuracy: 1, merchantRoad: 'road-a' });
+        attackOn(world, 'road-a', 1);
+        attackOn(world, 'road-b', 1);
+        tickClosedWorld(world, { tick: 1, perceivedDanger: 0.0 });
+        const m = world.merchants[0];
+        expect(m.routeBeliefs['road-a'].perceivedDanger).toBeGreaterThan(
+            m.routeBeliefs['road-b'].perceivedDanger);
+    });
+
+    test('evidence window: fresh attacks on the current road are learned, stale ones are not', () => {
+        // Fresh-evidence semantics (R1b review): the [tick-1, tick]
+        // window lets a merchant consume recent attacks on its CURRENT
+        // road. Anything older stays unknown — no deep-history learning.
+        // Separate worlds: a tickMerchant call re-decides the route,
+        // so sequential calls would move the merchant off-road.
+        const stale = merchantWorld({ accuracy: 1, merchantRoad: 'road-b' });
+        attackOn(stale.world, 'road-b', 1);
+        attackOn(stale.world, 'road-c', 1);
+        tickMerchant(stale.world, stale.merchant.id, { tick: 5, rng: () => 0 });
+        expect(stale.merchant.routeBeliefs['road-b'].perceivedDanger).toBe(0.2);
+        expect(stale.merchant.routeBeliefs['road-c'].perceivedDanger).toBe(0.2);
+        const fresh = merchantWorld({ accuracy: 1, merchantRoad: 'road-b' });
+        attackOn(fresh.world, 'road-b', 1);
+        attackOn(fresh.world, 'road-c', 1);
+        tickMerchant(fresh.world, fresh.merchant.id, { tick: 2, rng: () => 0 });
+        expect(fresh.merchant.routeBeliefs['road-b'].perceivedDanger).toBeGreaterThan(0.5);
+        expect(fresh.merchant.routeBeliefs['road-c'].perceivedDanger).toBe(0.2);
+    });
+    test('reducer: accuracy-0 merchant is blind everywhere across 5 ticks', () => {
+        // Pins R1b finding 3: perceptionAccuracy governs the step-2.4
+        // BeliefStore channel too, not just the canonical one.
+        const world = createClosedWorldScenario();
+        world.merchants[0].routeBeliefs = {
+            'road-a': { perceivedDanger: 0.05, confidence: 0.5 },
+            'road-b': { perceivedDanger: 0.8, confidence: 0.5 },
+            'road-c': { perceivedDanger: 0.8, confidence: 0.5 },
+        };
+        world.merchants[0].perceptionAccuracy = 0;
+        world.bandits[0].perceptionAccuracy = 0;
+        world.bandits[0].roadId = 'road-a';
+        for (let t = 1; t <= 5; t += 1) {
+            tickClosedWorld(world, { tick: t, perceivedDanger: 0.0, relationshipGate: true });
+        }
+        expect(world.merchants[0].selectedRoute).toBe('road-a');
+    });
+});
+
+// ---- Restored pre-R1 boundary oracles (V8 audit finding 4) ----
+// These six tests were overwritten during R1 detector work and are
+// restored verbatim: they pin canObserve + BeliefStore semantics the
+// new tests do not cover.
 describe('observation boundary (Constitution §9 / §87 / §533)', () => {
     it('an actor outside observation range does NOT learn the event', () => {
         // The §9 contract: a merchant traveling on road-b

@@ -30,25 +30,28 @@ import { createClosedWorldScenario, tickClosedWorld } from '../closed-world.js';
 
 describe('V6 §9.1 MUT-OBS-002 — bandit ground-truth shortcut', () => {
     it('A: with bandit perceptionAccuracy=1, bandit observes merchant via legal channel and updates trafficBelief', () => {
+        // R1 (V8 audit F2): the legal channel is co-location — the
+        // bandit counts passersby on its OWN road. The previous version
+        // staged the merchant on road-b (distant) and expected learning,
+        // which encoded the panopticon this repair removes.
         const world = createClosedWorldScenario();
         world.bandits[0].perceptionAccuracy = 1; // legal observation always succeeds
         world.bandits[0].roadId = 'road-a';
-        // Force the merchant onto a specific route.
-        world.merchants[0].selectedRoute = 'road-b';
-        world.merchants[0].lastRoute = 'road-b';
+        // The merchant travels the bandit's own road (observable).
+        world.merchants[0].selectedRoute = 'road-a';
+        world.merchants[0].lastRoute = 'road-a';
         world.merchants[0].routeBeliefs = {
-            'road-a': { perceivedDanger: 0.5, confidence: 0.5 },
-            'road-b': { perceivedDanger: 0.1, confidence: 0.9 },
-            'road-c': { perceivedDanger: 0.3, confidence: 0.5 },
+            'road-a': { perceivedDanger: 0.05, confidence: 0.9 },
+            'road-b': { perceivedDanger: 0.6, confidence: 0.5 },
+            'road-c': { perceivedDanger: 0.6, confidence: 0.5 },
         };
         tickClosedWorld(world, { tick: 1, perceivedDanger: 0.0, relationshipGate: true });
-        // The bandit's trafficBelief for road-b should be > 0
-        // (the bandit observed the merchant on road-b via the legal channel).
-        const roadBBelief = world.bandits[0].trafficBelief?.['road-b'];
-        expect(roadBBelief).toBeDefined();
-        expect(roadBBelief.estimatedTraffic).toBeGreaterThan(0);
+        // The bandit's trafficBelief for road-a should be > 0
+        // (the bandit observed the merchant on road-a via the legal channel).
+        const roadABelief = world.bandits[0].trafficBelief?.['road-a'];
+        expect(roadABelief).toBeDefined();
+        expect(roadABelief.estimatedTraffic).toBeGreaterThan(0);
     });
-
     it('B: with bandit perceptionAccuracy=0, bandit CANNOT observe merchant via legal channel', () => {
         const world = createClosedWorldScenario();
         world.bandits[0].perceptionAccuracy = 0; // legal observation always fails

@@ -12,7 +12,11 @@ describe('MUT-CHAIN-001 causal parentage', () => {
         const world = createClosedWorldScenario();
         const merchant = world.merchants[0];
         merchant.riskTolerance = 1;
-        merchant.perceptionAccuracy = 0;
+        // R1b: perceptionAccuracy governs ALL merchant observation
+        // (canonical channel + step-2.4 formation). The chain under
+        // test IS an observation chain, so the merchant must be able
+        // to observe (accuracy 1). Accuracy 0 is blind everywhere.
+        merchant.perceptionAccuracy = 1;
         merchant.routeFamiliarity = { 'road-a': 1, 'road-b': 0, 'road-c': 0 };
         merchant.routeBeliefs['road-a'] = { perceivedDanger: 0.01, confidence: 1 };
         merchant.routeBeliefs['road-b'] = { perceivedDanger: 1, confidence: 1 };

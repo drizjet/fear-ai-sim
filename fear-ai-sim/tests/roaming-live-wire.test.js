@@ -30,6 +30,11 @@ describe('roaming live-wire (directive §6: make roaming real)', () => {
         // The new event must have reason =
         // 'chooseRoamingDestination'.
         const world = createClosedWorldScenario();
+        // R1: relocation needs a traffic belief; with the panopticon
+        // closed, an idle bandit acquires none on its own. Seed a lawful
+        // prior (scouted road-c traffic) so the relocation leg can fire;
+        // the test's contract is the reason wiring, not emergence.
+        world.bandits[0].trafficBelief['road-c'] = { estimatedTraffic: 5, recency: 1.0, lastDecayTick: 1 };
         for (let t = 1; t <= 10; t += 1) {
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.8 });
         }
@@ -90,6 +95,8 @@ describe('roaming live-wire (directive §6: make roaming real)', () => {
         // world.events contains a BANDIT_RELOCATION event
         // with the legacy shape.
         const world = createClosedWorldScenario();
+        // R1 prior (see reason test above): relocation needs a belief.
+        world.bandits[0].trafficBelief['road-c'] = { estimatedTraffic: 5, recency: 1.0, lastDecayTick: 1 };
         for (let t = 1; t <= 5; t += 1) {
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.8 });
         }

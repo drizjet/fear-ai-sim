@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-V8-AUDIT-VERDICT (Lane B, unaccepted)
+EVID-2026-09-04-R1-PANOPTICON-CLOSURE (Lane B, unaccepted)
+
+## R1 — panopticon closure (F1/F2 + re-audit FAIL + R1b bypass round)
+
+- Repair: tickMerchant learns bandit activity ONLY from canObserve-passing BANDIT_ATTACK/RELOCATION events ([tick-1, tick] fresh-evidence window) with perceptionAccuracy as the success flip; tickBandit learns ONLY co-located merchants (route === bandit.roadId), gate before the rng draw. canObserve imported into canonical-trade-system.js (no new cycle — the import already existed).
+- Detectors: tests/observation-boundary.test.js — 9 new/pin tests (twin-belief identity, accuracy-0 blindness incl. 5-tick reducer pin, own-road learning, other-road exclusion, bandit co-location + accuracy-0, reducer elevation, fresh/stale window) + 6 restored pre-R1 oracles. 5 failed pre-fix for the right reasons.
+- Restaged (oracle-aligned, each documented): bandit shortcut A-tests (co-located), WHY/noise tests (staged legal attacks), reroute chain (contact-required) + mechanism (5-tick horizon kept), all-systems + roaming (lawful traffic priors), causal-chain (accuracy 1 — the chain IS an observation chain), differentiation (fear joins metrics: without contact, danger moves only felt fear — the old pass was stream-contingent attacks).
+- Scoped re-audit #1 verdict FAIL (correct): found the BeliefStore bridge, rumor teleport, 2.4 accuracy gap, 6 deleted oracles (observation-boundary.test.js existed in HEAD — overwritten unread), narrowed 5-tick, window time-travel, coarse replay. R1b closed all 9: oracles restored verbatim (15/15 green), rumor gated to same-town + exclusion detector (mutation-proven both directions), 2.4 gated on accuracy via encounter stream, mover/window semantics pinned, replay extended to 17 (history-window, canobserve-universal, formation-accuracy, rumor-locality). Re-audit #2: PASS, no live-tick leak constructible (live BeliefStore writers are exactly 2.4 + rumor).
+- Validation: 176/1327 suite, 4/15 long-horizon, build green, authority CLEAN, lint exit 0 (1562 rows, 8 explained divergences), replay 17/17 killed with clean restores, full reseed campaign.
+- Known follow-up P1 (NOT this candidate): default-world bandit initiative. With the leak closed, an idle bandit with no contact never acquires traffic beliefs (10-tick trace: zero attacks/relocations, frozen loot) — the hunt loop needs a lawful distant-sensing slice (bandit scout/rumor-carrier/exploration ignition). Integration tests use staged traffic priors until then; the stalemate is characterized, not hidden.
+- Process notes: two range-collision syntax breaks from stale line numbers (caught by node --check, repaired by re-read); one false RESIDUE-WARNING from substring search (now sha-only); one overwritten test file (restored + merged); one surviving replay entry forced a decay-proof fractional-clamp unit test (retaliation-clamp detectors now escalation|invariant-health).
 
 ## V8 AUDIT — verdict REJECTED (3 P0, 23 P1, 16 P2; 42 findings)
 

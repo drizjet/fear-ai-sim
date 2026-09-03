@@ -49,6 +49,21 @@ describe('escalation execution', () => {
         expect(faction.resources).toBe(1);
     });
 
+    it('retaliation spend floors at zero for fractional resources', () => {
+        // Pre-audit item 1: executeRetaliation spent resources-1
+        // unclamped, so a faction at 0.6 (fractional via
+        // restitution/trade paths) landed at -0.4 and broke the
+        // ALWAYS resources bound. The long-horizon detector caught it
+        // once, then trajectory drift hid it again — this unit test
+        // pins the floor directly so the gate cannot decay silently.
+        const faction = { id: 'f', lastDecision: 'RAID', escalation: 6, resources: 0.6 };
+        const target = { id: 't' };
+        const plan = planRetaliation(faction, target, { tick: 1 });
+        const result = executeRetaliation(faction, target, plan);
+        expect(result.ok).toBe(true);
+        expect(faction.resources).toBe(0);
+    });
+
     it('rejects executeRetaliation without a plan', () => {
         const faction = { id: 'f', lastDecision: 'RAID', escalation: 6, resources: 2 };
         const target = { id: 't' };

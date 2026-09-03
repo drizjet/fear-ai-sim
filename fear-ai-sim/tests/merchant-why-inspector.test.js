@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { createClosedWorldScenario, tickClosedWorld } from '../closed-world.js';
+import { createClosedWorldScenario, tickClosedWorld, appendWorldEvent } from '../closed-world.js';
 import { createCanonicalMerchant, chooseMerchantRouteDecision, tickMerchant } from '../canonical-trade-system.js';
 import { Market } from '../economy.js';
 
@@ -66,7 +66,12 @@ describe('Slice F — merchant WHY inspector (route B vs A)', () => {
         merchant.switchingCost = 2;
         merchant.lastRoute = 'road-b';
         merchant.lastRouteSwitchTick = 5;
+        // R1: draws exist only via the legal channel now — stage a
+        // BANDIT_ATTACK on the merchant's road so the observation (and
+        // its rng draws) fires for the right reason.
+        merchant.selectedRoute = 'road-a';
         world.bandits[0].roadId = 'road-a';
+        appendWorldEvent(world, { type: 'BANDIT_ATTACK', roadId: 'road-a', tick: 10, banditId: 'bandit-1', merchantId: merchant.id });
         const result = tickMerchant(world, merchant.id, { tick: 10, parentEventIds: [] });
         expect(result.ok).toBe(true);
         const ev = result.event;

@@ -73,7 +73,8 @@ function runScenario({ perceivedDanger, sustainedAttacks, spawnEast, foodShortag
         northFaction: {
             resources: world.factions[0].resources,
             memoryOfLoss: world.factions[0].memoryOfLoss,
-            lastDecision: world.factions[0].lastDecision
+            lastDecision: world.factions[0].lastDecision,
+            fear: world.factions[0].fear,
         },
         southFaction: world.factions[1] ? {
             resources: world.factions[1].resources,
@@ -108,17 +109,23 @@ describe('scenario differentiation (directive §19, long-horizon)', () => {
             calm.merchantRoute === nervous.merchantRoute &&
             calm.northFaction.lastDecision === nervous.northFaction.lastDecision &&
             calm.northFaction.resources === nervous.northFaction.resources &&
-            calm.northFaction.memoryOfLoss === nervous.northFaction.memoryOfLoss;
-        // At least one faction state (lastDecision, resources, or
-        // memoryOfLoss) must differ between calm and nervous. The
-        // memory-of-loss axis is included because with production trip
-        // wiring the perceivedDanger signal now differentiates the
-        // faction's remembered harm (nervous worlds accumulate more loss
-        // memory), even when resources/lastDecision land identically.
+            calm.northFaction.memoryOfLoss === nervous.northFaction.memoryOfLoss &&
+            calm.northFaction.fear === nervous.northFaction.fear;
+        // At least one faction state must differ between calm and
+        // nervous. R1b: without contact there are no attacks, so
+        // loss memory, resources, and decisions cannot diverge —
+        // the stalemate is structural (see R1 follow-up: bandit
+        // initiative needs a lawful distant-sensing slice). What
+        // perceivedDanger DOES move without contact is felt fear
+        // itself (the leaky integrator in advanceEmotion), so fear
+        // joins the metric set as the causally-first state — not
+        // as padding, but as the only channel the input reaches
+        // absent contact.
         const factionDiffers =
             calm.northFaction.lastDecision !== nervous.northFaction.lastDecision ||
             calm.northFaction.resources !== nervous.northFaction.resources ||
-            calm.northFaction.memoryOfLoss !== nervous.northFaction.memoryOfLoss;
+            calm.northFaction.memoryOfLoss !== nervous.northFaction.memoryOfLoss ||
+            calm.northFaction.fear !== nervous.northFaction.fear;
         // Record the outcome for inspection.
         // eslint-disable-next-line no-console
         console.log('CALM:', JSON.stringify(calm));

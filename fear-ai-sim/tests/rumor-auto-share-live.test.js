@@ -13,11 +13,10 @@ import { Market } from '../economy.js';
 
 describe('rumor auto-share in the live reducer (directive §8)', () => {
     it('after a BANDIT_ATTACK, a non-witness merchant on a different road learns via rumor', () => {
-        // The 2-town closed-world has both towns on road-a
-        // (the attack road), so both merchants directly
-        // observe. To test the auto-share contract we
-        // need a 3-town setup where the non-witness is on
-        // a road that does NOT connect to the attack.
+        // R1b: gossip spreads at shared locations (same town), not by
+        // teleport. The non-witness shares the witness's town (north)
+        // but travels a different road (road-ne), so it cannot observe
+        // the road-ns attack directly and learns only via gossip.
         // We build a minimal 3-town world manually.
         const towns = new Map();
         for (const id of ['north', 'south', 'east']) {
@@ -59,7 +58,7 @@ describe('rumor auto-share in the live reducer (directive §8)', () => {
                 },
                 {
                     id: 'merchants-2',
-                    location: 'east',
+                    location: 'north',
                     cargo: 0,
                     selectedRoute: 'road-ne',
                     beliefs: new BeliefStore()
@@ -100,5 +99,42 @@ describe('rumor auto-share in the live reducer (directive §8)', () => {
         // The non-witness's confidence must be lower than
         // the witness's (the share decay factor is 0.5).
         expect(nonWitnessBelief.confidence).toBeLessThan(witnessBelief.confidence);
+    });
+
+    it('a merchant in another town does NOT learn via rumor (no teleport)', () => {
+        // R1b (V8 audit finding 2): gossip is heard at shared
+        // locations only. A stranger in east cannot hear north
+        // gossip, even with full accuracy — cross-town spread
+        // needs a carrier, which does not exist yet.
+        const towns = new Map();
+        for (const id of ['north', 'south', 'east']) {
+            const market = new Market();
+            towns.set(id, { id, market, population: 1, consumes: { food: 1 }, produces: { food: 1.5 } });
+        }
+        const world = {
+            season: 'SPRING',
+            towns,
+            routes: [
+                { id: 'road-ns', from: 'north', to: 'south', distance: 5, actualDanger: 0.8 },
+                { id: 'road-ne', from: 'north', to: 'east', distance: 7, actualDanger: 0.1 },
+                { id: 'road-se', from: 'south', to: 'east', distance: 6, actualDanger: 0.1 }
+            ],
+            factions: [],
+            bandits: [{ id: 'bandits-1', roadId: 'road-ns', alternateRoadId: 'road-ne', lootExpectation: 0.5 }],
+            merchants: [
+                { id: 'merchants-1', location: 'north', cargo: 20, selectedRoute: 'road-ns', perceptionAccuracy: 1, beliefs: new BeliefStore() },
+                { id: 'merchants-2', location: 'east', cargo: 0, selectedRoute: 'road-se', perceptionAccuracy: 1, beliefs: new BeliefStore() }
+            ],
+            guards: [],
+            events: [],
+            beliefs: new BeliefStore(),
+            tickHistory: [],
+            relationships: new Map(),
+            consumedAttackIds: new Set()
+        };
+        world.events.push({ type: 'BANDIT_ATTACK', roadId: 'road-ns', banditId: 'bandits-1', tick: 1, lost: 6, delivered: 14 });
+        tickClosedWorld(world, { tick: 1, perceivedDanger: 0.0 });
+        expect(world.merchants[0].beliefs.get('road-ns', 'perceivedDanger')).toBeDefined();
+        expect(world.merchants[1].beliefs.get('road-ns', 'perceivedDanger')).toBeNull();
     });
 });

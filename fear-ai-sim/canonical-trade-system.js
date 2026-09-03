@@ -21,7 +21,7 @@
 // uses them so the two worlds share a single source of truth.
 
 import { clamp01, clamp } from './math-utils.js';
-import { appendWorldEvent, getWorldEvents } from './closed-world.js';
+import { appendWorldEvent, getWorldEvents, canObserve } from './closed-world.js';
 import {
     computeReputationDimension,
     hasReputationObservation,
@@ -352,48 +352,62 @@ export function tickMerchant(world, merchantId, {
             beliefs[routeId].confidence = clamp01(beliefs[routeId].confidence * 0.95);
         }
     }
-    // EVID-2026-08-29-LEGAL-OBSERVATION-CHANNEL (per Guardian
-    // §3): the canonical merchant's "cat-and-mouse" signal
-    // is a *legal observation channel*, not a ground-truth
-    // shortcut. Each tick, the merchant has a probability
-    // `merchant.perceptionAccuracy` (default 0.5) of
-    // successfully observing the bandit's current road. The
-    // observation, when it succeeds, updates the merchant's
-    // routeBeliefs for that road. The Guardian §3 says
-    // "actors can be wrong" and "no bandit-is-here
-    // ground-truth shortcut unless an explicit observation
-    // caused it". A `perceptionAccuracy: 0` merchant never
-    // observes; a `perceptionAccuracy: 1` merchant always
-    // does. The `rng` parameter (deterministic) makes the
-    // observation reproducible.
+    // R1 (V8 audit F1-MERCHANT-PANOPTICON): observation requires a
+    // legal channel. The merchant learns about bandit activity ONLY
+    // from bandit events it can legally observe: BANDIT_ATTACK /
+    // BANDIT_RELOCATION on its currently selected route (canObserve).
+    // The previous code scanned world.bandits[].roadId directly gated
+    // by a bare accuracy coin flip, so a merchant at north learned a
+    // distant bandit's road with p=0.5 — panopticon with noise, not
+    // partial observability. A quiet bandit (no events) stays hidden;
+    // perceptionAccuracy remains the success flip once the gate passes.
     // Slice F — capture observation rng draws and belief snapshot for WHY
     const whyObservations = [];
     const whyRngDraws = [];
     const beliefsSnapshotBefore = JSON.parse(JSON.stringify(merchant.routeBeliefs || {}));
-    if (world.bandits && world.bandits.length > 0 && rng) {
-        const accuracy = Number.isFinite(merchant.perceptionAccuracy)
-            ? clamp01(merchant.perceptionAccuracy) : 0.5;
-        for (const bandit of world.bandits) {
-            if (!bandit || !bandit.roadId) continue;
+    const accuracy = Number.isFinite(merchant.perceptionAccuracy)
+        ? clamp01(merchant.perceptionAccuracy) : 0.5;
+    if (rng) {
+        // Fresh evidence window: this tick and the previous one, so an
+        // attack that resolves after the merchant's decision tick is
+        // learnable on the next tick. Older history stays in the store
+        // (it was learned or missed when fresh); re-rolling it every
+        // tick would let accuracy-1 merchants time-travel.
+        const banditEvents = getWorldEvents(world, {
+            types: ['BANDIT_ATTACK', 'BANDIT_RELOCATION'],
+            minTick: tick - 1,
+            maxTick: tick,
+        });
+        const seenRoads = new Set();
+        for (const event of banditEvents) {
+            const roadId = event?.roadId
+                ?? event?.relocation?.roadId
+                ?? event?.relocation?.to
+                ?? event?.to;
+            if (!roadId || seenRoads.has(roadId)) continue;
+            // The gate: only the merchant's own road is observable.
+            if (!canObserve(merchant, event, world)) continue;
+            seenRoads.add(roadId);
+            const banditId = event?.banditId ?? event?.actorId ?? null;
             const draw = rng();
-            whyRngDraws.push({ banditId: bandit.id, roadId: bandit.roadId, draw, accuracy, observed: draw < accuracy });
+            whyRngDraws.push({ banditId, roadId, draw, accuracy, observed: draw < accuracy });
             if (draw < accuracy) {
                 // Successful observation. The merchant's
-                // perceivedDanger for the bandit's road jumps
+                // perceivedDanger for the event road jumps
                 // to a moderate level (not a hard override,
-                // just a "I saw the bandit there" signal).
-                if (merchant.routeBeliefs && merchant.routeBeliefs[bandit.roadId]) {
-                    const current = merchant.routeBeliefs[bandit.roadId].perceivedDanger ?? 0.5;
+                // just a "bandit activity here" signal).
+                if (merchant.routeBeliefs && merchant.routeBeliefs[roadId]) {
+                    const current = merchant.routeBeliefs[roadId].perceivedDanger ?? 0.5;
                     // Add observation noise: 0.7 ± 0.1 so actualDanger not injected exactly
                     const noise = (rng() - 0.5) * 0.2;
-                    whyRngDraws.push({ banditId: bandit.id, roadId: bandit.roadId, draw: noise, kind: 'noise' });
+                    whyRngDraws.push({ banditId, roadId, draw: noise, kind: 'noise' });
                     const observedDanger = clamp01(0.7 + noise);
-                    merchant.routeBeliefs[bandit.roadId].perceivedDanger = clamp01(Math.max(current, observedDanger));
-                    merchant.routeBeliefs[bandit.roadId].confidence = clamp01(
-                        (merchant.routeBeliefs[bandit.roadId].confidence ?? 0.5) + 0.2
+                    merchant.routeBeliefs[roadId].perceivedDanger = clamp01(Math.max(current, observedDanger));
+                    merchant.routeBeliefs[roadId].confidence = clamp01(
+                        (merchant.routeBeliefs[roadId].confidence ?? 0.5) + 0.2
                     );
-                    merchant.routeBeliefs[bandit.roadId].source = 'observation';
-                    whyObservations.push({ banditId: bandit.id, roadId: bandit.roadId, observedDanger });
+                    merchant.routeBeliefs[roadId].source = 'observation';
+                    whyObservations.push({ banditId, roadId, observedDanger });
                 }
             }
         }
@@ -613,8 +627,16 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
         }
     }
     for (const merchant of (world.merchants || [])) {
-        if (rng() >= banditAccuracy) continue; // observation failed
         const route = merchant.selectedRoute || merchant.lastRoute;
+        // R1 (V8 audit F2-BANDIT-PANOPTICON): co-location boundary. The
+        // bandit observes only merchants traveling its own road — it
+        // counts passersby, it does not scan distant itineraries. The
+        // previous code learned every merchant's route with p=0.5
+        // regardless of distance.
+        // R1b (review finding 9): gate before the draw so distant
+        // merchants do not shift the rng stream for co-located ones.
+        if (!route || route !== bandit.roadId) continue;
+        if (rng() >= banditAccuracy) continue; // observation failed
         if (route && bandit.trafficBelief[route]) {
             const cur = bandit.trafficBelief[route];
             cur.estimatedTraffic = Math.min(10, (cur.estimatedTraffic || 0) + 1);

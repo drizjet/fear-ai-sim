@@ -1,6 +1,6 @@
 import { describe, it, expect } from '@jest/globals';
 import { BeliefStore, Evidence } from '../beliefs.js';
-import { createClosedWorldScenario, canObserve } from '../closed-world.js';
+import { createClosedWorldScenario, canObserve, appendWorldEvent } from '../closed-world.js';
 import { createCanonicalMerchant, tickMerchant } from '../canonical-trade-system.js';
 
 // R3 — info quality: aliasing, canObserve, noisy observation
@@ -79,6 +79,10 @@ describe('R3 — noisy observation (not exact 0.7)', () => {
             w.merchants = [m];
             w.bandits = [{ id: 'b1', roadId: 'road-a' }];
             w.routes = [{ id: 'road-a', from: 'north', to: 'south', distance: 5 }];
+            // R1: observations fire only via the legal channel — stage
+            // the attack the merchant legally witnesses on its own road.
+            m.selectedRoute = 'road-a';
+            appendWorldEvent(w, { type: 'BANDIT_ATTACK', roadId: 'road-a', tick: 1, banditId: 'b1', merchantId: m.id });
             const result = tickMerchant(w, m.id, { tick: 1, rng: () => 0.1 + i * 0.15 });
             const ev = result.event;
             draws.push(ev.why.observations[0]?.observedDanger);
