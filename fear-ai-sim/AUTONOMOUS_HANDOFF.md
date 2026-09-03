@@ -1,5 +1,15 @@
 # AUTONOMOUS HANDOFF
 
+EVID-2026-09-02-SLICE-U-LAW-VIOLATION (Lane B, unaccepted)
+
+## SLICE U — town law → BANDIT_ATTACK violation
+
+- `law.js` owns town-level prohibitions as plain JSON: `LAW_TYPES` (banditry/theft/trespass/smuggling), `createLaw`, `ensureTownLaws`, `isActionIllegal`, `checkLawCompliance`. Default `banditry` law (`prohibits:'BANDIT_ATTACK'`, `scope:'town-roads'`, `penalty:0.3`) is materialized per town in `createClosedWorldScenario` and migrated on load/tick for older saves.
+- `closed-world.js` checks every `BANDIT_ATTACK` (direct `resolveBanditAttack` and encounter `BANDIT_ATTACK` consequences) against `town.laws` and emits `LAW_VIOLATED` parented to the attack with `{townId,lawId,lawType,prohibits,penalty,roadId,actorId,attackEventId}`. Scope `town-roads` requires incident road, `global` matches any, array/exact string scope also supported; mismatch is honest (no violation).
+- `tests/law-violation.test.js`: 5 tests cover direct violation, empty-law neutrality (mutation-sensitive), encounter-path enforcement via `tickClosedWorld({attackRoadId})`, scope-mismatch honesty (road-z vs global), and save/load persistence with custom penalty (0.77) surviving round-trip and deterministic replay.
+- Law state is plain JSON (`town.laws` array) and survives `saveWorld`/`loadWorld` via the existing Map serialization; `ensureTownLaws` is called on creation, on tick start, and in `reattachPrototypes` for migration.
+- Remaining law boundary: `LAW_VIOLATED` is auditable but not yet consumed by `JusticeSystem` or institutional enforcement (no penalty collection, legitimacy drift, or patrol escalation).
+
 EVID-2026-09-02-SLICE-T-EVENT-LEDGER-INDEX (Lane B, unaccepted)
 
 ## SLICE T — incremental event-ledger index for long-horizon health

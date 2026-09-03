@@ -14,6 +14,7 @@ import { tickMerchant as tickCanonicalMerchant, tickBandit as tickCanonicalBandi
 import { tickSeason, getSeasonModifier, getSpoilageModifier } from './ecology.js';
 import { tickDemography } from './demography.js';
 import { recordTradeReliability } from './reputation.js';
+import { ensureTownLaws, checkLawCompliance } from './law.js';
 
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 const clamp01 = value => clamp(value, 0, 1);
@@ -727,6 +728,7 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
             contestedRadius: 0,
             scarceResources: { food: true, tools: false },
         });
+        ensureTownLaws(towns.get(id));
     }
     const routes = [
         { id: 'road-a', from: 'north', to: 'south', distance: 5, actualDanger: 0.8 },
@@ -954,6 +956,26 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         rootReason: 'ATTACK_OPPORTUNITY',
     };
     const emitted = appendWorldEvent(world, event, []);
+    // Law slice: BANDIT_ATTACK on a town-incident road violates town law.
+    const lawViolation = checkLawCompliance({
+        world,
+        action: { type: 'BANDIT_ATTACK', roadId, actorId: emitted.banditId, tick },
+        tick,
+    });
+    if (lawViolation) {
+        appendWorldEvent(world, {
+            type: 'LAW_VIOLATED',
+            lawId: lawViolation.lawId,
+            lawType: lawViolation.lawType,
+            townId: lawViolation.townId,
+            prohibits: lawViolation.prohibits,
+            penalty: lawViolation.penalty,
+            roadId,
+            actorId: emitted.banditId,
+            attackEventId: emitted.eventId,
+            tick,
+        }, [emitted.eventId]);
+    }
     return { ok: true, event: emitted, attackOpportunityId };
 }
 
@@ -1073,6 +1095,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // resumed checkpoint obey the same due work as an uninterrupted world.
     ensurePendingWorldState(world);
     finalizeWorldEventLedger(world);
+    // Law slice: ensure every town has its prohibitions materialized.
+    if (world.towns && typeof world.towns.get === 'function') {
+        for (const [, town] of world.towns) ensureTownLaws(town);
+    }
     world.currentTick = tick;
     // PHASE §155: per-tick delivery accumulator. Reset before
     // advancePendingWorldObligations so each tick's deliveries are
@@ -3076,9 +3102,33 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     });
                 }
             }
+            // Law slice: BANDIT_ATTACK on a town-incident road violates law.
+            for (const consequenceEvent of consequenceEvents) {
+                const roadId = consequenceEvent.roadId ?? world.bandits?.[0]?.roadId;
+                const actorId = consequenceEvent.banditId ?? world.bandits?.[0]?.id ?? 'unknown';
+                if (typeof roadId !== 'string') continue;
+                const violation = checkLawCompliance({
+                    world,
+                    action: { type: 'BANDIT_ATTACK', roadId, actorId, tick },
+                    tick,
+                });
+                if (violation) {
+                    appendWorldEvent(world, {
+                        type: 'LAW_VIOLATED',
+                        lawId: violation.lawId,
+                        lawType: violation.lawType,
+                        townId: violation.townId,
+                        prohibits: violation.prohibits,
+                        penalty: violation.penalty,
+                        roadId,
+                        actorId,
+                        attackEventId: consequenceEvent.eventId,
+                        tick,
+                    }, [consequenceEvent.eventId]);
+                }
+            }
 
             // Encounter consequences occur after the reducer's ordinary
-            // faction pass. Consume them here exactly once so memory and
             // reaction are not silently skipped until a tick that can no
             // longer see them as current input.
             for (const consequenceEvent of consequenceEvents) {
@@ -3891,6 +3941,10 @@ function reattachPrototypes(world) {
                 };
                 town.market = Market.deserialize(serialized);
             }
+        }
+        // Law slice: migrate older saves that predate town.laws.
+        for (const town of world.towns.values()) {
+            if (town && typeof town === 'object') ensureTownLaws(town);
         }
     }
     // Relationship vectors: each entry in
