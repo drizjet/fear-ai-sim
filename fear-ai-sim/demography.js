@@ -14,7 +14,7 @@
 // follow-up slice; this is the first link.
 
 import { clamp } from './math-utils.js';
-import { appendWorldEvent } from './closed-world.js';
+import { appendWorldEvent, findLatestWorldEvent } from './closed-world.js';
 
 // Base birth rate per population per tick. Default 0.01 (1% per
 // tick is fast; intended to be tuned). At population=1 this is
@@ -232,8 +232,10 @@ export function tickDemography(world, tick) {
         // makes the per-town demographic state
         // chain MIGRATION -> POPULATION_CHANGE(T-1) ->
         // POPULATION_CHANGE(T) observable.
-        const previousPopChange = [...world.events].reverse().find(ev =>
-            ev.type === 'POPULATION_CHANGE' && ev.townId === update.townId
+        const previousPopChange = findLatestWorldEvent(
+            world,
+            ev => ev.townId === update.townId,
+            'POPULATION_CHANGE',
         );
         const popParentIds = previousPopChange?.eventId
             ? [previousPopChange.eventId]
@@ -253,14 +255,17 @@ export function tickDemography(world, tick) {
                 // the previous POPULATION_CHANGE for the
                 // destination so the chain is never empty after
                 // the first per-town event.
-                const migrationDecision = [...world.events].reverse().find(ev =>
-                    ev.type === 'MIGRATION_DECISION'
-                    && ev.townId === update.townId
-                    && ev.decision === 'FIRE'
-                    && (ev.tick ?? 0) <= tick
+                const migrationDecision = findLatestWorldEvent(
+                    world,
+                    ev => ev.townId === update.townId
+                        && ev.decision === 'FIRE'
+                        && (ev.tick ?? 0) <= tick,
+                    'MIGRATION_DECISION',
                 );
-                const destPreviousPop = [...world.events].reverse().find(ev =>
-                    ev.type === 'POPULATION_CHANGE' && ev.townId === destId
+                const destPreviousPop = findLatestWorldEvent(
+                    world,
+                    ev => ev.townId === destId,
+                    'POPULATION_CHANGE',
                 );
                 const immParentIds = [];
                 if (destPreviousPop?.eventId) immParentIds.push(destPreviousPop.eventId);

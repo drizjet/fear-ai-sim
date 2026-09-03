@@ -21,7 +21,12 @@
 // uses them so the two worlds share a single source of truth.
 
 import { clamp01, clamp } from './math-utils.js';
-import { appendWorldEvent } from './closed-world.js';
+import { appendWorldEvent, getWorldEvents } from './closed-world.js';
+import {
+    computeReputationDimension,
+    hasReputationObservation,
+    REPUTATION_DIMENSIONS,
+} from './reputation.js';
 
 // Deterministic xorshift32 RNG (mirrors closed-world.js).
 const deterministicRng = (seed = 1) => {
@@ -67,6 +72,10 @@ export function createCanonicalMerchant({
     routeFamiliarity = {},
     informationConfidence = 0.5,
     routeBeliefs = {},
+    reputationByDimension = { [REPUTATION_DIMENSIONS.TRADE_RELIABILITY]: {} },
+    tradeReliabilityWeight = 0.6,
+    tradeReliabilityHalfLifeTicks = 40,
+    reputationTrust = 1,
 } = {}) {
     if (!id) throw new TypeError('createCanonicalMerchant: id is required');
     return {
@@ -79,6 +88,12 @@ export function createCanonicalMerchant({
         routeFamiliarity,
         informationConfidence,
         routeBeliefs,
+        // Independent reputation dimensions. Trade reliability is keyed by
+        // destination town and is deliberately separate from violence memory.
+        reputationByDimension,
+        tradeReliabilityWeight,
+        tradeReliabilityHalfLifeTicks,
+        reputationTrust,
         // Route inertia state.
         lastRoute: null,
         lastRouteSwitchTick: -1000,
@@ -107,6 +122,8 @@ export function createPatrol({
     interceptionRate = 0.3,
     travelCost = 1,
     factionId = 'north-faction',
+    lawfulnessWeight = 0.5,
+    lawfulnessHalfLifeTicks = 40,
 } = {}) {
     if (!id) throw new TypeError('createPatrol: id is required');
     return {
@@ -118,6 +135,11 @@ export function createPatrol({
         factionId,
         detectionRate: clamp01(detectionRate),
         interceptionRate: clamp01(interceptionRate),
+        // Low observed lawfulness makes a patrol allocate more attention to
+        // an associated violator. The weight is capped and persisted so the
+        // adjustment is deterministic and save/load-safe.
+        lawfulnessWeight: clamp01(lawfulnessWeight),
+        lawfulnessHalfLifeTicks: Math.max(0, Number.isFinite(lawfulnessHalfLifeTicks) ? lawfulnessHalfLifeTicks : 40),
         detections: 0,
         interceptions: 0,
         deploymentHistory: [{ tick: 0, route }],
@@ -169,6 +191,9 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
         const distanceCost = (route.distance || 1) / 10;
         const cargoValue = merchant.cargo || 0;
         const cargoLossRisk = cargoValue * (merchant.cargoValueSensitivity ?? 0.5) * belief.perceivedDanger;
+        const destinationTownId = route.from === merchant.location
+            ? route.to
+            : route.to === merchant.location ? route.from : (route.to ?? null);
         // EVID-2026-08-30-LANEB-MARKET-OPPORTUNITY: the destination
         // market's price for the merchant's cargo reduces the route
         // score (high price = attractive destination). This connects
@@ -176,16 +201,16 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
         // The merchant must carry a `cargoKind` to look up the price.
         // If unavailable, no opportunity signal.
         let opportunityBonus = 0;
-        if (merchant.cargoKind && route.to) {
+        if (merchant.cargoKind && destinationTownId) {
             // Prefer world.markets (explicit map) but fallback to
             // world.towns.get(route.to).market so the canonical
             // closed-world scenario (town.market, no world.markets)
             // also drives opportunity. Without fallback the bonus is
             // decorative (always 0 in production).
             let destMarket = null;
-            if (world?.markets?.get) destMarket = world.markets.get(route.to);
+            if (world?.markets?.get) destMarket = world.markets.get(destinationTownId);
             if (!destMarket && world?.towns?.get) {
-                const destTown = world.towns.get(route.to);
+                const destTown = world.towns.get(destinationTownId);
                 if (destTown?.market?.getQuote) destMarket = destTown.market;
             }
             if (destMarket) {
@@ -197,8 +222,54 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
                 }
             }
         }
-        const score = distanceCost + dangerPenalty + cargoLossRisk / 100 - familiarityBonus - opportunityBonus;
-        return { route, index, score, belief, cargoLossRisk, distanceCost, dangerPenalty, familiarityBonus, opportunityBonus };
+        // Trade reliability is a separate, destination-scoped reputation
+        // dimension. A merchant only uses it when at least one observer has
+        // an actual observation; unobserved destinations remain neutral and
+        // do not acquire a fabricated preference.
+        const reliabilityObserved = Boolean(
+            destinationTownId
+            && Array.isArray(world?.merchants)
+            && world.merchants.some(observer => hasReputationObservation(
+                observer,
+                REPUTATION_DIMENSIONS.TRADE_RELIABILITY,
+                destinationTownId,
+            ))
+        );
+        const tradeReliability = reliabilityObserved
+            ? computeReputationDimension(
+                destinationTownId,
+                REPUTATION_DIMENSIONS.TRADE_RELIABILITY,
+                world.merchants,
+                {
+                    tick,
+                    halfLifeTicks: Number.isFinite(merchant.tradeReliabilityHalfLifeTicks)
+                        ? merchant.tradeReliabilityHalfLifeTicks : 40,
+                    neutral: 0.5,
+                },
+            )
+            : null;
+        const reliabilityWeight = Number.isFinite(merchant.tradeReliabilityWeight)
+            ? clamp01(merchant.tradeReliabilityWeight) : 0.6;
+        const tradeReliabilityPenalty = tradeReliability === null
+            ? 0
+            : (1 - tradeReliability) * reliabilityWeight;
+        const score = distanceCost + dangerPenalty + cargoLossRisk / 100
+            - familiarityBonus - opportunityBonus + tradeReliabilityPenalty;
+        return {
+            route,
+            index,
+            score,
+            belief,
+            cargoLossRisk,
+            distanceCost,
+            dangerPenalty,
+            familiarityBonus,
+            opportunityBonus,
+            destinationTownId,
+            tradeReliability,
+            tradeReliabilityPenalty,
+            reliabilityObserved,
+        };
     }).sort((a, b) => a.score - b.score || a.index - b.index);
 
     let chosen = ranked[0];
@@ -392,6 +463,8 @@ export function tickMerchant(world, merchantId, {
         rejectedAlternatives: decision.rejected,
         believedDanger: beliefs[decision.chosenRoute]?.perceivedDanger ?? null,
         beliefConfidence: beliefs[decision.chosenRoute]?.confidence ?? null,
+        tradeReliability: decision.ranked.find(r => r.route.id === decision.chosenRoute)?.tradeReliability ?? null,
+        tradeReliabilityPenalty: decision.ranked.find(r => r.route.id === decision.chosenRoute)?.tradeReliabilityPenalty ?? 0,
         chosenScore: decision.chosenScore,
         reason: `risk_tol=${merchant.riskTolerance.toFixed(2)}, perceived_danger=${(beliefs[decision.chosenRoute]?.perceivedDanger ?? 0).toFixed(2)}`,
         parentEventIds: Array.isArray(parentEventIds) ? [...parentEventIds] : [],
@@ -410,6 +483,10 @@ export function tickMerchant(world, merchantId, {
                 familiarityBonus: r.familiarityBonus,
                 opportunityBonus: r.opportunityBonus,
                 cargoLossRisk: r.cargoLossRisk,
+                destinationTownId: r.destinationTownId,
+                tradeReliability: r.tradeReliability,
+                tradeReliabilityPenalty: r.tradeReliabilityPenalty,
+                reliabilityObserved: r.reliabilityObserved,
                 perceivedDanger: r.belief.perceivedDanger,
                 confidence: r.belief.confidence,
             })),
@@ -603,15 +680,60 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
         return { ok: true, events: [], reason: 'NO_RESOURCES', gated: true };
     }
     if (!Array.isArray(world.events)) world.events = [];
-    const eventsThisTick = world.events.filter(
-        e => e.type === 'BANDIT_ATTACK' && (e.tick ?? 0) === tick && e.roadId === patrol.deployedRoute
-    );
+    const eventsThisTick = getWorldEvents(world, {
+        type: 'BANDIT_ATTACK',
+        tick,
+    }).filter(e => e.roadId === patrol.deployedRoute);
     if (eventsThisTick.length === 0) return { ok: true, events: [] };
     const produced = [];
     for (const attack of eventsThisTick) {
+        const attacker = world.bandits?.find(bandit => bandit.id === attack.banditId);
+        const violatorFactionId = attack.factionId ?? attacker?.factionId ?? null;
+        // Treaty observations are observer-scoped. A patrol consumes only
+        // the reputation held by its own faction; unrelated factions' records
+        // must not make this patrol more attentive by accident.
+        const lawfulnessObservers = patrolFaction ? [patrolFaction] : [];
+        const lawfulnessObserved = Boolean(
+            violatorFactionId
+            && patrolFaction
+            && hasReputationObservation(
+                patrolFaction,
+                REPUTATION_DIMENSIONS.LAWFULNESS,
+                violatorFactionId,
+            )
+        );
+        const lawfulness = lawfulnessObserved
+            ? computeReputationDimension(
+                violatorFactionId,
+                REPUTATION_DIMENSIONS.LAWFULNESS,
+                lawfulnessObservers,
+                {
+                    tick,
+                    halfLifeTicks: Number.isFinite(patrol.lawfulnessHalfLifeTicks)
+                        ? patrol.lawfulnessHalfLifeTicks : 40,
+                    neutral: 0.5,
+                },
+            )
+            : null;
+        // Only observed low lawfulness increases attention. Missing history
+        // is neutral: it must not make an unknown actor easier or harder to
+        // detect than the patrol's configured base rate.
+        const lawfulnessAttentionBonus = lawfulness === null
+            ? 0
+            : Math.max(0, 0.5 - lawfulness) * 2 * (patrol.lawfulnessWeight ?? 0.5);
+        const effectiveDetectionRate = clamp01(patrol.detectionRate + lawfulnessAttentionBonus);
+        const enforcementWhy = {
+            violatorFactionId,
+            lawfulnessObserverId: patrolFaction?.id ?? null,
+            lawfulness,
+            lawfulnessObserved,
+            lawfulnessAttentionBonus,
+            baseDetectionRate: patrol.detectionRate,
+            effectiveDetectionRate,
+        };
         // Detection roll.
         const detectRoll = rng();
-        if (detectRoll < patrol.detectionRate) {
+        if (detectRoll < effectiveDetectionRate) {
             patrol.detections += 1;
             // Interception roll.
             const interceptRoll = rng();
@@ -652,6 +774,7 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
                     merchantId: attack.merchantId,
                     roadId: attack.roadId,
                     recoveredCargo: attack.lost || 0,
+                    enforcementWhy,
                     // RESP-EVENT-ID-AUTHORITY-001: allocator-owned id;
                     // the patrol reaction parents to the attack event when
                     // its allocator id is resolvable at patrol time.
@@ -669,6 +792,7 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
                     patrolId,
                     attackOpportunityId: attack.attackOpportunityId,
                     roadId: attack.roadId,
+                    enforcementWhy,
                     ...(attack.eventId ? {} : { rootReason: 'PATROL_SWEEP' }),
                 };
                 const emittedMiss = appendWorldEvent(
@@ -684,6 +808,7 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
                 patrolId,
                 attackOpportunityId: attack.attackOpportunityId,
                 roadId: attack.roadId,
+                enforcementWhy,
                 ...(attack.eventId ? {} : { rootReason: 'PATROL_SWEEP' }),
             };
             const emittedMiss = appendWorldEvent(

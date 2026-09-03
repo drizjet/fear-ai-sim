@@ -3,7 +3,7 @@ import { findRoutePath, selectRoute } from './routing.js';
 import { FactionDecisionModel, ESCALATION_LEVELS } from './factioncore.js';
 import { formConvoy, resolveConvoyAmbush } from './convoy.js';
 import { Market } from './economy.js';
-import { relocateBandit, planRetaliation, executeRetaliation, recordHarmByActor, getMemoryOfLoss } from './escalation.js';
+import { relocateBandit, planRetaliation, executeRetaliation, recordHarmByActor, getMemoryOfLoss, computeReputation } from './escalation.js';
 import { JusticeSystem } from './justice.js';
 import { InteractionEngine } from './interactions.js';
 import { FactionRelationshipVector, evaluateStance, chooseStance, StanceLadder } from './factionrelationship.js';
@@ -13,6 +13,7 @@ import { createRoamingGroup, chooseRoamingDestination, generateCandidates, start
 import { tickMerchant as tickCanonicalMerchant, tickBandit as tickCanonicalBandit, tickPatrol as tickCanonicalPatrol } from './canonical-trade-system.js';
 import { tickSeason, getSeasonModifier, getSpoilageModifier } from './ecology.js';
 import { tickDemography } from './demography.js';
+import { recordTradeReliability } from './reputation.js';
 
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 const clamp01 = value => clamp(value, 0, 1);
@@ -151,6 +152,184 @@ function normalizeParentEventIds(parentEventIds = []) {
     return [...new Set(parentEventIds.filter(id => typeof id === 'string' && id.length > 0))];
 }
 
+// The event ledger is append-only during a reducer run, but legacy callers and
+// older subsystems still write directly to `world.events`. Keep a non-enumerable
+// index that is incrementally synchronized from the last observed array offset.
+// It is deliberately not serialized: the event array remains the authoritative
+// persistence format, and a loaded/forked world rebuilds this cache once.
+const EVENT_LEDGER_STATE = Symbol('closedWorldEventLedgerState');
+
+function eventTick(event) {
+    return event?.tick ?? 0;
+}
+
+function createEventLedgerState(world) {
+    const state = {
+        events: world.events,
+        cursor: 0,
+        byType: new Map(),
+        byTypeTick: new Map(),
+        positions: new WeakMap(),
+    };
+    Object.defineProperty(world, EVENT_LEDGER_STATE, {
+        value: state,
+        writable: true,
+        configurable: true,
+        enumerable: false,
+    });
+    return state;
+}
+
+function getEventLedgerState(world) {
+    if (!Array.isArray(world.events)) world.events = [];
+    const existing = world[EVENT_LEDGER_STATE];
+    if (!existing
+        || existing.events !== world.events
+        || !Number.isSafeInteger(existing.cursor)
+        || existing.cursor < 0
+        || existing.cursor > world.events.length) {
+        return createEventLedgerState(world);
+    }
+    return existing;
+}
+
+function indexWorldEvent(state, event, position) {
+    if (!event || typeof event !== 'object') return;
+    const type = event.type;
+    let byType = state.byType.get(type);
+    if (!byType) {
+        byType = [];
+        state.byType.set(type, byType);
+    }
+    byType.push(event);
+
+    let byTick = state.byTypeTick.get(type);
+    if (!byTick) {
+        byTick = new Map();
+        state.byTypeTick.set(type, byTick);
+    }
+    const tick = eventTick(event);
+    let atTick = byTick.get(tick);
+    if (!atTick) {
+        atTick = [];
+        byTick.set(tick, atTick);
+    }
+    atTick.push(event);
+    state.positions.set(event, position);
+}
+
+function synchronizeEventLedger(world) {
+    const state = getEventLedgerState(world);
+    for (let index = state.cursor; index < world.events.length; index += 1) {
+        const event = world.events[index];
+        if (event && typeof event === 'object') {
+            ensureWorldEventIdentity(world, event);
+            indexWorldEvent(state, event, index);
+        }
+        state.cursor = index + 1;
+    }
+    return state;
+}
+
+function sortLedgerOrder(events, state) {
+    return events.sort((a, b) =>
+        (state.positions.get(a) ?? Number.MAX_SAFE_INTEGER)
+        - (state.positions.get(b) ?? Number.MAX_SAFE_INTEGER)
+    );
+}
+
+function indexedEventsForTypeAndRange(state, type, minTick, maxTick) {
+    const byTick = state.byTypeTick.get(type);
+    if (!byTick) return [];
+    const lower = Number.isFinite(minTick) ? Math.ceil(minTick) : -Infinity;
+    const upper = Number.isFinite(maxTick) ? Math.floor(maxTick) : Infinity;
+    // Reducer windows are short integer tick ranges. Iterate those keys
+    // directly instead of scanning the complete history for every town.
+    if (Number.isFinite(lower) && Number.isFinite(upper)
+        && lower <= upper && upper - lower <= 10000) {
+        const result = [];
+        for (let tick = lower; tick <= upper; tick += 1) {
+            const events = byTick.get(tick);
+            if (events) result.push(...events);
+        }
+        return result;
+    }
+    return (state.byType.get(type) ?? []).filter(event => {
+        const tick = eventTick(event);
+        return tick >= lower && tick <= upper;
+    });
+}
+
+/**
+ * Read the event ledger through its incremental index. This preserves the
+ * ordering of the authoritative `world.events` array while making the common
+ * type/tick and recent-window queries proportional to the matching events.
+ */
+export function getWorldEvents(world, {
+    type = null,
+    types = null,
+    tick,
+    minTick,
+    maxTick,
+} = {}) {
+    const state = synchronizeEventLedger(world);
+    const requestedTypes = Array.isArray(types)
+        ? [...new Set(types)]
+        : type !== null && type !== undefined ? [type] : null;
+    const hasExactTick = Number.isFinite(tick);
+    const hasRange = Number.isFinite(minTick) || Number.isFinite(maxTick);
+    let candidates;
+
+    if (!requestedTypes) {
+        candidates = hasExactTick
+            ? world.events.filter(event => eventTick(event) === tick)
+            : world.events.slice();
+    } else if (hasExactTick) {
+        candidates = [];
+        for (const requestedType of requestedTypes) {
+            const atTick = state.byTypeTick.get(requestedType)?.get(tick);
+            if (atTick) candidates.push(...atTick);
+        }
+    } else if (hasRange) {
+        candidates = [];
+        for (const requestedType of requestedTypes) {
+            candidates.push(...indexedEventsForTypeAndRange(state, requestedType, minTick, maxTick));
+        }
+    } else {
+        candidates = [];
+        for (const requestedType of requestedTypes) {
+            candidates.push(...(state.byType.get(requestedType) ?? []));
+        }
+    }
+
+    if (requestedTypes && requestedTypes.length > 1) sortLedgerOrder(candidates, state);
+    if (!hasExactTick && hasRange) {
+        const lower = Number.isFinite(minTick) ? minTick : -Infinity;
+        const upper = Number.isFinite(maxTick) ? maxTick : Infinity;
+        candidates = candidates.filter(event => {
+            const candidateTick = eventTick(event);
+            return candidateTick >= lower && candidateTick <= upper;
+        });
+        // Iterating the tick buckets is fast but can reorder events when a
+        // caller appends an older-tick event later. The world.events array is
+        // authoritative, so restore ledger order for every range query.
+        sortLedgerOrder(candidates, state);
+    }
+    return candidates;
+}
+
+/** Find the newest indexed event of one type matching a predicate. */
+export function findLatestWorldEvent(world, predicate = () => true, type = null) {
+    const state = synchronizeEventLedger(world);
+    const events = type === null || type === undefined
+        ? world.events
+        : (state.byType.get(type) ?? []);
+    for (let index = events.length - 1; index >= 0; index -= 1) {
+        if (predicate(events[index])) return events[index];
+    }
+    return null;
+}
+
 function ensureWorldEventIdentity(world, event, parentEventIds = event?.parentEventIds) {
     if (!event || typeof event !== 'object') return event;
     if (typeof event.eventId !== 'string' || event.eventId.length === 0) {
@@ -162,14 +341,17 @@ function ensureWorldEventIdentity(world, event, parentEventIds = event?.parentEv
 
 export function appendWorldEvent(world, event, parentEventIds = event?.parentEventIds) {
     if (!Array.isArray(world.events)) world.events = [];
+    const state = synchronizeEventLedger(world);
     const emitted = ensureWorldEventIdentity(world, { ...event }, parentEventIds);
+    const position = world.events.length;
     world.events.push(emitted);
+    indexWorldEvent(state, emitted, position);
+    state.cursor = world.events.length;
     return emitted;
 }
 
 function finalizeWorldEventLedger(world) {
-    if (!Array.isArray(world.events)) world.events = [];
-    for (const event of world.events) ensureWorldEventIdentity(world, event);
+    synchronizeEventLedger(world);
     return world.events;
 }
 
@@ -372,6 +554,25 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
             routeRisk: 0,
             confidence: 1,
         });
+        // The merchant now owns a durable, dimension-specific observation of
+        // this shipment outcome. Reliability is based on usable destination
+        // storage, so a full delivery is successful while capacity overflow
+        // is a partial/failed observation. This intentionally does not touch
+        // `memoryByActor`: trade reliability and violence reputation have
+        // independent owners and can evolve without cross-contamination.
+        const merchant = (world.merchants ?? []).find(item => item.id === trip.merchantId);
+        const tradeReliability = merchant
+            ? recordTradeReliability(merchant, trip.destinationTownId, {
+                shipped: trip.cargo.amount,
+                delivered: delivery.delivered,
+                stored: delivery.stored,
+                overflow: delivery.overflow,
+                lost: delivery.lost,
+                tick,
+                observerTrust: merchant.reputationTrust ?? 1,
+                tripId: trip.tripId,
+            })
+            : null;
         consequence.status = 'APPLIED';
         consequence.appliedTick = tick;
         trip.status = 'DELIVERED';
@@ -398,6 +599,15 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
             destinationTownId: trip.destinationTownId,
             cargo: trip.cargo,
             delivery,
+            reputation: tradeReliability
+                ? {
+                    dimension: 'tradeReliability',
+                    observerId: trip.merchantId,
+                    destinationTownId: trip.destinationTownId,
+                    score: tradeReliability.score,
+                    outcome: tradeReliability.lastOutcome,
+                }
+                : null,
         }, [trip.arrivalEventId, ...consequence.parentEventIds]);
         trip.deliveryEventId = deliveredEvent.eventId;
         trip.lastEventId = deliveredEvent.eventId;
@@ -851,7 +1061,7 @@ export function runClosedWorldScenario({ perceivedDanger = 0.8, world: preBuilt 
  * and defensive defaults for `world.events` if the caller passed an object
  * that had none.
  */
-export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memoryDecayPerTick = 0.05, fearDecayPerTick = 0.10, griefDecayPerTick = 0.03, raidCooldown = 5, relationshipGate = true, encounterRng = null, pinBanditRoadId = null } = {}) {
+export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memoryDecayPerTick = 0.05, fearDecayPerTick = 0.10, griefDecayPerTick = 0.03, raidCooldown = 5, relationshipGate = true, encounterRng = null, pinBanditRoadId = null, attackRoadId = null } = {}) {
     if (!world || typeof world !== 'object') {
         throw new TypeError('tickClosedWorld requires a world object');
     }
@@ -896,7 +1106,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             const parentIds = world.drought.startEventId ? [world.drought.startEventId] : [];
             // Try to find DROUGHT_STARTED eventId if not stored
             if (parentIds.length === 0) {
-                const startEv = [...world.events].reverse().find(e => e.type === 'DROUGHT_STARTED' && e.townId === world.drought.townId);
+                const startEv = findLatestWorldEvent(
+                    world,
+                    event => event.townId === world.drought.townId,
+                    'DROUGHT_STARTED',
+                );
                 if (startEv?.eventId) parentIds.push(startEv.eventId);
             }
             appendWorldEvent(world, {
@@ -928,9 +1142,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     //    separately. `supplyShortage` is now derived from the town's
     //    market state (mean shortage across consumed goods) so the
     //    economy you built actually feeds the faction model.
-    const allAttacksThisTick = world.events.filter(
-        event => event.type === 'BANDIT_ATTACK' && (event.tick ?? 0) === tick
-    );
+    const allAttacksThisTick = getWorldEvents(world, {
+        type: 'BANDIT_ATTACK',
+        tick,
+    });
     // OBS-LOCALITY-001 (W1-PARTIAL-OBSERVABILITY): a faction feels
     // only the attacks its home town can legally know about —
     // attacks on roads incident to its town. In the default
@@ -1244,15 +1459,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                         // observer's perspective (the victim).
                         const beforeTrust = pair.getTrustFrom(observerFaction.id);
                         pair.recordHarm({ severity: isScoped ? 0.15 : 0.10, tick, fromFactionId: intruder.factionId });
-                        appendWorldEvent(world, {
-                            type: 'TREATY_VIOLATED',
-                            treatyId: passageTreaty.id,
-                            violator: intruder.factionId,
-                            observerId: observerFaction.id,
-                            reason: isScoped ? 'TERRITORY_INTRUSION_ON_PASSAGE_ROAD' : 'TERRITORY_INTRUSION_UNDER_PASSAGE_TREATY',
+                        // Use the shared compliance path so a live territory
+                        // breach updates treaty history and lawfulness exactly
+                        // like an encounter breach. The relationship debit
+                        // remains owned by this contextual territory path.
+                        checkTreatyCompliance({
+                            world,
+                            action: {
+                                type: isScoped ? 'TERRITORY_INTRUSION_ON_PASSAGE_ROAD' : 'TERRITORY_INTRUSION_UNDER_PASSAGE_TREATY',
+                                roadId: intruderRoadForTreaty,
+                                violator: intruder.factionId,
+                            },
                             tick,
-                            rootReason: 'TREATY_VIOLATION',
-                        }, []);
+                        });
                         intrusionEvent.context.violationCost = true;
                         intrusionEvent.context.trustDebit = Math.max(0, beforeTrust - pair.getTrustFrom(observerFaction.id));
                     }
@@ -1331,8 +1550,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // and BELIEF_UPDATE children. A one-tick lookback is required: live
         // encounters emit consequences after this pass, so their witnesses
         // can legally consume them on the following tick.
-        for (const event of [...world.events]) {
-            if (event.type !== 'BANDIT_RELOCATION' && event.type !== 'BANDIT_ATTACK') continue;
+        for (const event of getWorldEvents(world, {
+            types: ['BANDIT_RELOCATION', 'BANDIT_ATTACK'],
+            minTick: tick - 1,
+            maxTick: tick,
+        })) {
             const sourceTick = event.tick ?? 0;
             if (sourceTick > tick || sourceTick < tick - 1) continue;
             ensureWorldEventIdentity(world, event);
@@ -1483,16 +1705,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // rootReason when there is no belief event at all (e.g. tick 1
         // with an empty belief store).
         const beliefParentIds = (() => {
-            const sameTick = world.events
-                .filter(event => event.type === 'BELIEF_UPDATE'
-                    && event.tick === tick
-                    && event.merchantId === merchant.id)
+            const sameTick = getWorldEvents(world, {
+                type: 'BELIEF_UPDATE',
+                tick,
+            })
+                .filter(event => event.merchantId === merchant.id)
                 .map(event => event.eventId);
             if (sameTick.length > 0) return sameTick;
-            const earlier = world.events
-                .filter(event => event.type === 'BELIEF_UPDATE'
-                    && event.merchantId === merchant.id
-                    && Number.isFinite(event.tick) && event.tick <= tick);
+            const earlier = getWorldEvents(world, {
+                type: 'BELIEF_UPDATE',
+                maxTick: tick,
+            })
+                .filter(event => event.merchantId === merchant.id
+                    && Number.isFinite(event.tick));
             earlier.sort((a, b) => (b.tick ?? 0) - (a.tick ?? 0));
             return earlier.length > 0 ? [earlier[0].eventId] : [];
         })();
@@ -2037,9 +2262,13 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // meaningful (an attack on a north road should not
     // drive south migration unless the road is incident to
     // south). Global fallback is avoided.
-    const recentAttacksByTown = (townId) => world.events.filter(
-        event => event.type === 'BANDIT_ATTACK'
-            && (event.tick ?? 0) > tick - RECENT_ATTACK_WINDOW
+    const recentAttackEvents = getWorldEvents(world, {
+        type: 'BANDIT_ATTACK',
+        minTick: tick - RECENT_ATTACK_WINDOW,
+        maxTick: tick,
+    });
+    const recentAttacksByTown = (townId) => recentAttackEvents.filter(
+        event => (event.tick ?? 0) > tick - RECENT_ATTACK_WINDOW
             && (event.tick ?? 0) <= tick
             && (event.townId === townId || (event.roadId && world.routes.find(r => r.id === event.roadId && (r.from === townId || r.to === townId))))
     ).length;
@@ -2134,9 +2363,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // reported-crime window. The ledger must
             // record the actual mechanism that drove the
             // report, not just a tick stamp.
-            const upstreamAttackIds = world.events
-                .filter(ev => ev.type === 'BANDIT_ATTACK'
-                    && (ev.townId === townId || (world.towns.get(townId) && ev.roadId && world.routes.find(r => r.id === ev.roadId && (r.from === townId || r.to === townId))))
+            const upstreamAttackIds = recentAttackEvents
+                .filter(ev => (ev.townId === townId || (world.towns.get(townId) && ev.roadId && world.routes.find(r => r.id === ev.roadId && (r.from === townId || r.to === townId))))
                     && (ev.tick ?? 0) > tick - RECENT_ATTACK_WINDOW
                     && (ev.tick ?? 0) <= tick)
                 .map(ev => ev.eventId)
@@ -2172,9 +2400,9 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             ? [justiceResolvedEvent.eventId]
             : [];
         if (evaluationParentIds.length === 0) {
-            evaluationParentIds = world.events
-                .filter(ev => ev.type === 'BANDIT_ATTACK'
-                    && Number.isFinite(ev.tick) && ev.tick <= tick
+            evaluationParentIds = recentAttackEvents
+                .filter(ev => Number.isFinite(ev.tick)
+                    && ev.tick <= tick
                     && ev.tick > tick - RECENT_ATTACK_WINDOW
                     && typeof ev.eventId === 'string')
                 .slice(-3)
@@ -2446,13 +2674,28 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             );
         });
         if (reachable.length === 0) continue;
-        // Sort by per-target memory (descending). The bandit
-        // with the strongest specific memory is first.
-        const candidate = [...reachable].sort((a, b) => {
-            const memA = getMemoryOfLoss(faction, a.id) ?? 0;
-            const memB = getMemoryOfLoss(faction, b.id) ?? 0;
-            return memB - memA;
-        })[0];
+        // Direct memory is the primary target signal: the faction should
+        // retaliate against the actor it personally remembers. Network
+        // reputation is the secondary signal for equal-memory candidates,
+        // allowing an actor's violence against other observers to affect
+        // target selection without erasing the faction's own experience.
+        const rankedTargets = reachable.map(target => ({
+            target,
+            directMemory: clamp01(getMemoryOfLoss(faction, target.id)),
+            reputation: computeReputation(target.id, world.factions),
+        })).sort((a, b) => {
+            const directMemoryDelta = b.directMemory - a.directMemory;
+            if (directMemoryDelta !== 0) return directMemoryDelta;
+            const reputationDelta = b.reputation - a.reputation;
+            if (reputationDelta !== 0) return reputationDelta;
+            // Stable identity tie-break keeps the action deterministic even
+            // when two actors have identical observed history.
+            return String(a.target.id).localeCompare(String(b.target.id));
+        });
+        const selectedTarget = rankedTargets[0];
+        const candidate = selectedTarget.target;
+        const targetDirectMemory = selectedTarget.directMemory;
+        const targetReputation = selectedTarget.reputation;
         // Constitution §15 / §538: the relationship consumer is
         // directional and target-specific. A faction's desire to raid is an
         // internal capability signal; authorization comes from *that same
@@ -2582,10 +2825,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         }
 
         const latestStanceEvent = targetPair
-            ? [...world.events].reverse().find(event =>
-                event.type === 'STANCE_TRANSITION'
-                && event.pairId === targetPair.id
-                && event.evaluatorId === faction.id
+            ? findLatestWorldEvent(
+                world,
+                event => event.pairId === targetPair.id
+                    && event.evaluatorId === faction.id,
+                'STANCE_TRANSITION',
             )
             : null;
         const stanceParentIds = latestStanceEvent
@@ -2599,12 +2843,23 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             targetId: candidate.id,
             targetFactionId,
             pairId: targetPair?.id ?? null,
+            targetDirectMemory,
+            targetReputation,
+            targetSelection: rankedTargets.map(({ target, directMemory, reputation }) => ({
+                targetId: target.id,
+                directMemory,
+                reputation,
+            })),
             stance: Number.isFinite(targetStance) ? targetStance : null,
             threshold,
             relationshipGateEnabled: Boolean(relationshipGate),
             allowed: gateAllowed,
             reason: gateReason,
-            why,
+            why: [
+                ...why,
+                `Target direct memory=${targetDirectMemory.toFixed(3)}`,
+                `Target network reputation=${targetReputation.toFixed(3)}`,
+            ],
             whyNot,
             structuredDecision: structuredDecision ? {
                 from: structuredDecision.from,
@@ -2698,11 +2953,48 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         commitment.exposureEventId = exposure.eventId;
         routeExposures.push(exposure);
     }
+    // An explicit attack route is a runtime input, not hidden truth: it requests
+    // a local collision on that road for this tick. Keep the ordinary merchant
+    // decision in the ledger, then align the requested actors immediately before
+    // encounter eligibility so the directive cannot silently create an impossible
+    // attack. Invalid routes are ignored and the ordinary stochastic encounter
+    // path remains authoritative.
+    const requestedAttackRoute = typeof attackRoadId === 'string'
+        && world.routes?.some(route => route.id === attackRoadId)
+        ? attackRoadId
+        : null;
+    // Stage an explicit attack only for encounter resolution. The ordinary
+    // roaming and merchant decisions have already produced the persistent
+    // routes for this tick; keeping those routes intact lets the canonical
+    // trade pass still observe and act on the real decisions after the
+    // requested collision has been resolved.
+    let restoreAttackOverrides = null;
+    if (requestedAttackRoute) {
+        const originalBanditRoads = (world.bandits ?? []).map(bandit => bandit.roadId);
+        const originalMerchantRoutes = (world.merchants ?? []).map(merchant => merchant.selectedRoute);
+        for (const bandit of world.bandits ?? []) bandit.roadId = requestedAttackRoute;
+        const requestedRoute = world.routes.find(route => route.id === requestedAttackRoute);
+        const attackMerchant = world.merchants.find(merchant =>
+            (merchant.cargo ?? 0) > 0
+            && requestedRoute
+            && (requestedRoute.from === merchant.location || requestedRoute.to === merchant.location)
+        );
+        if (attackMerchant) attackMerchant.selectedRoute = requestedAttackRoute;
+        restoreAttackOverrides = () => {
+            (world.bandits ?? []).forEach((bandit, index) => {
+                if (index < originalBanditRoads.length) bandit.roadId = originalBanditRoads[index];
+            });
+            (world.merchants ?? []).forEach((merchant, index) => {
+                if (index < originalMerchantRoutes.length) merchant.selectedRoute = originalMerchantRoutes[index];
+            });
+        };
+    }
     const eligibleEncounters = evaluateEncounterEligibility(world, { tick });
     if (eligibleEncounters.length > 0) {
         const candidateEvent = appendWorldEvent(world, {
             type: 'CANDIDATE_ENCOUNTER',
             tick,
+            requestedAttackRoadId: requestedAttackRoute,
             candidates: eligibleEncounters.map(template => ({
                 id: template.id,
                 description: template.description,
@@ -2735,7 +3027,15 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // priority eligible encounter is statistically the
         // most likely to be picked first.
         const eligibleByPriority = eligibleEncounters.slice().sort((a, b) => (b.priority || 0) - (a.priority || 0));
-        const selected = selectEncounterCandidates(eligibleByPriority, { rng: activeRng, maxCandidates: 1 });
+        // A requested attack route is an explicit action input, so select the
+        // plausible bandit-ambush deterministically rather than allowing a
+        // lower-priority wildlife/checkpoint template to consume the request.
+        const requestedAmbush = requestedAttackRoute
+            ? eligibleByPriority.find(template => template.id === 'bandit-ambush')
+            : null;
+        const selected = requestedAmbush
+            ? [requestedAmbush]
+            : selectEncounterCandidates(eligibleByPriority, { rng: activeRng, maxCandidates: 1 });
         for (const template of selected) {
             const firstCreatedIndex = world.events.length;
             const result = instantiateEncounter(template, world, { tick, rng: activeRng });
@@ -2810,6 +3110,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             }
         }
     }
+    if (restoreAttackOverrides) restoreAttackOverrides();
 
     // 7.5. EVID-2026-08-29-CANONICAL-TRADE-INTEGRATION (Guardian V3
     // §3 Movement B planted-defect fix): the canonical trade-system
@@ -3581,6 +3882,12 @@ function reattachPrototypes(world) {
                     disrupted: toEntries(town.market.disrupted),
                     capacity: toEntries(town.market.capacity),
                     spoilageRate: toEntries(town.market.spoilageRate),
+                    // Preserve an uninitialized EMA as absent. Creating an
+                    // empty Map here changes stable save output after load,
+                    // even though no price-memory observation ever existed.
+                    _priceMemory: town.market._priceMemory == null
+                        ? undefined
+                        : toEntries(town.market._priceMemory),
                 };
                 town.market = Market.deserialize(serialized);
             }
@@ -3670,7 +3977,13 @@ function reattachPrototypes(world) {
     // a plain object — re-instantiate it from the
     // interactions module so the `execute` method is
     // available.
-    if (world.interactionEngine && typeof world.interactionEngine === 'object') {
+    // Preserve optional derived instances as absent when the checkpoint did
+    // not contain them. Eagerly adding these fields makes save(load(save(w)))
+    // differ for a fresh world even though no behavior has run yet. A normal
+    // reducer tick still initializes both lazily at the justice step below.
+    if (Object.prototype.hasOwnProperty.call(world, 'interactionEngine')
+        && world.interactionEngine
+        && typeof world.interactionEngine === 'object') {
         Object.setPrototypeOf(world.interactionEngine, InteractionEngine.prototype);
         if (!(world.interactionEngine.lastAction instanceof Map)) {
             world.interactionEngine.lastAction = new Map(Object.entries(world.interactionEngine.lastAction ?? {}));
@@ -3678,16 +3991,17 @@ function reattachPrototypes(world) {
         if (!Number.isFinite(world.interactionEngine.cooldown)) {
             world.interactionEngine.cooldown = 1;
         }
-    } else {
-        world.interactionEngine = new InteractionEngine({ cooldown: 1 });
     }
     // JusticeSystem: similar to InteractionEngine, the
     // JusticeSystem class has a `resolve` method that must
     // be callable after a JSON round-trip. The class
     // instance is plain-object-shaped after parse, so we
-    // re-instantiate it.
-    if (!world.justiceSystem
-        || typeof world.justiceSystem.resolve !== 'function') {
+    // re-instantiate it only when the serialized checkpoint
+    // included the instance. Fresh worlds acquire it lazily
+    // in tickClosedWorld, preserving resume byte identity.
+    if (Object.prototype.hasOwnProperty.call(world, 'justiceSystem')
+        && (!world.justiceSystem
+            || typeof world.justiceSystem.resolve !== 'function')) {
         world.justiceSystem = new JusticeSystem();
     }
 }

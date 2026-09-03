@@ -281,7 +281,7 @@ export class Simulation {
         return this.closedWorld;
     }
 
-    runClosedWorldStep({ perceivedDanger = 0.8, attackRoadId = 'road-a' } = {}) {
+    runClosedWorldStep({ perceivedDanger = 0.8, attackRoadId = null } = {}) {
         if (!this.closedWorld) this.configureClosedWorld();
         // EVID-2026-08-29-RUNTIME-AUTHORITATIVE-CANONICAL-PATH
         // (Guardian §1.2): the production runtime must invoke
@@ -300,9 +300,10 @@ export class Simulation {
         // produce, 4 justice, 4.5 territory, 5 stance, 6
         // encounter, 6.5 bandit relocation, 7 faction
         // action, 7.5 canonical trade system). The
-        // `perceivedDanger` and `attackRoadId` options are
-        // preserved for backward compatibility with tests
-        // that pass them.
+        // `perceivedDanger` and the optional `attackRoadId` input are
+        // preserved for backward compatibility with callers that pass
+        // them. A null attackRoadId leaves encounter selection stochastic;
+        // an explicit route requests a local attack on that road.
         this.closedWorldTick += 1;
         const tick = this.closedWorldTick;
         // Form a convoy the first time the scenario runs.
@@ -311,7 +312,7 @@ export class Simulation {
         }
         // Invoke the canonical reducer. This is the single
         // source of truth for the closed-world tick.
-        tickClosedWorld(this.closedWorld, { tick, perceivedDanger });
+        tickClosedWorld(this.closedWorld, { tick, perceivedDanger, attackRoadId });
         return { ok: true, tick, events: this.closedWorld.events.slice() };
     }
 

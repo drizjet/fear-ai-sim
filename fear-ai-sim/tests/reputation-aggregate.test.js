@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { recordHarmByActor, getMemoryOfLoss } from '../escalation.js';
+import { recordHarmByActor, getMemoryOfLoss, computeReputation } from '../escalation.js';
 import { FactionDecisionModel } from '../factioncore.js';
 
 // World-Completion Directive §30 "REPUTATION. Separate
@@ -16,15 +16,6 @@ import { FactionDecisionModel } from '../factioncore.js';
 // that attacked 3 towns has reputation 0.8 in each; the
 // mean across the 3 observers is 0.8. A bandit that
 // attacked 0 towns has reputation 0.
-
-function computeReputation(targetId, observers) {
-    if (!Array.isArray(observers) || observers.length === 0) return 0;
-    const values = observers
-        .map(obs => getMemoryOfLoss(obs, targetId))
-        .filter(v => Number.isFinite(v));
-    if (values.length === 0) return 0;
-    return values.reduce((a, b) => a + b, 0) / values.length;
-}
 
 describe('reputation aggregation (directive §30)', () => {
     it('a target with no observers has reputation 0', () => {

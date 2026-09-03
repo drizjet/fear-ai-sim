@@ -28,6 +28,8 @@
 // All operations are pure (no Math.random()) so the §121
 // determinism contract holds.
 
+import { recordLawfulnessViolation } from './reputation.js';
+
 /**
  * Create a treaty record. Pure function.
  * @param {object} options
@@ -55,6 +57,37 @@ export function createTreaty({ id, participants = [], terms = {}, startTick = 0 
         status: 'ACTIVE',
         termination: null,
     };
+}
+
+/**
+ * Record the institutional observation of a treaty breach. Every participating
+ * faction other than the violator receives an independent lawfulness record;
+ * this keeps the signal observer-scoped and separate from relationship harm.
+ */
+export function observeTreatyViolation({ world, treaty, violator, reason, tick = 0 } = {}) {
+    if (!world || !treaty || !violator) return [];
+    const observations = [];
+    for (const observerId of treaty.participants ?? []) {
+        if (observerId === violator) continue;
+        const observer = world.factions?.find(faction => faction.id === observerId);
+        if (!observer) continue;
+        const record = recordLawfulnessViolation(observer, violator, {
+            tick,
+            weight: observer.reputationTrust ?? 1,
+            treatyId: treaty.id,
+            reason,
+        });
+        if (record) {
+            observations.push({
+                observerId,
+                violatorId: violator,
+                dimension: 'lawfulness',
+                score: record.score,
+                outcome: record.lastOutcome,
+            });
+        }
+    }
+    return observations;
 }
 
 /**
@@ -125,7 +158,15 @@ export function violateTreaty({ treaty, violator, reason, world, tick = 0 } = {}
         return { ...treaty };
     }
     const violation = { violator, reason: reason ?? 'unspecified', tick };
+    if (!Array.isArray(treaty.violations)) treaty.violations = [];
     treaty.violations.push(violation);
+    const reputation = observeTreatyViolation({
+        world,
+        treaty,
+        violator,
+        reason: violation.reason,
+        tick,
+    });
     if (world && Array.isArray(world.events)) {
         world.events.push({
             type: 'TREATY_VIOLATED',
@@ -133,6 +174,7 @@ export function violateTreaty({ treaty, violator, reason, world, tick = 0 } = {}
             violator,
             reason: violation.reason,
             tick,
+            ...(reputation.length > 0 ? { reputation } : {}),
         });
     }
     return treaty;
@@ -246,10 +288,12 @@ export function requestNonAggression({ actor, target, world, tick = 0 } = {}) {
  * The MVP checks passage treaties: an action with a `roadId`
  * that matches an active passage treaty's `terms.scope` and
  * a `violator` that is a treaty participant is a violation.
- * Future slices can add checks for non-aggression treaties
- * (action.type === 'RAID' and target is a participant) and
- * trade treaties (action.type === 'embargo' and target is a
- * participant).
+ * Legacy passage records with `kind: 'PASSAGE'` and
+ * `terms.passage === true` are accepted as well. A scope-free
+ * passage treaty covers every road. Future slices can add
+ * checks for non-aggression treaties (action.type === 'RAID'
+ * and target is a participant) and trade treaties
+ * (action.type === 'embargo' and target is a participant).
  *
  * @param {object} options
  *   - world: the closed-world state (mutated in place)
@@ -265,7 +309,13 @@ export function checkTreatyCompliance({ world, action, tick = 0 } = {}) {
         if (treaty.status !== 'ACTIVE') continue;
         // Passage treaty: a road action by a treaty
         // participant on the protected scope is a violation.
-        if (treaty.terms.kind === 'passage' && action.roadId === treaty.terms.scope && action.violator) {
+        const treatyKind = treaty.terms?.kind ?? treaty.kind;
+        const isPassage = treatyKind === 'passage'
+            || treatyKind === 'PASSAGE'
+            || treaty.terms?.passage === true;
+        const hasScope = typeof treaty.terms?.scope === 'string' && treaty.terms.scope.length > 0;
+        const scopeMatches = !hasScope || action.roadId === treaty.terms.scope;
+        if (isPassage && scopeMatches && action.violator) {
             if (treaty.participants.includes(action.violator)) {
                 const updated = violateTreaty({
                     treaty,

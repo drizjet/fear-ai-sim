@@ -2,6 +2,28 @@ import { describe, it, expect } from '@jest/globals';
 import { createClosedWorldScenario, tickClosedWorld, resolveBanditAttack } from '../closed-world.js';
 import { getMemoryOfLoss, recordHarmByActor } from '../escalation.js';
 
+function makeReputationWorld() {
+    const world = createClosedWorldScenario();
+    const north = world.factions.find(faction => faction.id === 'north-faction');
+    north.grievance = 1;
+    north.militaryConfidence = 1;
+    north.riskTolerance = 1;
+    north.resources = 5;
+    north.maxResources = 5;
+    north.informationConfidence = 1;
+    // Keep the south faction as a network observer without allowing it to
+    // produce a competing invasion in this focused target-selection test.
+    const south = world.factions.find(faction => faction.id === 'south-faction');
+    south.resources = 0;
+    south.maxResources = 0;
+    south.lastDecision = 'HOLD';
+    world.bandits = [
+        { id: 'bandit-A', roadId: 'road-a', lootExpectation: 0.7, _lastRelocationTick: 0, relocationCooldownTicks: 100 },
+        { id: 'bandit-B', roadId: 'road-c', lootExpectation: 0.7, _lastRelocationTick: 0, relocationCooldownTicks: 100 },
+    ];
+    return { world, north, south };
+}
+
 describe('targeted retaliation: faction prefers the bandit it remembers', () => {
     it('a faction with a higher memory of bandit-B (the second bandit in the array) still raids bandit-B', () => {
         // The audit: "A faction harmed by Bandit A should not
@@ -38,6 +60,53 @@ describe('targeted retaliation: faction prefers the bandit it remembers', () => 
         // even though bandit-A is first in the array.
         const firstTarget = invasionEvents[0].targetId;
         expect(firstTarget).toBe('bandit-B');
+    });
+
+    it('network reputation breaks an equal direct-memory tie in the live invasion selector', () => {
+        const { world, north, south } = makeReputationWorld();
+        recordHarmByActor(south, 'bandit-B', { severity: 0.9, tick: 0, known: true });
+
+        tickClosedWorld(world, { tick: 1, perceivedDanger: 0 });
+
+        const invasion = world.events.find(event =>
+            event.type === 'INVASION' && event.factionId === north.id
+        );
+        const gate = world.events.find(event =>
+            event.type === 'FACTION_ACTION_GATE'
+            && event.factionId === north.id
+        );
+        expect(invasion?.targetId).toBe('bandit-B');
+        expect(gate).toMatchObject({
+            targetId: 'bandit-B',
+            targetDirectMemory: 0,
+            targetReputation: expect.closeTo(0.45, 5),
+        });
+        expect(gate.targetSelection).toEqual([
+            { targetId: 'bandit-B', directMemory: 0, reputation: expect.closeTo(0.45, 5) },
+            { targetId: 'bandit-A', directMemory: 0, reputation: 0 },
+        ]);
+    });
+
+    it('direct personal memory remains stronger than a higher network reputation', () => {
+        const { world, north, south } = makeReputationWorld();
+        recordHarmByActor(north, 'bandit-A', { severity: 0.8, tick: 0, known: true });
+        recordHarmByActor(south, 'bandit-B', { severity: 0.9, tick: 0, known: true });
+
+        tickClosedWorld(world, { tick: 1, perceivedDanger: 0 });
+
+        const invasion = world.events.find(event =>
+            event.type === 'INVASION' && event.factionId === north.id
+        );
+        const gate = world.events.find(event =>
+            event.type === 'FACTION_ACTION_GATE'
+            && event.factionId === north.id
+        );
+        expect(invasion?.targetId).toBe('bandit-A');
+        expect(gate).toMatchObject({
+            targetId: 'bandit-A',
+            targetDirectMemory: 0.8,
+            targetReputation: 0.4,
+        });
     });
 });
 

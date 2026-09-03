@@ -1,5 +1,47 @@
 # AUTONOMOUS HANDOFF
 
+EVID-2026-09-02-SLICE-T-EVENT-LEDGER-INDEX (Lane B, unaccepted)
+
+## SLICE T — incremental event-ledger index for long-horizon health
+
+- `closed-world.js` maintains a non-enumerable derived index keyed by event type and tick. `appendWorldEvent` indexes new allocator-owned events immediately; `synchronizeEventLedger` catches legacy direct `world.events.push(...)` producers before indexed reads, so the event array remains the sole persistence authority.
+- `getWorldEvents` serves exact-tick and bounded-range queries in authoritative ledger order; `findLatestWorldEvent` replaces repeated reverse scans in the reducer, demography, and patrol paths. Full-ledger consumers such as causal auditing remain unchanged.
+- `tests/event-ledger-index.test.js` covers typed/range ordering, legacy direct-push synchronization, latest-event lookup, allocator IDs, and save/load exclusion of the derived cache.
+- Long-horizon result: `tests/long-horizon-5000tick.test.js` passes across 3 seeds in about 23.8 seconds (mean 1.54 ms/tick, 92.6k to 93.0k events per seed), down from the prior 207.7-second run without changing event counts or final summaries.
+- Persistence boundary: the index is deliberately non-enumerable and rebuilt after load/fork. `world.events`, event IDs, parent IDs, and all queues remain serialized authoritative state.
+- Remaining performance boundary: `causal-ledger.js` still intentionally builds graph-wide maps for explicit audits; profile that workload separately before introducing an audit-specific cache.
+
+EVID-2026-09-02-SLICE-S-LAWFULNESS-PATROL-ENFORCEMENT (Lane B, unaccepted)
+
+## SLICE S — treaty lawfulness → observer-scoped patrol enforcement
+
+- `reputation.js` owns the bounded `lawfulness` dimension separately from violence memory and trade reliability. `treaty.js` records a violation for each participating faction that observed the breach, including treaty/reason metadata, while legacy hand-authored treaty records are normalized with a `violations` array before mutation.
+- `canonical-trade-system.js` consumes only the patrol faction's own lawfulness record. Low observed lawfulness adds a capped detection-attention bonus; missing history and unrelated factions remain neutral. Every `PATROL_INTERCEPTION` and `PATROL_DETECTION_MISS` carries `enforcementWhy` with observer, base/effective rates, score, and bonus.
+- `closed-world.js` routes territory passage breaches through the shared compliance path, so live territory and encounter violations update the same treaty history and lawfulness ledger. Save/load preserves the lawfulness state and does not eagerly materialize optional derived systems that were absent at the checkpoint.
+- `tests/lawfulness-patrol-enforcement.test.js`: 4 tests cover treaty observation isolation, live detection effect, unrelated-observer neutrality, and deterministic save/load enforcement.
+- Focused treaty, patrol, canonical trade, save/load, pending obligations, encounter RNG, and fork regression surface is green (51 tests including the new slice).
+- Remaining reputation boundary: `tradeFairness` and `honesty` are declared dimensions but have no live consumer; lawfulness has no retraction/appeal policy for stale or disputed observations.
+
+EVID-2026-09-02-SLICE-R-TRADE-RELIABILITY-REPUTATION (Lane B, unaccepted)
+
+## SLICE R — independent trade reliability → merchant route choice
+
+- `reputation.js` is the production owner for independent reputation dimensions. It keeps trade reliability separate from `escalation.js` violence memory, stores bounded destination-scoped observations, supports observer-trust weighting, and decays scores toward neutral by elapsed tick.
+- `canonical-trade-system.js` retains `reputationByDimension` plus reliability weight/half-life identity fields. `chooseMerchantRouteDecision` applies a destination reliability penalty only when an observer has a real record; an unobserved destination remains neutral and receives no penalty.
+- `closed-world.js` records the usable fraction of every materialized shipment at `PENDING_CARGO_DELIVERED`, including partial/failed capacity outcomes; the event carries the reputation score/outcome for auditability.
+- `tests/trade-reliability-reputation.test.js`: 5 tests cover dimension isolation, observer weighting, live route influence, terminal failure recording, save/load persistence, and deterministic scoring.
+- This slice expands reputation from violence-only cross-domain use to independent trade reliability consumed by live merchant decisions. Generic fairness/honesty/lawfulness dimensions remain available but are not yet wired to a consumer.
+
+EVID-2026-09-02-SLICE-Q-REPUTATION-INVASION-TARGET (Lane B, unaccepted)
+
+## SLICE Q — network reputation → live invasion target selection
+
+- `escalation.js`: production `computeReputation(targetId, observers)` now aggregates bounded violence memory across the supplied observer network, including zero-memory observers.
+- `closed-world.js`: retaliation target ranking keeps the actor faction's direct memory as the primary signal, then uses network reputation as a deterministic tie-breaker; `FACTION_ACTION_GATE` records the selected score and full ranked target evidence.
+- `tests/reputation-aggregate.test.js`: the existing six aggregation checks now exercise the production helper rather than a test-local duplicate.
+- `tests/targeted-retaliation.test.js`: live coverage proves reputation selects a tied-memory target and cannot override stronger direct personal memory.
+- This slice moves reputation from `CODE_VERIFIED` to `CROSS_DOMAIN_INTEGRATED`; remaining work is additional reputation dimensions and trust/time weighting.
+
 EVID-2026-09-01-SLICE-OP-ELASTIC-TRADE+STANCE-GATE (Lane B, unaccepted)
 
 Test Suites: 156 passed, 159 total in the non-long-horizon regression run
@@ -399,6 +441,7 @@ current symbols. Wave 1 lane classification:
 ## What this tree now contains (Lane B, unaccepted)
 - parentEventIds chain on merchant path (MUT-CHAIN-001 detector)
 - directional stance action gate (MUT-DIR-001)
+- network reputation target tie-break in the live invasion selector (Slice Q)
 - migration evaluation/decision/migration chain with FIRE iff MIGRATION (fixed: FIRE only when person can leave for real town, NO_POPULATION/NO_DESTINATION otherwise, per-town reportedCrime, no toTownId null, utility-driven destination)
 - bandit recency elapsed-tick decay
 - save/load pending obligations
@@ -433,9 +476,9 @@ current symbols. Wave 1 lane classification:
   - Production nuance: shipment volume scales with merchant's believed route danger and world perceivedDanger (dangerous worlds ship less), so §138 differentiation flows through delivered supply — updates to sensitivity-500tick (deliveredTotal axis) and scenario-differentiation-long-horizon (memoryOfLoss axis) are STRENGTHENINGS per audit law, tracked with the axes they measure
 
 ## Next 5
-1. Real pending-state fork + MUT-SAVE-001 held under two-branch identity (encounterRng persistence still open)
-2. WHY inspector for merchant route B vs A (observations, beliefs, candidates, utilities, threshold, rng)
-3. Justice → legitimacy re-verify after drought changes supplyShortage feeding faction reassess
+1. Wire trade fairness/lawfulness reputation into treaty or patrol decisions
+2. Add observer-specific confidence calibration and outlier handling
+3. Real pending-state fork + MUT-SAVE-001 held under two-branch identity
 4. Ecology/season material loop full integration (drought done; next: season→trade→migration multi-season)
 5. Evidence linter gate fix (SUPERSESSION + WSL DEFAULT_ROOT) — bounded, not another framework
 

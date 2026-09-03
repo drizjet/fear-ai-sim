@@ -101,6 +101,30 @@ export function getMemoryOfLoss(faction, actorId) {
     return faction.memoryByActor[actorId] ?? 0;
 }
 
+/**
+ * Aggregate an actor's violence reputation across the observer network.
+ *
+ * Reputation is deliberately separate from the acting faction's direct
+ * memory: direct memory answers "whom did I experience?", while this
+ * aggregate answers "what does the network remember this actor doing?".
+ * Missing memory is a real zero observation, so every supplied observer
+ * contributes to the mean. The result is bounded for callers that provide
+ * hand-authored or restored state.
+ *
+ * @param {string} targetId actor whose reputation is being queried
+ * @param {Array<object>} observers factions or other memory-bearing actors
+ * @returns {number} mean known violence memory in [0, 1]
+ */
+export function computeReputation(targetId, observers = []) {
+    if (!targetId || !Array.isArray(observers) || observers.length === 0) return 0;
+    const values = observers
+        .map(observer => getMemoryOfLoss(observer, targetId))
+        .filter(value => Number.isFinite(value))
+        .map(value => clamp(value));
+    if (values.length === 0) return 0;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
 export function executeRetaliation(faction, target, plan) {
     if (!faction || !target) {
         return { ok: false, action: null, reason: 'INVALID_INPUT' };

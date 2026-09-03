@@ -18,6 +18,8 @@ This document classifies the production state observed on a canonical world afte
 
 Pending protocol records carry their action IDs, event IDs, `parentEventIds`, status, due/progress fields, cargo, route, destination, and assignment references. The `pendingEffects` RNG stream is serialized as `{ algorithm, state, draws }`; no pending stochastic decision relies on a closure.
 
+The reducer also maintains a non-enumerable incremental event-ledger index keyed by event type and tick. It is derived cache state, intentionally excluded from `saveWorld`, and rebuilt by `loadWorld` or `forkWorld`; direct legacy pushes are synchronized before indexed reads so the authoritative persisted representation remains `world.events`.
+
 ## Derived on load
 
 These values are behaviorally required but are reconstructed from serialized data rather than treated as independent authority:
@@ -26,6 +28,7 @@ These values are behaviorally required but are reconstructed from serialized dat
 - Shared relationship aliases: each faction-local relationship entry is relinked to the canonical object in `world.relationships` after JSON removes object identity.
 - `JusticeSystem`, which has methods but no persistent instance state.
 - Function-backed roaming helpers such as `bandit.rng`. The canonical reducer derives its ordinary per-tick random helper from stable IDs/ticks; pending work must instead use `world.rngStreams`.
+- The derived event-ledger index and its cursor. They are performance caches, not authoritative state, and are reconstructed from the serialized event array.
 
 ## Ephemeral inputs and calculations
 

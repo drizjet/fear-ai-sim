@@ -134,7 +134,11 @@ export class Market {
             disrupted: [...this.disrupted.entries()],
             capacity: [...this.capacity.entries()],
             spoilageRate: [...this.spoilageRate.entries()],
-            _priceMemory: this._priceMemory ? [...this._priceMemory.entries()] : undefined
+            // Copy each memory record as well as the enclosing Map. Forks and
+            // save/load callers must not share mutable EMA state.
+            _priceMemory: this._priceMemory
+                ? [...this._priceMemory.entries()].map(([kind, memory]) => [kind, memory ? { ...memory } : memory])
+                : undefined
         };
     }
 
@@ -143,7 +147,12 @@ export class Market {
         for (const key of ['inventory', 'demand', 'basePrice', 'delivered', 'disrupted', 'capacity', 'spoilageRate']) {
             if (Array.isArray(data[key])) market[key] = new Map(data[key]);
         }
-        if (Array.isArray(data._priceMemory)) market._priceMemory = new Map(data._priceMemory);
+        if (Array.isArray(data._priceMemory)) {
+            market._priceMemory = new Map(data._priceMemory.map(([kind, memory]) => [
+                kind,
+                memory ? { ...memory } : memory,
+            ]));
+        }
         return market;
     }
 }
