@@ -13,7 +13,7 @@ import { createRoamingGroup, chooseRoamingDestination, generateCandidates, start
 import { tickMerchant as tickCanonicalMerchant, tickBandit as tickCanonicalBandit, tickPatrol as tickCanonicalPatrol } from './canonical-trade-system.js';
 import { tickSeason, getSeasonModifier, getSpoilageModifier } from './ecology.js';
 import { tickDemography } from './demography.js';
-import { recordTradeReliability } from './reputation.js';
+import { recordLawfulnessViolation, recordTradeReliability } from './reputation.js';
 import { ensureTownLaws, checkLawCompliance } from './law.js';
 
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
@@ -907,6 +907,46 @@ export function formClosedWorldConvoy(world) {
     world.events.push({ type: 'CONVOY_FORMED', convoyId: world.convoy.id });
     return world.convoy;
 }
+// Law slice V: a LAW_VIOLATED event is not terminal audit only. The violated
+// town's controlling faction observes the violator's lawfulness, so the
+// existing patrol attention consumer (canonical-trade-system) can react
+// without a treaty. The violator is the bandit's faction when known,
+// otherwise the raw actor id (patrol falls back to neutral when unobserved).
+function observeLawViolation(world, { townId, roadId, actorId, tick, lawViolation, parentEventId }) {
+    const town = world.towns?.get?.(townId) ?? null;
+    const observerFaction = town && town.controlledBy
+        ? (world.factions ?? []).find(faction => faction.id === town.controlledBy) ?? null
+        : null;
+    const bandit = (world.bandits ?? []).find(item => item.id === actorId) ?? null;
+    const violatorFactionId = typeof bandit?.factionId === 'string' && bandit.factionId.length > 0
+        ? bandit.factionId
+        : (typeof actorId === 'string' && (world.factions ?? []).some(faction => faction.id === actorId) ? actorId : actorId);
+    let observation = null;
+    if (observerFaction && violatorFactionId) {
+        observation = recordLawfulnessViolation(observerFaction, violatorFactionId, {
+            tick,
+            weight: observerFaction.reputationTrust ?? 1,
+            treatyId: lawViolation.lawId,
+            reason: `LAW_VIOLATED:${lawViolation.lawType}:${townId}:${roadId}`,
+        });
+    }
+    const lawEvent = appendWorldEvent(world, {
+        type: 'LAW_VIOLATED',
+        lawId: lawViolation.lawId,
+        lawType: lawViolation.lawType,
+        townId,
+        prohibits: lawViolation.prohibits,
+        penalty: lawViolation.penalty,
+        roadId,
+        actorId,
+        violatorFactionId,
+        observerFactionId: observerFaction?.id ?? null,
+        lawfulness: observation ? { score: observation.score, outcome: observation.lastOutcome } : null,
+        attackEventId: parentEventId,
+        tick,
+    }, [parentEventId]);
+    return { lawEvent, observation, observerFactionId: observerFaction?.id ?? null, violatorFactionId };
+}
 
 export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId = 'road-a', tick = 1 } = {}) {
     const merchant = world.merchants.find(item => item.id === merchantId);
@@ -939,10 +979,12 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         ? destination.market.deliverCargo('food', remaining, { disruption: 0 })
         : null;
     merchant.cargo = 0; // the merchant's cargo has been resolved by the attack
+    const attackingBandit = world.bandits.find(b => b.roadId === roadId) ?? null;
     const event = {
         type: 'BANDIT_ATTACK',
         attackOpportunityId,
-        banditId: world.bandits.find(b => b.roadId === roadId)?.id ?? 'unknown',
+        banditId: attackingBandit?.id ?? 'unknown',
+        factionId: typeof attackingBandit?.factionId === 'string' ? attackingBandit.factionId : undefined,
         roadId,
         merchantId,
         lost,
@@ -955,26 +997,27 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         // consumers (patrol reactions, faction memory) can parent to it.
         rootReason: 'ATTACK_OPPORTUNITY',
     };
+    // Omit an undefined factionId so stable serialization of legacy
+    // free-agent bandits is unchanged (no new key appears on old shapes).
+    if (event.factionId === undefined) delete event.factionId;
     const emitted = appendWorldEvent(world, event, []);
     // Law slice: BANDIT_ATTACK on a town-incident road violates town law.
+    // Slice V also records the violated town owner's lawfulness observation
+    // so patrol attention can react without requiring a treaty.
     const lawViolation = checkLawCompliance({
         world,
         action: { type: 'BANDIT_ATTACK', roadId, actorId: emitted.banditId, tick },
         tick,
     });
     if (lawViolation) {
-        appendWorldEvent(world, {
-            type: 'LAW_VIOLATED',
-            lawId: lawViolation.lawId,
-            lawType: lawViolation.lawType,
+        observeLawViolation(world, {
             townId: lawViolation.townId,
-            prohibits: lawViolation.prohibits,
-            penalty: lawViolation.penalty,
             roadId,
             actorId: emitted.banditId,
-            attackEventId: emitted.eventId,
             tick,
-        }, [emitted.eventId]);
+            lawViolation,
+            parentEventId: emitted.eventId,
+        });
     }
     return { ok: true, event: emitted, attackOpportunityId };
 }
@@ -3103,6 +3146,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 }
             }
             // Law slice: BANDIT_ATTACK on a town-incident road violates law.
+            // Slice V routes the same observation helper as the direct path
+            // so both producers update the identical lawfulness ledger.
             for (const consequenceEvent of consequenceEvents) {
                 const roadId = consequenceEvent.roadId ?? world.bandits?.[0]?.roadId;
                 const actorId = consequenceEvent.banditId ?? world.bandits?.[0]?.id ?? 'unknown';
@@ -3113,20 +3158,17 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     tick,
                 });
                 if (violation) {
-                    appendWorldEvent(world, {
-                        type: 'LAW_VIOLATED',
-                        lawId: violation.lawId,
-                        lawType: violation.lawType,
+                    observeLawViolation(world, {
                         townId: violation.townId,
-                        prohibits: violation.prohibits,
-                        penalty: violation.penalty,
                         roadId,
                         actorId,
-                        attackEventId: consequenceEvent.eventId,
                         tick,
-                    }, [consequenceEvent.eventId]);
+                        lawViolation: violation,
+                        parentEventId: consequenceEvent.eventId,
+                    });
                 }
             }
+
 
             // Encounter consequences occur after the reducer's ordinary
             // reaction are not silently skipped until a tick that can no

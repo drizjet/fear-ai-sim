@@ -1,14 +1,26 @@
 # AUTONOMOUS HANDOFF
 
+EVID-2026-09-03-SLICE-V-LAW-TO-LAWFULNESS-ENFORCEMENT (Lane B, unaccepted)
+
+## SLICE V — LAW_VIOLATED → observer lawfulness → patrol attention
+
+- `closed-world.js` adds internal `observeLawViolation`: each `LAW_VIOLATED` (both direct `resolveBanditAttack` and encounter `BANDIT_ATTACK` consequences) records `recordLawfulnessViolation` for the violated town's `controlledBy` faction against the violator faction (attacking bandit's `factionId` when known, else the raw actor id), with `reason: LAW_VIOLATED:<type>:<town>:<road>` and the law id as `treatyId` audit. The `LAW_VIOLATED` event now carries `{violatorFactionId, observerFactionId, lawfulness:{score,outcome}}` and remains parented to the attack.
+- `BANDIT_ATTACK` from `resolveBanditAttack` now carries `factionId` when the attacking bandit has one; the key is omitted for legacy free-agent bandits so stable serialization of old shapes is unchanged. The encounter path needs no `encounters.js` change: the helper resolves the faction from `world.bandits`, and patrol already falls back to the bandit lookup.
+- No new consumer was built: the existing Slice S patrol attention path consumes the new records directly (observed low lawfulness → capped detection bonus with `enforcementWhy`). Justice is intentionally untouched to avoid double-counting the same attack (`BANDIT_ATTACK` already drives `reportedCrime`).
+- `tests/law-lawfulness-enforcement.test.js`: 6 tests cover observer-scoped recording with trade-reliability isolation, empty-law neutrality, live patrol attention shift at a fixed `rng: 0.45` boundary (observed `detections:1` vs unknown `0`), encounter-path faction identity, save/load enforcement identity (`toEqual` on `LAW_VIOLATED`, identical `effectiveDetectionRate`), and free-agent fallback (violation emitted, no invented faction).
+- Mutation check: `if (observerFaction && violatorFactionId)` → `if (false && ...)` makes 3/6 new tests fail (`lawfulnessObserved: true` → `false`, no attention shift); gate restored, 11/11 law suites green.
+- Validation: non-long-horizon 162 suites / 1228 tests green, `long-horizon-5000tick` 3 seeds green (~25.9s, no regression vs ~23.8s), production build green.
+- Remaining law boundary: `LAW_VIOLATED.penalty` is not yet consumed by `JusticeSystem` (no legitimacy drift or fine collection); `tradeFairness`/`honesty` dimensions remain consumer-less.
+
 EVID-2026-09-02-SLICE-U-LAW-VIOLATION (Lane B, unaccepted)
 
 ## SLICE U — town law → BANDIT_ATTACK violation
 
 - `law.js` owns town-level prohibitions as plain JSON: `LAW_TYPES` (banditry/theft/trespass/smuggling), `createLaw`, `ensureTownLaws`, `isActionIllegal`, `checkLawCompliance`. Default `banditry` law (`prohibits:'BANDIT_ATTACK'`, `scope:'town-roads'`, `penalty:0.3`) is materialized per town in `createClosedWorldScenario` and migrated on load/tick for older saves.
-- `closed-world.js` checks every `BANDIT_ATTACK` (direct `resolveBanditAttack` and encounter `BANDIT_ATTACK` consequences) against `town.laws` and emits `LAW_VIOLATED` parented to the attack with `{townId,lawId,lawType,prohibits,penalty,roadId,actorId,attackEventId}`. Scope `town-roads` requires incident road, `global` matches any, array/exact string scope also supported; mismatch is honest (no violation).
+- `closed-world.js` checks every `BANDIT_ATTACK` (direct `resolveBanditAttack` and encounter `BANDIT_ATTACK` consequences) against `town.laws` and emits `LAW_VIOLATED` parented to the attack with `{townId,lawId,lawType,prohibits,penalty,roadId,actorId,attackEventId}` (Slice V extends this with `{violatorFactionId,observerFactionId,lawfulness}`). Scope `town-roads` requires incident road, `global` matches any, array/exact string scope also supported; mismatch is honest (no violation).
 - `tests/law-violation.test.js`: 5 tests cover direct violation, empty-law neutrality (mutation-sensitive), encounter-path enforcement via `tickClosedWorld({attackRoadId})`, scope-mismatch honesty (road-z vs global), and save/load persistence with custom penalty (0.77) surviving round-trip and deterministic replay.
 - Law state is plain JSON (`town.laws` array) and survives `saveWorld`/`loadWorld` via the existing Map serialization; `ensureTownLaws` is called on creation, on tick start, and in `reattachPrototypes` for migration.
-- Remaining law boundary: `LAW_VIOLATED` is auditable but not yet consumed by `JusticeSystem` or institutional enforcement (no penalty collection, legitimacy drift, or patrol escalation).
+- Remaining law boundary after Slice V: `LAW_VIOLATED.penalty` is auditable and lawfulness now drives patrol, but `JusticeSystem` still does not consume the penalty (no legitimacy drift or fine collection).
 
 EVID-2026-09-02-SLICE-T-EVENT-LEDGER-INDEX (Lane B, unaccepted)
 
