@@ -2341,6 +2341,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             && (event.tick ?? 0) <= tick
             && (event.townId === townId || (event.roadId && world.routes.find(r => r.id === event.roadId && (r.from === townId || r.to === townId))))
     ).length;
+    // Slice W: law-confirmed crime in the same window. LAW_VIOLATED is always
+    // parented to its attack, so this window trails the attack window by
+    // construction (same-tick violations are observed by next tick's justice).
+    const recentLawEvents = getWorldEvents(world, {
+        type: 'LAW_VIOLATED',
+        minTick: tick - RECENT_ATTACK_WINDOW,
+        maxTick: tick,
+    });
+    const recentLawsByTown = (townId) => recentLawEvents.filter(
+        event => (event.tick ?? 0) > tick - RECENT_ATTACK_WINDOW
+            && (event.tick ?? 0) <= tick
+            && (event.townId === townId || (event.roadId && world.routes.find(r => r.id === event.roadId && (r.from === townId || r.to === townId))))
+    );
     // PHASE §156: deferred immigration pass. The MIGRATION
     // step decrements the source town's population in the
     // loop below, and the immigration (adding the emigrant
@@ -2397,12 +2410,20 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         }
         const investigationQuality = 0.4;
         const corruption = 0.1;
+        // Slice W: mean LAW_VIOLATED penalty for this town in the window.
+        // Zero when no violation exists — missing law history stays neutral.
+        // (This branch only runs when reportedCrime is true; the idle path
+        // above already returned, so a hand-forged LAW without any attack
+        // cannot erode legitimacy on its own.)
+        const townLawEvents = recentLawsByTown(townId);
+        const lawPenalty = townLawEvents.length === 0 ? 0 : townLawEvents.reduce((sum, ev) => sum + (Number.isFinite(ev.penalty) ? ev.penalty : 0), 0) / townLawEvents.length;
         const result = world.justiceSystem.resolve({
             legitimacy: previous.legitimacy,
             grievance: previous.grievance,
             reportedCrime,
             investigationQuality,
-            corruption
+            corruption,
+            lawPenalty
         });
         const changed = result.legitimacy !== previous.legitimacy
             || result.grievance !== previous.grievance;
@@ -2438,6 +2459,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     && (ev.tick ?? 0) <= tick)
                 .map(ev => ev.eventId)
                 .filter(Boolean);
+            // Slice W: the law penalty is a real causal input to the
+            // legitimacy value above, so its LAW_VIOLATED events join the
+            // parent set alongside the attacks.
+            const upstreamLawIds = townLawEvents.map(ev => ev.eventId).filter(Boolean);
             justiceResolvedEvent = appendWorldEvent(world, {
                 type: 'JUSTICE_RESOLVED',
                 townId,
@@ -2445,8 +2470,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 legitimacy: result.legitimacy,
                 grievance: result.grievance,
                 migrationPressure: result.migrationPressure,
-                justiceAccess: result.justiceAccess
-            }, upstreamAttackIds);
+                justiceAccess: result.justiceAccess,
+                lawPenalty,
+                lawViolationCount: townLawEvents.length
+            }, [...upstreamAttackIds, ...upstreamLawIds]);
         }
         // V8 corrective checkpoint §4: emit an explicit
         // MIGRATION_PRESSURE_EVALUATED event when the

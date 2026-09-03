@@ -1,6 +1,15 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-V-LAW-TO-LAWFULNESS-ENFORCEMENT (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-W-LAW-PENALTY-JUSTICE (Lane B, unaccepted)
+
+## SLICE W — LAW_VIOLATED penalty → justice legitimacy → owning faction
+
+- `justice.js`: `JusticeSystem.resolve` accepts optional `lawPenalty = 0` (backward compatible). Law-confirmed crime erodes legitimacy by `clamp(lawPenalty)*0.15`, applied only when `reportedCrime` is true; grievance is untouched so attack volume is not double-counted (volume already drives grievance via `reportedCrime`). Mean — not sum — carries severity while the event count drives grievance.
+- `closed-world.js`: justice step queries `LAW_VIOLATED` in the same 5-tick per-town window as attacks (same-tick violations are observed by next tick's justice, lagging by construction), feeds the per-town mean penalty, audits `{lawPenalty,lawViolationCount}` on `JUSTICE_RESOLVED`, and parents the event to both attack and law events. The owning faction tracks the outcome through the existing Slice C 0.85/0.15 blend; the idle (`!reportedCrime`) recovery path is unchanged, so a hand-forged LAW without any attack cannot erode legitimacy.
+- `tests/law-justice-penalty.test.js`: 6 tests cover law-vs-baseline legitimacy gap (>0.05 over 5 fixed attacks: 0.024 vs 0.204), faction tracking (0.556 vs 0.615), penalty monotonicity (0.77 erodes further, justice clamps at 0), event audit with LAW parentage, forged-LAW honesty (idle parity), and `resolve` backward compatibility (`lawPenalty: 0` ≡ default, grievance untouched).
+- Mutation check: `* 0.15` → `* 0` fails 4/6 (gap, faction, monotonicity, unit); gate restored, law+justice 23/23 green.
+- Validation: non-long-horizon 163 suites / 1234 tests green, `long-horizon-5000tick` 3 seeds green (~28.9s), production build green.
+- Remaining law boundary: no fine collection or restitution; `tradeFairness`/`honesty` dimensions remain consumer-less.
 
 ## SLICE V — LAW_VIOLATED → observer lawfulness → patrol attention
 
