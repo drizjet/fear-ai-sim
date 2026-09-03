@@ -1,6 +1,15 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-PREAUDIT-5-MUTATION-REPLAY (Lane B, unaccepted)
+EVID-2026-09-04-V8-AUDIT-VERDICT (Lane B, unaccepted)
+
+## V8 AUDIT — verdict REJECTED (3 P0, 23 P1, 16 P2; 42 findings)
+
+- Candidate 79f287c frozen from fresh clone (remote==local, clean). All gates re-run raw (no shell pipes): suite 176/1316 exit 0, long-horizon 4/15 exit 0, build exit 0, authority CLEAN, lint exit 0 (1184 rows), replay 11/11 killed with clean restore. The historical PASS-text/Exit-1 conflict is resolved: PowerShell surfaces node stderr as NativeCommandError, poisoning wrapper codes; raw codes are the oracle (TEST_GREEN).
+- Five read-only auditors (same-model scouts, clone-only, claims-untrusted) returned 40+ findings; manager re-verified the P0s + MAT-001 + TM-HOLD-08 + A5-F2 by direct read. Artifacts: docs/audit/v8-current/ (candidate, findings, receipts, mutation matrix, maturity reconciliation, causal contracts, long-horizon, limitations, verdict).
+- P0 (reject): F1/F2 merchant/bandit panopticon reads bypassing canObserve; F6 live CONVOY_AMBUSH/MERCHANT_RESPAWN orphans. Perceived-reality claim is FALSE at candidate.
+- P1 themes: conservation holes (MAT-001 bandit-path overflow, MAT-005 exogenous population), oracle strength (seed fraud in sensitivity-500tick, coherence-only 5000tick, recovery-vs-nothing, two unguarded materialization terms), replay scope bias + no baseline, gate mechanism gaps (unsigned snapshot refresh, unenforced window/labels/supersession-auth, depth-5 closure), CI gap.
+- Statuses: DEVELOPMENT verdict REJECTED; supervisor NOT_ADMITTED; acceptedAuthority false. Artifacts commit AFTER the candidate (untracked at freeze); candidate SHA unchanged by this entry's commit.
+- Next repair responsibility (bounded, §22 order): R1 gate panopticon reads behind canObserve + twin-world OBS-BOUNDARY detectors; R2 migrate orphan emissions to appendWorldEvent with parentage; R3 book bandit-path delivered/overflow + exogenous population; R4 thread sensitivity seeds, add recovery-vs-control + holdout detectors, expand replay scope with baselines; R5 harden gate mechanisms (snapshot auth, window rule, label enforcement, supersession auth, CI wiring). Each repair = new candidate + re-run of affected gates + fresh read-only audit of the touched scope.
 
 ## PRE-AUDIT 5 — mutation-kill replay script (11/11 killed, zero residue)
 
