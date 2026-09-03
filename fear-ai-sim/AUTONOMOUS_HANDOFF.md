@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AE-STORM-WEATHER (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AF-STORM-BANDIT (Lane B, unaccepted)
+
+## SLICE AF — storms suppress the bandit hunt
+
+- Weather gains its second live consumer, mirroring the Slice AA wildlife pattern: `tickBandit` discounts route payoff by `weatherFactor = distance / (distance + weatherCost)` (severity 1 halves the payoff; calm roads carry `weatherCost: 0`, so the factor is exactly 1 and legacy behavior is preserved). The factor is audited on the scored rows next to `wildlifeFactor`; both discounts multiply, so a stormed, predator-crowded road pays for its danger twice over, honestly.
+- `tests/storm-bandit-suppression.test.js`: 6 tests cover the stormed hold with calm control (traffic 3 vs 5 relocates calm, holds stormed), the factor-free calm payoff ratio (5:3) with the storm halving, unrelated-road neutrality, severity monotonicity (0.25 hunts, 1.0 holds), holder stability (the bandit on the stormed road stays while it is still the best hunt — the discount does not panic holders), and save/load equality with identical follow-up decisions.
+- Mutation check: `* weatherFactor` dropped from the payoff → 3/6 fail (hold, halve, severe-monotonicity); wildlife suite unaffected (9/9 still green under the mutation); restored, zero residue.
+- Validation: non-long-horizon 172 suites / 1289 tests green, `long-horizon-5000tick` 3 seeds green (~22.7s, no regression), production build green.
+- Remaining weather boundary: no auto-scheduler; no storm effect on patrols or production.
 
 ## SLICE AE — storms price road risk through routing
 

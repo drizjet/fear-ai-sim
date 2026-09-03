@@ -643,9 +643,16 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
     const scored = routes.map(route => {
         const belief = bandit.trafficBelief[route.id] || { estimatedTraffic: 0, recency: 0 };
         const wildlifeFactor = wildlifePayoffFactor(world, route.id);
+        // Slice AF: storms suppress the hunt — a stormed road pays
+        // distance/(distance + weatherCost) of its calm payoff
+        // (severity 1 halves it). Calm roads carry weatherCost 0,
+        // so the factor is exactly 1 and legacy behavior is preserved.
+        const distance = Number(route.distance) || 0;
+        const weatherCost = Number(route.weatherCost) || 0;
+        const weatherFactor = distance > 0 ? distance / (distance + weatherCost) : 1;
         const payoff = belief.estimatedTraffic * (bandit.cargoValuePerMerchant ?? 10)
-            * belief.recency * seasonMod * wildlifeFactor;
-        return { routeId: route.id, payoff, recency: belief.recency, seasonMod, wildlifeFactor };
+            * belief.recency * seasonMod * wildlifeFactor * weatherFactor;
+        return { routeId: route.id, payoff, recency: belief.recency, seasonMod, wildlifeFactor, weatherFactor };
     }).sort((a, b) => b.payoff - a.payoff);
     const top = scored[0];
     if (!top || top.payoff <= 0) return { ok: false, reason: 'NO_OPPORTUNITY' };
