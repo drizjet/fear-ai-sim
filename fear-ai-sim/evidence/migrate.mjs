@@ -16,10 +16,11 @@
 //   node evidence/migrate.mjs [--root <repo-root>]
 
 import { readFileSync, existsSync, mkdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { appendRow, rowId } from './maturity.mjs';
 
-const DEFAULT_ROOT = 'C:/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim';
+const DEFAULT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 function parseArgs(argv) {
     const args = { root: DEFAULT_ROOT };

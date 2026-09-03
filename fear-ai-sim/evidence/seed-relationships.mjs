@@ -13,9 +13,10 @@
 
 import { appendRow, rowId } from './maturity.mjs';
 import { computeSourceFingerprint } from './fingerprint.mjs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = resolve('C:/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim');
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LEDGER = `${ROOT}/docs/evidence/EVIDENCE_LEDGER.jsonl`;
 
 const FILES = [

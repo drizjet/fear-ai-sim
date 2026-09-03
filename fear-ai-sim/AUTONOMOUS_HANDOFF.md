@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AH-STORM-SCHEDULER (Lane B, unaccepted)
+EVID-2026-09-03-AUDIT-F1F2 (Lane B, unaccepted)
+
+## AUDIT RESPONSE — independent audit F1 (fixed) + F2 (contained, invariant added)
+
+- The 2026-08-30 independent audit (fresh clone at 5350560) was verified finding-by-finding against current master. F1 and F2 were still live; both are now addressed. F3 still stands and was deliberately not touched (supervisor judgement required). F5 is fixed (has been for many slices: per-world monotonic `world.nextEventId` allocator plus `parentEventIds` on every event — the exact infrastructure the audit named as missing).
+- F1 fix: `evidence/migrate.mjs`, `evidence/seed-relationships.mjs`, and `evidence/seed-territory.mjs` derived their root from the hardcoded author checkout. All three now use the `lint.mjs` pattern (`resolve(dirname(fileURLToPath(import.meta.url)), '..')`); `--root` override on migrate/lint still wins. `lint.mjs` itself was already fixed; `receipt.mjs` uses cwd (works from the package dir). The two test files the audit named carry cwd fallbacks and degrade gracefully.
+- F2 containment: the runtime guard the audit asked for already exists — `buildReceipt` throws inside test processes without an explicit out-of-tree ledgerPath, and the helper suite proves byte-identical ledger across the blocked write. New `tests/evidence-ledger-isolation.test.js` (3 tests) is the separate invariant that reads the suite instead of exercising the writers: only the guard suite may name the canonical ledger path, maturity row-writer importers must not touch docs/evidence paths, and no test may name the ledger filename without tmpdir(). A planted violating probe file fails all 3 invariant tests; removed after.
+- F2 closure proof: full non-long-horizon run (175 suites / 1304 tests) leaves the production ledger byte-identical (sha b01041d4, 270 rows before and after). The 144 historical `__receipt_test__` rows stay: they are committed history, the linter already quarantines them (0 admissible, all stale, own domain), and purging committed evidence to look cleaner is exactly the confidence-inflating edit pattern this audit criticizes. Linter verdict stands: exit 1 on stale fingerprints, 0 admissible — reported, not hidden.
+- F3 status (read-only): `authority-check --verify` still reports AUTHORITY_VIOLATION on current master (one NEW_FILE: CURRENT_REALITY_MANIFEST.json postdates the snapshot). Not re-snapshotted — per the audit, that would destroy the drift evidence. Supervisor call.
+- F4/F6 notes: manifest staleness not re-derived here; jest exit codes are always captured explicitly in this workflow (`Command exited with code` observed per run) rather than through pipes.
+- Validation: non-long-horizon 175 suites / 1304 tests green, `long-horizon-5000tick` 3 seeds green (~23.1s), production build green.
 
 ## SLICE AH — opt-in storm scheduler
 
