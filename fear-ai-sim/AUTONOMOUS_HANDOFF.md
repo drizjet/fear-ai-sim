@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AB-CRIME-INVESTIGATION (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AC-WAGON-CAPACITY (Lane B, unaccepted)
+
+## SLICE AC — wagon capacity prices road usage per shipment
+
+- Logistics leaves SPECIFIED (the gap Slice Y named): `closed-world.js` owns `WAGON_CAPACITY = 12` — the established 12-unit shipment contract is exactly one wagon — with `wagonsForShipment` (`max(1, ceil(amount / 12))`). `schedulePendingTradeTrip` scales usage wear as `0.01 * wagons`: standard loads keep the legacy 0.01 exactly, over-capacity loads degrade the road faster, and the 0.5 floor plus maintenance recovery still bound travel time at 2x. `TRIP_COMMITMENT` audits `{wagons, roadCondition}` next to the pre-wear snapshot.
+- Capacity prices the road, not the goods: cargo volume is untouched (a 20-unit trip still delivers 20), so §155 market conservation holds and the Slice Z route-choice/travel-time consumers react to heavier wear without any new currency or event type.
+- Live-path note: merchants carry up to 20 units, so calm-world shipments (13–20 units) now take 2 wagons where they previously wore 0.01. This is the intended capacity signal, bounded by the same floor; default-danger shipments stay at 12 units / 1 wagon.
+- `tests/logistics-wagon-capacity.test.js`: 6 tests cover wagon math (1/12→1, 13/24→2, 25→3), legacy 12-unit wear with wagon audit, 20-unit double wear, volume preservation, floor behavior, and save/load equality. The Slice Z migration detector was retargeted (not weakened): tick-1 roads assert wagon-exact wear from their own commitments (`1 − 0.01 * wagons`, unshipped roads exactly 1) instead of the flat 0.99 bound.
+- Mutation check: wear flattened to `0.01` → 2 failures (20-unit wear, migration exactness); restored, zero residue.
+- Validation: non-long-horizon 169 suites / 1270 tests green, `long-horizon-5000tick` 3 seeds green (~19.4s, no regression), production build green.
+- Remaining logistics boundary: no multi-trip splitting (over-capacity loads travel as one trip with higher wear); no wagon upkeep in merchant/faction currency.
 
 ## SLICE AB — patrol coverage → town investigation quality → justice verdicts
 

@@ -11,11 +11,24 @@ describe('road condition infrastructure (slice Z)', () => {
         tickClosedWorld(legacy, { tick: 1, perceivedDanger: 0.1 });
         // Migration yields a finite condition; the merchant may already have
         // shipped on tick 1 (maintenance runs before shipment wear), so the
-        // migrated value is 1 minus at most one wear step.
+        // migrated value is 1 minus at most one wagon-scaled wear step
+        // (Slice AC: tick-1 cargo is at most 20 units = 2 wagons = 0.02).
+        // Roads that shipped match their commitment's wagon count exactly.
+        const wagonsByRoad = new Map();
+        for (const event of legacy.events) {
+            if (event.type === 'TRIP_COMMITMENT' && event.materialized !== false && Number.isInteger(event.wagons)) {
+                wagonsByRoad.set(event.routeId, event.wagons);
+            }
+        }
         for (const route of legacy.routes) {
             expect(Number.isFinite(route.condition)).toBe(true);
-            expect(route.condition).toBeGreaterThanOrEqual(0.99);
+            expect(route.condition).toBeGreaterThanOrEqual(0.98);
             expect(route.condition).toBeLessThanOrEqual(1);
+            if (wagonsByRoad.has(route.id)) {
+                expect(route.condition).toBeCloseTo(1 - 0.01 * wagonsByRoad.get(route.id), 10);
+            } else {
+                expect(route.condition).toBe(1);
+            }
         }
     });
 

@@ -390,6 +390,17 @@ function makeEncounterRng(world, encounterRng) {
     return () => nextEncounterRandom(world);
 }
 
+// Slice AC (logistics): the standard wagon train carries WAGON_CAPACITY
+// cargo units — the established 12-unit shipment contract is exactly one
+// wagon, so existing behavior is the capacity baseline, not an exception.
+// Over-capacity loads take extra wagons; wagon count prices road usage.
+export const WAGON_CAPACITY = 12;
+export function wagonsForShipment(cargoAmount) {
+    const amount = Number(cargoAmount);
+    if (!Number.isFinite(amount) || amount <= 0) return 1;
+    return Math.max(1, Math.ceil(amount / WAGON_CAPACITY));
+}
+
 /**
  * Commit a cargo-bearing trip whose effects occur on later reducer ticks.
  * The cargo leaves the merchant immediately, remains owned by the trip while
@@ -433,6 +444,10 @@ export function schedulePendingTradeTrip(world, {
 
     const actionId = allocateWorldActionId(world);
     const tripId = `TRIP-${actionId}`;
+    // Slice AC: wagon count prices road usage. One wagon per
+    // WAGON_CAPACITY units; the audit carries it alongside the
+    // pre-wear condition snapshot.
+    const wagons = wagonsForShipment(amount);
     const commitment = emitPendingWorldEvent(world, {
         type: 'TRIP_COMMITMENT',
         actionId,
@@ -442,6 +457,7 @@ export function schedulePendingTradeTrip(world, {
         routeId,
         destinationTownId,
         cargo: { kind: cargoKind, amount },
+        wagons,
         // Slice Z: road condition at departure (pre-wear snapshot).
         roadCondition: Number.isFinite(route.condition) ? route.condition : 1,
     }, parentEventIds);
@@ -462,10 +478,11 @@ export function schedulePendingTradeTrip(world, {
         parentEventIds: [commitment.eventId],
     };
     merchant.cargo -= amount;
-    // Slice Z: usage wear. Every materialized shipment degrades the road;
-    // the per-tick maintenance pass recovers it. Floored so travel time
-    // stays bounded (worst case 2x at condition 0.5).
-    route.condition = Math.max(0.5, (Number.isFinite(route.condition) ? route.condition : 1) - 0.01);
+    // Slice AC: usage wear scales with wagons (0.01 per wagon). A
+    // standard 12-unit load is one wagon — exactly the legacy 0.01 —
+    // while over-capacity loads degrade the road faster. Floored so
+    // travel time stays bounded (worst case 2x at condition 0.5).
+    route.condition = Math.max(0.5, (Number.isFinite(route.condition) ? route.condition : 1) - 0.01 * wagons);
     world.pendingTrips.push(trip);
     world.routeCommitments.push({
         commitmentId: `ROUTE-${actionId}`,
