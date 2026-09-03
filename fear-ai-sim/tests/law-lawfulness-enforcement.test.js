@@ -23,8 +23,11 @@ describe('law violation -> lawfulness -> patrol attention (slice V)', () => {
         const result = resolveBanditAttack(world, { merchantId: 'merchant-1', roadId: 'road-a', tick: 1 });
         expect(result.ok).toBe(true);
         const lawEvents = world.events.filter(e => e.type === 'LAW_VIOLATED');
-        expect(lawEvents.length).toBe(1);
-        const ev = lawEvents[0];
+        // Both incident towns emit; only the non-self-loop town observes.
+        expect(lawEvents.map(e => e.townId).sort()).toEqual(['north', 'south']);
+        const ev = lawEvents.find(e => e.townId === 'north');
+        const southEv = lawEvents.find(e => e.townId === 'south');
+        expect(southEv.lawfulness).toBeNull();
         // Default bandit belongs to south-faction; violated town owner observes.
         expect(ev.violatorFactionId).toBe('south-faction');
         expect(ev.observerFactionId).toBe('north-faction');
@@ -88,11 +91,12 @@ describe('law violation -> lawfulness -> patrol attention (slice V)', () => {
         const world = createClosedWorldScenario();
         tickClosedWorld(world, { tick: 1, attackRoadId: 'road-a' });
         const laws = world.events.filter(e => e.type === 'LAW_VIOLATED' && e.tick === 1);
-        expect(laws.length).toBeGreaterThan(0);
+        expect(laws.map(l => l.townId).sort()).toEqual(['north', 'south']);
         for (const law of laws) {
             expect(law.violatorFactionId).toBe('south-faction');
-            expect(law.observerFactionId).toBe('north-faction');
         }
+        expect(laws.find(l => l.townId === 'north').observerFactionId).toBe('north-faction');
+        expect(laws.find(l => l.townId === 'south').observerFactionId).toBe('south-faction');
         const attacks = world.events.filter(e => e.type === 'BANDIT_ATTACK' && e.tick === 1);
         expect(attacks.length).toBeGreaterThan(0);
     });
@@ -121,7 +125,6 @@ describe('law violation -> lawfulness -> patrol attention (slice V)', () => {
         // stringify, so compare structurally rather than by raw string.
         expect(afterLaw).toEqual(beforeLaw);
     });
-
     test('free-agent bandit still emits LAW_VIOLATED without inventing a faction', () => {
         const world = createClosedWorldScenario();
         delete world.bandits[0].factionId;
@@ -130,7 +133,10 @@ describe('law violation -> lawfulness -> patrol attention (slice V)', () => {
         expect(result.ok).toBe(true);
         expect(result.event.factionId).toBeUndefined();
         const laws = world.events.filter(e => e.type === 'LAW_VIOLATED');
-        expect(laws.length).toBe(1);
-        expect(laws[0].violatorFactionId).toBe(world.bandits[0].id);
+        expect(laws.map(l => l.townId).sort()).toEqual(['north', 'south']);
+        for (const law of laws) {
+            expect(law.violatorFactionId).toBe(world.bandits[0].id);
+            expect(law.restitution).toBeNull();
+        }
     });
 });

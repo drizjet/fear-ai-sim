@@ -14,7 +14,7 @@ import { tickMerchant as tickCanonicalMerchant, tickBandit as tickCanonicalBandi
 import { tickSeason, getSeasonModifier, getSpoilageModifier } from './ecology.js';
 import { tickDemography } from './demography.js';
 import { recordLawfulnessViolation, recordTradeReliability } from './reputation.js';
-import { ensureTownLaws, checkLawCompliance } from './law.js';
+import { ensureTownLaws, checkAllLawCompliance, checkLawCompliance } from './law.js';
 
 const clamp = (value, min = 0, max = 1) => Math.max(min, Math.min(max, Number.isFinite(value) ? value : min));
 const clamp01 = value => clamp(value, 0, 1);
@@ -912,7 +912,7 @@ export function formClosedWorldConvoy(world) {
 // existing patrol attention consumer (canonical-trade-system) can react
 // without a treaty. The violator is the bandit's faction when known,
 // otherwise the raw actor id (patrol falls back to neutral when unobserved).
-function observeLawViolation(world, { townId, roadId, actorId, tick, lawViolation, parentEventId }) {
+function observeLawViolation(world, { townId, roadId, actorId, tick, lawViolation, parentEventId, restitutionShare = null } = {}) {
     const town = world.towns?.get?.(townId) ?? null;
     const observerFaction = town && town.controlledBy
         ? (world.factions ?? []).find(faction => faction.id === town.controlledBy) ?? null
@@ -921,8 +921,13 @@ function observeLawViolation(world, { townId, roadId, actorId, tick, lawViolatio
     const violatorFactionId = typeof bandit?.factionId === 'string' && bandit.factionId.length > 0
         ? bandit.factionId
         : (typeof actorId === 'string' && (world.factions ?? []).some(faction => faction.id === actorId) ? actorId : actorId);
+    const violatorFaction = (world.factions ?? []).find(faction => faction.id === violatorFactionId) ?? null;
+    // A town cannot observe its own faction's lawfulness or pay itself
+    // restitution: self-loops emit the LAW_VIOLATED audit (the town's
+    // justice window still sees it) but record nothing and transfer nothing.
+    const isSelfLoop = Boolean(observerFaction && violatorFaction && observerFaction.id === violatorFaction.id);
     let observation = null;
-    if (observerFaction && violatorFactionId) {
+    if (observerFaction && violatorFactionId && !isSelfLoop) {
         observation = recordLawfulnessViolation(observerFaction, violatorFactionId, {
             tick,
             weight: observerFaction.reputationTrust ?? 1,
@@ -930,15 +935,14 @@ function observeLawViolation(world, { townId, roadId, actorId, tick, lawViolatio
             reason: `LAW_VIOLATED:${lawViolation.lawType}:${townId}:${roadId}`,
         });
     }
-    // Slice X: penalty-funded restitution. The violator faction transfers
-    // penalty units (1:1) to the observer faction, zero-sum and clamped:
-    // the violator cannot go below 0, the observer cannot exceed its cap
-    // (same cap semantics as the per-tick refill). Non-faction violators,
-    // missing observers, and self-loops skip the transfer honestly.
+    // Slice X: penalty-funded restitution. Slice Y apportions it: the caller
+    // passes each town's share (town penalty / executable-town count) so the
+    // total across towns stays conserved instead of multiplying per town.
     let restitution = null;
-    const violatorFaction = (world.factions ?? []).find(faction => faction.id === violatorFactionId) ?? null;
-    if (observerFaction && violatorFaction && observerFaction.id !== violatorFaction.id) {
-        const amount = clamp01(lawViolation.penalty);
+    if (observerFaction && violatorFaction && !isSelfLoop) {
+        const amount = restitutionShare !== null && Number.isFinite(restitutionShare)
+            ? clamp01(restitutionShare)
+            : clamp01(lawViolation.penalty);
         const violatorBefore = Math.max(0, Number(violatorFaction.resources) || 0);
         const observerBefore = Math.max(0, Number(observerFaction.resources) || 0);
         const transferred = Math.min(violatorBefore, amount);
@@ -974,6 +978,32 @@ function observeLawViolation(world, { townId, roadId, actorId, tick, lawViolatio
         tick,
     }, [parentEventId]);
     return { lawEvent, observation, restitution, observerFactionId: observerFaction?.id ?? null, violatorFactionId };
+}
+
+// Slice Y: apportion one attack's penalty across every violated town without
+// multiplying the sentence. Executable towns are violated towns whose observer
+// is a real faction distinct from the violator faction; each gets
+// townPenalty / executableCount. Self-loops and non-faction violators yield
+// an empty set, so their LAW_VIOLATED events stay audit-only.
+function apportionedLawShares(world, violations, actorId) {
+    const bandit = (world.bandits ?? []).find(item => item.id === actorId) ?? null;
+    const violatorFactionId = typeof bandit?.factionId === 'string' && bandit.factionId.length > 0
+        ? bandit.factionId
+        : (typeof actorId === 'string' && (world.factions ?? []).some(faction => faction.id === actorId) ? actorId : null);
+    const executable = (violations ?? []).filter(violation => {
+        const town = world.towns?.get?.(violation.townId) ?? null;
+        const observerId = town?.controlledBy ?? null;
+        return Boolean(observerId && violatorFactionId && observerId !== violatorFactionId
+            && (world.factions ?? []).some(faction => faction.id === observerId));
+    });
+    const shares = new Map();
+    for (const violation of violations ?? []) {
+        const isExecutable = executable.some(entry => entry.townId === violation.townId);
+        shares.set(violation.townId, isExecutable && executable.length > 0
+            ? clamp01(violation.penalty) / executable.length
+            : 0);
+    }
+    return shares;
 }
 
 export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId = 'road-a', tick = 1 } = {}) {
@@ -1032,12 +1062,16 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
     // Law slice: BANDIT_ATTACK on a town-incident road violates town law.
     // Slice V also records the violated town owner's lawfulness observation
     // so patrol attention can react without requiring a treaty.
-    const lawViolation = checkLawCompliance({
+    // Slice Y: every violated town emits its own LAW_VIOLATED (no more
+    // first-match starvation); restitution is apportioned across executable
+    // towns so the total sentence stays conserved.
+    const lawViolations = checkAllLawCompliance({
         world,
         action: { type: 'BANDIT_ATTACK', roadId, actorId: emitted.banditId, tick },
         tick,
     });
-    if (lawViolation) {
+    const lawShares = apportionedLawShares(world, lawViolations, emitted.banditId);
+    for (const lawViolation of lawViolations) {
         observeLawViolation(world, {
             townId: lawViolation.townId,
             roadId,
@@ -1045,6 +1079,7 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
             tick,
             lawViolation,
             parentEventId: emitted.eventId,
+            restitutionShare: lawShares.get(lawViolation.townId) ?? 0,
         });
     }
     return { ok: true, event: emitted, attackOpportunityId };
@@ -3203,16 +3238,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // Law slice: BANDIT_ATTACK on a town-incident road violates law.
             // Slice V routes the same observation helper as the direct path
             // so both producers update the identical lawfulness ledger.
+            // Slice Y: every violated town emits its own LAW_VIOLATED with an
+            // apportioned restitution share (conserved total).
             for (const consequenceEvent of consequenceEvents) {
                 const roadId = consequenceEvent.roadId ?? world.bandits?.[0]?.roadId;
                 const actorId = consequenceEvent.banditId ?? world.bandits?.[0]?.id ?? 'unknown';
                 if (typeof roadId !== 'string') continue;
-                const violation = checkLawCompliance({
+                const violations = checkAllLawCompliance({
                     world,
                     action: { type: 'BANDIT_ATTACK', roadId, actorId, tick },
                     tick,
                 });
-                if (violation) {
+                const shares = apportionedLawShares(world, violations, actorId);
+                for (const violation of violations) {
                     observeLawViolation(world, {
                         townId: violation.townId,
                         roadId,
@@ -3220,6 +3258,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                         tick,
                         lawViolation: violation,
                         parentEventId: consequenceEvent.eventId,
+                        restitutionShare: shares.get(violation.townId) ?? 0,
                     });
                 }
             }

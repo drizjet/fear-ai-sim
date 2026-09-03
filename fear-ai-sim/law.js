@@ -112,16 +112,19 @@ export function isActionIllegal(action, town, world = null) {
 }
 
 /**
- * Check an action against all towns' laws. Returns the first matching violation
- * or null. The first town in insertion order wins, which is deterministic.
+ * Check an action against all towns' laws. Returns every matching violation
+ * in town insertion order (deterministic). Previously only the first match
+ * was observable, which systematically starved later towns sharing an
+ * incident road (e.g. south never saw road-a violations).
  */
-export function checkLawCompliance({ world, action, tick = 0 } = {}) {
-    if (!world || !world.towns || typeof world.towns.get !== 'function') return null;
-    if (!action || typeof action.type !== 'string') return null;
+export function checkAllLawCompliance({ world, action, tick = 0 } = {}) {
+    if (!world || !world.towns || typeof world.towns.get !== 'function') return [];
+    if (!action || typeof action.type !== 'string') return [];
+    const violations = [];
     for (const [, town] of world.towns) {
         const law = isActionIllegal(action, town, world);
         if (law) {
-            return {
+            violations.push({
                 townId: town.id,
                 lawId: law.id,
                 lawType: law.type,
@@ -129,8 +132,16 @@ export function checkLawCompliance({ world, action, tick = 0 } = {}) {
                 penalty: law.penalty,
                 action,
                 tick,
-            };
+            });
         }
     }
-    return null;
+    return violations;
+}
+
+/**
+ * Check an action against all towns' laws. Returns the first matching violation
+ * or null. The first town in insertion order wins, which is deterministic.
+ */
+export function checkLawCompliance({ world, action, tick = 0 } = {}) {
+    return checkAllLawCompliance({ world, action, tick })[0] ?? null;
 }

@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-X-LAW-RESTITUTION (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-Y-MULTITOWN-APPORTIONMENT (Lane B, unaccepted)
+
+## SLICE Y — every violated town emits; sentence apportioned, total conserved
+
+- Root cause: `checkLawCompliance` returned the first matching town, so a shared road (road-a incident to north+south) systematically starved later towns — south never emitted, never observed lawfulness, never fed its justice window. `law.js` adds `checkAllLawCompliance` (every match, insertion order); `checkLawCompliance` delegates to it (`[0] ?? null`, behavior unchanged).
+- `closed-world.js` adds `apportionedLawShares`: executable towns (observer is a real faction distinct from the violator faction) split the sentence as `townPenalty / executableCount`; self-loops and non-faction violators yield an empty set. Both emission sites (direct + encounter) loop over all violations, each with its share. `observeLawViolation` takes `restitutionShare` (defaults to full penalty) and skips self-loop lawfulness observation (matching the treaty `observeTreatyViolation` rule that never records the violator observing itself).
+- Conserved totals: default road-a attack emits north (executable, transfers 0.3, records lawfulness) + south self-loop (audit-only, south justice still sees it). Restitution total stays 0.3, faction budget stays zero-sum (south 1.7 / north 1.3 from 2.0/1.0). Single-scope worlds keep one event with the full sentence.
+- `tests/law-apportionment.test.js`: 6 tests cover multi-town emission with legacy-API compatibility, conserved totals, self-loop audit-only (no self-observation/payment), starved-town justice response (south `lawViolationCount > 0`, `lawPenalty` 0.3), single-scope full sentence, and apportioned save/load equality. Three legacy suites were strengthened (not weakened) for the new emission count: violation count 1→2 with conserved total, lawfulness south-null, free-agent dual events, save/load dual events, north-pays-south on flipped bandit faction.
+- Mutation check: `checkAllLawCompliance` → `slice(0, 1)` fails 4/11 apportionment+violation detectors; restored, law suites 29/29 green.
+- Validation: non-long-horizon 165 suites / 1246 tests green, `long-horizon-5000tick` 3 seeds green (~23.7s, events ~95.3k vs ~93k from dual LAW emission, no behavior change), production build green.
+- Deliberately deferred: `tradeFairness`/`honesty` get no consumer this slice — no non-overlapping minimal producer exists (price-deviation contradicts the opportunity bonus; delivery shortfall is already reliability). Inventing one would be decorative state. Next candidates: `logistics`/`wildlife`/`infrastructure` SPECIFIED gaps.
 
 ## SLICE X — LAW_VIOLATED penalty → faction resource restitution
 
@@ -9,7 +19,7 @@ EVID-2026-09-03-SLICE-X-LAW-RESTITUTION (Lane B, unaccepted)
 - `tests/law-restitution.test.js`: 6 tests cover zero-sum transfer, empty-law neutrality, broke-violator floor (0.1 → 0 / +0.1), capped-observer honesty (debit still applies, credit 0), free-agent and self-loop skips, and tick-path audit (every LAW carries `amount: 0.3`, total transferred > 0, save/load `toEqual`).
 - Mutation check: `Math.min(violatorBefore, amount)` → `0` fails 4/6 with assertion failures (not crashes); restored from backup, zero `MUTATION-TEST` residue, law suites 23/23 green. (An earlier edit-tool attempt at the same mutation clipped the neighboring `observerCap` line and produced a `ReferenceError`; the block was rebuilt and re-verified — recorded here so the next worker distrusts narrow range edits around that block.)
 - Validation: non-long-horizon 164 suites / 1240 tests green, `long-horizon-5000tick` 3 seeds green (~38.6s, same order as ~28.9s baseline; no event-count change), production build green.
-- Remaining law boundary: no multi-town apportionment (first matching town wins); `tradeFairness`/`honesty` dimensions remain consumer-less.
+- Remaining law boundary after Slice Y: apportionment exists (every town emits, total conserved); `tradeFairness`/`honesty` dimensions remain consumer-less (deliberately deferred, see Slice Y).
 
 ## SLICE W — LAW_VIOLATED penalty → justice legitimacy → owning faction
 
@@ -18,7 +28,7 @@ EVID-2026-09-03-SLICE-X-LAW-RESTITUTION (Lane B, unaccepted)
 - `tests/law-justice-penalty.test.js`: 6 tests cover law-vs-baseline legitimacy gap (>0.05 over 5 fixed attacks: 0.024 vs 0.204), faction tracking (0.556 vs 0.615), penalty monotonicity (0.77 erodes further, justice clamps at 0), event audit with LAW parentage, forged-LAW honesty (idle parity), and `resolve` backward compatibility (`lawPenalty: 0` ≡ default, grievance untouched).
 - Mutation check: `* 0.15` → `* 0` fails 4/6 (gap, faction, monotonicity, unit); gate restored, law+justice 23/23 green.
 - Validation: non-long-horizon 163 suites / 1234 tests green, `long-horizon-5000tick` 3 seeds green (~28.9s), production build green.
-- Remaining law boundary: restitution now exists (Slice X); / dimensions remain consumer-less; no multi-town apportionment.
+- Remaining law boundary after Slice Y: restitution exists (Slice X, now apportioned), apportionment exists; `tradeFairness`/`honesty` dimensions remain consumer-less (deliberately deferred, see Slice Y).
 
 ## SLICE V — LAW_VIOLATED → observer lawfulness → patrol attention
 

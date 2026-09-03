@@ -2,24 +2,29 @@ import { createClosedWorldScenario, tickClosedWorld, resolveBanditAttack, saveWo
 import { ensureTownLaws, isActionIllegal, checkLawCompliance, LAW_TYPES } from '../law.js';
 
 describe('law violation (town banditry prohibition)', () => {
-    test('BANDIT_ATTACK on an incident road violates town law and emits LAW_VIOLATED', () => {
+    test('BANDIT_ATTACK on an incident road violates every incident town law', () => {
         const world = createClosedWorldScenario();
-        // Force a deterministic attack via resolveBanditAttack (direct path)
+        // Force a deterministic attack via resolveBanditAttack (direct path).
+        // road-a is incident to both north and south, so both towns emit
+        // their own LAW_VIOLATED (Slice Y ended first-match starvation).
         world.merchants[0].cargo = 20;
         const result = resolveBanditAttack(world, { merchantId: 'merchant-1', roadId: 'road-a', tick: 1 });
         expect(result.ok).toBe(true);
         const lawEvents = world.events.filter(e => e.type === 'LAW_VIOLATED');
-        expect(lawEvents.length).toBe(1);
-        const ev = lawEvents[0];
-        expect(ev.prohibits).toBe('BANDIT_ATTACK');
-        expect(ev.lawType).toBe(LAW_TYPES.BANDITRY);
-        expect(typeof ev.townId).toBe('string');
-        expect(typeof ev.lawId).toBe('string');
-        expect(ev.penalty).toBeGreaterThan(0);
-        expect(ev.roadId).toBe('road-a');
-        expect(ev.attackEventId).toBe(result.event.eventId);
-        // Parentage is auditable: LAW_VIOLATED parent is the attack
-        expect(ev.parentEventIds).toContain(result.event.eventId);
+        expect(lawEvents.map(e => e.townId).sort()).toEqual(['north', 'south']);
+        for (const ev of lawEvents) {
+            expect(ev.prohibits).toBe('BANDIT_ATTACK');
+            expect(ev.lawType).toBe(LAW_TYPES.BANDITRY);
+            expect(typeof ev.lawId).toBe('string');
+            expect(ev.penalty).toBeGreaterThan(0);
+            expect(ev.roadId).toBe('road-a');
+            expect(ev.attackEventId).toBe(result.event.eventId);
+            // Parentage is auditable: LAW_VIOLATED parent is the attack
+            expect(ev.parentEventIds).toContain(result.event.eventId);
+        }
+        // The sentence stays conserved across towns (no multiplication).
+        const total = lawEvents.reduce((sum, ev) => sum + (ev.restitution?.transferred ?? 0), 0);
+        expect(total).toBeCloseTo(0.3, 10);
     });
 
     test('removing town laws prevents violation (mutation-sensitive)', () => {
@@ -100,8 +105,8 @@ describe('law violation (town banditry prohibition)', () => {
         const result = resolveBanditAttack(loaded, { merchantId: 'merchant-1', roadId: 'road-a', tick: 1 });
         expect(result.ok).toBe(true);
         const lawEvents = loaded.events.filter(e => e.type === 'LAW_VIOLATED');
-        expect(lawEvents.length).toBe(1);
-        expect(lawEvents[0].penalty).toBeCloseTo(0.77, 5);
+        expect(lawEvents.map(e => e.townId).sort()).toEqual(['north', 'south']);
+        expect(lawEvents.find(e => e.townId === 'north').penalty).toBeCloseTo(0.77, 5);
         // Deterministic replay: same save/load + same tick yields byte-identical events
         const world2 = createClosedWorldScenario();
         world2.towns.get('north').laws[0].penalty = 0.77;

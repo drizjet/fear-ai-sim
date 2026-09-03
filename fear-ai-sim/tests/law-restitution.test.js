@@ -62,11 +62,18 @@ describe('penalty-funded restitution (slice X)', () => {
         const loop = directWorld({});
         loop.bandits[0].factionId = 'north-faction';
         resolveBanditAttack(loop, { merchantId: 'merchant-1', roadId: 'road-a', tick: 1 });
-        const loopLaw = loop.events.find(e => e.type === 'LAW_VIOLATED');
-        expect(loopLaw.violatorFactionId).toBe('north-faction');
-        expect(loopLaw.observerFactionId).toBe('north-faction');
-        expect(loopLaw.restitution).toBeNull();
-        expect(loop.factions.find(f => f.id === 'north-faction').resources).toBe(1);
+        const loopLaws = loop.events.filter(e => e.type === 'LAW_VIOLATED');
+        expect(loopLaws.map(l => l.townId).sort()).toEqual(['north', 'south']);
+        const loopNorth = loopLaws.find(l => l.townId === 'north');
+        expect(loopNorth.violatorFactionId).toBe('north-faction');
+        expect(loopNorth.observerFactionId).toBe('north-faction');
+        expect(loopNorth.restitution).toBeNull();
+        // The south town is genuinely victimized by a north-faction bandit,
+        // so it still collects its apportioned share from the north.
+        const loopSouth = loopLaws.find(l => l.townId === 'south');
+        expect(loopSouth.restitution).not.toBeNull();
+        expect(loopSouth.restitution.transferred).toBeCloseTo(0.3, 10);
+        expect(loop.factions.find(f => f.id === 'north-faction').resources).toBeCloseTo(0.7, 10);
     });
 
     test('tick path audits every transfer and restitution survives save/load', () => {
@@ -77,11 +84,15 @@ describe('penalty-funded restitution (slice X)', () => {
         }
         const laws = world.events.filter(e => e.type === 'LAW_VIOLATED');
         expect(laws.length).toBeGreaterThan(0);
-        for (const law of laws) {
+        // North towns collect apportioned shares; self-loop south towns audit only.
+        for (const law of laws.filter(l => l.townId === 'north')) {
             expect(law.restitution).not.toBeNull();
             expect(law.restitution.amount).toBeCloseTo(0.3, 10);
         }
-        const totalTransferred = laws.reduce((sum, law) => sum + law.restitution.transferred, 0);
+        for (const law of laws.filter(l => l.townId === 'south')) {
+            expect(law.restitution).toBeNull();
+        }
+        const totalTransferred = laws.reduce((sum, law) => sum + (law.restitution?.transferred ?? 0), 0);
         expect(totalTransferred).toBeGreaterThan(0);
         const json = saveWorld(world);
         const loaded = loadWorld(json);
