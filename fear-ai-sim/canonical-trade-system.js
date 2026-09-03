@@ -756,7 +756,17 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
         const lawfulnessAttentionBonus = lawfulness === null
             ? 0
             : Math.max(0, 0.5 - lawfulness) * 2 * (patrol.lawfulnessWeight ?? 0.5);
-        const effectiveDetectionRate = clamp01(patrol.detectionRate + lawfulnessAttentionBonus);
+        // Slice AG: storms blind the patrol — the deployed road's
+        // weatherCost scales the whole effective rate by the same
+        // distance/(distance + weatherCost) factor the bandit hunt
+        // uses (severity 1 halves it). Calm roads carry 0, so the
+        // factor is exactly 1. The rate scales; no extra RNG draw,
+        // so the encounter stream alignment is untouched.
+        const deployedRoute = (world.routes ?? []).find(route => route.id === patrol.deployedRoute);
+        const patrolWeatherCost = Number(deployedRoute?.weatherCost) || 0;
+        const patrolDistance = Number(deployedRoute?.distance) || 0;
+        const weatherFactor = patrolDistance > 0 ? patrolDistance / (patrolDistance + patrolWeatherCost) : 1;
+        const effectiveDetectionRate = clamp01((patrol.detectionRate + lawfulnessAttentionBonus) * weatherFactor);
         const enforcementWhy = {
             violatorFactionId,
             lawfulnessObserverId: patrolFaction?.id ?? null,
@@ -764,6 +774,8 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
             lawfulnessObserved,
             lawfulnessAttentionBonus,
             baseDetectionRate: patrol.detectionRate,
+            weatherCost: patrolWeatherCost,
+            weatherFactor,
             effectiveDetectionRate,
         };
         // Detection roll.

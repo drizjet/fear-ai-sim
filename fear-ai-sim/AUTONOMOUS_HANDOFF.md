@@ -1,6 +1,15 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AF-STORM-BANDIT (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AG-STORM-PATROL (Lane B, unaccepted)
+
+## SLICE AG — storms blind patrol detection
+
+- Weather gains its third live consumer with the same factor shape as the hunt: `tickPatrol` scales the whole effective detection rate (base + lawfulness bonus) by the deployed road's `distance / (distance + weatherCost)` (severity 1 halves it; calm roads factor exactly 1). The rate scales — no extra RNG draw — so encounter-stream alignment is untouched. `enforcementWhy` audits `{weatherCost, weatherFactor}` beside the Slice V lawfulness fields.
+- `tests/storm-patrol-detection.test.js`: 6 tests cover the intercept-to-miss flip at a fixed rng boundary (0.4 base detects at 0.3 calm, misses at 0.2 stormed), the `enforcementWhy` audit, calm parity, unrelated-road neutrality, live reducer pricing (storm-world patrol events carry factor < 1), and save/load equality with identical follow-up outcomes.
+- Staging note: the staged attack emits LAW_VIOLATED, which adds a Slice V lawfulness bonus (+0.5) that masks the weather scaling — the detectors strip town laws to isolate weather, documented in the fixture. The first run caught this honestly (storm still intercepted).
+- Mutation check: weather scaling dropped from the rate → 2/6 fail (flip, audit); restored, zero residue.
+- Validation: non-long-horizon 173 suites / 1295 tests green, `long-horizon-5000tick` 3 seeds green (~14.3s, no regression), production build green.
+- Remaining weather boundary: no auto-scheduler; no storm effect on production.
 
 ## SLICE AF — storms suppress the bandit hunt
 
