@@ -734,6 +734,10 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
             claimedRadius: 3,
             contestedRadius: 0,
             scarceResources: { food: true, tools: false },
+            // Slice AB (crime): per-town investigation quality. Starts at
+            // the legacy fixed value (0.4) so worlds without patrols behave
+            // exactly as before; patrol coverage ratchets it upward.
+            crime: { investigationQuality: 0.4 },
         });
         ensureTownLaws(towns.get(id));
     }
@@ -2474,6 +2478,24 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             justiceAccess: 0.5
         };
         const reportedCrime = recentAttacksByTown(townId) > 0;
+        // Slice AB (crime): patrol coverage builds investigation quality.
+        // A patrol deployed on a road incident to this town ratchets quality
+        // upward (+0.05/tick, cap 0.9); uncovered towns hold steady so
+        // patrol-less worlds behave exactly as before (0.4 baseline).
+        // Plain JSON on the town: save/load/fork-safe; older saves migrate.
+        // NOTE: the loop head already binds `town`, but a later `const town`
+        // in this same block (Slice C) shadows it into TDZ — use townRef.
+        const townRef = world.towns.get(townId);
+        if (!townRef.crime || typeof townRef.crime !== 'object') townRef.crime = { investigationQuality: 0.4 };
+        const patrolled = (world.patrols ?? []).some(patrol => {
+            const roadId = patrol?.deployedRoute ?? null;
+            return typeof roadId === 'string' && world.routes.some(route =>
+                route.id === roadId && (route.from === townId || route.to === townId));
+        });
+        if (patrolled) {
+            const current = Number.isFinite(townRef.crime.investigationQuality) ? townRef.crime.investigationQuality : 0.4;
+            townRef.crime.investigationQuality = Math.min(0.9, current + 0.05);
+        }
         // Only resolve justice when there is something to resolve. Without
         // a reported crime, the `JusticeSystem` would still drift legitimacy
         // and grievance from its idle `justiceAccess` baseline; suppressing
@@ -2497,7 +2519,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             }
             continue;
         }
-        const investigationQuality = 0.4;
+        // Slice AB consumes the town's own investigation quality (built by
+        // patrol coverage above). Unpatrolled towns stay at the legacy 0.4.
+        // townRef (not `town`: the Slice C `const town` below shadows it).
+        const investigationQuality = Number.isFinite(townRef.crime?.investigationQuality)
+            ? townRef.crime.investigationQuality
+            : 0.4;
         const corruption = 0.1;
         // Slice W: mean LAW_VIOLATED penalty for this town in the window.
         // Zero when no violation exists — missing law history stays neutral.
@@ -2560,6 +2587,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 grievance: result.grievance,
                 migrationPressure: result.migrationPressure,
                 justiceAccess: result.justiceAccess,
+                investigationQuality,
                 lawPenalty,
                 lawViolationCount: townLawEvents.length
             }, [...upstreamAttackIds, ...upstreamLawIds]);

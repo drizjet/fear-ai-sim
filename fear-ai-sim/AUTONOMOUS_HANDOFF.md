@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AA-WILDLIFE-COMPETITION (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AB-CRIME-INVESTIGATION (Lane B, unaccepted)
+
+## SLICE AB — patrol coverage → town investigation quality → justice verdicts
+
+- Crime leaves its placeholder state: towns carry plain-JSON `crime: { investigationQuality }` (default 0.4, the legacy fixed value; older saves migrate on tick). A patrol deployed on an incident road ratchets quality upward (+0.05/tick, cap 0.9); uncovered towns hold steady, so patrol-less worlds behave exactly as before (zero baseline drift by construction).
+- `JusticeSystem.resolve` consumes the town's own quality (replacing the fixed 0.4) and `JUSTICE_RESOLVED` audits it. Patrolled towns keep higher legitimacy and lower grievance than bare controls under identical attacks, flowing to factions via Slice C and onward to migration pressure.
+- `tests/crime-investigation.test.js`: 6 tests cover baseline with migration, upward ratchet with 0.9 cap, legitimacy/grievance split vs control, unrelated-road neutrality, event audit with bare-control contrast, and save/load equality with identical follow-up justice.
+- Mutation checks (both gates): consumer fixed to 0.4 → 2/6 fail; evolution `+0.05` → `+0.0` → 3/6 fail; both restored, zero residue.
+- Validation: non-long-horizon 168 suites / 1264 tests green, `long-horizon-5000tick` 3 seeds green (~25.0s, no regression), production build green.
+- Process note: the new code first referenced the loop-head `town` binding, but a later Slice C `const town` in the same block shadows it into TDZ (`Cannot access 'town' before initialization`, failing all 6); fixed by routing the new reads through `townRef = world.towns.get(townId)`, plus a comment so the next worker does not repeat it. A follow-up edit then ate the adjacent `const corruption = 0.1` line (`corruption is not defined`); restored immediately. Both caught pre-commit by the new detectors.
+- Remaining crime boundary: no unreported-crime modeling; ratchet-only by design (no decay without coverage).
 
 ## SLICE AA — wildlife predators compete with the bandit for roads
 
