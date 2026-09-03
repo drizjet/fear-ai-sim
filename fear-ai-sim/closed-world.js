@@ -1270,8 +1270,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // Slice AE (weather): storms price road risk through routing.
     // A storm is transient scenario state on world.storm { active,
     // roadId, severity, remainingTicks, startedTick, startEventId },
-    // injected like the Slice D drought (no auto-scheduler — the
-    // scenario or a test declares it). While active, the storm road
+    // injected directly or started by the Slice AH scheduler below.
+    // While active, the storm road
     // carries weatherCost = severity * distance, which routing.routeCost
     // prices into every merchant's base score (Slice AD wiring); all
     // other roads reset to 0 each tick, so ended storms clear by
@@ -1294,6 +1294,46 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 severity: world.storm.severity,
                 tick,
             }, parentIds);
+        }
+    }
+    // Slice AH (weather): opt-in storm scheduler. A scenario declares
+    // world.stormSchedule { everyTicks, durationTicks, severity,
+    // roadIds, nextRoadIndex? } (plain JSON, save/load-safe). When no
+    // storm is active and the tick hits the cadence, a storm starts on
+    // the next scheduled road (rotation persists on nextRoadIndex, so
+    // save/load/fork cannot double-schedule). An active storm is never
+    // stacked — the cadence tick is skipped. Malformed schedules
+    // (no cadence, no roads, no matching route) are honest no-ops.
+    // Absent schedule means no storms: unscheduled worlds behave
+    // exactly as before, and the default scenario stays storm-free.
+    const schedule = world.stormSchedule;
+    if (schedule && typeof schedule === 'object' && !world.storm?.active
+        && Number.isInteger(tick) && tick > 0) {
+        const everyTicks = Number(schedule.everyTicks);
+        const durationTicks = Math.max(1, Math.floor(Number(schedule.durationTicks) || 0));
+        const candidates = (Array.isArray(schedule.roadIds) ? schedule.roadIds : [])
+            .filter(roadId => (world.routes ?? []).some(route => route?.id === roadId));
+        if (Number.isFinite(everyTicks) && everyTicks >= 1 && durationTicks >= 1
+            && candidates.length > 0 && tick % everyTicks === 0) {
+            const roadIndex = Number.isInteger(schedule.nextRoadIndex) && schedule.nextRoadIndex >= 0
+                ? schedule.nextRoadIndex : 0;
+            const roadId = candidates[roadIndex % candidates.length];
+            schedule.nextRoadIndex = roadIndex + 1;
+            const severity = clamp01(Number(schedule.severity) || 0);
+            const started = appendWorldEvent(world, {
+                type: 'STORM_STARTED',
+                roadId,
+                severity,
+                duration: durationTicks,
+                tick,
+                scheduled: true,
+                rootReason: 'STORM_SCHEDULE',
+            }, []);
+            world.storm = {
+                active: true, roadId, severity,
+                remainingTicks: durationTicks, startedTick: tick,
+                startEventId: started.eventId,
+            };
         }
     }
     // 0.1 Slice D — drought shock (ecology → production → shortage → migration)

@@ -1,6 +1,15 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AG-STORM-PATROL (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AH-STORM-SCHEDULER (Lane B, unaccepted)
+
+## SLICE AH — opt-in storm scheduler
+
+- Weather closes its injected-only gap: scenarios may declare `world.stormSchedule { everyTicks, durationTicks, severity, roadIds, nextRoadIndex? }` (plain JSON). On cadence ticks with no active storm, the reducer starts a storm on the next scheduled road, emits `STORM_STARTED` with `{scheduled: true, rootReason: 'STORM_SCHEDULE'}`, and wires `startEventId` so `STORM_ENDED` parentage keeps working. Rotation persists on `nextRoadIndex` (save/load cannot double-schedule); active storms are never stacked; malformed schedules (no cadence, no roads, unknown roads) are honest no-ops. Absent schedule means no storms — the default scenario stays storm-free and unscheduled worlds behave exactly as before.
+- `tests/storm-scheduler.test.js`: 6 tests cover cadence shape (road, severity, duration, single start event with wired parent id), rotation with no-stacking (including long-storm/short-cadence overlap), the scheduled pricing lifecycle (storm prices from the tick after it starts — the scheduler runs after the pricing pass — and clears on end), malformed-schedule honesty, the unscheduled baseline over 20 ticks, and save/load rotation equality.
+- Mutation check: cadence gated to never fire → 4/6 fail; the AE suite stays green under the mutation; restored, zero residue.
+- Process note: the pricing test first assumed the tick-5 storm prices on tick 5, but the scheduler runs after the pricing pass — the detector now asserts tick-6 pricing explicitly. A range edit again dropped the countdown block's closing brace and the drought header (syntax error, caught by `node --check`); both restored.
+- Validation: non-long-horizon 174 suites / 1301 tests green, `long-horizon-5000tick` 3 seeds green (~19.6s, no regression), production build green.
+- Remaining weather boundary: storms are scheduled, not seasonal/RNG-driven; no storm effect on production.
 
 ## SLICE AG — storms blind patrol detection
 
