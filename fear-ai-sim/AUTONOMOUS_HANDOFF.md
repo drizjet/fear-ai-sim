@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-AUDIT-F1F2 (Lane B, unaccepted)
+EVID-2026-09-03-AUDIT-F3-RESOLUTION (Lane B, unaccepted)
+
+## AUDIT RESPONSE — F3 authority violation resolved by supervisor action
+
+- The violation was genuine, not a false positive: `CURRENT_REALITY_MANIFEST.json` declares itself worker-authored (`createdAt 2026-08-30T22:30Z`, "Worker wrote this. Supervisor must verify independently.") and was committed post-snapshot (snapshot 20:08Z, single commit 47240c3 for the whole control dir). A worker writing a new control-plane file is exactly what the checker exists to detect.
+- Resolution, authorized by the supervisor instruction to fix the remaining audit findings: the manifest was removed from the worktree via `git rm` (fully recoverable from history — no evidence destroyed), and the baseline was re-established with the checker's own `--snapshot`. The new snapshot covers the same `frozen-mutants` matrix hash as the old one (continuity), and `--verify` now reports CLEAN.
+- Deliberately not done: adopting the manifest by re-snapshotting around it. Its content is irrecoverably stale as "current reality" (gitHead 63d76f9, 128/1095 worker-reported counts vs 175/1304 measured on this master, every field flagged reVerificationPending, mutation method "no disposable copy, no receipt"). Blessing it would have been the exact evidence-destroying act the audit warned against. Nothing in docs/tools/production referenced the file — only the prior handoff entry, which stands as history.
+- Lane A consequence: the authority baseline is no longer known-bad. Acceptance claims bind to a clean baseline from this commit forward; the 2026-08-30→2026-09-03 window remains admitted violation period and claims dated inside it stay inadmissible.
 
 ## AUDIT RESPONSE — independent audit F1 (fixed) + F2 (contained, invariant added)
 
