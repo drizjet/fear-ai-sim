@@ -1267,6 +1267,35 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const current = Number.isFinite(route.condition) ? route.condition : 1;
         route.condition = Math.min(1, Math.max(0.5, current + 0.01));
     }
+    // Slice AE (weather): storms price road risk through routing.
+    // A storm is transient scenario state on world.storm { active,
+    // roadId, severity, remainingTicks, startedTick, startEventId },
+    // injected like the Slice D drought (no auto-scheduler — the
+    // scenario or a test declares it). While active, the storm road
+    // carries weatherCost = severity * distance, which routing.routeCost
+    // prices into every merchant's base score (Slice AD wiring); all
+    // other roads reset to 0 each tick, so ended storms clear by
+    // construction and older saves migrate with zero weather.
+    for (const route of world.routes ?? []) {
+        if (!route || typeof route !== 'object') continue;
+        route.weatherCost = (world.storm?.active && world.storm.roadId === route.id)
+            ? clamp01(Number(world.storm.severity) || 0) * (Number(route.distance) || 0)
+            : 0;
+    }
+    if (world.storm?.active) {
+        const remaining = Math.max(0, (world.storm.remainingTicks ?? 0) - 1);
+        world.storm.remainingTicks = remaining;
+        if (remaining <= 0) {
+            world.storm.active = false;
+            const parentIds = world.storm.startEventId ? [world.storm.startEventId] : [];
+            appendWorldEvent(world, {
+                type: 'STORM_ENDED',
+                roadId: world.storm.roadId,
+                severity: world.storm.severity,
+                tick,
+            }, parentIds);
+        }
+    }
     // 0.1 Slice D — drought shock (ecology → production → shortage → migration)
     // A drought is a transient ecology modifier on food production for a
     // single town. It is stored on world.drought { active, severity, kind,

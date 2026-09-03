@@ -1,6 +1,17 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AD-ROUTING-MERCHANT-BASE (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AE-STORM-WEATHER (Lane B, unaccepted)
+
+## SLICE AE — storms price road risk through routing
+
+- Weather leaves SPECIFIED by mirroring the Slice D drought contract: storms are transient scenario state (`world.storm { active, roadId, severity, remainingTicks, startedTick, startEventId }`, injected — no auto-scheduler). The reducer prices the storm road at `weatherCost = severity × distance` every tick; every other road resets to 0, so ended storms clear by construction and older saves migrate with zero weather and zero drift. The clock decrements and `STORM_ENDED` emits parented to `STORM_STARTED`.
+- The consumer was already live: `routing.routeCost` has priced `weatherCost` since Slice Z, but nothing ever set it (a dormant term). Through the Slice AD wiring it now flows into every merchant's base score with no canonical-trade-system change — a severity-1 storm on road-a moves the live merchant to pristine road-c against a calm control that stays on road-a.
+- `tests/storm-weather-routing.test.js`: 6 tests cover pricing (`0.5 × 5 = 2.5`, others 0), end/clear with parentage, the live reroute flip with pinned beliefs (`perceptionAccuracy: 0`, since the legal observation channel would otherwise rewrite mid-test beliefs), severity monotonicity (1.25 vs 3.75), save/load equality with identical follow-up pricing, and the calm baseline.
+- Mutation check: weather assignment flattened to `0` → 3/6 fail (pricing, flip, monotonicity); restored, zero residue.
+- Process note: the flip test first failed because the live topology has three roads from north — the stormed merchant takes pristine road-c, not road-b as assumed; the detector now asserts the refuge directly (verified by dumping live scores: road-c 0.45 < road-a 0.95 stormed). A range edit also dropped the maintenance loop's closing brace and the drought section header (syntax error, caught by `node --check`); both restored.
+- Validation: non-long-horizon 171 suites / 1283 tests green, `long-horizon-5000tick` 3 seeds green (~16.6s, no regression), production build green.
+- Doc honesty fix in the same pass: the ecology maturity row still claimed "no ecology system" while season/drought/demography have been live for slices; corrected to the real boundary (no regrowth stock, injected-not-scheduled droughts).
+- Remaining weather boundary: no auto-scheduler; no storm effect on bandits, patrols, or production.
 
 ## SLICE AD — routing.js owns the merchant base cost
 
