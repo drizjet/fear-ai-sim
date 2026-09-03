@@ -1,6 +1,15 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-AUDIT-F3-RESOLUTION (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AI-STORM-PRODUCTION (Lane B, unaccepted)
+
+## SLICE AI — storms disrupt town production
+
+- Weather gains its fourth live consumer in the step-4 market loop, beside the Slice D drought block: an active storm on any road incident to a town scales that town's per-good production by `(1 − 0.3 × severity)` — milder than drought's 0.6 by design (logistical disruption: labor and carts cannot move; the fields still yield). Unknown storm roads match no incident road and multiply by exactly 1; storm-free worlds are untouched.
+- `tests/storm-production.test.js`: 6 tests cover the designed ratio (0.82 at severity 0.6), the market consequence (lower supply — shortage stays pinned at 0 under surplus-rate production, so the detector asserts supply rather than inventing a shortage), incident-only honesty, severity monotonicity (0.7 vs 0.94), recovery after the storm ends, and save/load equality.
+- Mutation check: multiplier neutralized to 1 → 3/6 fail (ratio, supply, monotonicity); the drought suite stays green under the mutation; restored, zero residue.
+- Process note: the shortage-first detector failed honestly (surplus production pins shortage at 0 in both worlds) and was rewritten to assert supply. Two range edits dropped the drought block's closing brace and the produce guard head (syntax errors, caught by `node --check`); both restored.
+- Validation: non-long-horizon 176 suites / 1310 tests green, `long-horizon-5000tick` 3 seeds green (~20.0s, no regression), production build green.
+- Remaining weather boundary: storms are scheduled, not seasonal/RNG-driven.
 
 ## AUDIT RESPONSE — F3 authority violation resolved by supervisor action
 

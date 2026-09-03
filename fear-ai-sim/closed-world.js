@@ -2375,6 +2375,21 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 const droughtMultiplier = Math.max(0.1, 1 - sev * 0.6);
                 perCapitaProduction *= droughtMultiplier;
             }
+            // Slice AI: storms disrupt town production. An active storm on
+            // any road incident to this town scales all production by
+            // (1 - 0.3 * severity) — labor and carts cannot move in
+            // the storm. Milder than drought (0.6) by design: the fields
+            // still yield, the disruption is logistical. No storm (or a
+            // storm on no incident road) multiplies by exactly 1.
+            if (world.storm?.active && world.storm.roadId) {
+                const stormRoad = (world.routes ?? []).find(route =>
+                    route?.id === world.storm.roadId
+                    && (route.from === townId || route.to === townId));
+                if (stormRoad) {
+                    const stormSev = clamp01(Number(world.storm.severity) || 0);
+                    perCapitaProduction *= Math.max(0, 1 - stormSev * 0.3);
+                }
+            }
             if (Number.isFinite(perCapitaProduction) && perCapitaProduction > 0 && population > 0) {
                 const prodResult = market.produce(kind, population * perCapitaProduction);
                 if (prodResult) {
