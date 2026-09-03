@@ -146,7 +146,7 @@ export function executeRetaliation(faction, target, plan) {
         return { ok: false, action, reason: 'INSUFFICIENT_RESOURCES' };
     }
     faction.executedActions.add(action.actionId);
-    faction.resources = resources - 1;
+    faction.resources = Math.max(0, resources - 1);
     if (target && typeof target === 'object') {
         target.threatened = true;
     }

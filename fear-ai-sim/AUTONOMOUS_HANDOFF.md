@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AI-STORM-PRODUCTION (Lane B, unaccepted)
+EVID-2026-09-03-PREAUDIT-1-SKIPPED-SUITES (Lane B, unaccepted)
+
+## PRE-AUDIT 1 — skipped-suite enumeration (plus one real fix)
+
+- The routine per-change gate runs non-long-horizon plus `long-horizon-5000tick`. The routinely-skipped set is exactly three suites: `long-horizon-invariant-health`, `scenario-differentiation-long-horizon`, `long-horizon-dynamics`. All three now run explicitly: scenario-differentiation 4/4 (~1.1s batch), dynamics 5/5, invariant-health 5/5 after the fix below.
+- The enumeration caught a genuine regression hiding in the skipped set: invariant-health ALWAYS `faction.resources in [0, max]` failed at tick 213 (`north-faction resources -0.4 > max 2`). Cause: `escalation.js executeRetaliation` spent `resources - 1` unclamped — the only faction-resources write in the codebase without a `Math.max(0, …)` floor — so a faction entering with fractional resources (0.6, via restitution/trade paths) landed at -0.4. Fix: clamp the spend at zero, matching every other write site. The Slice H invariant test is the detector; the observed pre-fix failure is the mutation proof (unclamped gate fails, clamped gate passes); no test file was touched.
+- Post-fix: non-long-horizon 176 suites / 1310 tests green (~39.8s), 5000-tick 3 seeds green (~17.7s). Authority-check `--verify` CLEAN. `lint:evidence` still exits 1 (270 rows, 0 admissible, all domains stale) — that is item 2, not this entry.
+- Lesson for the audit: the skipped set is where regressions hide by construction. Item 5's replay script should include these three suites in its scope.
 
 ## SLICE AI — storms disrupt town production
 
