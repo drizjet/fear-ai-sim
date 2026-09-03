@@ -8,10 +8,14 @@
 // BLOCKED / CONTRADICTED / INCOMPLETE / ADMISSIBLE per row.
 //
 // Exits 0 if every row is ADMISSIBLE for its domain (or the
-// domain has no rows but no active contradiction either). Exits
-// 1 if any row is CONTRADICTED or if any domain has an active
-// contradiction that is not recorded in the evidence.
-//
+// domain has no rows but no active contradiction either), or is
+// explicitly retired: INVALIDATED by an EVIDENCE_SUPERSESSION row,
+// or SUPERSEDED by a live re-proof of the same claim. A row whose
+// tracked files still hash as recorded is current (ADMISSIBLE)
+// even across commits that touch nothing it tracks. Exits
+// 1 if any row is CONTRADICTED, STALE with no live successor, or
+// INCOMPLETE, or if any domain has an active contradiction that is
+// not recorded in the evidence.
 // Usage:
 //   node scripts/audit-evidence.mjs [--root <repo-root>]
 
@@ -122,13 +126,27 @@ function main() {
         const commandOk = Array.isArray(row.commandResults)
             && row.commandResults.length > 0
             && row.commandResults.every(cr => cr.ok === true);
+        const contradicted = Array.isArray(row.knownContradictions) && row.knownContradictions.length > 0;
+        // V8 corrective checkpoint §7: content-match currency. The
+        // fingerprint binds head + dirty + file hashes, so ANY commit
+        // stales every row even when the tracked sources are byte-identical.
+        // A row whose tracked files still hash exactly as recorded proves
+        // the same claim against the same sources: that is current
+        // evidence, not stale evidence. Content drift is still STALE.
+        const contentMatches = row.sourceState
+            && Array.isArray(row.sourceState.fileHashes)
+            && Array.isArray(fresh.fileHashes)
+            && row.sourceState.fileHashes.length === fresh.fileHashes.length
+            && row.sourceState.fileHashes.every(entry =>
+                fresh.fileHashes.some(other => other.path === entry.path && other.hash === entry.hash));
         let status = 'INCOMPLETE';
-        if (freshness === 'STALE') status = 'STALE';
+        if (contradicted) status = 'CONTRADICTED';
+        else if (freshness === 'STALE' && !contentMatches) status = 'STALE';
         else if (freshness === 'INCOMPLETE') status = 'INCOMPLETE';
         else if (!commandOk) status = 'INCOMPLETE';
-        else if (Array.isArray(row.knownContradictions) && row.knownContradictions.length > 0) status = 'CONTRADICTED';
-        else status = 'ADMISSIBLE';
+        else if (freshness === 'FRESH' || contentMatches) status = 'ADMISSIBLE';
         row.freshness = status;
+        row._provisional = status;
         if (!report.domains[row.domain]) {
             report.domains[row.domain] = {
                 rows: 0,
@@ -137,6 +155,8 @@ function main() {
                 contradicted: 0,
                 incomplete: 0,
                 supersession: 0,
+                invalidated: 0,
+                superseded: 0,
                 derivedLabel: null,
             };
         }
@@ -148,6 +168,52 @@ function main() {
         else d.incomplete += 1;
     }
 
+    // V8 corrective checkpoint §8: retirement. The ledger is append-only,
+    // so history accumulates. A non-admissible row retires (stops failing
+    // the gate) in exactly two cases, both explicit:
+    //   (a) INVALIDATED — its claimId is named by an EVIDENCE_SUPERSESSION
+    //       row's invalidatedClaimIds (test pollution, withdrawn claims);
+    //   (b) SUPERSEDED — a live row with the same domain + claimId +
+    //       dimension is currently ADMISSIBLE (a reseed re-proved the
+    //       claim against newer sources; the older proof is history).
+    // A lone stale row with no current proof still fails: that is the
+    // MUT-EVID-002 contract and it is unchanged. Retired rows never
+    const invalidatedClaimIds = new Set();
+    for (const row of ledger) {
+        if (row && row.dimension === 'EVIDENCE_SUPERSESSION' && Array.isArray(row.invalidatedClaimIds)) {
+            for (const id of row.invalidatedClaimIds) invalidatedClaimIds.add(id);
+        }
+    }
+    const liveProof = new Set();
+    const proofKey = (row) => [row.domain, row.claimId, row.dimension].join('|');
+    for (const row of ledger) {
+        if (row && row.freshness === 'ADMISSIBLE' && row.domain && row.claimId && row.dimension) {
+            liveProof.add(proofKey(row));
+        }
+    }
+    const provisionalBucket = { ADMISSIBLE: 'admissible', STALE: 'stale', CONTRADICTED: 'contradicted', INCOMPLETE: 'incomplete' };
+    for (const row of ledger) {
+        if (!row || row.freshness === 'ADMISSIBLE' || row.freshness === 'SUPERSESSION' || row.dimension === 'EVIDENCE_SUPERSESSION') {
+            delete row._provisional;
+            continue;
+        }
+        let retired = null;
+        if (row.claimId && invalidatedClaimIds.has(row.claimId)) {
+            retired = 'INVALIDATED';
+        } else if (row.freshness !== 'CONTRADICTED' && row.domain && row.claimId && row.dimension
+            && liveProof.has(proofKey(row))) {
+            retired = 'SUPERSEDED';
+        }
+        if (retired) {
+            const d = report.domains[row.domain];
+            const bucket = provisionalBucket[row._provisional];
+            if (d && bucket && typeof d[bucket] === 'number' && d[bucket] > 0) d[bucket] -= 1;
+            if (d && retired === 'INVALIDATED') d.invalidated += 1;
+            if (d && retired === 'SUPERSEDED') d.superseded += 1;
+            row.freshness = retired;
+        }
+        delete row._provisional;
+    }
     for (const dom of Object.keys(report.domains)) {
         const m = maturityGate({ domain: dom, ledger, contradictions });
         report.domains[dom].derivedLabel = m.label;
@@ -168,12 +234,16 @@ function main() {
 
     process.stdout.write(JSON.stringify(report, null, 2) + '\n');
 
-    // Exit non-zero unless every recorded row is currently admissible.
-    // Reporting STALE or INCOMPLETE while returning success allows CI and
-    // maturity automation to accept evidence whose declared support has
-    // drifted, which is the MUT-EVID-002 failure mode.
+    // Exit non-zero unless every recorded row is currently admissible or
+    // explicitly retired. Reporting STALE or INCOMPLETE while returning
+    // success allows CI and maturity automation to accept evidence whose
+    // declared support has drifted, which is the MUT-EVID-002 failure mode.
     // SUPERSESSION rows are audit metadata, not claims — exclude them.
-    const hasInadmissible = ledger.some(r => r.freshness !== 'ADMISSIBLE' && r.freshness !== 'SUPERSESSION' && r.dimension !== 'EVIDENCE_SUPERSESSION');
+    // INVALIDATED (named by a supersession row) and SUPERSEDED (a live
+    // re-proof of the same claim exists) rows are history, not drift:
+    // they neither pass nor fail the gate and never support maturity.
+    const retired = new Set(['SUPERSESSION', 'INVALIDATED', 'SUPERSEDED']);
+    const hasInadmissible = ledger.some(r => !retired.has(r.freshness) && r.freshness !== 'ADMISSIBLE' && r.dimension !== 'EVIDENCE_SUPERSESSION');
     const activeC = contradictions.filter(c => c.active !== false);
     const hasUntrackedContradiction = activeC.some(c => {
         return !ledger.some(r => r.domain === c.domain && Array.isArray(r.knownContradictions) && r.knownContradictions.includes(c.rowId));

@@ -11,7 +11,8 @@
 
 import { mkdtempSync, writeFileSync, rmSync, existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
 import {
     maturityGate,
     readLedger,
@@ -263,5 +264,110 @@ describe('evidence-linter (Movement 1)', () => {
         }];
         const result = maturityGate({ domain: 'territory', ledger, contradictions });
         expect(result.label).toBe('UNIT_VERIFIED');
+    });
+});
+
+// V8 checkpoint §7-§8 retirement detectors (pre-audit item 2). Fixture-ledgers
+// drive the real linter subprocess; tmpdir() keeps the isolation invariant happy.
+const RETIRE_LINTER = resolve(process.cwd(), 'evidence/lint.mjs');
+
+function retireFixture() {
+    const rootDir = mkdtempSync(join(tmpdir(), 'fear-evidence-retire-'));
+    const evidenceDir = join(rootDir, 'docs', 'evidence');
+    mkdirSync(evidenceDir, { recursive: true });
+    writeFileSync(join(rootDir, 'source.js'), 'export const value = 1;\n');
+    writeFileSync(join(rootDir, 'docs', 'DOMAIN_MATURITY.md'), '| retire-test | UNIT_VERIFIED | fixture | none | none |\n');
+    writeFileSync(join(evidenceDir, 'CONTRADICTIONS.jsonl'), '');
+    return { rootDir, evidenceDir };
+}
+
+function retireRow(overrides = {}) {
+    return {
+        evidenceId: 'EVID-FIXTURE',
+        claimId: 'RETIRE-1',
+        domain: 'retire-test',
+        dimension: 'UNIT_VERIFIED',
+        claim: 'fixture claim',
+        sourceState: { head: 'no-git', dirty: false, fingerprint: 'bogus', fingerprintFiles: ['source.js'], fileHashes: [] },
+        files: ['source.js'],
+        transitiveDependencies: ['source.js'],
+        commandResults: [{ ok: true }],
+        knownContradictions: [],
+        ...overrides,
+    };
+}
+
+function writeLedgerRows(evidenceDir, rows) {
+    writeFileSync(join(evidenceDir, 'EVIDENCE_LEDGER.jsonl'), rows.map(r => JSON.stringify(r)).join('\n') + '\n');
+}
+
+function runRetireAudit(rootDir) {
+    return spawnSync(process.execPath, [RETIRE_LINTER, '--root', rootDir], { cwd: process.cwd(), encoding: 'utf8' });
+}
+
+describe('evidence retirement (§7 content-match, §8 supersede/invalidate)', () => {
+    test('16. stale row with a live same-claim successor retires SUPERSEDED and passes', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
+            const live = retireRow({ sourceState: { head: fp.head, dirty: fp.dirty, fingerprint: fp.fingerprint, fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes } });
+            const stale = retireRow({ evidenceId: 'EVID-FIXTURE-OLD' });
+            writeLedgerRows(evidenceDir, [stale, live]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.domains['retire-test']).toMatchObject({ admissible: 1, superseded: 1, stale: 0 });
+            expect(result.status).toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+
+    test('17. stale row named by a supersession row retires INVALIDATED and never counts admissible', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            const stale = retireRow();
+            const kill = {
+                evidenceId: 'EVID-FIXTURE-KILL', claimId: 'KILL-1', domain: 'retire-test',
+                dimension: 'EVIDENCE_SUPERSESSION', claim: 'fixture invalidation',
+                invalidatedClaimIds: ['RETIRE-1'], commandResults: [], knownContradictions: [],
+            };
+            writeLedgerRows(evidenceDir, [stale, kill]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.domains['retire-test']).toMatchObject({ admissible: 0, invalidated: 1, stale: 0 });
+            expect(result.status).toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+
+    test('18. head-only drift with identical file hashes stays ADMISSIBLE', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
+            const row = retireRow({
+                sourceState: { head: 'deadbeef-old-head', dirty: false, fingerprint: 'stale-by-head', fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes },
+            });
+            writeLedgerRows(evidenceDir, [row]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.domains['retire-test']).toMatchObject({ admissible: 1, stale: 0 });
+            expect(result.status).toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+
+    test('19. stale row with no successor and no invalidation still fails', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            writeLedgerRows(evidenceDir, [retireRow()]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.domains['retire-test']).toMatchObject({ admissible: 0, stale: 1 });
+            expect(result.status).not.toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
     });
 });
