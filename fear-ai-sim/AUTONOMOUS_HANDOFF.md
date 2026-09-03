@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-Z-ROAD-CONDITION (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AA-WILDLIFE-COMPETITION (Lane B, unaccepted)
+
+## SLICE AA — wildlife predators compete with the bandit for roads
+
+- Wildlife leaves SPECIFIED: `wildlife.js` owns `WildlifeGroup` (`{id,roadId,size,lastMoveTick}`, plain JSON) with `createWildlifeGroup`, `tickWildlifeGroup` (deterministic move toward the busiest merchant road when it leads by more than the threshold, ties hold, no RNG consumed), `wildlifePressureOnRoad` (total size per road), and `wildlifePayoffFactor` (`1 − min(0.8, size/10)`).
+- `createClosedWorldScenario` seeds `wolves-1` (road-b, size 3); the reducer migrates legacy saves (absent array means no group, behavior preserved) and ticks groups in step 7.5 before the bandit scores, emitting sparse `WILDLIFE_RELOCATION` (root `FORAGE`) only on actual moves. `tickBandit` multiplies route payoff by the factor (absent groups factor exactly 1, so legacy worlds are untouched).
+- Measured: size-10 group on road-b holds a road-a bandit (no relocation) where the empty control relocates; size-3 default dilutes 30% without freezing the cat-and-mouse (full suite green unchanged).
+- `tests/wildlife-competition.test.js`: 6 tests cover deterministic tracking, no-traffic hold, crowded suppression with empty control, unrelated-road neutrality, exact factor values (1 / 0.7 / 0.2 cap), and save/load equality with sparse hold.
+- Mutation check: payoff `* wildlifeFactor` removed → suppression test fails (crowded bandit relocates); restored, zero residue.
+- Validation: non-long-horizon 167 suites / 1258 tests green, `long-horizon-5000tick` 3 seeds green (~20.8s, no regression), production build green.
+- Remaining wildlife boundary: fixed size (no reproduction/mortality); no cargo consumption or patrol interaction.
 
 ## SLICE Z — road condition → route choice + travel time
 

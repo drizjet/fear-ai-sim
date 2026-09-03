@@ -27,6 +27,7 @@ import {
     hasReputationObservation,
     REPUTATION_DIMENSIONS,
 } from './reputation.js';
+import { wildlifePayoffFactor } from './wildlife.js';
 
 // Deterministic xorshift32 RNG (mirrors closed-world.js).
 const deterministicRng = (seed = 1) => {
@@ -614,11 +615,15 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
     const seasonKey = (world && world.season) || 'SUMMER';
     const seasonMod = SEASON_BANDIT_MODIFIER[seasonKey] ?? 1.0;
     // Score each route by believed traffic * cargoValue * season.
+    // Slice AA: predators dilute the payoff — each wildlife size unit on
+    // the road cuts payoff 10% (capped at 80%). Absent groups mean a
+    // factor of exactly 1 (legacy behavior preserved).
     const scored = routes.map(route => {
         const belief = bandit.trafficBelief[route.id] || { estimatedTraffic: 0, recency: 0 };
+        const wildlifeFactor = wildlifePayoffFactor(world, route.id);
         const payoff = belief.estimatedTraffic * (bandit.cargoValuePerMerchant ?? 10)
-            * belief.recency * seasonMod;
-        return { routeId: route.id, payoff, recency: belief.recency, seasonMod };
+            * belief.recency * seasonMod * wildlifeFactor;
+        return { routeId: route.id, payoff, recency: belief.recency, seasonMod, wildlifeFactor };
     }).sort((a, b) => b.payoff - a.payoff);
     const top = scored[0];
     if (!top || top.payoff <= 0) return { ok: false, reason: 'NO_OPPORTUNITY' };

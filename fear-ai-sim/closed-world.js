@@ -10,6 +10,7 @@ import { FactionRelationshipVector, evaluateStance, chooseStance, StanceLadder }
 import { evaluateEncounterEligibility, selectEncounterCandidates, instantiateEncounter } from './encounters.js';
 import { checkTreatyCompliance, activeTreatiesFor } from './treaty.js';
 import { createRoamingGroup, chooseRoamingDestination, generateCandidates, startTravel, advanceTravel, tickRoamingGroup, scoutDestination, recordObservation, ROAMING_MODE, makeXorShift32 } from './roaming.js';
+import { tickWildlifeGroup } from './wildlife.js';
 import { tickMerchant as tickCanonicalMerchant, tickBandit as tickCanonicalBandit, tickPatrol as tickCanonicalPatrol } from './canonical-trade-system.js';
 import { tickSeason, getSeasonModifier, getSpoilageModifier } from './ecology.js';
 import { tickDemography } from './demography.js';
@@ -868,9 +869,14 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         treaties: [],
         // The §89 wildlife collection. The wildlife-encounter
         // apply function pushes wildlife sightings here.
-        // A future slice can wire the wildlife subsystem to
-        // model predator-prey dynamics.
+        // Slice AA adds the predator-competition subsystem: wildlife
+        // groups occupy roads and dilute bandit payoff there
+        // (see wildlife.js). Groups are plain JSON and migrate
+        // on tick for older saves.
         wildlife: [],
+        wildlifeGroups: [
+            { id: 'wolves-1', roadId: 'road-b', size: 3, lastMoveTick: null },
+        ],
         // The §17 / §325 attack-execution idempotency contract.
         // Each bandit attack opportunity has a unique
         // attackOpportunityId. Once an attack has been debited
@@ -1207,6 +1213,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // resumed checkpoint obey the same due work as an uninterrupted world.
     ensurePendingWorldState(world);
     finalizeWorldEventLedger(world);
+    // Slice AA: migrate older saves without the predator subsystem.
+    // Absent means no group (legacy behavior preserved); malformed
+    // entries are left for the per-tick loop to skip honestly.
+    if (!Array.isArray(world.wildlifeGroups)) world.wildlifeGroups = [];
+    if (!Array.isArray(world.wildlife)) world.wildlife = [];
     // Law slice: ensure every town has its prohibitions materialized.
     if (world.towns && typeof world.towns.get === 'function') {
         for (const [, town] of world.towns) ensureTownLaws(town);
@@ -3321,6 +3332,23 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // step 2.5 call is the authoritative merchant tick; step 7.5
     // only processes bandit and patrol so the encounter engine can
     // see fresh bandit/patrol state for the same tick.
+    // Slice AA: wildlife moves before the bandit scores routes, so the
+    // predator-competition discount applies in the same tick. Movement is
+    // deterministic (no RNG consumed); only actual relocations emit.
+    for (const group of (world.wildlifeGroups ?? [])) {
+        if (!group || typeof group.id !== 'string') continue;
+        const moved = tickWildlifeGroup(world, group.id, { tick });
+        if (moved.ok && moved.relocated) {
+            appendWorldEvent(world, {
+                type: 'WILDLIFE_RELOCATION',
+                tick,
+                groupId: group.id,
+                from: moved.from,
+                to: moved.to,
+                rootReason: 'FORAGE',
+            }, []);
+        }
+    }
     for (const bandit of (world.bandits || [])) {
         if (bandit && bandit.trafficBelief) {
             tickCanonicalBandit(world, bandit.id, { tick, rng: makeEncounterRng(world, encounterRng) });
