@@ -1,6 +1,17 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-SLICE-AC-WAGON-CAPACITY (Lane B, unaccepted)
+EVID-2026-09-03-SLICE-AD-ROUTING-MERCHANT-BASE (Lane B, unaccepted)
+
+## SLICE AD — routing.js owns the merchant base cost
+
+- Trade-routes leaves its split-brain state: `chooseMerchantRouteDecision` consumed a hand-rolled blend that duplicated `routing.routeCost` term-for-term (distance/condition, danger, cargo-at-risk, familiarity) while Slice Z had to patch condition handling in both places. The canonical decision now maps its identity/belief terms 1:1 onto a routing perception — `fearSensitivity: (1 − riskTolerance) * 40`, `expectedCargoLoss: cargoLossRisk / 10`, `routeFamiliarity: familiarityBonus * 10`, `confidence: 1` — and consumes `routeCost / 10` as the base score (routing prices distance in whole units, the decision scores in distance/10 units). The ranking is identical to the legacy blend by construction; market opportunity and trade-reliability adjustments layer on top (neither has a routing equivalent and both stay canonical).
+- New live capability, not just a refactor: routing-only terms now steer merchants. A tolled road (`tollCost: 3`) loses to an otherwise identical free road by exactly 0.3 — the legacy blend tied and the index tiebreak kept the tolled road. Component fields (`distanceCost`, `dangerPenalty`, `familiarityBonus`) stay exact for the WHY audit, plus the new `routingBaseCost` field.
+- `tests/routing-merchant-base.test.js`: 7 tests cover base reconstruction vs the legacy blend, ranking-order identity with routing, the danger flip, condition flow (degraded short loses to pristine long), opportunity layering (`score ≡ base − bonus`), `selectRoute` agreement, and toll steering.
+- Mutation check: base recomputed as the legacy blend (routing bypassed) → toll test fails (`road-toll` chosen); restored, zero residue. The toll test is the discriminator — reconstruction/order tests pass under the mutation by design, since the mapping is algebraically identical.
+- Process note: the first production edit dropped the `const beliefs` extraction (all 21 trade-routing tests failed with `beliefs is not defined`); restored immediately. The second dropped the `destinationTownId` head (syntax error, caught by `node --check` before any test ran). Both caught pre-commit.
+- Validation: non-long-horizon 170 suites / 1277 tests green, `long-horizon-5000tick` 3 seeds green (~22.6s, no regression), production build green.
+- Doc honesty fix in the same pass: the markets maturity row still claimed "no price elasticity" two slices after Slice N/O shipped `getElasticQuote`; corrected to the real boundary (no bidding/auction discovery).
+- Remaining trade boundary: the real `trade.js` trip lifecycle (`startTrip`/`completeTrip`) is still unwired into the pending-trip system; `findRoutePath` multi-hop planning is unused (all live roads are direct edges).
 
 ## SLICE AC — wagon capacity prices road usage per shipment
 

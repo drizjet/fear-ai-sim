@@ -28,7 +28,10 @@ import {
     REPUTATION_DIMENSIONS,
 } from './reputation.js';
 import { wildlifePayoffFactor } from './wildlife.js';
-
+// Slice AD: routing.js owns route costing. The canonical decision maps
+// its identity/belief terms onto a routing perception and consumes
+// routeCost as the base score instead of maintaining a parallel blend.
+import { routeCost } from './routing.js';
 // Deterministic xorshift32 RNG (mirrors closed-world.js).
 const deterministicRng = (seed = 1) => {
     let state = seed >>> 0 || 1;
@@ -175,10 +178,19 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
         // "no information" (0 danger). The merchant
         // optimizes for distance first, then known danger.
         const belief = beliefs[route.id] || { perceivedDanger: 0, confidence: 0.5 };
+        // Slice AD: the base cost comes from routing.routeCost — the
+        // single owner of distance/condition/danger/cargo/familiarity
+        // pricing. The canonical identity terms map onto a routing
+        // perception 1:1 (fearSensitivity carries the risk-tolerance
+        // blend, expectedCargoLoss carries the value-at-risk blend,
+        // routeFamiliarity carries the familiarity bonus). routing
+        // prices distance in whole units while this decision scores in
+        // distance/10 units, so perception weights are scaled by 10
+        // and the routing cost is normalized back — the ranking is
+        // identical to the legacy blend by construction, and the
+        // component fields below stay exact for the WHY audit.
         // Risk tolerance inversely weights perceived danger in the
-        // route score: high tolerance -> low danger penalty. This is
-        // a simple linear blend; the routing module does the
-        // heavier multi-factor work when available.
+        // route score: high tolerance -> low danger penalty.
         // EVID-2026-08-29-BELIEF-DRIVES-CHOICE: the danger
         // penalty is amplified so that a high perceivedDanger
         // (e.g. 0.8) outweighs a moderate distance difference.
@@ -193,6 +205,13 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
         const distanceCost = (route.distance || 1) / (10 * roadCondition);
         const cargoValue = merchant.cargo || 0;
         const cargoLossRisk = cargoValue * (merchant.cargoValueSensitivity ?? 0.5) * belief.perceivedDanger;
+        const routingBaseCost = routeCost(route, {
+            perceivedDanger: belief.perceivedDanger,
+            fearSensitivity: (1 - merchant.riskTolerance) * 40,
+            expectedCargoLoss: cargoLossRisk / 10,
+            routeFamiliarity: familiarityBonus * 10,
+            confidence: 1,
+        }) / 10;
         const destinationTownId = route.from === merchant.location
             ? route.to
             : route.to === merchant.location ? route.from : (route.to ?? null);
@@ -255,8 +274,10 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
         const tradeReliabilityPenalty = tradeReliability === null
             ? 0
             : (1 - tradeReliability) * reliabilityWeight;
-        const score = distanceCost + dangerPenalty + cargoLossRisk / 100
-            - familiarityBonus - opportunityBonus + tradeReliabilityPenalty;
+        // Slice AD: the ranking score is the routing-owned base plus
+        // the canonical market/reputation adjustments (opportunity and
+        // reliability have no routing equivalent and stay here).
+        const score = routingBaseCost - opportunityBonus + tradeReliabilityPenalty;
         return {
             route,
             index,
@@ -271,6 +292,7 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
             tradeReliability,
             tradeReliabilityPenalty,
             reliabilityObserved,
+            routingBaseCost,
         };
     }).sort((a, b) => a.score - b.score || a.index - b.index);
 
