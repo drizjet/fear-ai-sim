@@ -39,7 +39,7 @@ if (receipt.exitCode !== 0) {
 const text = readFileSync(MATURITY_DOC, 'utf8');
 let seeded = 0;
 for (const line of text.split(/\r?\n/)) {
-    const match = line.match(/^\|\s*([a-z][a-z0-9-]*)\s*\|\s*(`[A-Z_]+`)\s*\|/);
+    const match = line.match(/^\|\s*([a-z][a-z0-9-]*)\s*\|\s*`?([A-Z_]+)`?/);
     if (!match) continue;
     const [, domain, label] = match;
     const claimId = `C-${domain}-SPECIFIED`;

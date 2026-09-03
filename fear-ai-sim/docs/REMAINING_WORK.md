@@ -1,8 +1,8 @@
 # Fear AI / BadAI — Remaining Work Ledger
 
+> SUPERSEDED 2026-09-03 (pre-audit item 3): this ledger describes a 24-suite / 576-test world from 2026-08-26 and has not tracked the world-completion slices since. The authoritative sources are now `AUTONOMOUS_HANDOFF.md` (per-slice dated records) and `DOMAIN_MATURITY.md` (per-domain derived labels backed by `docs/evidence/EVIDENCE_LEDGER.jsonl`, gated by `node evidence/lint.mjs`). This file is preserved as dated history; do not update it — record new work in the handoff.
+
 **Date:** 2026-08-26  
-**Repository:** `fear-ai-sim/`  
-**Baseline:** historical baseline was 540 tests; latest verification is 24 suites/576 tests passed, Vite build passed with import/chunk warnings, and npm audit reported 0 vulnerabilities.
 
 Statuses are deliberately evidence-based:
 

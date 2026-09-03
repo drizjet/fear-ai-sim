@@ -1,6 +1,18 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-PREAUDIT-2-EVIDENCE-GATE (Lane B, unaccepted)
+EVID-2026-09-03-PREAUDIT-3-ROADMAP-HONESTY (Lane B, unaccepted)
+
+## PRE-AUDIT 3 — roadmap honesty (37 divergences to 8 explained)
+
+- Three mapping scouts (trade cluster, agent/world cluster, nearly-there; read-only, strict needle-verified output contract) mapped every under-evidenced domain to existing detector tests and production symbols. New evidence/seed-slice-coverage.mjs binds 100 rows with fail-fast needle verification — every needle held at seed time, zero aborts.
+- 9 upgrades, all ledger-backed (derived already exceeded declared): belief/diplomacy/demography/trade to CROSS_DOMAIN_INTEGRATED; memory/observation/ecology/justice/territory to CONSEQUENCE_VERIFIED.
+- 1 downgrade, scout-proven: refugees LIVE_PATH_INTEGRATED (basic) to UNIT_VERIFIED — no world.refugees array, no refugeeGroup type, no live consumer; immigrants absorb into town population. Two CODE/UNIT rows seed the immigration behavior that does exist.
+- relationships needed one CONSEQUENCE row (escalation past TOLERANT) to complete its CROSS chain — added, now derives CROSS_DOMAIN_INTEGRATED as declared.
+- Two hardcoded receipts found and rewritten: seed-territory.mjs and seed-relationships.mjs recorded exitCode 0 with August summaries and never ran their commands. Both now run every command live via runTestReceipt with real exit codes/digests through buildReceipt (same claimIds, so honest rows retire the hardcoded ones). No other seed had the disease (all others use runTestReceipt).
+- REMAINING_WORK.md (2026-08-26, 24-suite world) stamped SUPERSEDED in place; handoff + maturity table + ledger are the authorities. seed-specified.mjs regex now accepts trailing text after the label (it had skipped 6 domains: factions, refugees, quests, replay, and 2 more).
+- Remaining 8 divergences, all non-false: 7 ledger domains with proof but no doc row (bandits, merchants, patrol, market, long-horizon, runtime, statistical-validation — sub-domains of trade/runtime, extra proof claims nothing false); visualization BLOCKED (deliberate scope verdict, linter has no BLOCKED concept — SPECIFIED-derived is the closest true statement).
+- Validation: lint exit 0 (714 rows, 0 errors); full suite 176/1316 green; ledger byte-identical across the run. No production code touched in this item.
+- Process note: one coverage-seed insert overwrote the relationships-integration row (caught by row-count check, restored, rerun). Scouts delivered exact-substring needles; the seeder re-verified all of them.
 
 ## PRE-AUDIT 2 — evidence gate green (mechanism completed, ledger re-proved)
 
