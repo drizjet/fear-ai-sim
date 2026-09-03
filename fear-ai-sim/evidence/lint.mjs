@@ -48,7 +48,7 @@ function loadDomains(rootDir) {
     const rows = [];
     // The maturity table is markdown: `| <domain> | <label> | <evidence> | ...`
     for (const line of text.split(/\r?\n/)) {
-        const m = /^\|\s*([a-z][a-z0-9_-]*)\s*\|\s*([A-Z_]+)/.exec(line);
+        const m = /^\|\s*([a-z][a-z0-9_-]*)\s*\|\s*`?([A-Z_]+)`?/.exec(line);
         if (m) rows.push({ domain: m[1], declared: m[2] });
     }
     return rows;

@@ -1,6 +1,15 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-03-PREAUDIT-1-SKIPPED-SUITES (Lane B, unaccepted)
+EVID-2026-09-03-PREAUDIT-2-EVIDENCE-GATE (Lane B, unaccepted)
+
+## PRE-AUDIT 2 — evidence gate green (mechanism completed, ledger re-proved)
+
+- Root cause of the permanent red: the fingerprint binds head + dirty + file hashes, so ANY commit staled every row, and the append-only ledger could never return to green — the gate demanded history be present-tense. The linter now implements the retirement semantics the audit trail always implied: (a) rows whose tracked files still hash as recorded are ADMISSIBLE across head-only drift; (b) EVIDENCE_SUPERSESSION.invalidatedClaimIds is honored (INVALIDATED); (c) a stale row with a live same-claim re-proof retires SUPERSEDED. A lone stale row with no current proof still fails — the MUT-EVID-002 pinned tests are untouched and green.
+- Two mechanism bugs found en route, both fixed with detectors: buildReceipt never persisted fileHashes (content-match had nothing to compare — all reseeds went stale on the next dirty flip), fixed plus legacy-aware dedup so pre-fileHashes rows never block an enriched re-seed; maturityGate let retired placeholders without commandResults veto their live successors, fixed to tally live rows only (test 20). loadDomains never parsed backticked maturity labels, so declaredLabel never joined — fixed (test 21).
+- Ledger work: all 10 seed scripts re-run (98 live claims re-proved, old rows auto-retired); new evidence/seed-specified.mjs re-proves the 25 SPECIFIED migration placeholders against the maturity doc itself (31 rows — the doc has 6 newer domains) with the full suite as shared receipt; one mass-invalidation supersession row retires the remaining 141 Jest-pollution rows (history preserved, 0 admissible). Ledger: 270 -> 529 rows.
+- Validation: lint exits 0, 0 failing domains, 0 errors; full suite 176/1316 green with ledger byte-identical before/after (sha 65c91a61); 5000-tick covered by seed-long-horizon receipt. Authority CLEAN (item 1). 17 domains derive above SPECIFIED.
+- Process notes: the edit tool echoed duplicated lines several times in the test-21 append (ranges drifted as the file changed); each caught by node --check and repaired by re-reading first. Mutation proof: content-match removal kills test 18; pre-change code fails new tests 16-18; maturity poison fix is covered by test 20.
+- Explicitly NOT done here (item 3): 37 declared-vs-derived label divergences remain (e.g. factions/quests/refugees/replay have no rows at all; many LIVE_PATH_INTEGRATED declarations derive lower). The gate is green; the declarations are next.
 
 ## PRE-AUDIT 1 — skipped-suite enumeration (plus one real fix)
 

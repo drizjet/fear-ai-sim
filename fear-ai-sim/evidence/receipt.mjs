@@ -228,6 +228,9 @@ export function buildReceipt({
             dirty,
             fingerprint: fp,
             fingerprintFiles: declaredDeps,
+            // V8 checkpoint §7: persist the per-file hashes so the
+            // linter can prove content currency across head-only drift.
+            fileHashes: fpObj.fileHashes,
             dependencyDepth: useImportClosure ? dependencyDepth : 0,
         },
         files: sortedUniq([...testFiles, ...sourceFiles]),
@@ -274,6 +277,10 @@ export function buildReceipt({
             prev.claimId === row.claimId
             && prev.dimension === row.dimension
             && prev.sourceState?.fingerprint === row.sourceState.fingerprint
+            // V8 checkpoint §7 schema migration: pre-fileHashes rows
+            // carry strictly less proof (no content binding), so they
+            // never block an enriched re-seed of the same claim.
+            && Array.isArray(prev.sourceState?.fileHashes)
         );
         if (!isDuplicate) {
             appendFileSync(ledgerPath, JSON.stringify(row) + '\n');

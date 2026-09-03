@@ -123,12 +123,19 @@ export function maturityGate({ domain, ledger = [], contradictions = [] } = {}) 
     if (!domain) throw new TypeError('maturityGate: domain is required');
     const evidenceRows = ledger.filter(r => r && r.domain === domain);
     const domainContradictions = contradictions.filter(c => c && c.domain === domain && c.active !== false);
+    // V8 checkpoint §8: retired rows are history. They neither support
+    // a dimension nor poison it (a superseded placeholder without
+    // commandResults must not veto its live successor). Rows without a
+    // linter-assigned freshness (unit fixtures, unlinted ledgers) stay in.
+    const liveRows = evidenceRows.filter(r => r.freshness === undefined
+        || r.freshness === 'FRESH' || r.freshness === 'ADMISSIBLE'
+        || r.freshness === 'STALE' || r.freshness === 'INCOMPLETE' || r.freshness === 'CONTRADICTED');
 
     // Tally which dimensions are fully met.
     const dimensions = {};
     const reasons = [];
     for (const dim of ALLOWED_DIMENSIONS) {
-        const rows = evidenceRows.filter(r => r.dimension === dim);
+        const rows = liveRows.filter(r => r.dimension === dim);
         if (rows.length === 0) {
             dimensions[dim] = false;
             continue;

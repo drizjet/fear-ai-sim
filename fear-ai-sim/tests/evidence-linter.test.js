@@ -371,3 +371,34 @@ describe('evidence retirement (§7 content-match, §8 supersede/invalidate)', ()
         }
     });
 });
+
+describe('maturityGate retirement (§8)', () => {
+    test('20. retired rows neither support nor poison a dimension', () => {
+        // A superseded placeholder without commandResults must not veto
+        // its live successor; retired-only history proves nothing.
+        const ghost = fakeRow({ commandResults: [], freshness: 'SUPERSEDED' });
+        const live = fakeRow({ freshness: 'ADMISSIBLE' });
+        expect(maturityGate({ domain: 'territory', ledger: [ghost, live], contradictions: [] }).dimensions.UNIT_VERIFIED).toBe(true);
+        expect(maturityGate({ domain: 'territory', ledger: [ghost], contradictions: [] }).dimensions.UNIT_VERIFIED).toBe(false);
+        const killed = fakeRow({ commandResults: [{ ok: true }], freshness: 'INVALIDATED' });
+        expect(maturityGate({ domain: 'territory', ledger: [killed], contradictions: [] }).dimensions.UNIT_VERIFIED).toBe(false);
+    });
+});
+
+describe('maturity declared-label join', () => {
+    test('21. backticked maturity labels join as declaredLabel', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            writeFileSync(join(rootDir, 'docs', 'DOMAIN_MATURITY.md'), '| retire-test | `UNIT_VERIFIED` | fixture | none | none |\n');
+            const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
+            const live = retireRow({ sourceState: { head: fp.head, dirty: fp.dirty, fingerprint: fp.fingerprint, fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes } });
+            writeLedgerRows(evidenceDir, [live]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.domains['retire-test'].declaredLabel).toBe('UNIT_VERIFIED');
+            expect(result.status).toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+});
