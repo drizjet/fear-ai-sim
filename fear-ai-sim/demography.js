@@ -14,7 +14,7 @@
 // follow-up slice; this is the first link.
 
 import { clamp } from './math-utils.js';
-import { appendWorldEvent, findLatestWorldEvent, bookExogenousPopulation } from './closed-world.js';
+import { appendWorldEvent, findLatestWorldEvent, formSettlerGroup } from './closed-world.js';
 
 // Base birth rate per population per tick. Default 0.01 (1% per
 // tick is fast; intended to be tuned). At population=1 this is
@@ -189,16 +189,18 @@ export function tickDemography(world, tick) {
                     immigrationByTown.set(destId,
                         (immigrationByTown.get(destId) || 0) + update.emigration);
                 } else {
-                    // R3 (V8 audit MAT-005b): emigrants dropped at
-                    // an unsettleable destination are a declared
-                    // deletion, not a silent one. Book the outflow.
-                    bookExogenousPopulation(world, 'outflow', update.emigration);
+                    // E1 (settler populations): emigrants refused at a
+                    // 0-pop destination camp as settlers instead of
+                    // vanishing into outflow. No outflow is booked:
+                    // the humans remain in the world (see
+                    // formSettlerGroup + tickSettlerGroups).
+                    formSettlerGroup(world, { originTownId: update.townId, size: update.emigration, tick, reason: 'MIGRATION_FLOOR_ZERO_POP' });
                 }
                 transferReceipt.set(update.townId, { destId, received, amount: update.emigration });
             } else {
-                // R3: no destination exists at all — same declared
-                // deletion as the 0-population case.
-                bookExogenousPopulation(world, 'outflow', update.emigration);
+                // E1: no destination exists at all — the emigrants camp
+                // at the origin instead of being deleted into outflow.
+                formSettlerGroup(world, { originTownId: update.townId, size: update.emigration, tick, reason: 'NO_DESTINATION' });
                 transferReceipt.set(update.townId, { destId: null, received: false, amount: update.emigration });
             }
         }

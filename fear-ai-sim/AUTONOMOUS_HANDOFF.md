@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-R9-R11-HYGIENE-ORACLES-WIRING (Lane B, unaccepted)
+EVID-2026-09-05-E1-SETTLERS (Lane B, unaccepted)
+
+## E1 — settler populations: dropped emigrants camp, then found (expansion)
+
+- Source (lawful, existing): demography dropped transfers (0-pop dest, no dest) previously vanished into exogenous outflow (declared deletion). They now form persistent `world.settlerGroups` (plain JSON, save/load-free) via formSettlerGroup + SETTLER_GROUP_FORMED, with no outflow booked — the humans remain.
+- Autonomous founding: reducer step 0.6 tickSettlerGroups surveys (`<camp>-landing`, collision-suffixed; SCOUT_OBSERVATION + belief the knowledge gate requires) one tick, founds via the unmodified settleAttempt operator the next (template pop = group size, cost 1). Founded groups absorb; bankrupt factions wait (live NO_RESOURCES). Chronic shortage founds serial towns — mechanism, not duplication.
+- Conservation restated with reason (R3 precedent): MAT-005b outflow test now pins towns + settlers balance with 0 outflow for grouped headcount. Full suite shows zero collateral (drops are rare in existing fixtures).
+- Validation: 189/1371 suite, 4/16 long-horizon, lint exit 0 (3320 rows), build green, authority CLEAN, replay 40/40 (2 new E1 entries).
 
 ## R9 — test hygiene (TM-VAC-01, TM-VAC-02, TM-TEMP-11)
 

@@ -933,6 +933,10 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         // R8 (rate calibration): templateId -> last fired tick.
         // Plain object: JSON-safe across save/load and fork.
         encounterCooldowns: {},
+        // E1 (settler populations): dropped demography emigrants camp
+        // as persistent groups instead of vanishing into outflow.
+        // Plain array of JSON: JSON-safe across save/load and fork.
+        settlerGroups: [],
         scheduledConsequences: [],
         routeCommitments: [],
         patrolAssignments: [],
@@ -1455,11 +1459,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // 0.5. EVID-2026-08-29-DEMOGRAPHY: per-town population
     //    update driven by ecology (season), scarcity (food
     //    shortage), and the demographic rates in demography.js.
-    //    tickDemography mutates town.population and emits
-    //    POPULATION_CHANGE events. We call it BEFORE the
-    //    produce/consume step so the new population takes
-    //    effect on the same tick's economy.
+    //    We call it BEFORE the produce/consume step so the new
+    //    population takes effect on the same tick's economy.
     tickDemography(world, tick);
+
+    // 0.6. E1 (settler populations): camped settler groups survey
+    // then found via settleAttempt. Runs right after demography so
+    // groups formed this tick survey immediately and found next.
+    tickSettlerGroups(world, { tick });
 
     // 1. Faction reassessment driven by the CURRENT tick's flow, not
     //    cumulative history. `newAttacksThisTick` counts only BANDIT_ATTACK
@@ -4599,6 +4606,121 @@ function reattachPrototypes(world) {
  *   - townTemplate: { produces, storageCapacity, spoilageRate, consumes, population }
  * @returns {{ok: boolean, reason?: string, town?: object, event?: object}}
  */
+/**
+ * Form a persistent settler group from dropped demography emigrants.
+ *
+ * E1: emigrants subtracted at the source but refused at every
+ * destination used to vanish into the exogenous-outflow ledger
+ * (declared deletion). They now camp at the origin town as a
+ * persistent group that can survey and found (tickSettlerGroups).
+ * No outflow is booked: the humans remain in the world.
+ *
+ * @param {object} world
+ * @param {object} options { originTownId, size, tick, reason }
+ * @returns {{group: object, event: object}}
+ */
+export function formSettlerGroup(world, { originTownId, size, tick = 0, reason = 'NO_DESTINATION' } = {}) {
+    if (!world || typeof world !== 'object') throw new TypeError('formSettlerGroup requires world');
+    if (!originTownId || !(size > 0)) throw new TypeError('formSettlerGroup requires originTownId and positive size');
+    if (!Array.isArray(world.settlerGroups)) world.settlerGroups = [];
+    const origin = world.towns?.get?.(originTownId);
+    const group = {
+        id: `settlers-${tick}-${world.settlerGroups.length}`,
+        size,
+        originTownId,
+        campTownId: originTownId,
+        factionId: origin?.controlledBy ?? null,
+        formedTick: tick,
+        status: 'CAMPED',
+        travelState: 'AT_LOCATION',
+        currentLocation: originTownId,
+        beliefs: {},
+    };
+    world.settlerGroups.push(group);
+    const prevPop = findLatestWorldEvent(world, ev => ev.townId === originTownId, 'POPULATION_CHANGE');
+    const event = appendWorldEvent(world, {
+        type: 'SETTLER_GROUP_FORMED',
+        groupId: group.id,
+        size,
+        originTownId,
+        campTownId: originTownId,
+        reason,
+        tick,
+    }, prevPop?.eventId ? [prevPop.eventId] : []);
+    return { group, event };
+}
+
+/**
+ * Advance camped settler groups one tick: survey-then-found.
+ *
+ * E1: each CAMPED group with members either (a) surveys a derived
+ * site (`<camp>-landing`, collision-suffixed) when it has no belief
+ * about it — recording the belief the settleAttempt knowledge gate
+ * requires, with a SCOUT_OBSERVATION audit — or (b) founds via the
+ * existing settleAttempt operator when the belief exists and the
+ * backing faction can pay. Founded groups are absorbed (members
+ * become town population via the template) and leave the array;
+ * unfunded groups wait (the live NO_RESOURCES path).
+ *
+ * @param {object} world
+ * @param {object} options { tick }
+ * @returns {Array} events emitted this tick
+ */
+export function tickSettlerGroups(world, { tick = 0 } = {}) {
+    if (!world || typeof world !== 'object') return [];
+    if (!Array.isArray(world.settlerGroups)) world.settlerGroups = [];
+    const events = [];
+    const remaining = [];
+    for (const group of world.settlerGroups) {
+        if (!group || group.status !== 'CAMPED' || !(group.size > 0)) {
+            if (group) remaining.push(group);
+            continue;
+        }
+        let site = `${group.campTownId}-landing`;
+        let suffix = 2;
+        while (world.towns?.has?.(site)) {
+            site = `${group.campTownId}-landing-${suffix}`;
+            suffix += 1;
+        }
+        if (!group.beliefs) group.beliefs = {};
+        if (!group.beliefs[site]) {
+            group.beliefs[site] = { perceivedDanger: 0.2, confidence: 0.5, tick, source: 'settler-survey' };
+            if (!Array.isArray(group.observations)) group.observations = [];
+            group.observations.push({ locationId: site, tick });
+            events.push(appendWorldEvent(world, {
+                type: 'SCOUT_OBSERVATION',
+                observerId: group.id,
+                locationId: site,
+                resourceEstimate: 0,
+                dangerEstimate: 0.2,
+                confidence: 0.5,
+                tick,
+                sourceType: 'SETTLER_SURVEY',
+            }, []));
+            remaining.push(group);
+            continue;
+        }
+        const result = settleAttempt(world, group, site, {
+            tick,
+            cost: 1,
+            townTemplate: {
+                produces: { food: 1.0, tools: 0.1 },
+                storageCapacity: { food: 50, tools: 30 },
+                spoilageRate: { food: 0.05, tools: 0 },
+                consumes: { food: 1, tools: 0.2 },
+                population: group.size,
+                controlledBy: group.factionId ?? undefined,
+                homeRadius: 1,
+                claimedRadius: 3,
+                contestedRadius: 0,
+                scarceResources: { food: true, tools: false },
+            },
+        });
+        if (!result.ok) remaining.push(group);
+    }
+    world.settlerGroups = remaining;
+    return events;
+}
 export function settleAttempt(world, group, locationId, { tick = 0, cost = 1, townTemplate = null } = {}) {
     if (!world || typeof world !== 'object') throw new TypeError('settleAttempt requires world');
     if (!group || typeof group !== 'object') throw new TypeError('settleAttempt requires group');

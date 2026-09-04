@@ -356,6 +356,22 @@ const MUTATIONS = [
         detectors: 'long-horizon-invariant-health',
         note: 'R5 drought shock neutralized; convergence must fail',
     },
+    {
+        id: 'settler-formation',
+        file: 'demography.js',
+        target: 'formSettlerGroup(world, { originTownId: update.townId, size: update.emigration, tick, reason: \'MIGRATION_FLOOR_ZERO_POP\' });',
+        replacement: 'void update.emigration;',
+        detectors: 'settler-founding|conservation-r3',
+        note: 'E1 dropped-transfer formation skipped; camps and settler conservation must fail',
+    },
+    {
+        id: 'settler-founding',
+        file: 'closed-world.js',
+        target: 'group.beliefs[site] = { perceivedDanger: 0.2, confidence: 0.5, tick, source: \'settler-survey\' };',
+        replacement: 'void site;',
+        detectors: 'settler-founding',
+        note: 'E1 survey belief never sticks; survey-only camps must never found',
+    },
 ];
 
 function runDetectors(pattern) {

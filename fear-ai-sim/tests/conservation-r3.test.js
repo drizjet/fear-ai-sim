@@ -60,24 +60,32 @@ describe('R3 conservation closure (MAT-001 / MAT-005)', () => {
         expect(world.exogenousPopulation?.inflow ?? 0).toBe(result.refugeeCount);
     });
 
-    test('demography emigration to a 0-population town is booked as declared outflow', () => {
-        // MAT-005b: emigrants subtracted at the source but dropped at
-        // a 0-pop destination must land in the outflow ledger, not
-        // vanish silently. Force shortage-driven emigration out of
-        // north into a world where every other town is empty.
+    test('demography emigration to a 0-population town camps as settlers (E1 restatement)', () => {
+        // E1 restates MAT-005b: emigrants subtracted at the source but
+        // dropped at a 0-pop destination no longer vanish into the
+        // outflow ledger — they persist as a camped settler group.
+        // Force shortage-driven emigration out of north into a world
+        // where every other town is empty.
         const world = createClosedWorldScenario();
         for (const [id, town] of world.towns) {
             town.population = id === 'north' ? 50 : 0;
         }
         world.towns.get('north').market.inventory.set('food', 0);
         world.towns.get('north').market.setDemand('food', 500, 1);
+        const before = totalPop(world);
         tickDemography(world, 1);
         const evs = world.events.filter(e => e.type === 'POPULATION_CHANGE' && e.tick === 1);
         const emigrated = evs.reduce((s, e) => s + (Number(e.emigration) || 0), 0);
         const immigrated = evs.reduce((s, e) => s + (Number(e.immigration) || 0), 0);
-        const dropped = Number(world.exogenousPopulation?.outflow ?? 0);
+        const births = evs.reduce((s, e) => s + (Number(e.births) || 0), 0);
+        const deaths = evs.reduce((s, e) => s + (Number(e.deaths) || 0), 0);
+        const settlerPop = (world.settlerGroups ?? []).reduce((s, g) => s + (Number(g.size) || 0), 0);
         expect(emigrated).toBeGreaterThan(0);
         expect(immigrated).toBe(0);
-        expect(dropped).toBe(emigrated - immigrated);
+        // The camp holds the dropped headcount; nothing is booked as
+        // outflow for grouped humans.
+        expect(settlerPop).toBe(emigrated - immigrated);
+        expect(Number(world.exogenousPopulation?.outflow ?? 0)).toBe(0);
+        expect(totalPop(world) + settlerPop).toBe(before + births - deaths);
     });
 });
