@@ -228,6 +228,15 @@ export function rowId() {
 /**
  * Classify a test change. Returns the classification plus whether
  * the original contract is weakened.
+ *
+ * TM-VAC-02 boundary contract (keyword heuristic, explicitly
+ * incomplete): branch 0 identical strings -> NONDETERMINISM_DEFECT;
+ * branch 1 `toEqual` -> `toMatchObject` -> TEST_DEFECT; branch 2
+ * direct field write -> `setXxxFrom(` call -> SPECIFICATION_DEFECT.
+ * Anything else — including numeric-only edits such as severity
+ * recalibrations — matches no keyword and returns the default
+ * TEST_DEFECT. The default is a triage fallback, not a semantic
+ * verdict; tests 12a-12d pin each branch and its boundary.
  */
 export function classifyTestChange({ original, new: next, justification } = {}) {
     const weakensOriginal = isWeaker(original, next);

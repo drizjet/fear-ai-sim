@@ -120,39 +120,47 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
         //      axis saturates.
         // The contract: at least one axis must produce at least two
         // distinct rounded means across {0.0, 0.5, 0.9}.
-        const mean = (pd, metric) => {
-            let total = 0;
+        const cellValues = {};
+        for (const pd of PDS) {
+            cellValues[pd] = { invasions: [], deliveredTotal: [] };
             for (const seed of SEEDS) {
                 const world = createClosedWorldScenario();
                 const rng = mulberry32(seed);
                 for (let t = 1; t <= TICKS; t += 1) {
                     tickClosedWorld(world, { tick: t, perceivedDanger: pd, encounterRng: rng });
                 }
-                total += metric(world);
+                cellValues[pd].invasions.push(world.events.filter(e => e.type === 'INVASION').length);
+                cellValues[pd].deliveredTotal.push(summarize(world).deliveredTotal);
             }
-            return total / SEEDS.length;
-        };
+        }
+        const mean = (pd, metric) => cellValues[pd][metric].reduce((s, v) => s + v, 0) / SEEDS.length;
+        // A5-F7: within-regime ranges are logged, not just means.
+        // Probed 2026-09-05: invasions are cooldown-cadenced and
+        // identical across seeds within a regime (38/38/38), while
+        // deliveredTotal carries the seed variance (376/395/406).
         const roundedByAxis = {
-            invasions: PDS.map(pd => Math.round(mean(pd, w => w.events.filter(e => e.type === 'INVASION').length) * 10) / 10),
-            deliveredTotal: PDS.map(pd => Math.round(mean(pd, w => summarize(w).deliveredTotal) * 10) / 10),
+            invasions: PDS.map(pd => Math.round(mean(pd, 'invasions') * 10) / 10),
+            deliveredTotal: PDS.map(pd => Math.round(mean(pd, 'deliveredTotal') * 10) / 10),
         };
         const distinctByAxis = {};
         for (const [axis, values] of Object.entries(roundedByAxis)) {
             distinctByAxis[axis] = new Set(values).size;
         }
-        // At least one axis must differentiate the regimes. If both axes
-        // round to a single value, the inputs are not producing diverse
-        // distributions — that is a real parametric sensitivity failure.
         const maxDistinct = Math.max(...Object.values(distinctByAxis));
         expect(maxDistinct).toBeGreaterThanOrEqual(2);
-        // If the invasion axis saturated (single value), the trade axis
-        // must carry the differentiation — otherwise the world is not
-        // responding to perceivedDanger at all.
+        // A5-F7: the trade axis is a DIRECTIONAL oracle, not an OR-axis
+        // escape hatch. §155 production trade: dangerous worlds ship
+        // less. Probed means: 392 (pd 0.0) / 275 (pd 0.5) / 188
+        // (pd 0.9) — strictly decreasing with wide margin. Response
+        // check: flattening all regimes to one pd fails this (and the
+        // diversity gate). Zeroing one merchant danger channel does
+        // NOT fail it — the response is multi-channel (routing fear
+        // term, cargo risk, faction fear) by design, not single-point.
         if (distinctByAxis.invasions < 2) {
             expect(distinctByAxis.deliveredTotal).toBeGreaterThanOrEqual(2);
         }
+        expect(mean(0.9, 'deliveredTotal')).toBeLessThan(mean(0.0, 'deliveredTotal'));
     });
-
     it('§138 multi-seed variance: 5 seeds at 500 ticks have bounded invasion spread', () => {
         // The §138 / §151 contract: a multi-seed run
         // should have a *bounded* distribution (not
@@ -162,6 +170,7 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
         const TICKS = 500;
         const SEEDS = [1, 7, 42, 100, 9999];
         const counts = [];
+        const delivered = [];
         for (const seed of SEEDS) {
             const world = createClosedWorldScenario();
             const rng = mulberry32(seed * 1000 + 7);
@@ -169,6 +178,7 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
                 tickClosedWorld(world, { tick: t, perceivedDanger: 0.5, encounterRng: rng });
             }
             counts.push(world.events.filter(e => e.type === 'INVASION').length);
+            delivered.push(summarize(world).deliveredTotal);
         }
         // The invasion count is bounded (the §138
         // contract: behavior is conditional, not
@@ -182,5 +192,13 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
         // 95-98 note measured 5x the identical world: same seed
         // streams were never passed in.)
         expect(spread).toBeLessThan(mean * 0.5);
+        // A5-F7: the fraud-shaped failure (R5: one stream run 5x)
+        // measures spread 0 and passes the bound above. The trade
+        // axis carries genuine seed variance, so its spread must be
+        // positive — five identical worlds fail here.
+        const deliveredSpread = Math.max(...delivered) - Math.min(...delivered);
+        // eslint-disable-next-line no-console
+        console.log('MULTI-SEED-SPREAD invasions=' + counts.join('/') + ' delivered=' + delivered.map(d => d.toFixed(0)).join('/'));
+        expect(deliveredSpread).toBeGreaterThan(0);
     });
 });

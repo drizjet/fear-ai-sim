@@ -442,9 +442,14 @@ export class PresenceBreakDetector {
     }
 
     /**
-     * Update detection state
+     * Update detection state.
+     *
+     * TM-TEMP-11: `now` is injectable (defaults to Date.now()) so
+     * the idle/eyes-closed thresholds are testable without real
+     * wall-clock waits. Production passes nothing and behaves
+     * exactly as before.
      */
-    update(state) {
+    update(state, now = Date.now()) {
         // Check headset status
         if (state.headsetWorn !== undefined) {
             this.headsetWorn = state.headsetWorn;
@@ -452,13 +457,13 @@ export class PresenceBreakDetector {
 
         // Check controller activity
         if (state.controllerActive) {
-            this.lastControllerInput = Date.now();
+            this.lastControllerInput = now;
         }
 
         // Check eye tracking
         if (state.eyesClosed) {
             if (!this.eyesClosedStart) {
-                this.eyesClosedStart = Date.now();
+                this.eyesClosedStart = now;
             }
         } else {
             this.eyesClosedStart = null;
@@ -472,14 +477,13 @@ export class PresenceBreakDetector {
         // Check for calm request
         this.isCalm = state.requestCalm || false;
 
-        return this.detectPresenceBreak();
+        return this.detectPresenceBreak(now);
     }
 
     /**
      * Detect if player is experiencing presence break
      */
-    detectPresenceBreak() {
-        const now = Date.now();
+    detectPresenceBreak(now = Date.now()) {
         const indicators = {
             headsetRemoved: !this.headsetWorn,
             controllerIdle: (now - this.lastControllerInput) > this.config.idleTimeout,

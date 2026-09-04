@@ -22,7 +22,14 @@ function merchant(overrides = {}) {
 const BARE_WORLD = { towns: new Map(), merchants: [] };
 
 describe('routing owns the merchant base cost (slice AD)', () => {
-    test('routingBaseCost reconstructs the legacy blend exactly', () => {
+    // TM-VAC-01 scope note: the reconstruction test below and the
+    // ranking-identity test pin the 10x perception MAPPING (they
+    // pass for any implementation computing the same linear blend,
+    // including an inlined fork). Single-ownership is proven by the
+    // routing-only fork detectors at the bottom (toll, weather):
+    // those terms have no legacy-blend equivalent and vanish if the
+    // routeCost() call is replaced by inline math.
+    test('routingBaseCost reconstructs the legacy blend exactly (mapping consistency)', () => {
         const decision = chooseMerchantRouteDecision(merchant(), ROUTES, {}, { tick: 0, world: BARE_WORLD });
         for (const item of decision.ranked) {
             const legacy = item.distanceCost + item.dangerPenalty + item.cargoLossRisk / 100 - item.familiarityBonus;
@@ -117,5 +124,28 @@ describe('routing owns the merchant base cost (slice AD)', () => {
         const tollItem = decision.ranked.find(r => r.route.id === 'road-toll');
         const freeItem = decision.ranked.find(r => r.route.id === 'road-free');
         expect(tollItem.routingBaseCost - freeItem.routingBaseCost).toBeCloseTo(0.3, 10);
+    });
+
+    test('routing-only weather term flows into the live base cost (fork detector)', () => {
+        // weatherCost has no legacy-blend equivalent: replacing the
+        // routeCost() call with the inline legacy formula drops this
+        // term while the mapping-consistency tests above stay green.
+        // Toll proves the same for tolls; weather is the second
+        // independent routing-only term.
+        const stormed = [
+            { id: 'road-storm', from: 'north', to: 'south', distance: 5, actualDanger: 0.1, condition: 1, weatherCost: 3 },
+            { id: 'road-calm', from: 'north', to: 'south', distance: 5, actualDanger: 0.1, condition: 1 },
+        ];
+        const m = merchant({
+            routeBeliefs: {
+                'road-storm': { perceivedDanger: 0.1, confidence: 1 },
+                'road-calm': { perceivedDanger: 0.1, confidence: 1 },
+            },
+        });
+        const decision = chooseMerchantRouteDecision(m, stormed, {}, { tick: 0, world: BARE_WORLD });
+        expect(decision.chosenRoute).toBe('road-calm');
+        const stormItem = decision.ranked.find(r => r.route.id === 'road-storm');
+        const calmItem = decision.ranked.find(r => r.route.id === 'road-calm');
+        expect(stormItem.routingBaseCost - calmItem.routingBaseCost).toBeCloseTo(0.3, 10);
     });
 });

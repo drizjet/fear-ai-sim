@@ -31,6 +31,15 @@ import { Brain } from '../brain.js';
 import { perfCheck } from './_perf_harness.mjs';
 
 describe('Performance Benchmarks (V8 corrective checkpoint §9 reproducible protocol)', () => {
+    // TM-TEMP-11: every bench runs a real single measurement in
+    // default mode too. The catastrophic bound (100x the bench
+    // bound) is a tripwire for hangs/pathologies, not a perf
+    // assertion — the median check under RUN_PERF=1 is the real
+    // oracle. A test asserting nothing in default mode is vacuous.
+    function expectCatastrophicBound(r, boundMs) {
+        if (r.skipped) expect(r.duration).toBeLessThanOrEqual(boundMs * 100);
+    }
+
 
     describe('Agent Update Performance', () => {
         it('2000 agents update: median <= 100ms', () => {
@@ -47,11 +56,7 @@ describe('Performance Benchmarks (V8 corrective checkpoint §9 reproducible prot
             });
             const r = perfCheck('2000-agents-update', op, { absoluteUpperBoundMs: 100 });
             if (!r.skipped) expect(r.median).toBeLessThanOrEqual(r.threshold);
-            // Default-mode coarse check.
-            const start = Date.now();
-            op();
-            const dur = Date.now() - start;
-            expect(dur).toBeLessThan(200);
+            expectCatastrophicBound(r, 100);
         });
 
         it('Social forces (50 neighbors): median <= 10ms', () => {
@@ -76,7 +81,7 @@ describe('Performance Benchmarks (V8 corrective checkpoint §9 reproducible prot
             };
             const r = perfCheck('social-forces-50', op, { absoluteUpperBoundMs: 10 });
             if (!r.skipped) expect(r.median).toBeLessThanOrEqual(r.threshold);
-            op();
+            expectCatastrophicBound(r, 10);
         });
     });
 
@@ -95,6 +100,7 @@ describe('Performance Benchmarks (V8 corrective checkpoint §9 reproducible prot
             };
             const r = perfCheck('brain-decide', op, { absoluteUpperBoundMs: 5 });
             if (!r.skipped) expect(r.median).toBeLessThanOrEqual(r.threshold);
+            expectCatastrophicBound(r, 5);
         });
 
         it('1000 stimulus calculations: median <= 50ms', () => {
@@ -106,6 +112,7 @@ describe('Performance Benchmarks (V8 corrective checkpoint §9 reproducible prot
             };
             const r = perfCheck('1000-stimulus', op, { absoluteUpperBoundMs: 50 });
             if (!r.skipped) expect(r.median).toBeLessThanOrEqual(r.threshold);
+            expectCatastrophicBound(r, 50);
         });
     });
 
@@ -120,6 +127,7 @@ describe('Performance Benchmarks (V8 corrective checkpoint §9 reproducible prot
             });
             const r = perfCheck('1000-mutations', op, { absoluteUpperBoundMs: 50 });
             if (!r.skipped) expect(r.median).toBeLessThanOrEqual(r.threshold);
+            expectCatastrophicBound(r, 50);
         });
     });
 
@@ -152,19 +160,25 @@ describe('Performance Benchmarks (V8 corrective checkpoint §9 reproducible prot
             };
             const r = perfCheck('panic-propagation-1000', op, { absoluteUpperBoundMs: 100 });
             if (!r.skipped) expect(r.median).toBeLessThanOrEqual(r.threshold);
+            expectCatastrophicBound(r, 100);
         });
     });
 
     describe('Memory Usage Benchmarks', () => {
-        it('agent memory footprint under 100MB (estimate)', () => {
+        it('agent memory footprint under 100MB (measured heap delta)', () => {
+            // TM-TEMP-11: the old test asserted hardcoded arithmetic
+            // (1000 * 500 bytes < 100MB) and measured nothing. This
+            // asserts the actual heap delta of materializing agents.
+            if (global.gc) global.gc();
+            const before = process.memoryUsage().heapUsed;
             const agents = [];
             const count = 1000;
             for (let i = 0; i < count; i++) {
                 agents.push(new Agent(Math.random() * 800, Math.random() * 600));
             }
-            const estimatedBytesPerAgent = 500;
-            const estimatedTotalMB = (count * estimatedBytesPerAgent) / (1024 * 1024);
-            expect(estimatedTotalMB).toBeLessThan(100);
+            const after = process.memoryUsage().heapUsed;
+            expect(agents.length).toBe(count);
+            expect(after - before).toBeLessThan(100 * 1024 * 1024);
         });
     });
 });

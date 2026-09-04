@@ -1646,32 +1646,27 @@ describe('Phase 3 Core Systems', () => {
             });
 
             it('should detect controller idleness', () => {
+                // TM-TEMP-11: injected timestamps, no wall-clock wait.
+                // The threshold comparison is deterministic: idle is
+                // (now - lastInput) > idleTimeout.
                 const detector = new PresenceBreakDetector();
-                detector.config.idleTimeout = 100; // 100ms for testing
-                
-                // Wait then update without controller activity
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        const result = detector.update({ controllerActive: false });
-                        expect(result.indicators.controllerIdle).toBe(true);
-                        resolve();
-                    }, 150);
-                });
+                detector.config.idleTimeout = 100;
+                detector.update({ controllerActive: true }, 1000);
+                let result = detector.update({ controllerActive: false }, 1050);
+                expect(result.indicators.controllerIdle).toBe(false);
+                result = detector.update({ controllerActive: false }, 1150);
+                expect(result.indicators.controllerIdle).toBe(true);
             });
 
             it('should detect eyes closed', () => {
+                // TM-TEMP-11: injected timestamps, no wall-clock wait.
                 const detector = new PresenceBreakDetector();
-                detector.config.eyesClosedThreshold = 50; // 50ms for testing
-                
-                detector.update({ eyesClosed: true });
-                
-                return new Promise(resolve => {
-                    setTimeout(() => {
-                        const result = detector.update({ eyesClosed: true });
-                        expect(result.indicators.eyesClosed).toBe(true);
-                        resolve();
-                    }, 100);
-                });
+                detector.config.eyesClosedThreshold = 50;
+                detector.update({ eyesClosed: true }, 2000);
+                let result = detector.update({ eyesClosed: true }, 2020);
+                expect(result.indicators.eyesClosed).toBe(false);
+                result = detector.update({ eyesClosed: true }, 2100);
+                expect(result.indicators.eyesClosed).toBe(true);
             });
 
             it('should detect calm request', () => {

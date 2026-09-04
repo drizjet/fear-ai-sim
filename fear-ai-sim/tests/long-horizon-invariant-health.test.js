@@ -8,9 +8,24 @@ describe('Slice H — long-horizon invariant health (500 ticks)', () => {
     it('ALWAYS: faction.resources stays within [0, maxResources] and population stays non-negative', () => {
         const world = createClosedWorldScenario();
         world.ticksPerSeason = 50;
+        // A5-F3 anti-stasis: the corruption bounds below pass a
+        // frozen world (0 in [0,max], pop pinned at 0). The decisions
+        // counter is the stasis detector: merchants decide every
+        // tick (structural), so an agency-free world scores exactly
+        // 0 against the >= 400 floor while the corruption bounds
+        // stay green (verified by probe 2026-09-05).
+        //
+        // Negative results from the same probe (NOT asserted — they
+        // do not discriminate): faction refill fires without agency
+        // (resourcedTicks 500/500 frozen) and the refugee pump moves
+        // population without merchants (popChanged true frozen).
+        // Refill/demography vigor belongs to A5-F5, not this gate.
         let violation = null;
+        let decisions = 0;
         for (let t = 1; t <= 500; t++) {
+            const decisionsBefore = world.events.filter(e => e.type === 'MERCHANT_ROUTE_DECISION').length;
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.5 });
+            decisions += world.events.filter(e => e.type === 'MERCHANT_ROUTE_DECISION').length - decisionsBefore;
             for (const f of world.factions) {
                 if (f.resources < 0 || f.resources > f.maxResources + 1e-9) {
                     violation = `tick ${t} faction ${f.id} resources ${f.resources} > max ${f.maxResources}`;
@@ -33,6 +48,7 @@ describe('Slice H — long-horizon invariant health (500 ticks)', () => {
             if (violation) break;
         }
         expect(violation).toBeNull();
+        expect(decisions).toBeGreaterThanOrEqual(400);
     });
 
     it('ALWAYS: market mass-balance holds per tick (no unexplained creation)', () => {
@@ -42,7 +58,9 @@ describe('Slice H — long-horizon invariant health (500 ticks)', () => {
         for (const town of world.towns.values()) town.market.inventory.set('food', 20);
         const supplyBefore = new Map();
         for (const [townId, town] of world.towns) supplyBefore.set(`${townId}:food:0`, town.market.getQuote('food').supply);
-        for (let t = 1; t <= 30; t++) {
+        // A5-F3: was 30 ticks (a month-scale peek). The full 500-tick
+        // horizon costs nothing extra here and rules out slow leaks.
+        for (let t = 1; t <= 500; t++) {
             for (const [townId, town] of world.towns) supplyBefore.set(`${townId}:food:${t}`, town.market.getQuote('food').supply);
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.3 });
         }

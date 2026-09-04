@@ -206,4 +206,34 @@ describe('Slice P — structured chooseStance routes into invasion gate', () => 
             && event.treatyId === treaty.id
         )).toHaveLength(1);
     });
-});
+    it('authorizes action against unaffiliated targets with WHY audit (A5-F8 boundary)', () => {
+        // A5-F8: the relationship vector covers FACTION pairs. A
+        // factionless target bypasses stance by design (there is no
+        // pair to consult), recorded as TARGET_HAS_NO_FACTION with
+        // the reason in WHY — not silently, not via the stance
+        // threshold. This pins the documented scope boundary.
+        const { world } = raidReadyWorld({
+            northInformationConfidence: 1,
+            northTrust: 0,
+            northPressure: 1,
+            northStance: StanceLadder.HOSTILE,
+        });
+        world.bandits[0].factionId = null;
+
+        tickForGate(world);
+
+        const gate = northGate(world);
+        expect(gate).toMatchObject({
+            evaluatorId: NORTH,
+            targetFactionId: null,
+            allowed: true,
+            reason: 'TARGET_HAS_NO_FACTION',
+        });
+        expect(gate.why).toEqual(
+            expect.arrayContaining([
+                'Unaffiliated targets do not require an inter-faction stance',
+            ]),
+        );
+        expect(northInvasions(world)).toHaveLength(1);
+    });
+    });

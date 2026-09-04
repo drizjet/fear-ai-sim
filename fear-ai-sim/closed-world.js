@@ -4561,8 +4561,10 @@ function reattachPrototypes(world) {
 //   The new town inherits a market with capacity/spoilage from
 //   the staging schema, a default consumes/produces, and the
 //   staking faction as controlledBy with homeRadius/claimedRadius.
-//   The claimedRadius is authoritative — canObserveTerritory
-//   already uses it. The event is SETTLEMENT_FOUNDED.
+//   claimedRadius is recorded as authoritative DATA, but no live
+//   reader consumes it yet: canObserveTerritory is adjacency-only
+//   (radius is symbolic there by explicit contract) — a radius
+//   check is a future slice, not this one.
 //
 // Slice L: roaming travel exposure → bandit belief
 //   When a bandit is IN_TRANSIT (startTravel/advanceTravel), each
@@ -4576,11 +4578,18 @@ function reattachPrototypes(world) {
 
 /**
  * Attempt to found a new settlement at `locationId` by `group`.
+ *
+ * TM-HOLD-10 scope: OPERATOR-API, not autonomous. The reducer never
+ * calls this (no live settler population exists — refugees absorb
+ * into towns, see A5-F9). Live-consequential outputs: the founded
+ * town ticks in market/demography/territory passes from the next
+ * tick (proven by settlement-staking.test.js "new settlement is
+ * live"). Autonomous founding awaits settler populations.
+ *
  * The group must be AT_LOCATION (not IN_TRANSIT) and the
  * location must not already be a town. The staking faction
  * (group.factionId or its id) must have resources > 0 to pay
  * the founding cost (1 resource unit).
- *
  * @param {object} world - closed world
  * @param {object} group - roaming group (bandit, merchant group, etc.)
  * @param {string} locationId - new town id
@@ -4699,7 +4708,12 @@ export function settleAttempt(world, group, locationId, { tick = 0, cost = 1, to
 /**
  * Stake or extend a town's claimed territory.
  * Increases claimedRadius by `delta` (default 1) up to `maxRadius` (default 5).
- * Emits TERRITORY_STAKED. The radius is authoritative for canObserveTerritory.
+ * Emits TERRITORY_STAKED.
+ *
+ * TM-HOLD-10 scope: OPERATOR-API, not autonomous. The reducer never
+ * calls this, and no live pass reads claimedRadius yet (territory
+ * observation is adjacency-only). The radius + event are durable
+ * state for the future radius-check slice and for scenario authors.
  *
  * @param {object} world
  * @param {string} townId
@@ -4733,12 +4747,15 @@ export function stakeTerritory(world, townId, { delta = 1, maxRadius = 5, tick =
     }, []);
     return { ok: true, event, previousRadius, newRadius };
 }
-
 /**
  * Slice L helper: advance a roaming group's travel and record
  * exposure as a scout observation into the group's belief map.
- * This is the glue that makes `bandit.beliefs` grow via travel,
- * not just via synthetic lootExpectation in relocateBanditViaRoaming.
+ *
+ * TM-HOLD-10 scope: OPERATOR-API, not autonomous. The reducer never
+ * calls this — live bandits relocate via relocateBanditViaRoaming
+ * (synthesized beliefs), which does not consume travel-written
+ * belief maps yet (roaming maturity row). Wiring travel observations
+ * into relocation is expansion work, not this slice.
  *
  * @param {object} group - roaming group (must be IN_TRANSIT)
  * @param {number} ticks - ticks to advance

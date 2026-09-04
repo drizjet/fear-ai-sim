@@ -191,17 +191,49 @@ describe('evidence-linter (Movement 1)', () => {
         expect(result.weakensOriginal).toBe(false);
     });
 
-    test('12. classifyTestChange: severity increase is TEST_DEFECT, weakensOriginal=false', () => {
+    test('12a. classifyTestChange: severity increase hits the documented default (TEST_DEFECT, weakensOriginal=false)', () => {
+        // TM-VAC-02 scope note: the classifier is a KEYWORD heuristic
+        // with an explicit default (see classifyTestChange docstring).
+        // A numeric-only change matches no keyword, so the default
+        // TEST_DEFECT is the specified answer here — this test pins
+        // the default branch, and 12b-12d below pin its boundary so
+        // the suite fails when the branch logic (not just the
+        // default) changes.
         const result = classifyTestChange({
             original: 'severity: 0.3',
             new: 'severity: 0.4',
             justification: 'the previousIncidentsCount trust-dampening is correct; the test fixture needed recalibration',
         });
-        // Heuristic: a numeric severity change is not detected
-        // by the keyword-based classifier; the explicit
-        // classification TEST_DEFECT is the right answer for
-        // this case. The classifier returns TEST_DEFECT as
-        // the default for non-keyword cases.
+        expect(result.classification).toBe('TEST_DEFECT');
+        expect(result.weakensOriginal).toBe(false);
+    });
+
+    test('12b. classifyTestChange: identical strings are NONDETERMINISM_DEFECT (branch 0)', () => {
+        const result = classifyTestChange({
+            original: 'expect(x).toBe(1)',
+            new: 'expect(x).toBe(1)',
+            justification: 'unchanged assertion, rerun only',
+        });
+        expect(result.classification).toBe('NONDETERMINISM_DEFECT');
+        expect(result.weakensOriginal).toBe(false);
+    });
+
+    test('12c. classifyTestChange: toMatchObject without toEqual in the original stays default (branch-1 boundary)', () => {
+        const result = classifyTestChange({
+            original: 'expect(x).toBe(1)',
+            new: 'expect(x).toMatchObject({ a: 1 })',
+            justification: 'rewrote an exact assertion as a partial one',
+        });
+        expect(result.classification).toBe('TEST_DEFECT');
+        expect(result.weakensOriginal).toBe(true);
+    });
+
+    test('12d. classifyTestChange: setXFrom without a direct-write original stays default (branch-2 boundary)', () => {
+        const result = classifyTestChange({
+            original: 'a2b.getGrievance()',
+            new: "a2b.setGrievanceFrom('*default*', 0.5)",
+            justification: 'already a call on both sides; no contract migration',
+        });
         expect(result.classification).toBe('TEST_DEFECT');
         expect(result.weakensOriginal).toBe(false);
     });

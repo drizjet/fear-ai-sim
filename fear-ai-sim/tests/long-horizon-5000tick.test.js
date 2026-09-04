@@ -49,12 +49,18 @@ function runLongHorizon(seed) {
     let nanFound = false;
     let negativeInventory = false;
     const tickStart = process.hrtime.bigint();
+    let maxTickMs = 0;
     for (let t = 1; t <= LONG_HORIZON_TICKS; t++) {
+        const oneStart = process.hrtime.bigint();
         try {
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.5, encounterRng: rng });
         } catch (e) {
             return { seed, crashed: true, error: String(e), events: world.events.length };
         }
+        // A5-F7: per-tick worst case, not just the mean. A hanging
+        // tick hides inside a healthy mean; the tripwire is generous
+        // (10s vs observed ~1ms) — catastrophic only.
+        maxTickMs = Math.max(maxTickMs, Number(process.hrtime.bigint() - oneStart) / 1e6);
         // Spot-check: any NaN in inventory or population?
         for (const [townId, town] of world.towns) {
             const pop = town.population;
@@ -71,6 +77,7 @@ function runLongHorizon(seed) {
     const totalMs = Number(tickEnd - tickStart) / 1e6;
     const finalState = {
         seed,
+        maxTickMs,
         crashed: false,
         nanFound,
         negativeInventory,
@@ -86,9 +93,33 @@ function runLongHorizon(seed) {
         banditRelocations: world.events.filter(e => e.type === 'BANDIT_RELOCATION').length,
         populationChanges: world.events.filter(e => e.type === 'POPULATION_CHANGE').length,
         routeDecisions: world.events.filter(e => e.type === 'MERCHANT_ROUTE_DECISION').length,
+        tripCommitments: world.events.filter(e => e.type === 'TRIP_COMMITMENT').length,
+        cargoDeliveries: world.events.filter(e => e.type === 'PENDING_CARGO_DELIVERED').length,
         banditAttacks: world.events.filter(e => e.type === 'BANDIT_ATTACK').length,
     };
     return finalState;
+}
+
+// A5-F1 activity floors (anti-stasis tripwires, fixture-calibrated
+// 2026-09-05: seed-1 census gives 5000 decisions, 5000 commitments,
+// 989 deliveries, 3706 encounters, 1572 invasions, 1 relocation,
+// 0 bandit attacks). Floors sit an order of magnitude below the
+// live counts. They fail a frozen world (see the agency-free
+// contrast test below) while the old crash/NaN/season gates pass
+// it — that gap is exactly the audit finding.
+//
+// The 0-attack stalemate is NOT floored here: the bandit sits on
+// road-a for 5000 ticks while trade flows elsewhere (deterrence
+// equilibrium or initiative failure — owned by A5-F5, with the
+// count logged below as its input). Flooring attacks>0 on this
+// fixture would invent vigor the mechanism does not have.
+function expectLiveActivity(r) {
+    expect(r.routeDecisions).toBeGreaterThanOrEqual(2500);
+    expect(r.tripCommitments).toBeGreaterThanOrEqual(2500);
+    expect(r.cargoDeliveries).toBeGreaterThanOrEqual(100);
+    expect(r.banditRelocations).toBeGreaterThanOrEqual(1);
+    expect(r.maxTickMs).toBeLessThan(10000);
+    expect(r.seasonChanges).toBeGreaterThan(0);
 }
 
 describe('long-horizon 5000-tick run (EVID-2026-08-29-LONG-HORIZON)', () => {
@@ -121,8 +152,52 @@ describe('long-horizon 5000-tick run (EVID-2026-08-29-LONG-HORIZON)', () => {
         // change must have fired (proving the season loop is
         // running) and at least one bandit relocation (proving
         // the bandit is responsive).
+        // A5-F1: activity floors — a frozen world passes the
+        // crash/NaN gates above but fails these.
         for (const r of results) {
-            expect(r.seasonChanges).toBeGreaterThan(0);
+            expectLiveActivity(r);
+        }
+        // A5-F1/F7: seeds must genuinely vary the world (R5 lesson:
+        // identical worlds measured a constant). Event totals and
+        // delivery counts differ across seeds.
+        expect(new Set(results.map(r => r.events)).size).toBeGreaterThan(1);
+        // A5-F7 rates with exposure denominators, logged per seed.
+        for (const r of results) {
+            // eslint-disable-next-line no-console
+            console.log(`  seed=${r.seed} attacks/encounter=${(r.banditAttacks / Math.max(1, r.routeDecisions)).toFixed(4)} deliveries/commitment=${(r.cargoDeliveries / Math.max(1, r.tripCommitments)).toFixed(3)} relocations=${r.banditRelocations} attacks=${r.banditAttacks}`);
         }
     }, 120000);
+
+    it('agency-free world passes coherence gates but fails every activity floor (contrast)', () => {
+        // A5-F1 contrast: strip bandits and merchants. Seasons,
+        // encounters (town-driven types), markets, and demography
+        // still tick — the old gates stay green — but every
+        // agency-requiring count is structurally zero, failing the
+        // floors above. Run the floors against these zeros in
+        // scratch to confirm they fire; here pin the zeros.
+        const world = createClosedWorldScenario({ season: 'SPRING' });
+        world.ticksPerSeason = 100;
+        world.bandits = [];
+        world.merchants = [];
+        world.towns.get('north').population = 100;
+        world.towns.get('south').population = 100;
+        let crashed = false;
+        for (let t = 1; t <= 500; t++) {
+            try {
+                tickClosedWorld(world, { tick: t, perceivedDanger: 0.5 });
+            } catch (e) {
+                crashed = true;
+                break;
+            }
+        }
+        // Old gates: still green on a frozen world (the finding).
+        expect(crashed).toBe(false);
+        expect(world.events.filter(e => e.type === 'SEASON_CHANGE').length).toBeGreaterThan(0);
+        // Agency counts: structurally zero — each would fail its
+        // corresponding live floor above.
+        expect(world.events.filter(e => e.type === 'MERCHANT_ROUTE_DECISION').length).toBe(0);
+        expect(world.events.filter(e => e.type === 'PENDING_CARGO_DELIVERED').length).toBe(0);
+        expect(world.events.filter(e => e.type === 'BANDIT_RELOCATION').length).toBe(0);
+        expect(world.events.filter(e => e.type === 'BANDIT_ATTACK').length).toBe(0);
+    });
 });

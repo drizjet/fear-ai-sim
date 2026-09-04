@@ -1,6 +1,25 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-R8-ENCOUNTERS (Lane B, unaccepted)
+EVID-2026-09-05-R9-R11-HYGIENE-ORACLES-WIRING (Lane B, unaccepted)
+
+## R9 — test hygiene (TM-VAC-01, TM-VAC-02, TM-TEMP-11)
+
+- VAC-01: routing-merchant-base 8 tests. Tests 1-2 relabeled mapping-consistency (pass for any same-math fork, by design); ownership proven by toll + NEW weather fork detectors (routing-only terms vanish if routeCost() is inlined). Mutations: inline-legacy fork kills exactly the 2 detectors; const-base kills 6/8.
+- VAC-02: classifier test 12 split into 12a-d boundary suite (default pin, identical-input branch, two near-miss boundaries) + docstring boundary contract. Mutations: default-swap kills 3, drop-identical kills 1, broaden-branch-2 kills exactly 12d. Lint exit 0 unaffected.
+- TEMP-11: PresenceBreakDetector.update/detectPresenceBreak take injectable now (production default unchanged); the 2 phase3 timer tests use staged timestamps, no waits. Perf suite: every bench asserts a 100x catastrophic tripwire in default mode; memory test measures heap delta (was hardcoded arithmetic). Mutations: 1-byte bound fails, zero slack fails, ignored-now fails both timer tests.
+
+## R10 — long-horizon oracles (A5-F1, A5-F3, A5-F5, A5-F7)
+
+- F1: 5000tick gains activity floors (decisions/commitments/deliveries/ratio/relocation), delivery-ratio floor, max-tick tripwire, cross-seed variance assert, per-seed rate logs, and an agency-free contrast world (passes coherence, zeros agency). Bandit 0-attack stalemate documented as F5 input, not floored.
+- F3: invariant-health test 1 gains a decisions>=400 stasis detector (frozen world scores 0, verified by probe); refill/demography explicitly NOT asserted (probe: both fire without agency). Mass-balance extended 30->500 ticks.
+- F5: root-caused the RAID lock (chronic tools shortage 1.000, supply 0 — unmeetable deficit + food-only trade; NOT broken decay). New faction-recovery.test.js: unit zero-flow recovery flips HOLD in <=60 ticks; live relief (produces.tools fix) returns HOLD. Both decay mutations kill precisely.
+- F7: multi-seed gains deliveredSpread>0 floor (single-stream fraud fails it); diversity gains logged within-regime ranges + directional trade assert (pd0.9 mean < pd0.0 mean; flatten-regimes fails it). Single-channel danger-blind does NOT kill direction (multi-channel by design, documented). 5000tick logs attacks/encounter + deliveries/commitment rates.
+
+## R11 — wiring honesty (TM-HOLD-10, A5-F8)
+
+- HOLD-10: scoped as operator-API (no live settler population, no radius reader, no travel-driven relocation). Corrected two doc overclaims (claimedRadius "already uses it", Slice-L live-bandit wiring). operator-api-scope.test.js pins absence-of-autonomy + channel visibility. Settlement liveness (founded towns tick) already proven, kept.
+- F8: verified the ledger makes no Trip-lifecycle live claim (0 rows); maturity prose already bounds trade pending-trip vs Trip-class surfaces. Added TARGET_HAS_NO_FACTION boundary pin (unaffiliated raid authorizes with WHY audit; dropping the branch fails it). Relationships row now states the factionless boundary.
+- Validation: 188/1367 suite, 4/16 long-horizon, lint exit 0 (3085 rows), build green, authority CLEAN, replay 38/38.
 
 ## R8 — encounter rate calibration + bandit initiative
 
