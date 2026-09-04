@@ -332,6 +332,30 @@ const MUTATIONS = [
         detectors: 'evidence-linter',
         note: 'retired-row poison returns; superseded placeholders must veto',
     },
+    {
+        id: 'shipment-scaling',
+        file: 'closed-world.js',
+        target: 'Math.max(1, Math.floor(merchantCargo * (1 - believedDanger * 0.5) * (1 - worldCaution * 0.4)))',
+        replacement: 'Math.max(1, Math.floor(merchantCargo))',
+        detectors: 'materialization-scaling',
+        note: 'R5 danger-scaled shipment neutralized; volume must stop responding',
+    },
+    {
+        id: 'travel-time',
+        file: 'closed-world.js',
+        target: 'Math.max(1, Math.round((route.distance ?? 1) / (Number.isFinite(route.condition) ? route.condition : 1)))',
+        replacement: 'Math.max(1, Math.round((route.distance ?? 1)))',
+        detectors: 'materialization-scaling',
+        note: 'R5 condition travel divisor dropped; degraded road must not delay',
+    },
+    {
+        id: 'drought-recovery',
+        file: 'closed-world.js',
+        target: 'const droughtMultiplier = Math.max(0.1, 1 - sev * 0.6);',
+        replacement: 'const droughtMultiplier = 1;',
+        detectors: 'long-horizon-invariant-health',
+        note: 'R5 drought shock neutralized; convergence must fail',
+    },
 ];
 
 function runDetectors(pattern) {

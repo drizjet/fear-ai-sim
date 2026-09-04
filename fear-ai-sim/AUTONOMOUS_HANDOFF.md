@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-R4-REPLAY-SCOPE (Lane B, unaccepted)
+EVID-2026-09-04-R5-ORACLE-STRENGTH (Lane B, unaccepted)
+
+## R5 — oracle strength (seeds, holdouts, recovery)
+
+- Sensitivity seeds threaded: the 500-tick loops passed `seed` nowhere (5x identical worlds, spread measured a constant). Both loops now pass mulberry32 streams via encounterRng; measured spread 128-145 (12%, bounded and non-degenerate); stale 95-98 note replaced with measured values. Determinism (§121) still passes.
+- Holdouts closed: shipment scaling (believedDanger/worldCaution volume) and condition travel time each have a live-tick detector in tests/materialization-scaling.test.js (both mutation-proven: neutralizing one fails only its own test). Replay +3 (shipment-scaling, travel-time, drought-recovery); 38/38 killed, clean restores.
+- Drought SUSTAIN is control-relative: twin no-drought world; final distance to control must be smaller than drought-time distance. Overshoot (-1.1) accepted as legitimate rebound (convergence, not one-sidedness); drought neutralization kills SUSTAIN only.
+- No production changes in this slice (tests + replay harness only): no reseed needed, lint unaffected.
+- Validation: 179/1338 suite, 4/15 long-horizon, build green, authority CLEAN.
 
 ## R4 — replay scope + soundness (TM-BIAS-07 + TM-KILL-04)
 

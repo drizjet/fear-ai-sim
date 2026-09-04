@@ -114,6 +114,27 @@ describe('Slice H — long-horizon invariant health (500 ticks)', () => {
         expect(finalSupply).toBeGreaterThan(droughtSupply);
         expect(sustained).toBe(true);
         expect(world.events.some(e => e.type === 'DROUGHT_ENDED')).toBe(true);
+        // R5 (A5-F4): recovery relative to a no-drought control twin,
+        // not just above the drought low. An any-epsilon uptick passes
+        // the old assertions while the gap to control stays wide (a
+        // ratchet, not a recovery). The gap must narrow: the shocked
+        // world converges back toward the control trajectory.
+        const control = createClosedWorldScenario({ season: 'SUMMER' });
+        control.ticksPerSeason = 10000;
+        control.towns.get('north').population = 10;
+        control.towns.get('south').population = 10;
+        control.towns.get('north').produces.food = 0.8;
+        control.towns.get('south').produces.food = 1.5;
+        control.towns.get('north').market.setCapacity('food', 500);
+        control.towns.get('north').market.inventory.set('food', 40);
+        for (let t = 1; t <= 50; t++) tickClosedWorld(control, { tick: t, perceivedDanger: 0.2 });
+        const controlSupply = control.towns.get('north').market.getQuote('food').supply;
+        // Convergence: the final distance to control must be smaller
+        // than the drought-time distance. Overshoot is legitimate
+        // rebound (measured -1.1: the resumed production briefly
+        // outpaces control); a ratchet would hold the full gap.
+        expect(Math.abs(controlSupply - finalSupply)).toBeLessThan(
+            Math.abs(controlSupply - droughtSupply));
     });
 
     it('EVENTUALLY: every materialized trip reaches terminal state within H ticks', () => {

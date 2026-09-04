@@ -18,6 +18,20 @@
 import { describe, it, expect } from '@jest/globals';
 import { createClosedWorldScenario, tickClosedWorld } from '../closed-world.js';
 
+// R5 (V8 audit A5-F2): the seed loops below thread this stream into
+// tickClosedWorld via encounterRng, so distinct seeds drive
+// genuinely distinct trajectories. Previously the loop variable
+// was never passed anywhere and all "seeds" ran identical worlds.
+function mulberry32(seed) {
+    let state = seed >>> 0;
+    return () => {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
 function summarize(world) {
     return {
         invasions: world.events.filter(e => e.type === 'INVASION').length,
@@ -110,8 +124,9 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
             let total = 0;
             for (const seed of SEEDS) {
                 const world = createClosedWorldScenario();
+                const rng = mulberry32(seed);
                 for (let t = 1; t <= TICKS; t += 1) {
-                    tickClosedWorld(world, { tick: t, perceivedDanger: pd });
+                    tickClosedWorld(world, { tick: t, perceivedDanger: pd, encounterRng: rng });
                 }
                 total += metric(world);
             }
@@ -149,8 +164,9 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
         const counts = [];
         for (const seed of SEEDS) {
             const world = createClosedWorldScenario();
+            const rng = mulberry32(seed * 1000 + 7);
             for (let t = 1; t <= TICKS; t += 1) {
-                tickClosedWorld(world, { tick: t, perceivedDanger: 0.5 });
+                tickClosedWorld(world, { tick: t, perceivedDanger: 0.5, encounterRng: rng });
             }
             counts.push(world.events.filter(e => e.type === 'INVASION').length);
         }
@@ -160,9 +176,11 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
         // the mean.
         const mean = counts.reduce((s, c) => s + c, 0) / counts.length;
         const spread = Math.max(...counts) - Math.min(...counts);
-        // (Note: the audit found 95-98 invasions across
-        // 5 seeds — the spread is < 5 invasions, which
-        // is well under 50% of the mean.)
+        // (Note: with genuinely threaded seeds the counts are
+        // 128-145 across 5 seeds — spread 17 on mean ~140 (12%),
+        // well under 50% of the mean, and non-degenerate. The old
+        // 95-98 note measured 5x the identical world: same seed
+        // streams were never passed in.)
         expect(spread).toBeLessThan(mean * 0.5);
     });
 });
