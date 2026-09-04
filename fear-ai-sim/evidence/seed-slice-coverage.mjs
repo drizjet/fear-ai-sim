@@ -9,9 +9,8 @@
 // Every needle below was read-verified by three mapping scouts against
 // the cited files; the seeder re-verifies each needle fail-fast via
 // assertionExists, so a drifted symbol aborts the seed instead of
-// minting a false row. Idempotent via buildReceipt dedup. One shared
-// command receipt: the full non-long-horizon suite, which must be
-// green or the seed refuses to run.
+// minting a false row. Pass --needles-only to verify needles without
+// running the suite or writing rows.
 
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,11 +20,14 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..');
 const T = (p) => `tests/${p}`;
 
-const receipt = runTestReceipt('--runInBand --testPathIgnorePatterns=long-horizon', {
-    cwd: ROOT,
-    timeoutMs: 300000,
-    label: 'full non-long-horizon suite at slice-coverage seed',
-});
+const NEEDLES_ONLY = process.argv.includes('--needles-only');
+const receipt = NEEDLES_ONLY
+    ? { exitCode: 0, command: 'needles-only', cwd: '.', timeoutMs: 0, durationMs: 0, outputDigest: 'none', outputSnippet: '', label: 'needles-only' }
+    : runTestReceipt('--runInBand --testPathIgnorePatterns=long-horizon', {
+        cwd: ROOT,
+        timeoutMs: 300000,
+        label: 'full non-long-horizon suite at slice-coverage seed',
+    });
 if (receipt.exitCode !== 0) {
     throw new Error(`seed-slice-coverage: suite was not green (exit ${receipt.exitCode}); refusing to seed`);
 }
@@ -142,7 +144,7 @@ ROWS.push(
 // ---- refugees downgrade support (scout verdict: no persistent group; immigration behavior only) ----
 ROWS.push(
 ['refugees', 'CODE_EXISTS', 'refugees-code', 'The reducer runs an immigration pass that moves population into destination towns under migration pressure with world-total conservation.', [T('migration-immigration.test.js')], ['closed-world.js', 'justice.js'], ['toTownId', 'MIGRATION', 'migrationPressure']],
-['refugees', 'UNIT_VERIFIED', 'refugees-unit', 'Immigration tests prove named destinations distinct from origins, world-total conservation, and camp growth absorbed as town population.', [T('migration-immigration.test.js')], ['closed-world.js'], ['expect(m.toTownId).toBeDefined()', 'expect(finalTotal).toBe(initialTotal)', 'expect(immigrationsToRefugee.length).toBeGreaterThan(0)']],
+['refugees', 'UNIT_VERIFIED', 'refugees-unit', 'Immigration tests prove named destinations distinct from origins, world-total conservation, and camp growth absorbed as town population.', [T('migration-immigration.test.js')], ['closed-world.js'], ['expect(m.toTownId).toBeDefined()', 'expect(finalTotal - (exo.inflow ?? 0) + (exo.outflow ?? 0)).toBe(initialTotal)', 'expect(immigrationsToRefugee.length).toBeGreaterThan(0)']],
 );
 
 function assertNeedles(files, needles, claimId) {
@@ -169,8 +171,9 @@ for (const [domain, dimension, suffix, claim, tests, sources, needles] of ROWS) 
         assertions: needles.map((n) => `verified present: ${n}`),
         limitations: ['Slice-coverage seed: binds existing detector tests; dimension semantics per evidence/maturity.mjs ladder.'],
         useImportClosure: true,
+        dryRun: NEEDLES_ONLY,
     });
     seeded += 1;
 }
 
-console.log(`Seeded ${seeded} slice-coverage rows.`);
+console.log(`${NEEDLES_ONLY ? 'Verified (no writes)' : 'Seeded'} ${seeded} slice-coverage rows.`);

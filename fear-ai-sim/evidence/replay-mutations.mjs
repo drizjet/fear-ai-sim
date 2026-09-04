@@ -194,6 +194,34 @@ const MUTATIONS = [
         detectors: 'event-parentage',
         note: 'R2 encounter parent dropped; candidate parentage must fail',
     },
+    {
+        id: 'bandit-delivery-booking',
+        file: 'closed-world.js',
+        target: 'cumulative.deliveryOverflow = (Number(cumulative.deliveryOverflow) || 0) + (Number(marketResult.overflow) ?? 0);',
+        replacement: 'cumulative.deliveryOverflow = (Number(cumulative.deliveryOverflow) || 0) + 0;',
+        detectors: 'conservation-r3',
+        note: 'R3 bandit overflow unbooked; capacity residual must drift',
+    },
+    {
+        id: 'refugee-applied',
+        file: 'encounters.js',
+        target: `result.destinationTownId = destination.id;
+                result.refugeeCount = refugeeCount;
+                applied = true;`,
+        replacement: `result.destinationTownId = destination.id;
+                result.refugeeCount = refugeeCount;
+                applied = false;`,
+        detectors: 'conservation-r3',
+        note: 'R3 refugee apply reverted; inflow booking must vanish',
+    },
+    {
+        id: 'demography-receipt',
+        file: 'demography.js',
+        target: 'const received = Boolean(dest && (dest.population || 0) > 0);',
+        replacement: 'const received = true;',
+        detectors: 'conservation-r3',
+        note: 'R3 floor bypassed; phantom immigration must return',
+    },
 ];
 
 function runDetectors(pattern) {

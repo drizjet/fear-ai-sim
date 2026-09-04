@@ -138,7 +138,9 @@ describe('Slice B — conservation across 200 ticks multi-seed', () => {
             const finalTotal = [...world.towns.values()].reduce((s, t) => s + t.population, 0);
             // Migrations conserve (source -1, dest +1); only demography births/deaths change total
             // Allow ±10 for 200 ticks of births/deaths
-            expect(Math.abs(finalTotal - initialTotal)).toBeLessThanOrEqual(10);
+            // R3: refugee absorption/drops add booked exogenous terms.
+            const exoDU = world.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+            expect(Math.abs(finalTotal - (exoDU.inflow ?? 0) + (exoDU.outflow ?? 0) - initialTotal)).toBeLessThanOrEqual(10);
             // Every MIGRATION has valid destination and FIRE==MIG
             const fires = world.events.filter(e => e.type === 'MIGRATION_DECISION' && e.decision === 'FIRE');
             const migs = world.events.filter(e => e.type === 'MIGRATION');

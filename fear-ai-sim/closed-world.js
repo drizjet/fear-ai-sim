@@ -135,6 +135,22 @@ function bookExogenousInflow(world, kind, amount) {
     world.exogenousInflow[kind] = (world.exogenousInflow[kind] ?? 0) + amt;
 }
 
+export function bookExogenousPopulation(world, direction, amount) {
+    // R3 (V8 audit MAT-005): declared exogenous population flow.
+    // People entering (refugee absorption from off-map) or leaving
+    // (emigrants dropped at unsettleable destinations) the modeled
+    // set are creation/deletion events; without this ledger they
+    // break the population identity silently. Plain JSON so
+    // save/load round-trips it with zero migration work.
+    if (!world) return;
+    if (!world.exogenousPopulation || typeof world.exogenousPopulation !== 'object') {
+        world.exogenousPopulation = { inflow: 0, outflow: 0 };
+    }
+    const amt = Number(amount);
+    if ((direction !== 'inflow' && direction !== 'outflow') || !Number.isFinite(amt) || amt <= 0) return;
+    world.exogenousPopulation[direction] = (Number(world.exogenousPopulation[direction]) || 0) + amt;
+}
+
 function allocateWorldActionId(world) {
     ensurePendingWorldState(world);
     const id = `WORLD-ACTION-${String(world.nextActionId).padStart(6, '0')}`;
@@ -1070,6 +1086,24 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         ? destination.market.deliverCargo('food', remaining, { disruption: 0 })
         : null;
     merchant.cargo = 0; // the merchant's cargo has been resolved by the attack
+    // R3 (V8 audit MAT-001): book the bandit-path delivery into the
+    // cumulative market-flow ledger immediately. Unlike trip
+    // deliveries (booked into deliveredThisTick before the same
+    // tick's market loop), attacks resolve in the late-tick
+    // encounter step — AFTER the market loop merged and BEFORE
+    // the next reset — so a deliveredThisTick entry would be
+    // wiped unmerged. Direct cumulative booking is exact and
+    // matches the ledger's integral semantics. Key mirrors the
+    // trip path town:kind shape.
+    if (marketResult) {
+        if (!world.marketFlows) world.marketFlows = new Map();
+        const delivKey = 'south:food';
+        const cumulative = world.marketFlows.get(delivKey)
+            ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0 };
+        cumulative.delivered = (Number(cumulative.delivered) || 0) + (Number(marketResult.stored) ?? 0);
+        cumulative.deliveryOverflow = (Number(cumulative.deliveryOverflow) || 0) + (Number(marketResult.overflow) ?? 0);
+        world.marketFlows.set(delivKey, cumulative);
+    }
     const attackingBandit = world.bandits.find(b => b.roadId === roadId) ?? null;
     const event = {
         type: 'BANDIT_ATTACK',

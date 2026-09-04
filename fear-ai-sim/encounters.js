@@ -1,4 +1,4 @@
-import { appendWorldEvent } from './closed-world.js';
+import { appendWorldEvent, bookExogenousPopulation } from './closed-world.js';
 
 // Constitution §89 / §90 / §91 / §94 / §532.
 //
@@ -74,10 +74,13 @@ export function encounterCatalog() {
             check(world) {
                 // A refugee encounter is plausible when there is
                 // recent faction conflict (grievance > 0) and a
-                // settlement with capacity to absorb them.
+                // settlement with capacity to absorb them. Towns is
+                // a Map in live worlds (R3: .length was always
+                // undefined, so this type could never be eligible).
                 if (!world.factions || !world.towns) return false;
+                const townCount = world.towns.size ?? world.towns.length ?? 0;
                 return world.factions.some(faction => (faction.grievance ?? 0) > 0.3)
-                    && world.towns.length > 0;
+                    && townCount > 0;
             },
         },
         {
@@ -259,6 +262,10 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
             const destination = world.towns?.values?.()?.next?.()?.value;
             if (destination) {
                 destination.population = (destination.population ?? 0) + refugeeCount;
+                // R3 (V8 audit MAT-005a): refugees arrive from off-map —
+                // creation is legitimate, but it must be owned. Book
+                // the headcount into the exogenous-population ledger.
+                bookExogenousPopulation(world, 'inflow', refugeeCount);
                 result.sourceFactionId = sourceFaction.id;
                 result.destinationTownId = destination.id;
                 result.refugeeCount = refugeeCount;

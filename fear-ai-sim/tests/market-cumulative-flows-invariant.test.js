@@ -83,6 +83,11 @@ describe('cumulative market flows invariant (Constitution §155 audit trail)', (
             town.market.deliverCargo('food', 20, { routeRisk: 0 });
         }
         for (let t = 1; t <= 100; t += 1) {
+            // R3: hold grievance at zero so no refugee-group encounters
+            // fire. This test is about the audit trail, not about
+            // demography; refugee absorption would pump population and
+            // production away from the pinned-season equilibrium.
+            world.factions.forEach(f => { f.grievance = 0; });
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.0 });
         }
         // Sum the per-tick flows across all MARKET_TICK events.

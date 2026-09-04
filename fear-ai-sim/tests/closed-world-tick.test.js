@@ -551,6 +551,13 @@ describe('tickClosedWorld', () => {
             f.fear = 0;
         });
         for (let i = 0; i < 50; i++) {
+            // R3: hold factions at zero grievance every tick so no
+            // refugee-group encounters fire. This test isolates the
+            // market step (per its own header comment); refugee
+            // absorption is population dynamics, measured elsewhere.
+            // Endogenous grievance would otherwise rise from scarcity
+            // and pump exogenous heads into the equilibrium math.
+            world.factions.forEach(f => { f.grievance = 0; });
             tickClosedWorld(world, { tick: i + 1, perceivedDanger: 0.0 });
         }
         for (const [townId, town] of world.towns) {

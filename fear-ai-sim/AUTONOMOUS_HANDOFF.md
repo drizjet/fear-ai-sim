@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-R2-EVENT-PARENTAGE (Lane B, unaccepted)
+EVID-2026-09-04-R3-CONSERVATION-CLOSURE (Lane B, unaccepted)
+
+## R3 — conservation closure (MAT-001 + MAT-005)
+
+- MAT-001: resolveBanditAttack books {stored, overflow} into the cumulative market-flow ledger AT ATTACK TIME (direct, not deliveredThisTick — attacks resolve after the market loop merged and before the next reset, so a same-tick entry would be wiped unmerged; first implementation used the wrong plumbing and the detector caught it). Capacity-pressure detector proves residual holds.
+- MAT-005: new world.exogenousPopulation {inflow, outflow} ledger (plain JSON, lazy-init). Refugee-group absorption books inflow; demography drops book outflow via a single recorded transferReceipt reused by the event emission (gate-time vs emission-time pops can disagree — one decision point). Dropped transfers emit truthful received-0 events with dropReason instead of the phantom +N the town never got (found while debugging: the emission loop invented immigration the apply loop refused).
+- Enabling the refugee type (dead twice over: missing applied=true + Map.length check) restored a live population pump. Conservation equations restated with the booked terms (full identity incl. event-summed births/deaths where nonzero; massResidual pattern); production-mechanics fixtures isolate demography by per-tick grievance pin (their stated intent). 11 failing tests, each reasoned individually (one contaminated comment fixed on sight); no equation padded with slack. Fixture-control vs restatement rule: isolate when the test isn't about the confound, restate when it is.
+- Detectors: tests/conservation-r3.test.js (3 tests, all red pre-fix). Replay +3 (bandit-delivery-booking, refugee-applied, demography-receipt); 23/23 killed, clean restores. Seed tooling: --needles-only fast mode added to the coverage seeder; dedup no longer lets FAILED proofs block green re-proofs (mid-repair mint poisoned ecology otherwise).
+- Self-caught tooling errors: one edit ate the attackOpportunityId idempotency guard (restored verbatim, diff-audited); one mis-anchored insert duplicated a delivery block (removed); one seed-script range collision swapped out the markets consumer row (lint caught it via derived UNIT — restored, row-set diffed vs HEAD).
+- Validation: 178/1336 suite, 4/15 long-horizon, build green, authority CLEAN, lint exit 0 (2145 rows, 8 explained divergences), full reseed campaign.
+- Open follow-up (not this candidate): refugee encounter rate calibration (fires whenever grievance>0.3 with no cooldown — swamps births in quiet worlds; template rate never calibrated) and bandit distant-sensing initiative (R1 stalemate note stands).
 
 ## R2 — event parentage authority (F6 + re-audit round)
 

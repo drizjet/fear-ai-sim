@@ -51,7 +51,10 @@ describe('MIGRATION immigration (Constitution §156 / §69)', () => {
         for (const [, town] of world.towns) {
             finalTotal += town.population;
         }
-        expect(finalTotal).toBe(initialTotal);
+        // R3: close with the booked exogenous terms (massResidual
+        // pattern). Tiny pops keep births/deaths at exactly 0.
+        const exo = world.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+        expect(finalTotal - (exo.inflow ?? 0) + (exo.outflow ?? 0)).toBe(initialTotal);
     });
 
     it('individual town populations can both increase and decrease across ticks', () => {
@@ -110,10 +113,13 @@ describe('MIGRATION immigration (Constitution §156 / §69)', () => {
         // The world total is conserved (proves the §156
         // population balance on both sides of the
         // emigration+immigration pair).
+        // R3: refugee absorption adds booked inflow on top of the
+        // migration pair; the identity closes with it.
         let finalTotal = 0;
         for (const [, town] of world.towns) {
             finalTotal += town.population;
         }
-        expect(finalTotal).toBe(2); // north=1, south=1, refugee-camp=0
+        const exoCamp = world.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+        expect(finalTotal - (exoCamp.inflow ?? 0) + (exoCamp.outflow ?? 0)).toBe(2); // north=1, south=1, refugee-camp=0
     });
 });

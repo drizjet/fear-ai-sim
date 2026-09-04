@@ -27,11 +27,17 @@ describe('MIGRATION event decrements town population (Constitution §69 / §164)
         // The world total population must be conserved
         // (migration moves people between towns, not out of
         // the world). This is the §156 population balance.
+        // R3: refugee absorption creates people exogenously and
+        // unsettleable drops delete them — both now booked in
+        // world.exogenousPopulation. The identity closes with
+        // those declared terms (massResidual pattern). Tiny
+        // populations keep births/deaths at exactly 0 by floor.
         let finalTotal = 0;
         for (const [, town] of world.towns) {
             finalTotal += town.population;
         }
-        expect(finalTotal).toBe(initialTotal);
+        const exo = world.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+        expect(finalTotal - (exo.inflow ?? 0) + (exo.outflow ?? 0)).toBe(initialTotal);
         // At least one MIGRATION event must fire.
         const migrationCount = world.events.filter(ev => ev.type === 'MIGRATION').length;
         expect(migrationCount).toBeGreaterThan(0);
@@ -56,6 +62,11 @@ describe('MIGRATION event decrements town population (Constitution §69 / §164)
     it('under low pressure, population stays at its initial value (no spurious migration)', () => {
         // The complement: under low pressure, no MIGRATION
         // events fire, so population does not change.
+        // R3: refugee absorption (booked exogenous inflow) can
+        // still add heads even when migration is quiet. Per-town
+        // identity closes with each town's ENCOUNTER-attributed
+        // refugee share; low-pressure tiny pops keep births,
+        // deaths, and drops at exactly 0.
         const world = createClosedWorldScenario();
         const initialPop = {};
         for (const [townId, town] of world.towns) {
@@ -64,8 +75,14 @@ describe('MIGRATION event decrements town population (Constitution §69 / §164)
         for (let t = 1; t <= 20; t++) {
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.0 });
         }
+        const influxByTown = {};
+        for (const event of world.events) {
+            if (event.type !== 'ENCOUNTER' || !event.result || event.result.refugeeCount == null) continue;
+            const dest = event.result.destinationTownId;
+            influxByTown[dest] = (influxByTown[dest] ?? 0) + event.result.refugeeCount;
+        }
         for (const [townId, town] of world.towns) {
-            expect(town.population).toBe(initialPop[townId]);
+            expect(town.population).toBe((initialPop[townId] ?? 0) + (influxByTown[townId] ?? 0));
         }
     });
 });

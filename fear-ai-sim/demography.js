@@ -14,7 +14,7 @@
 // follow-up slice; this is the first link.
 
 import { clamp } from './math-utils.js';
-import { appendWorldEvent, findLatestWorldEvent } from './closed-world.js';
+import { appendWorldEvent, findLatestWorldEvent, bookExogenousPopulation } from './closed-world.js';
 
 // Base birth rate per population per tick. Default 0.01 (1% per
 // tick is fast; intended to be tuned). At population=1 this is
@@ -169,6 +169,12 @@ export function tickDemography(world, tick) {
     // destination accounts for it (otherwise the destination's
     // own demographic event would overwrite the immigration).
     const immigrationByTown = new Map();
+    // R3: receipt per source transfer, decided once here from
+    // pre-apply populations. The emission loop below must reuse
+    // this receipt — re-reading post-apply populations can disagree
+    // with the gate above (a town that emigrated itself away reads
+    // 0 after applying, though it received when gated).
+    const transferReceipt = new Map();
     for (const update of updates) {
         if (update.emigration > 0) {
             const destId = pickDestination(update.townId);
@@ -178,10 +184,22 @@ export function tickDemography(world, tick) {
                 // population 0 cannot receive immigrants (it
                 // has nobody to settle them). Skip the
                 // immigration for the 0-population case.
-                if (dest && (dest.population || 0) > 0) {
+                const received = Boolean(dest && (dest.population || 0) > 0);
+                if (received) {
                     immigrationByTown.set(destId,
                         (immigrationByTown.get(destId) || 0) + update.emigration);
+                } else {
+                    // R3 (V8 audit MAT-005b): emigrants dropped at
+                    // an unsettleable destination are a declared
+                    // deletion, not a silent one. Book the outflow.
+                    bookExogenousPopulation(world, 'outflow', update.emigration);
                 }
+                transferReceipt.set(update.townId, { destId, received, amount: update.emigration });
+            } else {
+                // R3: no destination exists at all — same declared
+                // deletion as the 0-population case.
+                bookExogenousPopulation(world, 'outflow', update.emigration);
+                transferReceipt.set(update.townId, { destId: null, received: false, amount: update.emigration });
             }
         }
     }
@@ -244,8 +262,13 @@ export function tickDemography(world, tick) {
         events.push(emittedPop);
         // Emit the immigration event separately for the source/dest
         // pair, so the audit trail can trace the migration.
+        // R3: reuse the transfer receipt decided above — re-picking
+        // here would read post-apply populations AND the world has
+        // mutated since, so the destination could disagree.
         if (update.emigration > 0) {
-            const destId = pickDestination(update.townId);
+            const receipt = transferReceipt.get(update.townId);
+            const destId = receipt?.destId ?? null;
+            const destReceives = receipt?.received ?? false;
             if (destId) {
                 // Honest parentage: demography runs at step 0.5
                 // before justice/migration on the same tick, so
@@ -280,16 +303,22 @@ export function tickDemography(world, tick) {
                 // recent POP newPopulation, or current dest
                 // population (old value before its own update).
                 const destOldPop = destPreviousPop ? destPreviousPop.newPopulation : (destTown?.population ?? 0);
+                // R3 (MAT-005b): the event tells the truth recorded in
+                // the receipt above — never re-read post-apply pops.
+                // A dropped transfer emits received 0 with the drop
+                // owned by the outflow ledger, not a phantom +N.
                 const immEvent = {
                     type: 'POPULATION_CHANGE',
                     tick,
                     townId: destId,
                     previousPopulation: destOldPop,
-                    newPopulation: destOldPop + update.emigration,
+                    newPopulation: destReceives ? destOldPop + update.emigration : destOldPop,
                     births: 0,
                     deaths: 0,
                     emigration: 0,
-                    immigration: update.emigration,
+                    immigration: destReceives ? update.emigration : 0,
+                    attemptedImmigration: update.emigration,
+                    ...(destReceives ? {} : { dropReason: 'MIGRATION_FLOOR_ZERO_POP' }),
                     sourceTownId: update.townId,
                     shortage: 0,
                     season: update.season,

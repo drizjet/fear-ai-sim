@@ -160,10 +160,16 @@ describe('MIGRATION-INCIDENCE (V8 corrective checkpoint, sustained vs controlled
         expect(highFires.length).toBe(highMigs.length);
         // Population conserved across migration (source + sink = initial total, modulo demography which is ~0 at these populations)
         // With sink, total should remain 20 (no net birth/death at pop 10 with surplus food in 30 ticks is small; allow +-1 for demography)
-        const highTotal = high.towns.get('north').population + high.towns.get('south').population;
+        // R3: refugee absorption adds booked inflow on top; close the
+        // band with it (massResidual pattern).
+        const highExo = high.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+        const highTotal = high.towns.get('north').population + high.towns.get('south').population
+            - (highExo.inflow ?? 0) + (highExo.outflow ?? 0);
         expect(highTotal).toBeGreaterThanOrEqual(19);
         expect(highTotal).toBeLessThanOrEqual(21);
-        const lowTotal = low.towns.get('north').population + low.towns.get('south').population;
+        const lowExo = low.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+        const lowTotal = low.towns.get('north').population + low.towns.get('south').population
+            - (lowExo.inflow ?? 0) + (lowExo.outflow ?? 0);
         expect(lowTotal).toBeGreaterThanOrEqual(19);
     });
 });

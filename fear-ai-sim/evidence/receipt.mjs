@@ -281,6 +281,13 @@ export function buildReceipt({
             // carry strictly less proof (no content binding), so they
             // never block an enriched re-seed of the same claim.
             && Array.isArray(prev.sourceState?.fileHashes)
+            // R3: a FAILED proof (commands not ok) is not proof at
+            // all — it must never block a later green re-proof of
+            // the same claim (seeds that run mid-repair would
+            // otherwise poison the claim permanently).
+            && Array.isArray(prev.commandResults)
+            && prev.commandResults.length > 0
+            && prev.commandResults.every(cr => cr.ok === true)
         );
         if (!isDuplicate) {
             appendFileSync(ledgerPath, JSON.stringify(row) + '\n');

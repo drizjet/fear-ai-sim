@@ -56,8 +56,20 @@ describe('population balance property test (Constitution §156 / §18)', () => {
             }
             // The world total must equal the initial total
             // (population is conserved across MIGRATION).
+            // R3: the full identity closes every term. Refugee
+            // absorption/drops come from the booked exogenous
+            // ledger; births/deaths come from the audited
+            // POPULATION_CHANGE events. Demography internal
+            // transfers net out by construction.
             const finalTotal = getWorldTotal(world);
-            expect(finalTotal).toBe(initialTotal);
+            const exoPB = world.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+            let births = 0, deaths = 0;
+            for (const e of world.events) {
+                if (e.type !== 'POPULATION_CHANGE' || e.immigrationKind) continue;
+                births += Number(e.births) || 0;
+                deaths += Number(e.deaths) || 0;
+            }
+            expect(finalTotal - (exoPB.inflow ?? 0) + (exoPB.outflow ?? 0) - births + deaths).toBe(initialTotal);
         }
     });
 
@@ -110,8 +122,16 @@ describe('population balance property test (Constitution §156 / §18)', () => {
             // Count MIGRATION events for audit-trail verification.
             const migrations = world.events.filter(ev => ev.type === 'MIGRATION');
             // The world total must still be conserved.
+            // R3: full identity with event-summed births/deaths.
             const finalTotal = getWorldTotal(world);
-            expect(finalTotal).toBe(initialTotal);
+            const exoPB2 = world.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+            let births2 = 0, deaths2 = 0;
+            for (const e of world.events) {
+                if (e.type !== 'POPULATION_CHANGE' || e.immigrationKind) continue;
+                births2 += Number(e.births) || 0;
+                deaths2 += Number(e.deaths) || 0;
+            }
+            expect(finalTotal - (exoPB2.inflow ?? 0) + (exoPB2.outflow ?? 0) - births2 + deaths2).toBe(initialTotal);
             // At least some seeds should have MIGRATION events.
             if (seed === 0) {
                 expect(migrations.length).toBeGreaterThan(0);

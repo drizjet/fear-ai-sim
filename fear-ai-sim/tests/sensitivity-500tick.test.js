@@ -72,7 +72,16 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
         expect(world.towns.get('north').population).toBeGreaterThan(0);
         expect(world.towns.get('south').population).toBeGreaterThan(0);
         const totalPop = [...world.towns.values()].reduce((s, t) => s + t.population, 0);
-        expect(totalPop).toBe(2);
+        // R3: full identity — booked exogenous terms plus
+        // event-summed births/deaths (massResidual pattern).
+        const exo207 = world.exogenousPopulation ?? { inflow: 0, outflow: 0 };
+        let births207 = 0, deaths207 = 0;
+        for (const e of world.events) {
+            if (e.type !== 'POPULATION_CHANGE' || e.immigrationKind) continue;
+            births207 += Number(e.births) || 0;
+            deaths207 += Number(e.deaths) || 0;
+        }
+        expect(totalPop - (exo207.inflow ?? 0) + (exo207.outflow ?? 0) - births207 + deaths207).toBe(2);
     });
 
     it('§138 behavioral diversity: different perceivedDanger produces different distributions', () => {
