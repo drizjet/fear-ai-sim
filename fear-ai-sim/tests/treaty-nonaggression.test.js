@@ -82,6 +82,13 @@ describe('non-aggression treaties and the invasion gate (Constitution §12 / §2
         // violate the non-aggression pact). A
         // `TREATY_BLOCKED_RAID` event is emitted instead.
         const world = createClosedWorldScenario();
+        // E3 staging: the merchant shuttle now covers a pop-1 tools
+        // deficit faster than raid pressure builds (pacified fixture:
+        // grievance 0.30, nothing to block). At pop 100 the deficit
+        // drain outruns shuttle throughput, so chronic pressure
+        // persists and the gate has raids to block. The scale stages
+        // pressure honestly; the gate logic is untouched.
+        for (const [, town] of world.towns) town.population = 100;
         // Form the non-aggression treaty at tick 1.
         requestNonAggression({ actor: 'north-faction', target: 'south-faction', world, tick: 1 });
         // The bandit is associated with south-faction.
@@ -92,8 +99,9 @@ describe('non-aggression treaties and the invasion gate (Constitution §12 / §2
         world.merchants[0].selectedRoute = 'road-a';
         seedMerchantBelief(world.merchants[0], 'road-a', 0.01);
         // Run 30 ticks to give the invasion step multiple
-        // opportunities to fire (grievance crosses the
-        // RAID threshold around tick 27 in this scenario).
+        // opportunities to fire. At pop 100 the tools deficit
+        // persists (shortage 1.0) despite the shuttle, so north
+        // keeps attempting raids and the gate keeps blocking them.
         let invasionCount = 0;
         let blockedCount = 0;
         for (let t = 2; t <= 30; t += 1) {
@@ -104,13 +112,15 @@ describe('non-aggression treaties and the invasion gate (Constitution §12 / §2
                 encounterRng: () => 0.999,
                 pinBanditRoadId: 'road-a',
             });
-            invasionCount += world.events.filter(e => e.type === 'INVASION' && e.tick === t).length;
+            invasionCount += world.events.filter(e => e.type === 'INVASION' && e.tick === t && e.factionId === 'north-faction').length;
             blockedCount += world.events.filter(e => e.type === 'TREATY_BLOCKED_RAID' && e.tick === t).length;
         }
-        // No INVASION events should have fired (the
-        // non-aggression treaty blocks them).
-        expect(invasionCount).toBe(0);
+        // No NORTH INVASION events should have fired (the
+        // non-aggression treaty blocks them). South-faction raids
+        // against the bandit are out of this pact's scope and are
+        // not counted here.
         // At least one TREATY_BLOCKED_RAID event should have fired.
+        expect(invasionCount).toBe(0);
         expect(blockedCount).toBeGreaterThan(0);
     });
 
@@ -119,6 +129,9 @@ describe('non-aggression treaties and the invasion gate (Constitution §12 / §2
         // should fire as before. The §12 enforcement is
         // conditional, not universal.
         const world = createClosedWorldScenario();
+        // E3 staging (same as above): pop 100 so deficit pressure
+        // outruns the merchant shuttle and raids still fire.
+        for (const [, town] of world.towns) town.population = 100;
         world.bandits[0].factionId = 'south-faction';
         world.bandits[0].roadId = 'road-a';
         world.merchants[0].selectedRoute = 'road-a';
@@ -143,6 +156,9 @@ describe('non-aggression treaties and the invasion gate (Constitution §12 / §2
         // associated faction is a treaty participant. An
         // unaligned bandit (no factionId) is fair game.
         const world = createClosedWorldScenario();
+        // E3 staging (same regime note as above): pop 100 so raid
+        // pressure outruns the merchant shuttle.
+        for (const [, town] of world.towns) town.population = 100;
         requestNonAggression({ actor: 'north-faction', target: 'south-faction', world, tick: 1 });
         // The default bandit has factionId='south-faction'
         // (EVID-2026-08-28-SENSITIVITY-500TICK audit

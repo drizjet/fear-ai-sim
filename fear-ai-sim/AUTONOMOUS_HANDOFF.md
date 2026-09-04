@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E2-TRAFFIC-RELOCATION (Lane B, unaccepted)
+EVID-2026-09-05-E3-TOOLS-TRADE (Lane B, unaccepted)
+
+## E3 — endogenous tools trade and deficit relief (expansion)
+
+- Gap (probed, not guessed): north tools deficit (produce 0.1, consume 0.2) with south surplus (0.3 vs 0.2), but merchant.cargoKind frozen at spawn, restock refilled the same kind exogenously, merchants never moved, and resolveBanditAttack hardcoded food/south. Trip/delivery/market/faction-wires were kind-generic; only selection, acquisition, movement, and the legacy attack debit terminated the chain.
+- Fix: selectMerchantCargoKind (destShortage-localShortage per kind, margin 0.2, surplus>=1 gate, ties hold) + source-market exchange (sell hold via deliverCargo booked through deliveredThisTick, buy via consume capped at surplus) at commit when free to ship; merchant relocates on TRIP_ARRIVAL; attack debit generalized to kind/destinationTownId (default south preserves legacy). Live encounter-theft booking already kind-aware (verified, no duplicate added).
+- Loop closed: food north->south, tools south->north from existing production numbers; north mean tools shortage 0.56 vs 1.0 no-trader control (pop 10, 60 ticks); invasion mean 99->10 across 5x500 seeds (worst seed 34 via chronic shortage, zero attacks: genuine threshold variance, not chaos).
+- Fallout restaged honestly (production untouched): 3 treaty tests to pop 100 (deficit outruns shuttle; pact-party scoping for invasion counts) + sensitivity variance to absolute regime pins (mean<50, max<=40, spread>0) with measured base/E3 numbers. Selection-freeze kills 6 E3 detectors + the pacification pin; relocation-cut kills 5.
+- Validation: 191/1384 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 43/43 (2 new E3 entries).
 
 ## E2 — travel-driven relocation: roaming synthesis consumes traffic (expansion)
 

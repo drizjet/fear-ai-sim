@@ -380,6 +380,22 @@ const MUTATIONS = [
         detectors: 'settler-founding',
         note: 'E1 survey belief never sticks; survey-only camps must never found',
     },
+    {
+        id: 'merchant-tools-selection',
+        file: 'canonical-trade-system.js',
+        target: 'const switched = best !== hold && margin > 0.2',
+        replacement: 'const switched = false && best !== hold && margin > 0.2',
+        detectors: 'merchant-tools-trade|sensitivity-500tick',
+        note: 'E3 cargo selection frozen on hold; exchange/trip/relief detectors and the pacification pin must fail',
+    },
+    {
+        id: 'merchant-travels-with-trip',
+        file: 'closed-world.js',
+        target: 'if (traveler && trip.destinationTownId) traveler.location = trip.destinationTownId;',
+        replacement: 'if (false && traveler && trip.destinationTownId) traveler.location = trip.destinationTownId;',
+        detectors: 'merchant-tools-trade',
+        note: 'E3 arrival relocation disabled; merchant never reaches the surplus end so no tools loop forms',
+    },
 ];
 
 function runDetectors(pattern) {

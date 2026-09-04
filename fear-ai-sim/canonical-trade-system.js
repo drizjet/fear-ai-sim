@@ -316,6 +316,80 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
 
     return { chosenRoute: chosen.route.id, ranked, rejected, chosenScore: chosen.score };
 }
+/**
+ * E3 — endogenous cargo selection. The merchant compares the
+ * destination market's shortage against its local market's shortage
+ * per kind and carries the good the destination needs most *relative
+ * to home abundance*: score(kind) = destShortage - localShortage.
+ * The destination-quote read is the same information boundary the
+ * route opportunityBonus already uses (established contract); the
+ * local read is co-located observation. A switch needs a margin
+ * (0.2, anti-oscillation) and a real local surplus to buy from
+ * (supply - demand >= 1). Ties hold the current cargo. Without a
+ * destination or markets, the hold is kept: selection never invents
+ * cargo.
+ */
+export function selectMerchantCargoKind(merchant, { world = null, destinationTownId = null } = {}) {
+    const hold = merchant?.cargoKind ?? 'food';
+    const readMarket = (townId) => {
+        if (!townId || !world?.towns?.get) return null;
+        const town = world.towns.get(townId);
+        return town?.market?.getQuote ? town.market : null;
+    };
+    const localMarket = readMarket(merchant?.location);
+    const destMarket = readMarket(destinationTownId);
+    const kinds = [];
+    if (localMarket) {
+        const town = world.towns.get(merchant.location);
+        for (const kind of Object.keys(town?.consumes ?? {})) if (!kinds.includes(kind)) kinds.push(kind);
+        for (const kind of Object.keys(town?.produces ?? {})) if (!kinds.includes(kind)) kinds.push(kind);
+    }
+    if (!kinds.includes(hold)) kinds.push(hold);
+    const shortageOf = (market, kind) => {
+        if (!market) return 0;
+        try {
+            const quote = market.getQuote(kind);
+            return Number.isFinite(quote?.shortage) ? clamp01(quote.shortage) : 0;
+        } catch {
+            return 0;
+        }
+    };
+    const surplusOf = (market, kind) => {
+        if (!market) return 0;
+        try {
+            const quote = market.getQuote(kind);
+            if (!quote || !Number.isFinite(quote.supply) || !Number.isFinite(quote.demand)) return 0;
+            return quote.supply - quote.demand;
+        } catch {
+            return 0;
+        }
+    };
+    const scores = {};
+    for (const kind of kinds) {
+        const localShortage = shortageOf(localMarket, kind);
+        const destShortage = shortageOf(destMarket, kind);
+        scores[kind] = {
+            localShortage,
+            destShortage,
+            score: destShortage - localShortage,
+            localSurplus: surplusOf(localMarket, kind),
+        };
+    }
+    let best = hold;
+    for (const kind of kinds) {
+        if ((scores[kind]?.score ?? -Infinity) > (scores[best]?.score ?? -Infinity)) best = kind;
+    }
+    const margin = (scores[best]?.score ?? 0) - (scores[hold]?.score ?? 0);
+    const switched = best !== hold && margin > 0.2 && (scores[best]?.localSurplus ?? 0) >= 1;
+    return {
+        cargoKind: switched ? best : hold,
+        switched,
+        hold,
+        best,
+        margin,
+        scores,
+    };
+}
 
 /**
  * Update the canonical merchant: pick a route, depart, and emit a

@@ -182,16 +182,30 @@ describe('long-horizon sensitivity audit (Constitution §135 / §138 / §207)', 
         }
         // The invasion count is bounded (the §138
         // contract: behavior is conditional, not
-        // chaotic). We assert the spread is < 50% of
-        // the mean.
+        // chaotic). E3 regime notes (measured 5×500 ticks,
+        // seeds 1/7/42/100/9999, deterministic streams):
+        // pre-trade baseline 97/99/99/100/99 (mean ~99,
+        // spread 3); with the merchant shuttle
+        // 34/2/2/13/1 (mean ~10, spread 33). Trade
+        // pacifies most seeds but threshold variance
+        // remains (worst seed still raids via chronic
+        // shortage). The pins below capture THAT regime:
+        // pacified mean, absolutely bounded worst case,
+        // non-degenerate spread. A relative spread bound
+        // (< 50% of mean) cannot survive pacification: the
+        // mean moved, not just the variance.
         const mean = counts.reduce((s, c) => s + c, 0) / counts.length;
         const spread = Math.max(...counts) - Math.min(...counts);
-        // (Note: with genuinely threaded seeds the counts are
-        // 128-145 across 5 seeds — spread 17 on mean ~140 (12%),
-        // well under 50% of the mean, and non-degenerate. The old
-        // 95-98 note measured 5x the identical world: same seed
-        // streams were never passed in.)
-        expect(spread).toBeLessThan(mean * 0.5);
+        // Directional pacification: the shuttle must hold the
+        // mean far below the untraded baseline (~99). Disabling
+        // the E3 exchange returns the mean to ~99 and fails this.
+        expect(mean).toBeLessThan(50);
+        // Absolutely bounded worst seed: no seed returns to
+        // baseline rage. A broken invasion gate explodes past this.
+        expect(Math.max(...counts)).toBeLessThanOrEqual(40);
+        // Non-degenerate: threshold variance across seeds must
+        // remain visible. Five identical worlds (spread 0) fail here.
+        expect(spread).toBeGreaterThan(0);
         // A5-F7: the fraud-shaped failure (R5: one stream run 5x)
         // measures spread 0 and passes the bound above. The trade
         // axis carries genuine seed variance, so its spread must be

@@ -70,6 +70,10 @@ describe('default scenario exercises the diplomatic machinery (Constitution §12
         // invasion-gate should fire and emit the
         // TREATY_BLOCKED_RAID event.
         const world = createClosedWorldScenario();
+        // E3 staging: pop 100 so the tools-deficit pressure outruns
+        // the merchant shuttle (at pop 1 trade pacifies the fixture
+        // and no raid is ever attempted). Gate logic untouched.
+        for (const [, town] of world.towns) town.population = 100;
         requestNonAggression({ actor: 'north-faction', target: 'south-faction', world, tick: 1 });
         // Set up: bandit on road-a (a road the north
         // faction can reach), merchant on road-a (false
@@ -85,9 +89,10 @@ describe('default scenario exercises the diplomatic machinery (Constitution §12
                 pinBanditRoadId: 'road-a',
             });
         }
-        const invasions = world.events.filter(e => e.type === 'INVASION').length;
+        const invasions = world.events.filter(e => e.type === 'INVASION' && e.factionId === 'north-faction').length;
         const blocked = world.events.filter(e => e.type === 'TREATY_BLOCKED_RAID').length;
-        // The treaty must block every invasion.
+        // The treaty must block every NORTH invasion (south-faction
+        // raids against the bandit are out of this pact's scope).
         expect(invasions).toBe(0);
         // At least one TREATY_BLOCKED_RAID event must have fired.
         expect(blocked).toBeGreaterThan(0);

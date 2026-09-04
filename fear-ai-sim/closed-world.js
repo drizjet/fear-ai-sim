@@ -11,7 +11,7 @@ import { evaluateEncounterEligibility, selectEncounterCandidates, instantiateEnc
 import { checkTreatyCompliance, activeTreatiesFor } from './treaty.js';
 import { createRoamingGroup, chooseRoamingDestination, generateCandidates, startTravel, advanceTravel, tickRoamingGroup, scoutDestination, recordObservation, ROAMING_MODE, makeXorShift32 } from './roaming.js';
 import { tickWildlifeGroup } from './wildlife.js';
-import { tickMerchant as tickCanonicalMerchant, tickBandit as tickCanonicalBandit, tickPatrol as tickCanonicalPatrol } from './canonical-trade-system.js';
+import { tickMerchant as tickCanonicalMerchant, tickBandit as tickCanonicalBandit, tickPatrol as tickCanonicalPatrol, selectMerchantCargoKind } from './canonical-trade-system.js';
 import { tickSeason, getSeasonModifier, getSpoilageModifier } from './ecology.js';
 import { tickDemography } from './demography.js';
 import { recordLawfulnessViolation, recordTradeReliability } from './reputation.js';
@@ -574,12 +574,23 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
         if (trip.remainingTicks === 0) {
             trip.status = 'ARRIVED';
             trip.arrivedTick = tick;
+            // E3 — the merchant travels WITH its cargo. Arrival moves
+            // the merchant to the destination town, so the next commit
+            // reads the destination's market as local and the origin's
+            // as the deficit signal: the shuttle circuit (food one way,
+            // tools the other) closes with the existing single
+            // merchant. Respawn, convoy, and encounter logic all read
+            // merchant.location dynamically, so they follow.
+            const traveler = (world.merchants ?? []).find(item => item.id === trip.merchantId);
+            if (traveler && trip.destinationTownId) traveler.location = trip.destinationTownId;
             const arrival = emitPendingWorldEvent(world, {
                 type: 'TRIP_ARRIVAL',
                 actionId: trip.actionId,
                 tripId: trip.tripId,
                 tick,
                 destinationTownId: trip.destinationTownId,
+                merchantId: trip.merchantId,
+                merchantLocation: trip.destinationTownId,
             }, [trip.lastEventId]);
             trip.arrivalEventId = arrival.eventId;
             trip.lastEventId = arrival.eventId;
@@ -1106,7 +1117,7 @@ function apportionedLawShares(world, violations, actorId) {
     return shares;
 }
 
-export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId = 'road-a', tick = 1 } = {}) {
+export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId = 'road-a', tick = 1, destinationTownId = 'south' } = {}) {
     const merchant = world.merchants.find(item => item.id === merchantId);
     const road = world.routes.find(item => item.id === roadId);
     if (!merchant || !road || merchant.cargo <= 0) return { ok: false, reason: 'INVALID_ATTACK' };
@@ -1132,9 +1143,14 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
     // mass identity (towns + merchant cargo + in-trip cargo + loss sink)
     // stays exact. Previously the lost cargo simply vanished.
     bookTransitLoss(world, merchant.cargoKind ?? 'food', lost);
-    const destination = world.towns.get('south');
+    // E3: the remainder is the merchant's ACTUAL cargo kind delivered
+    // to its actual destination town (previously hardcoded food/south,
+    // which would misbook a tools shipment as food at the wrong end).
+    // Default preserves the legacy one-shot/test contract.
+    const cargoKind = merchant.cargoKind ?? 'food';
+    const destination = world.towns.get(destinationTownId);
     const marketResult = destination?.market?.deliverCargo
-        ? destination.market.deliverCargo('food', remaining, { disruption: 0 })
+        ? destination.market.deliverCargo(cargoKind, remaining, { disruption: 0 })
         : null;
     merchant.cargo = 0; // the merchant's cargo has been resolved by the attack
     // R3 (V8 audit MAT-001): book the bandit-path delivery into the
@@ -1148,7 +1164,7 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
     // trip path town:kind shape.
     if (marketResult) {
         if (!world.marketFlows) world.marketFlows = new Map();
-        const delivKey = 'south:food';
+        const delivKey = `${destinationTownId}:${cargoKind}`;
         const cumulative = world.marketFlows.get(delivKey)
             ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0 };
         cumulative.delivered = (Number(cumulative.delivered) || 0) + (Number(marketResult.stored) ?? 0);
@@ -2099,17 +2115,73 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             const destinationTownId = route?.from === merchant.location
                 ? route.to
                 : route?.to === merchant.location ? route.from : (route?.to ?? merchant.location);
+            // E3 — endogenous cargo selection + market exchange. When the
+            // merchant is free to ship, it compares the destination
+            // shortage against local abundance per kind and carries what
+            // the destination needs most relative to home surplus. The
+            // exchange is a real market trade at the LOCAL market: the
+            // hold is sold in (deliverCargo, merged into the market loop
+            // via deliveredThisTick like trip cargo) and the new kind is
+            // bought out (consume, capped at local surplus so the home
+            // town's own demand is never stripped). No creation: the buy
+            // is bounded by on-hand surplus, the sell is stored or booked
+            // as overflow. Gated on no active trip so cargo already
+            // committed to a pending trip is never touched mid-transit.
+            const travelingAlready = (world.pendingTrips ?? []).some(
+                t => t.merchantId === merchant.id
+                    && (t.status === 'IN_TRANSIT' || t.status === 'ARRIVED')
+            );
+            if (!travelingAlready && destinationTownId && destinationTownId !== merchant.location) {
+                let selection = null;
+                try {
+                    selection = selectMerchantCargoKind(merchant, { world, destinationTownId });
+                } catch {
+                    selection = null;
+                }
+                if (selection?.switched) {
+                    const localTown = world.towns?.get?.(merchant.location);
+                    const localMarket = localTown?.market;
+                    const surplus = selection.scores?.[selection.cargoKind]?.localSurplus ?? 0;
+                    const buyAmount = Math.max(0, Math.min(20, Math.floor(surplus)));
+                    if (localMarket && buyAmount >= 1) {
+                        const holdKind = merchant.cargoKind ?? 'food';
+                        const holdAmount = Math.max(0, Number(merchant.cargo) || 0);
+                        const sale = holdAmount > 0 && typeof localMarket.deliverCargo === 'function'
+                            ? localMarket.deliverCargo(holdKind, holdAmount, { routeRisk: 0, confidence: 1 })
+                            : { stored: 0, overflow: 0 };
+                        if (!world.deliveredThisTick) world.deliveredThisTick = new Map();
+                        const sellKey = `${merchant.location}:${holdKind}`;
+                        const priorSale = world.deliveredThisTick.get(sellKey) ?? { stored: 0, overflow: 0 };
+                        priorSale.stored += sale.stored ?? 0;
+                        priorSale.overflow += sale.overflow ?? 0;
+                        world.deliveredThisTick.set(sellKey, priorSale);
+                        const bought = typeof localMarket.consume === 'function'
+                            ? localMarket.consume(selection.cargoKind, buyAmount)
+                            : { consumed: 0, unmet: buyAmount };
+                        merchant.cargo = Number(bought.consumed) || 0;
+                        merchant.cargoKind = selection.cargoKind;
+                        appendWorldEvent(world, {
+                            type: 'CARGO_EXCHANGED',
+                            tick,
+                            merchantId: merchant.id,
+                            locationTownId: merchant.location,
+                            destinationTownId,
+                            fromKind: holdKind,
+                            toKind: selection.cargoKind,
+                            soldHold: holdAmount,
+                            saleStored: sale.stored ?? 0,
+                            saleOverflow: sale.overflow ?? 0,
+                            bought: merchant.cargo,
+                            buyUnmet: bought.unmet ?? 0,
+                            margin: selection.margin,
+                            scores: selection.scores,
+                        }, [routeResult.event.eventId]);
+                    }
+                }
+            }
             const merchantCargo = Number(merchant.cargo) || 0;
-            // EVID-2026-08-31-TRIP-MATERIALIZATION: a TRIP_COMMITMENT
-            // that never schedules a pending trip is decorative — the
-            // cargo leaves nothing, travels nowhere, and the destination
-            // market never feels it. The canonical route decision now
-            // materializes a real pending trip whose DELIVER_CARGO
-            // consequence lands `stored` units in the destination market
-            // on arrival (booked into marketFlows via the §155 mass
-            // balance). Ship a bounded load so the merchant still has
-            // cargo to trade on later ticks; the trip's travel time is
-            // the route distance so delivery lands on a later tick.
+            // Post-exchange hold: the trip carries what the merchant
+            // owns NOW (possibly tools after an E3 exchange above).
             const cargoKind = merchant.cargoKind ?? 'food';
             // EVID-2026-08-31-TRIP-MATERIALIZATION: the canonical route
             // decision materializes a real pending trip (cargo leaves the
@@ -2138,10 +2210,9 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // must still fire every tick the merchant decides, so a
             // deferral still records a commitment event with
             // `materialized: false` and the exposure engine reads it.
-            const alreadyTraveling = (world.pendingTrips ?? []).some(
-                t => t.merchantId === merchant.id
-                    && (t.status === 'IN_TRANSIT' || t.status === 'ARRIVED')
-            );
+            // `travelingAlready` (computed pre-exchange above): the
+            // exchange gate and the ship gate read the same trip state.
+            const alreadyTraveling = travelingAlready;
             const canShip = cargoAmount > 0 && route
                 && destinationTownId !== merchant.location && !alreadyTraveling;
             try {
