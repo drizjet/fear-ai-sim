@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-R3-CONSERVATION-CLOSURE (Lane B, unaccepted)
+EVID-2026-09-04-R4-REPLAY-SCOPE (Lane B, unaccepted)
+
+## R4 — replay scope + soundness (TM-BIAS-07 + TM-KILL-04)
+
+- Harness now measures a green baseline per entry before mutating (BASELINE_RED verdict, fails the gate like SURVIVED). No production changes in this slice.
+- Table 23 → 35: law-apportion/restitution/justice-penalty/lawfulness, wildlife-factor, condition-divisor (retargeted to the live routing.js surcharge — the canonical distanceCost is WHY-only since Slice AD, so the historical anchor was behaviorally void), market-theft/delivery-merge/exactonce-trip, chain-merchant (retargeted to the live re-parenting line — the call-site arg is masked by it), chain-migration, maturity-live-rows. 35/35 killed with clean restores.
+- Dropped with reason: consequence-status-only exactonce (no independent effect given the trip guard), OBS fallback/locality (covered by R1 gate entries), event-template family (obsolete post-R2 allocator; covered by R2 entries), lint DEFAULT_ROOT (config), migration count-latency (test-classifier). Full mapping in the verdict handoff.
+- Self-caught: two replay entries lost to a range collision (found by entry inventory vs expectation, restored); one crude mutation masked by redundant fixup led to removing the redundancy instead.
+- Validation: replay 35/35 (baselines green throughout), full suite untouched by this slice (no prod/test changes), lint exit 0 (2145 rows).
 
 ## R3 — conservation closure (MAT-001 + MAT-005)
 

@@ -222,6 +222,116 @@ const MUTATIONS = [
         detectors: 'conservation-r3',
         note: 'R3 floor bypassed; phantom immigration must return',
     },
+    {
+        id: 'law-apportion',
+        file: 'closed-world.js',
+        target: `const lawViolations = checkAllLawCompliance({
+        world,
+        action: { type: 'BANDIT_ATTACK', roadId, actorId: emitted.banditId, tick },
+        tick,
+    });`,
+        replacement: `const lawViolations = checkAllLawCompliance({
+        world,
+        action: { type: 'BANDIT_ATTACK', roadId, actorId: emitted.banditId, tick },
+        tick,
+    }).slice(0, 1);`,
+        detectors: 'law-apportionment',
+        note: 'Slice Y first-match starvation restored; south must go blind',
+    },
+    {
+        id: 'law-restitution',
+        file: 'closed-world.js',
+        target: 'const transferred = Math.min(violatorBefore, amount);',
+        replacement: 'const transferred = 0;',
+        detectors: 'law-restitution',
+        note: 'Slice X restitution zeroed; violator keeps everything',
+    },
+    {
+        id: 'law-justice-penalty',
+        file: 'justice.js',
+        target: 'const lawDebit = clamp(lawPenalty) * 0.15;',
+        replacement: 'const lawDebit = clamp(lawPenalty) * 0;',
+        detectors: 'law-justice-penalty',
+        note: 'Slice W lawPenalty coupling cut; justice ignores violations',
+    },
+    {
+        id: 'law-lawfulness',
+        file: 'closed-world.js',
+        target: 'if (observerFaction && violatorFactionId && !isSelfLoop) {',
+        replacement: 'if (false && violatorFactionId && !isSelfLoop) {',
+        detectors: 'law-lawfulness-enforcement',
+        note: 'Slice V observer gate shut; lawfulness never recorded',
+    },
+    {
+        id: 'wildlife-factor',
+        file: 'canonical-trade-system.js',
+        target: '* belief.recency * seasonMod * wildlifeFactor * weatherFactor;',
+        replacement: '* belief.recency * seasonMod * weatherFactor;',
+        detectors: 'wildlife-competition',
+        note: 'Slice AA predator discount removed; crowded road must not hold',
+    },
+    {
+        id: 'condition-divisor',
+        file: 'routing.js',
+        target: 'const conditionSurcharge = distance * (1 / roadCondition - 1);',
+        replacement: 'const conditionSurcharge = 0;',
+        detectors: 'road-condition',
+        note: 'Slice AD surcharge removed (distanceCost is WHY-only since AD); degraded short road must win',
+    },
+    {
+        id: 'market-theft',
+        file: 'closed-world.js',
+        target: "bookTransitLoss(world, merchant.cargoKind ?? 'food', lost);",
+        replacement: 'void lost;',
+        detectors: 'w1-material-loss-sink',
+        note: 'R2-W1 theft booking removed; mass residual must go positive',
+    },
+    {
+        id: 'market-delivery-merge',
+        file: 'closed-world.js',
+        target: 'tickFlow.delivered += delivery.stored ?? 0;',
+        replacement: 'tickFlow.delivered += 0;',
+        detectors: 'pending-trip-market-conservation|market-tick-flows',
+        note: 'trip delivery merge disabled; delivered quantum must vanish',
+    },
+    {
+        id: 'market-exactonce-trip',
+        file: 'closed-world.js',
+        target: "trip.status = 'DELIVERED';",
+        replacement: "trip.status = 'ARRIVED';",
+        detectors: 'pending-trip',
+        note: 'trip closure left open; delivery must repeat',
+    },
+    // R4 note: a consequence-status-only entry (status APPLIED->PENDING)
+    // was tried and SURVIVED: with trip.status DELIVERED the guard
+    // still blocks re-application, so the consequence line alone has
+    // no independent observable effect. Coverage of the closure lives
+    // in market-exactonce-trip. A PENDING-forever consequence leak has
+    // no detector (minor gap, recorded).
+    {
+        id: 'chain-merchant',
+        file: 'closed-world.js',
+        target: 'ensureWorldEventIdentity(world, routeResult.event, beliefParentIds);',
+        replacement: 'ensureWorldEventIdentity(world, routeResult.event, []);',
+        detectors: 'causal-chain',
+        note: 'decision re-parenting cut at the live site; chain must break',
+    },
+    {
+        id: 'chain-migration',
+        file: 'closed-world.js',
+        target: '}, decision.eventId ? [decision.eventId] : []);',
+        replacement: '}, []);',
+        detectors: 'migration-decision-chain',
+        note: 'MIGRATION-to-decision parent link cut; chain must break',
+    },
+    {
+        id: 'maturity-live-rows',
+        file: 'evidence/maturity.mjs',
+        target: 'const rows = liveRows.filter(r => r.dimension === dim);',
+        replacement: 'const rows = evidenceRows.filter(r => r.dimension === dim);',
+        detectors: 'evidence-linter',
+        note: 'retired-row poison returns; superseded placeholders must veto',
+    },
 ];
 
 function runDetectors(pattern) {
@@ -256,13 +366,22 @@ for (const mutation of MUTATIONS) {
         if (occurrences !== 1) {
             throw new Error(`anchor occurs ${occurrences}x, expected exactly 1`);
         }
-        const beforeHash = sha(original);
-        writeFileSync(path, original.replace(mutation.target, mutation.replacement));
-        const run = runDetectors(mutation.detectors);
-        entry.exitCode = run.exitCode;
-        entry.failedTests = failedCount(run.output);
-        entry.durationMs = run.durationMs;
-        entry.verdict = run.exitCode !== 0 && entry.failedTests > 0 ? 'KILLED' : 'SURVIVED';
+        // TM-KILL-04: measure the green baseline BEFORE mutating. A
+        // detector that is already red cannot witness a kill — without
+        // this, pre-existing red would count as KILLED.
+        const baseline = runDetectors(mutation.detectors);
+        entry.baselineExit = baseline.exitCode;
+        entry.baselineFailed = failedCount(baseline.output);
+        if (baseline.exitCode !== 0) {
+            entry.verdict = 'BASELINE_RED';
+        } else {
+            writeFileSync(path, original.replace(mutation.target, mutation.replacement));
+            const run = runDetectors(mutation.detectors);
+            entry.exitCode = run.exitCode;
+            entry.failedTests = failedCount(run.output);
+            entry.durationMs = run.durationMs;
+            entry.verdict = run.exitCode !== 0 && entry.failedTests > 0 ? 'KILLED' : 'SURVIVED';
+        }
     } catch (err) {
         entry.verdict = 'ERROR';
         entry.error = String(err?.message ?? err).slice(0, 300);
