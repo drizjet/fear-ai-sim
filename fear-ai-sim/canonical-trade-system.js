@@ -229,12 +229,18 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
             // also drives opportunity. Without fallback the bonus is
             // decorative (always 0 in production).
             let destMarket = null;
+            let destAbandoned = false;
             if (world?.markets?.get) destMarket = world.markets.get(destinationTownId);
             if (!destMarket && world?.towns?.get) {
                 const destTown = world.towns.get(destinationTownId);
+                // E4: abandoned towns are rubble with haunting
+                // shortage quotes but nobody to buy. Serving ghost
+                // demand would pile goods into a husk forever, so
+                // the opportunity signal is cut, not the route.
+                destAbandoned = Boolean(destTown?.abandoned);
                 if (destTown?.market?.getQuote) destMarket = destTown.market;
             }
-            if (destMarket) {
+            if (destMarket && !destAbandoned) {
                 // Slice O: prefer elastic price if market supports it (history-dependent bid curve)
                 const elastic = typeof destMarket.getElasticQuote === 'function' ? destMarket.getElasticQuote(merchant.cargoKind) : null;
                 const quote = elastic ?? destMarket.getQuote?.(merchant.cargoKind);
@@ -345,8 +351,14 @@ export function selectMerchantCargoKind(merchant, { world = null, destinationTow
         for (const kind of Object.keys(town?.produces ?? {})) if (!kinds.includes(kind)) kinds.push(kind);
     }
     if (!kinds.includes(hold)) kinds.push(hold);
+    // E4: husk destinations score zero shortage (same ghost-demand
+    // cut as the route opportunityBonus above).
+    const destTown = destinationTownId && world?.towns?.get
+        ? world.towns.get(destinationTownId) : null;
+    const destGhost = Boolean(destTown?.abandoned);
     const shortageOf = (market, kind) => {
         if (!market) return 0;
+        if (market === destMarket && destGhost) return 0;
         try {
             const quote = market.getQuote(kind);
             return Number.isFinite(quote?.shortage) ? clamp01(quote.shortage) : 0;

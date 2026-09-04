@@ -56,8 +56,12 @@ describe('A5-F5 — shocked factions recover when the stimulus ends', () => {
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.5, encounterRng: rng });
         }
         const north = world.factions.find(f => f.id === 'north-faction');
-        // Locked pre-condition: the chronic tools deficit pins grievance.
-        expect(north.grievance).toBeGreaterThan(0.9);
+        // E4 equilibrium note (measured): exit drains the shock —
+        // north falls 100 -> ~42 as people leave the tools famine,
+        // so grievance settles ~0.6 instead of the frozen-pop 1.0.
+        // The lock is the DECISION (still RAID), not the number.
+        expect(north.grievance).toBeGreaterThan(0.5);
+        expect(north.lastDecision).toBe('RAID');
         expect(world.towns.get('north').market.getQuote('tools').shortage).toBeCloseTo(1.0, 2);
         // Relief: fix the structural production deficit.
         world.towns.get('north').produces.tools = 1.5;

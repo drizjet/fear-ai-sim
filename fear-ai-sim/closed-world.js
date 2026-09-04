@@ -2213,8 +2213,15 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // `travelingAlready` (computed pre-exchange above): the
             // exchange gate and the ship gate read the same trip state.
             const alreadyTraveling = travelingAlready;
+            // E4: no shipments to rubble. An abandoned destination has
+            // nobody to buy, so the load stays with the merchant and
+            // the decision records a DEFERRED commitment
+            // (ABANDONED_DESTINATION) instead of rotting goods into a
+            // husk market forever. The causal chain still fires.
+            const destAbandoned = Boolean(destinationTownId
+                && world.towns?.get?.(destinationTownId)?.abandoned);
             const canShip = cargoAmount > 0 && route
-                && destinationTownId !== merchant.location && !alreadyTraveling;
+                && destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned;
             try {
                 let commitmentEventId;
                 let trip;
@@ -2242,7 +2249,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                         routeId: chosenRoute,
                         status: 'DEFERRED',
                         materialized: false,
-                        reason: alreadyTraveling ? 'ALREADY_TRAVELING' : 'NO_CARGO_OR_ROUTE',
+                        reason: alreadyTraveling ? 'ALREADY_TRAVELING' : (destAbandoned ? 'ABANDONED_DESTINATION' : 'NO_CARGO_OR_ROUTE'),
                     }, [routeResult.event.eventId]);
                     commitmentEventId = deferred.eventId;
                 }
@@ -4777,12 +4784,37 @@ export function tickSettlerGroups(world, { tick = 0 } = {}) {
             if (group) remaining.push(group);
             continue;
         }
+        // E4 — recovery preference: a camped group re-founds a known
+        // abandoned site instead of sprawling a new landing. Knowledge
+        // mirrors the settleAttempt gates (at / adjacent / belief).
+        // Worlds without abandoned sites behave exactly as before.
+        let refoundSite = null;
+        if (world.towns instanceof Map) {
+            for (const [townId, town] of world.towns) {
+                if (!town?.abandoned) continue;
+                const atSite = group.currentLocation === townId;
+                let adjacentToSite = false;
+                if (!atSite && group.currentLocation) {
+                    adjacentToSite = (world.routes ?? []).some(r =>
+                        (r.from === group.currentLocation && r.to === townId)
+                        || (r.from === townId && r.to === group.currentLocation));
+                }
+                if (atSite || adjacentToSite || group.beliefs?.[townId]) {
+                    refoundSite = townId;
+                    break;
+                }
+            }
+        }
         let site = `${group.campTownId}-landing`;
         let suffix = 2;
         while (world.towns?.has?.(site)) {
             site = `${group.campTownId}-landing-${suffix}`;
             suffix += 1;
         }
+        // A known husk takes precedence over a fresh landing: the
+        // survey-then-found rhythm below is unchanged, but
+        // settleAttempt revives instead of founding.
+        if (refoundSite) site = refoundSite;
         if (!group.beliefs) group.beliefs = {};
         if (!group.beliefs[site]) {
             group.beliefs[site] = { perceivedDanger: 0.2, confidence: 0.5, tick, source: 'settler-survey' };
@@ -4822,12 +4854,115 @@ export function tickSettlerGroups(world, { tick = 0 } = {}) {
     world.settlerGroups = remaining;
     return events;
 }
+
+/**
+ * E4 — abandon a dead town. A town that was once inhabited but now
+ * holds nobody becomes rubble: the flag excludes it from future
+ * migration destinations, the claim is released (factions fall back
+ * to wider aggregates; the home faction keeps its townId memory and
+ * feels the empty shelves as shortage pressure — loss, not peace),
+ * and the remaining inventory spoils out, booked straight into the
+ * cumulative market-flow ledger (bandit-path pattern) so the R3
+ * mass residual stays exact. Idempotent per episode: a second call
+ * is ALREADY_ABANDONED. Recovery goes through settleAttempt, which
+ * revives abandoned sites instead of refusing them. The demographic
+ * remainder buckets are cleared: headcount-in-waiting belonged to
+ * the living and must not resolve into births for nobody later.
+ */
+export function abandonTown(world, townId, { tick = 0 } = {}) {
+    const town = world.towns?.get?.(townId);
+    if (!town) return { ok: false, reason: 'NO_TOWN' };
+    if (town.abandoned) return { ok: false, reason: 'ALREADY_ABANDONED' };
+    const spoiledByKind = {};
+    if (town.market?.inventory instanceof Map) {
+        for (const [kind, amount] of town.market.inventory) {
+            const qty = Math.max(0, Number(amount) || 0);
+            if (qty <= 0) continue;
+            spoiledByKind[kind] = qty;
+            town.market.inventory.set(kind, 0);
+            if (!world.marketFlows) world.marketFlows = new Map();
+            const flowKey = `${townId}:${kind}`;
+            const cumulative = world.marketFlows.get(flowKey)
+                ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0 };
+            cumulative.spoiled = (Number(cumulative.spoiled) || 0) + qty;
+            world.marketFlows.set(flowKey, cumulative);
+        }
+    }
+    const previousController = town.controlledBy ?? null;
+    town.abandoned = true;
+    town.abandonedTick = tick;
+    town.controlledBy = null;
+    if (town._demoRemainder && typeof town._demoRemainder === 'object') {
+        town._demoRemainder.births = 0;
+        town._demoRemainder.deaths = 0;
+        town._demoRemainder.emigration = 0;
+    }
+    const event = appendWorldEvent(world, {
+        type: 'TOWN_ABANDONED',
+        tick,
+        townId,
+        previousController,
+        spoiledByKind,
+        rootReason: 'NO_INHABITANTS',
+    }, []);
+    return { ok: true, town, event, spoiledByKind, previousController };
+}
+
 export function settleAttempt(world, group, locationId, { tick = 0, cost = 1, townTemplate = null } = {}) {
     if (!world || typeof world !== 'object') throw new TypeError('settleAttempt requires world');
     if (!group || typeof group !== 'object') throw new TypeError('settleAttempt requires group');
-    if (!locationId || typeof locationId !== 'string') throw new TypeError('settleAttempt requires locationId string');
     if (world.towns?.has?.(locationId)) {
-        return { ok: false, reason: 'ALREADY_EXISTS' };
+        const existing = world.towns.get(locationId);
+        // E4 — recovery: an abandoned site can be re-founded. The
+        // husk record persists (market, radii, routes), so revival
+        // re-inhabits it instead of minting a duplicate town: flag
+        // cleared, population from the settling group, claim to the
+        // group's faction, market loop resumes on live demand. A
+        // lived-in town is still refused (ALREADY_EXISTS).
+        if (!existing?.abandoned) {
+            return { ok: false, reason: 'ALREADY_EXISTS' };
+        }
+        // Same travel/knowledge gates as founding: no teleport
+        // settlements, no settling unknown sites.
+        if (group.travelState === 'IN_TRANSIT') {
+            return { ok: false, reason: 'IN_TRANSIT' };
+        }
+        const hasBelief = Boolean(group.beliefs?.[locationId]);
+        const atLocation = group.currentLocation === locationId;
+        let adjacent = false;
+        if (!atLocation && !hasBelief && group.currentLocation) {
+            const routes = world.routes ?? [];
+            adjacent = routes.some(r => (r.from === group.currentLocation && r.to === locationId) || (r.from === locationId && r.to === group.currentLocation));
+        }
+        if (!atLocation && !adjacent && !hasBelief) {
+            return { ok: false, reason: 'NO_KNOWLEDGE' };
+        }
+        const factionId = group.factionId ?? group.id;
+        const faction = world.factions?.find(f => f.id === factionId);
+        if (faction && (faction.resources ?? 0) < cost) {
+            return { ok: false, reason: 'NO_RESOURCES' };
+        }
+        if (faction) {
+            faction.resources = Math.max(0, (faction.resources ?? 0) - cost);
+        }
+        existing.abandoned = false;
+        existing.refoundedTick = tick;
+        existing.population = townTemplate?.population ?? group.size ?? 1;
+        if (townTemplate?.consumes) existing.consumes = townTemplate.consumes;
+        if (townTemplate?.produces) existing.produces = townTemplate.produces;
+        existing.controlledBy = townTemplate?.controlledBy ?? factionId;
+        const event = appendWorldEvent(world, {
+            type: 'TOWN_REFOUNDED',
+            tick,
+            locationId,
+            factionId,
+            groupId: group.id,
+            population: existing.population,
+            previousAbandonedTick: existing.abandonedTick ?? null,
+            cost,
+        }, []);
+        group.currentLocation = locationId;
+        return { ok: true, town: existing, event, refounded: true };
     }
     if (group.travelState === 'IN_TRANSIT') {
         return { ok: false, reason: 'IN_TRANSIT' };

@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E3-TOOLS-TRADE (Lane B, unaccepted)
+EVID-2026-09-05-E4-SETTLEMENT-LIFECYCLE (Lane B, unaccepted)
+
+## E4 — settlement growth, decline, abandonment, recovery (expansion)
+
+- Gap (probed, not guessed): integer demographic floors froze every sub-scale town (founded pop-1 husks at shortage 1.0 forever, never dying/growing); no abandonment, no takeover-free claim release, migration by shortage only, merchants serving ghost demand.
+- Fix: fractional remainder buckets in demography (event identities stay exact); abandonTown (spoil-out booked, claim released, remainders cleared, exact-once per episode) hooked to inhabited-then-empty; settleAttempt revives husks (same travel/knowledge/cost gates) with tickSettlerGroups preferring known husks; pickDestination adds 40-tick attack-recency penalty and skips husks; merchants cut opportunity/selection/shipments to abandoned dests (ABANDONED_DESTINATION deferral).
+- Loop closed: barren towns decline to zero and abandon; prosperous twins grow; husks go idle and re-found; raids divert migrants to safe towns; trade access lowers emigration (E3 link); drought exit-drain documented (pop 100->42, grievance pins moved to decision-lock).
+- Fallout restaged honestly (production untouched except noted): 3 treaty tests pop-100 (E3 precedent), sensitivity to baseline-relative pins (max<100; E4 growth outruns shuttle at thin-surplus seeds), faction-recovery to RAID-lock, migration-immigration to vital-terms identity, SUSTAIN to food-balanced acute shock (1.0) with parallel-twin shock pin (kills the neutralized-shock mutant again), coverage needle to the new identity line.
+- Validation: 192/1394 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 47/47 (4 new E4 entries). Takeover explicitly deferred to E8.
 
 ## E3 — endogenous tools trade and deficit relief (expansion)
 

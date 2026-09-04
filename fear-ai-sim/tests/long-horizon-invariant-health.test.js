@@ -109,7 +109,15 @@ describe('Slice H — long-horizon invariant health (500 ticks)', () => {
         world.ticksPerSeason = 10000;
         world.towns.get('north').population = 10;
         world.towns.get('south').population = 10;
-        world.towns.get('north').produces.food = 0.8;
+        // E4 note: north must be food-BALANCED (1.0 = consumption)
+        // for the acute shock to be measurable. A chronic deficit
+        // (0.8) sheds people during the drought under living
+        // demography, so populations diverge and per-capita
+        // trajectories no longer run parallel — the R5 gap pin
+        // confounds exit with ratchet. Chronic-deficit collapse is
+        // E4's own decline detectors' job; this pin measures acute
+        // shock absorption on parallel populations (9 vs 11 heads).
+        world.towns.get('north').produces.food = 1.0;
         world.towns.get('south').produces.food = 1.5;
         world.towns.get('north').market.setCapacity('food', 500);
         world.towns.get('north').market.inventory.set('food', 40);
@@ -117,13 +125,30 @@ describe('Slice H — long-horizon invariant health (500 ticks)', () => {
         world.drought = { active: true, severity: sev, kind: 'food', townId: 'north', remainingTicks: 20, startedTick: 1 };
         const ev = appendWorldEvent(world, { type: 'DROUGHT_STARTED', townId: 'north', kind: 'food', severity: sev, duration: 20, tick: 1 });
         world.drought.startEventId = ev.eventId;
-        // Drought phase
-        for (let t = 1; t <= 20; t++) tickClosedWorld(world, { tick: t, perceivedDanger: 0.2 });
+        // Drought phase. The control twin ticks in parallel so the
+        // shock itself is pinned twin-relative (droughtSupply below
+        // the same-tick control): a neutralized-shock mutant shows
+        // no dip and fails here, not just at convergence.
+        const control = createClosedWorldScenario({ season: 'SUMMER' });
+        control.ticksPerSeason = 10000;
+        control.towns.get('north').population = 10;
+        control.towns.get('south').population = 10;
+        control.towns.get('north').produces.food = 1.0;
+        control.towns.get('south').produces.food = 1.5;
+        control.towns.get('north').market.setCapacity('food', 500);
+        control.towns.get('north').market.inventory.set('food', 40);
+        for (let t = 1; t <= 20; t++) {
+            tickClosedWorld(world, { tick: t, perceivedDanger: 0.2 });
+            tickClosedWorld(control, { tick: t, perceivedDanger: 0.2 });
+        }
         const droughtSupply = world.towns.get('north').market.getQuote('food').supply;
+        const controlSupplyAtShock = control.towns.get('north').market.getQuote('food').supply;
+        expect(droughtSupply).toBeLessThan(controlSupplyAtShock);
         // Recovery phase: 30 ticks without drought
         let sustained = true;
         for (let t = 21; t <= 50; t++) {
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.2 });
+            tickClosedWorld(control, { tick: t, perceivedDanger: 0.2 });
             const supply = world.towns.get('north').market.getQuote('food').supply;
             // After recovery, supply should be trending up vs drought low
             if (t > 35 && supply < droughtSupply) sustained = false;
@@ -132,25 +157,14 @@ describe('Slice H — long-horizon invariant health (500 ticks)', () => {
         expect(finalSupply).toBeGreaterThan(droughtSupply);
         expect(sustained).toBe(true);
         expect(world.events.some(e => e.type === 'DROUGHT_ENDED')).toBe(true);
-        // R5 (A5-F4): recovery relative to a no-drought control twin,
-        // not just above the drought low. An any-epsilon uptick passes
-        // the old assertions while the gap to control stays wide (a
-        // ratchet, not a recovery). The gap must narrow: the shocked
-        // world converges back toward the control trajectory.
-        const control = createClosedWorldScenario({ season: 'SUMMER' });
-        control.ticksPerSeason = 10000;
-        control.towns.get('north').population = 10;
-        control.towns.get('south').population = 10;
-        control.towns.get('north').produces.food = 0.8;
-        control.towns.get('south').produces.food = 1.5;
-        control.towns.get('north').market.setCapacity('food', 500);
-        control.towns.get('north').market.inventory.set('food', 40);
-        for (let t = 1; t <= 50; t++) tickClosedWorld(control, { tick: t, perceivedDanger: 0.2 });
+        // R5 (A5-F4): recovery relative to the parallel no-drought
+        // twin ticked above, not just above the drought low. An
+        // any-epsilon uptick passes the old assertions while the gap
+        // to control stays wide (a ratchet, not a recovery). The gap
+        // must narrow: the shocked world converges back toward the
+        // control trajectory. Overshoot is legitimate rebound; a
+        // ratchet would hold the full gap.
         const controlSupply = control.towns.get('north').market.getQuote('food').supply;
-        // Convergence: the final distance to control must be smaller
-        // than the drought-time distance. Overshoot is legitimate
-        // rebound (measured -1.1: the resumed production briefly
-        // outpaces control); a ratchet would hold the full gap.
         expect(Math.abs(controlSupply - finalSupply)).toBeLessThan(
             Math.abs(controlSupply - droughtSupply));
     });

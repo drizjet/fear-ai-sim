@@ -396,6 +396,38 @@ const MUTATIONS = [
         detectors: 'merchant-tools-trade',
         note: 'E3 arrival relocation disabled; merchant never reaches the surplus end so no tools loop forms',
     },
+    {
+        id: 'settlement-remainder-resolution',
+        file: 'demography.js',
+        target: 'const birthsTotal = birthsExact + (Number(rem.births) || 0);',
+        replacement: 'const birthsTotal = birthsExact;',
+        detectors: 'settlement-lifecycle',
+        note: 'E4 fractional births frozen; sub-scale decline/growth must fail',
+    },
+    {
+        id: 'settlement-abandonment',
+        file: 'demography.js',
+        target: '} else if (town.everInhabited && !town.abandoned) {',
+        replacement: '} else if (false && town.everInhabited && !town.abandoned) {',
+        detectors: 'settlement-lifecycle',
+        note: 'E4 abandonment hook cut; decline never terminates, husk silence must fail',
+    },
+    {
+        id: 'settlement-insecurity-penalty',
+        file: 'demography.js',
+        target: 'const score = candShortage + insecurityOf(candId);',
+        replacement: 'const score = candShortage;',
+        detectors: 'settlement-lifecycle',
+        note: 'E4 raid exposure ignored; migrants must not divert from the raided road',
+    },
+    {
+        id: 'settlement-refound',
+        file: 'closed-world.js',
+        target: 'if (!existing?.abandoned) {',
+        replacement: 'if (!existing?.abandoned || true) {',
+        detectors: 'settlement-lifecycle',
+        note: 'E4 revival refused; husks never re-found, sprawl returns',
+    },
 ];
 
 function runDetectors(pattern) {

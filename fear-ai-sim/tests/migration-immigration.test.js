@@ -51,10 +51,18 @@ describe('MIGRATION immigration (Constitution §156 / §69)', () => {
         for (const [, town] of world.towns) {
             finalTotal += town.population;
         }
-        // R3: close with the booked exogenous terms (massResidual
-        // pattern). Tiny pops keep births/deaths at exactly 0.
+        // E4 identity note: sub-scale towns are demographically live
+        // now (remainder buckets), so births/deaths resolve over 50
+        // ticks even at tiny pops. The §156 transfer identity holds
+        // WITH the vital terms, all carried on POPULATION_CHANGE.
         const exo = world.exogenousPopulation ?? { inflow: 0, outflow: 0 };
-        expect(finalTotal - (exo.inflow ?? 0) + (exo.outflow ?? 0)).toBe(initialTotal);
+        let births = 0, deaths = 0;
+        for (const ev of world.events) {
+            if (ev.type !== 'POPULATION_CHANGE') continue;
+            births += Number(ev.births) || 0;
+            deaths += Number(ev.deaths) || 0;
+        }
+        expect(finalTotal - (exo.inflow ?? 0) + (exo.outflow ?? 0)).toBe(initialTotal + births - deaths);
     });
 
     it('individual town populations can both increase and decrease across ticks', () => {

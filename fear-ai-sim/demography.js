@@ -14,7 +14,7 @@
 // follow-up slice; this is the first link.
 
 import { clamp } from './math-utils.js';
-import { appendWorldEvent, findLatestWorldEvent, formSettlerGroup } from './closed-world.js';
+import { appendWorldEvent, findLatestWorldEvent, formSettlerGroup, abandonTown } from './closed-world.js';
 
 // Base birth rate per population per tick. Default 0.01 (1% per
 // tick is fast; intended to be tuned). At population=1 this is
@@ -80,13 +80,13 @@ export function computeDemographicUpdate(world, townId, tick) {
         BASE_DEATH_RATE + meanShortage * SCARCITY_DEATH_MULTIPLIER * BASE_DEATH_RATE,
         0, 1
     );
-    const deaths = Math.floor(population * effectiveDeathRate);
+    const deathsExact = population * effectiveDeathRate;
     // Births: base rate scaled by (1 - shortage).
     const effectiveBirthRate = clamp(
         BASE_BIRTH_RATE * (1 - meanShortage * (1 - SCARCITY_BIRTH_MULTIPLIER)),
         0, 1
     );
-    const births = Math.floor(population * effectiveBirthRate);
+    const birthsExact = population * effectiveBirthRate;
     // Emigration: shortage * season modifier.
     const seasonKey = world.season || 'SUMMER';
     const seasonMod = SEASON_EMIGRATION_MODIFIER[seasonKey] ?? 1.0;
@@ -94,7 +94,30 @@ export function computeDemographicUpdate(world, townId, tick) {
         meanShortage * MAX_EMIGRATION_RATE * seasonMod,
         0, MAX_EMIGRATION_RATE
     );
-    const emigration = Math.floor(population * effectiveEmigrationRate);
+    const emigrationExact = population * effectiveEmigrationRate;
+    // E4 — sub-scale demographic resolution. Integer floors froze
+    // every town below pop ~20 into a statue (pop 1: all rates
+    // floor to 0 forever, so founded towns neither grew, starved,
+    // nor declined). Fractional parts now accumulate in plain
+    // per-town remainder buckets (save/load-safe numbers) and only
+    // whole humans move. Event fields carry the applied integers,
+    // so per-event conservation identities stay exact; the
+    // remainder is town-held headcount-in-waiting, invisible until
+    // it resolves. Single-tick-from-zero behavior is unchanged
+    // (buckets start at 0, integer parts equal the old floors).
+    if (!town._demoRemainder || typeof town._demoRemainder !== 'object') {
+        town._demoRemainder = { births: 0, deaths: 0, emigration: 0 };
+    }
+    const rem = town._demoRemainder;
+    const birthsTotal = birthsExact + (Number(rem.births) || 0);
+    const deathsTotal = deathsExact + (Number(rem.deaths) || 0);
+    const emigrationTotal = emigrationExact + (Number(rem.emigration) || 0);
+    const births = Math.floor(birthsTotal);
+    const deaths = Math.floor(deathsTotal);
+    const emigration = Math.floor(emigrationTotal);
+    rem.births = birthsTotal - births;
+    rem.deaths = deathsTotal - deaths;
+    rem.emigration = emigrationTotal - emigration;
     const newPopulation = Math.max(0, population + births - deaths - emigration);
     return {
         tick,
@@ -136,15 +159,38 @@ export function tickDemography(world, tick) {
         if (update) updates.push(update);
     }
     // Second pass: pick a destination for each emigrating town.
-    // The destination is the town with the lowest food shortage
-    // that isn't the origin and has positive population
-    // capacity (i.e., not already overcrowded).
+    // E4 — the destination is the town with the lowest
+    // shortage-plus-insecurity score. Security is lawful public
+    // knowledge: recent BANDIT_ATTACK / CONVOY_AMBUSH events on
+    // roads incident to the candidate, decayed over 40 ticks. A
+    // raided town repels migrants even when its shelves are full,
+    // so insecurity can empty a town (decline -> abandonment).
+    // Abandoned towns are rubble, not destinations.
+    const attackTickByTown = new Map();
+    for (const event of world.events ?? []) {
+        if (event?.type !== 'BANDIT_ATTACK' && event?.type !== 'CONVOY_AMBUSH') continue;
+        if (!Number.isFinite(event?.tick)) continue;
+        const roadId = event.roadId;
+        if (!roadId) continue;
+        const road = (world.routes ?? []).find(r => r.id === roadId);
+        if (!road) continue;
+        for (const end of [road.from, road.to]) {
+            const prev = attackTickByTown.get(end);
+            if (prev === undefined || event.tick > prev) attackTickByTown.set(end, event.tick);
+        }
+    }
+    const insecurityOf = (townId) => {
+        const last = attackTickByTown.get(townId);
+        if (last === undefined) return 0;
+        return 0.5 * Math.max(0, 1 - (tick - last) / 40);
+    };
     const pickDestination = (originId) => {
         let best = null;
-        let bestShortage = Infinity;
+        let bestScore = Infinity;
         for (const [candId, cand] of world.towns) {
             if (candId === originId) continue;
             if (!cand || !cand.market) continue;
+            if (cand.abandoned) continue;
             let candShortage = 0;
             let count = 0;
             if (typeof cand.market.getQuote === 'function') {
@@ -157,14 +203,14 @@ export function tickDemography(world, tick) {
                 }
                 if (count > 0) candShortage = candShortage / count;
             }
-            if (candShortage < bestShortage) {
-                bestShortage = candShortage;
+            const score = candShortage + insecurityOf(candId);
+            if (score < bestScore) {
+                bestScore = score;
                 best = candId;
             }
         }
         return best;
     };
-    // Apply.
     // Track per-town immigration so the apply step for the
     // destination accounts for it (otherwise the destination's
     // own demographic event would overwrite the immigration).
@@ -215,6 +261,16 @@ export function tickDemography(world, tick) {
         const newPop = Math.max(0, oldPop + update.births - update.deaths - update.emigration + immigration);
         const actualDelta = newPop - oldPop;
         town.population = newPop;
+        // E4 — inhabited-then-empty means abandoned. The flag is set
+        // only by observed life (never at construction), so towns
+        // initialized at 0 pop that never lived never trigger. A
+        // re-founded town keeps its history and can abandon again
+        // (new episode, new event).
+        if (newPop > 0) {
+            town.everInhabited = true;
+        } else if (town.everInhabited && !town.abandoned) {
+            abandonTown(world, update.townId, { tick });
+        }
         if (actualDelta === 0 && update.births === 0 && update.deaths === 0 && update.emigration === 0 && immigration === 0) {
             continue;
         }
