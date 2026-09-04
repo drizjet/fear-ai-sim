@@ -782,8 +782,16 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         // (1.2) gives south a small food buffer: equilibrium
         // (1.2 - 1) / 0.05 = 4 units, ~4 ticks of consumption.
         // North remains the granary (1.5 / 1 = 9.5 equilibrium).
-        north: { produces: { food: 1.5, tools: 0.1 }, storageCapacity: { food: 100, tools: 50 }, spoilageRate: { food: 0.05, tools: 0 } },
-        south: { produces: { food: 1.2, tools: 0.3 }, storageCapacity: { food: 100, tools: 50 }, spoilageRate: { food: 0.05, tools: 0 } }
+        // E5: ore -> metal -> tools production chain. Refining
+        // capacity (metal) and extraction (ore) match each town's
+        // forge demand (tools) exactly, so the chain is a pure
+        // pass-through by default and legacy tools flows reproduce
+        // bit-for-bit until the ore is cut. Recipes are per-town
+        // plain JSON: { outputKind: { inputKind: unitsPerOutput } }.
+        // Absent town.recipes means the legacy flat rate (older
+        // saves behave exactly as before, no migration needed).
+        north: { produces: { food: 1.5, tools: 0.1, ore: 0.1, metal: 0.1 }, storageCapacity: { food: 100, tools: 50, ore: 50, metal: 50 }, spoilageRate: { food: 0.05, tools: 0 }, recipes: { metal: { ore: 1 }, tools: { metal: 1 } } },
+        south: { produces: { food: 1.2, tools: 0.3, ore: 0.3, metal: 0.3 }, storageCapacity: { food: 100, tools: 50, ore: 50, metal: 50 }, spoilageRate: { food: 0.05, tools: 0 }, recipes: { metal: { ore: 1 }, tools: { metal: 1 } } },
     };
     const towns = new Map();
     for (const [id, schema] of Object.entries(townSchema)) {
@@ -800,7 +808,8 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
             population: 1,
             consumes: { food: 1, tools: 0.2 },
             produces: schema.produces,
-            // Slice EVID-2026-08-28-TERRITORY-VERTICAL-SLICE:
+            // E5: production recipes (absent = legacy flat rate).
+            recipes: schema.recipes ? JSON.parse(JSON.stringify(schema.recipes)) : undefined,
             // authoritative town territory fields. The
             // `controlledBy` is the canonical owner; the radii
             // describe how far the town's reach extends
@@ -1166,7 +1175,7 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         if (!world.marketFlows) world.marketFlows = new Map();
         const delivKey = `${destinationTownId}:${cargoKind}`;
         const cumulative = world.marketFlows.get(delivKey)
-            ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0 };
+            ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0, inputsConsumed: 0, inputShortfall: 0 };
         cumulative.delivered = (Number(cumulative.delivered) || 0) + (Number(marketResult.stored) ?? 0);
         cumulative.deliveryOverflow = (Number(cumulative.deliveryOverflow) || 0) + (Number(marketResult.overflow) ?? 0);
         world.marketFlows.set(delivKey, cumulative);
@@ -2546,7 +2555,95 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // (e.g. an exporting farm) still drives the produce/spoil path
         // for that good.
         const allKinds = new Set([...Object.keys(consumes), ...Object.keys(produces)]);
-        for (const kind of allKinds) {
+        // E5: recipe inputs produce before their consumers (ore ->
+        // metal -> tools in the same tick, no one-tick lag). Kahn
+        // passes over ALPHABETICAL kind order: save/load round-trips
+        // alphabetize plain-object keys (stableValue), so insertion
+        // order is load-sensitive and must not decide production
+        // order — the strict-resume contract depends on it. A
+        // dependency cycle (no seed has one) falls back to
+        // alphabetical order.
+        const recipes = (town && typeof town.recipes === 'object' && town.recipes) || {};
+        const orderedKinds = [];
+        const placed = new Set();
+        const pending = [...allKinds].sort();
+        let progressed = true;
+        while (pending.length > 0 && progressed) {
+            progressed = false;
+            for (let i = 0; i < pending.length; i++) {
+                const inputs = Object.keys(recipes[pending[i]] ?? {});
+                if (inputs.every(k => placed.has(k) || !allKinds.has(k))) {
+                    orderedKinds.push(pending[i]);
+                    placed.add(pending[i]);
+                    pending.splice(i, 1);
+                    i--;
+                    progressed = true;
+                }
+            }
+        }
+        for (const kind of pending) orderedKinds.push(kind);
+        // E5 planning pass (topo order): scale the per-capita rate
+        // through every modifier, gate recipe outputs by their input
+        // stocks, and deduct the inputs NOW. Deduction must precede
+        // the per-kind loop because an input kind iterates (and emits
+        // its MARKET_TICK) before its consumers run; booking here and
+        // merging below (deliveredThisTick pattern) keeps the per-tick
+        // identity exact for every kind. Industrial use is booked as
+        // `consumed` on the input kind, so all mass identities hold
+        // unchanged; `inputsConsumed` / `inputShortfall` say why.
+        const scaledRate = (forKind) => {
+            const base = Number(produces[forKind]) || 0;
+            let pcp = base * getSeasonModifier(world.season, forKind);
+            if (world.drought?.active && world.drought.townId === townId && (world.drought.kind ?? 'food') === forKind) {
+                pcp *= Math.max(0.1, 1 - clamp01(Number(world.drought.severity) || 0) * 0.6);
+            }
+            if (world.storm?.active && world.storm.roadId) {
+                const stormRoad = (world.routes ?? []).find(route =>
+                    route?.id === world.storm.roadId
+                    && (route.from === townId || route.to === townId));
+                if (stormRoad) pcp *= Math.max(0, 1 - clamp01(Number(world.storm.severity) || 0) * 0.3);
+            }
+            return pcp;
+        };
+        const producePlan = new Map();
+        const recipeUse = new Map();
+        for (const kind of orderedKinds) {
+            const pcp = scaledRate(kind);
+            const desired = (Number.isFinite(pcp) && pcp > 0 && population > 0) ? population * pcp : 0;
+            let gated = desired;
+            const recipe = recipes[kind];
+            if (recipe && desired > 0) {
+                let inputLimit = Infinity;
+                for (const [input, perUnitRaw] of Object.entries(recipe)) {
+                    const perUnit = Number(perUnitRaw) || 0;
+                    if (!(perUnit > 0)) continue;
+                    inputLimit = Math.min(inputLimit, Math.max(0, Number(market.inventory.get(input)) || 0) / perUnit);
+                }
+                gated = Math.min(desired, Math.max(0, inputLimit));
+                for (const [input, perUnitRaw] of Object.entries(recipe)) {
+                    const perUnit = Number(perUnitRaw) || 0;
+                    if (!(perUnit > 0) || gated <= 0) continue;
+                    const used = market.consume(input, gated * perUnit);
+                    const prev = recipeUse.get(input) ?? { consumed: 0, inputsConsumed: 0 };
+                    prev.consumed += used?.consumed ?? 0;
+                    prev.inputsConsumed += used?.consumed ?? 0;
+                    recipeUse.set(input, prev);
+                }
+            }
+            // Materialize now (topo order): downstream kinds planned
+            // later this pass already see this output in inventory,
+            // so the cascade runs same-tick from zero stock. The
+            // per-kind loop below only books the stashed result.
+            let produced = 0;
+            let overflow = 0;
+            if (Number.isFinite(pcp) && pcp > 0 && population > 0) {
+                const prodResult = market.produce(kind, gated);
+                produced = prodResult?.produced ?? 0;
+                overflow = prodResult?.overflow ?? 0;
+            }
+            producePlan.set(kind, { pcp, gated, short: desired - gated, produced, overflow });
+        }
+        for (const kind of orderedKinds) {
             // PHASE §155: track per-flow numbers for the event
             // log. The Market primitive returns these from each
             // call. We track two things:
@@ -2556,8 +2653,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             //   2. `cumulativeFlow` — total flows for the audit
             //      trail (accumulates across ticks).
             const flowKey = `${townId}:${kind}`;
-            const cumulativeFlow = marketFlows.get(flowKey) ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0 };
-            const tickFlow = { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0 };
+            const cumulativeFlow = marketFlows.get(flowKey) ?? { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0, inputsConsumed: 0, inputShortfall: 0 };
+            const tickFlow = { produced: 0, delivered: 0, consumed: 0, spoiled: 0, overflow: 0, deliveryOverflow: 0, inputsConsumed: 0, inputShortfall: 0 };
+            // E5: older saves and delivery-first bookings predate the
+            // recipe memo fields; normalize so accumulation never NaNs.
+            if (!Number.isFinite(cumulativeFlow.inputsConsumed)) cumulativeFlow.inputsConsumed = 0;
+            if (!Number.isFinite(cumulativeFlow.inputShortfall)) cumulativeFlow.inputShortfall = 0;
             // PHASE §155: merge deliveries booked by
             // advancePendingWorldObligations earlier in this tick
             // (pending-trip cargo that arrived). Without this the
@@ -2570,52 +2671,28 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 // booking it keeps the global mass identity exact.
                 tickFlow.deliveryOverflow += delivery.overflow ?? 0;
             }
-            // Produce. `population * perCapitaProduction` flows in, capped
-            // at the storage capacity set in `createClosedWorldScenario`.
-            // EVID-2026-08-29-ECOLOGY: the perCapitaProduction is
-            // multiplied by the current season's modifier for this good
-            // (winter food = 0.4x, summer food = 1.3x, etc.). The
-            // season advances on the world's `ticksPerSeason` cadence
-            // (see ecology.js / tickSeason).
-            const basePerCapitaProduction = Number(produces[kind]) || 0;
-            const seasonModifier = getSeasonModifier(world.season, kind);
-            let perCapitaProduction = basePerCapitaProduction * seasonModifier;
-            // Slice D: drought reduces food production for the affected town
-            if (world.drought?.active && world.drought.townId === townId && (world.drought.kind ?? 'food') === kind) {
-                const sev = clamp01(Number(world.drought.severity) || 0);
-                const droughtMultiplier = Math.max(0.1, 1 - sev * 0.6);
-                perCapitaProduction *= droughtMultiplier;
+            // E5: merge recipe input use planned above. The input kind
+            // may iterate before or after its consumers; merging by key
+            // (deliveredThisTick pattern) lands it on the right kind.
+            const plannedUse = recipeUse.get(kind);
+            if (plannedUse) {
+                tickFlow.consumed += plannedUse.consumed;
+                tickFlow.inputsConsumed += plannedUse.inputsConsumed;
             }
-            // Slice AI: storms disrupt town production. An active storm on
-            // any road incident to this town scales all production by
-            // (1 - 0.3 * severity) — labor and carts cannot move in
-            // the storm. Milder than drought (0.6) by design: the fields
-            // still yield, the disruption is logistical. No storm (or a
-            // storm on no incident road) multiplies by exactly 1.
-            if (world.storm?.active && world.storm.roadId) {
-                const stormRoad = (world.routes ?? []).find(route =>
-                    route?.id === world.storm.roadId
-                    && (route.from === townId || route.to === townId));
-                if (stormRoad) {
-                    const stormSev = clamp01(Number(world.storm.severity) || 0);
-                    perCapitaProduction *= Math.max(0, 1 - stormSev * 0.3);
-                }
-            }
-            if (Number.isFinite(perCapitaProduction) && perCapitaProduction > 0 && population > 0) {
-                const prodResult = market.produce(kind, population * perCapitaProduction);
-                if (prodResult) {
-                    // PHASE §155: `produced` is the *attempted*
-                    // amount; the *stored* amount is what
-                    // actually changes inventory. Track the
-                    // attempted amount as `produced` and the
-                    // capacity-rejected amount as `overflow`,
-                    // so the mass-balance invariant uses
-                    // `produced - overflow` (= stored) for the
-                    // supply change.
-                    tickFlow.produced += prodResult.produced ?? 0;
-                    tickFlow.overflow += prodResult.overflow ?? 0;
-                }
-            }
+            // Produce. The amount was planned above (modifiers scaled,
+            // recipe gated, inputs deducted); here it only lands in
+            // inventory and books the §155 flow terms. `produced` is
+            // the *attempted* amount; the *stored* amount is what
+            // actually changes inventory. Track the attempted amount
+            // as `produced` and the capacity-rejected amount as
+            // `overflow`, so the mass-balance invariant uses
+            // `produced - overflow` (= stored) for the supply change.
+            // (Modifier chain lives in scaledRate above; drought D and
+            // storm AI scale the planned rate before gating.)
+            const kindPlan = producePlan.get(kind) ?? { pcp: 0, gated: 0, short: 0, produced: 0, overflow: 0 };
+            tickFlow.inputShortfall += kindPlan.short;
+            tickFlow.produced += kindPlan.produced;
+            tickFlow.overflow += kindPlan.overflow;
             // Demand + consume.
             const perCapitaDemand = Number(consumes[kind]) || 0;
             if (Number.isFinite(perCapitaDemand) && perCapitaDemand > 0 && population > 0) {
@@ -2655,6 +2732,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             cumulativeFlow.spoiled += tickFlow.spoiled;
             cumulativeFlow.overflow += tickFlow.overflow;
             cumulativeFlow.deliveryOverflow += tickFlow.deliveryOverflow;
+            cumulativeFlow.inputsConsumed += tickFlow.inputsConsumed;
+            cumulativeFlow.inputShortfall += tickFlow.inputShortfall;
             marketFlows.set(flowKey, cumulativeFlow);
             if (typeof market.getQuote !== 'function') continue;
             const quote = market.getQuote(kind);
@@ -4837,9 +4916,10 @@ export function tickSettlerGroups(world, { tick = 0 } = {}) {
             tick,
             cost: 1,
             townTemplate: {
-                produces: { food: 1.0, tools: 0.1 },
-                storageCapacity: { food: 50, tools: 30 },
+                produces: { food: 1.0, tools: 0.1, ore: 0.1, metal: 0.1 },
+                storageCapacity: { food: 50, tools: 30, ore: 30, metal: 30 },
                 spoilageRate: { food: 0.05, tools: 0 },
+                recipes: { metal: { ore: 1 }, tools: { metal: 1 } },
                 consumes: { food: 1, tools: 0.2 },
                 population: group.size,
                 controlledBy: group.factionId ?? undefined,
@@ -4988,9 +5068,10 @@ export function settleAttempt(world, group, locationId, { tick = 0, cost = 1, to
         faction.resources = Math.max(0, (faction.resources ?? 0) - cost);
     }
     const template = townTemplate ?? {
-        produces: { food: 1.0, tools: 0.1 },
-        storageCapacity: { food: 50, tools: 30 },
+        produces: { food: 1.0, tools: 0.1, ore: 0.1, metal: 0.1 },
+        storageCapacity: { food: 50, tools: 30, ore: 30, metal: 30 },
         spoilageRate: { food: 0.05, tools: 0 },
+        recipes: { metal: { ore: 1 }, tools: { metal: 1 } },
         consumes: { food: 1, tools: 0.2 },
         population: 1,
         controlledBy: factionId,
@@ -5013,8 +5094,8 @@ export function settleAttempt(world, group, locationId, { tick = 0, cost = 1, to
         id: locationId,
         market,
         population: template.population ?? 1,
-        consumes: template.consumes ?? { food: 1, tools: 0.2 },
-        produces: template.produces ?? { food: 1.0, tools: 0.1 },
+        produces: template.produces ?? { food: 1.0, tools: 0.1, ore: 0.1, metal: 0.1 },
+        recipes: template.recipes ? JSON.parse(JSON.stringify(template.recipes)) : undefined,
         controlledBy: template.controlledBy ?? factionId,
         homeRadius: template.homeRadius ?? 1,
         claimedRadius: template.claimedRadius ?? 3,

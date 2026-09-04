@@ -73,9 +73,9 @@ describe('E4 — decline, abandonment, and growth', () => {
         // Genuine surplus on every consumed kind: the deficit town
         // above shrinks, this one must grow. Staging prosperity, not
         // assuming it.
-        north.produces = { food: 2, tools: 0.5 };
-        north.market.inventory.set('food', 50);
-        north.market.inventory.set('tools', 20);
+        // E5: prosperity includes the production chain — forge demand
+        // without ore/metal extraction is a blockade, not surplus.
+        north.produces = { food: 2, tools: 0.5, ore: 0.5, metal: 0.5 };
         runTicks(world, 1, 120);
         expect(north.population).toBeGreaterThan(8);
         expect(north.abandoned).not.toBe(true);

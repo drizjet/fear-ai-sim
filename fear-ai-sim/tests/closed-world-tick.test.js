@@ -170,7 +170,10 @@ describe('tickClosedWorld', () => {
         const marketEvents = world.events.filter(event => event.type === 'MARKET_TICK');
         // The default scenario declares 2 goods per town (food, tools), so
         // the total is towns.size * goods.size.
-        const goodsPerTown = Object.keys(world.towns.get('north').consumes).length;
+        const north = world.towns.get('north');
+        // E5: the market loop touches consumes UNION produces (ore/metal
+        // intermediates produce/consume without demand), so count that union.
+        const goodsPerTown = new Set([...Object.keys(north.consumes ?? {}), ...Object.keys(north.produces ?? {})]).size;
         expect(marketEvents).toHaveLength(world.towns.size * goodsPerTown);
         const townIds = new Set(marketEvents.map(event => event.townId));
         const kinds = new Set(marketEvents.map(event => event.kind));
@@ -184,7 +187,10 @@ describe('tickClosedWorld', () => {
         const world = createClosedWorldScenario();
         tickClosedWorld(world, { tick: 1, perceivedDanger: 0.0 });
         const snapshot = world.tickHistory[0];
-        const goodsPerTown = Object.keys(world.towns.get('north').consumes).length;
+        const north = world.towns.get('north');
+        // E5: the market loop touches consumes UNION produces (ore/metal
+        // intermediates produce/consume without demand), so count that union.
+        const goodsPerTown = new Set([...Object.keys(north.consumes ?? {}), ...Object.keys(north.produces ?? {})]).size;
         expect(snapshot.marketPrices).toHaveLength(world.towns.size * goodsPerTown);
         const keys = new Set(snapshot.marketPrices.map(entry => `${entry.townId}::${entry.kind}`));
         for (const [townId, town] of world.towns) {
@@ -285,7 +291,9 @@ describe('tickClosedWorld', () => {
         const firstTickEvents = world.events.filter(
             event => event.type === 'MARKET_TICK' && event.tick === 1
         );
-        const goodsPerTown = Object.keys(world.towns.get('north').consumes).length;
+        // E5: the market loop touches consumes UNION produces (ore/metal
+        // intermediates produce/consume without demand), so count that union.
+        const goodsPerTown = new Set([...Object.keys(north.consumes ?? {}), ...Object.keys(north.produces ?? {})]).size;
         expect(firstTickEvents).toHaveLength(world.towns.size * goodsPerTown);
 
         tickClosedWorld(world, { tick: 2, perceivedDanger: 0.0 });

@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E4-SETTLEMENT-LIFECYCLE (Lane B, unaccepted)
+EVID-2026-09-05-E5-PRODUCTION-CHAIN (Lane B, unaccepted)
+
+## E5 — production chains: tools are forged from ore via metal (expansion)
+
+- Gap (probed, not guessed): tools inflow was input-independent — a drought-starved twin forged exactly as many tools as the control (2.7 = 2.7), because market.produce added same-kind stock and deducted nothing.
+- Fix: per-town recipes { metal: { ore: 1 }, tools: { metal: 1 } } (plain JSON, absent = legacy flat rate, no migration). Hoisted topo planning pass (alphabetical Kahn order — save/load alphabetizes keys, strict-resume depends on it) scales rates through drought/storm modifiers, gates outputs by input stocks, deducts inputs immediately so the same-tick cascade works from zero stock; the per-kind loop only books flows. Industrial use is booked as consumed on the input kind, so every mass identity holds unchanged (zero invariant restaging); inputsConsumed/inputShortfall memos say why.
+- Loop closed: ore blockade collapses metal+tools (<50% control); tick-1 forge from zero stock; 1:1 chain identity (ore consumed = metal produced = tools consumed); cargo stays food/tools; save/load identical. Default rates match refining to forge demand exactly — legacy tools flows reproduce bit-for-bit until ore is cut.
+- Fallout restaged honestly (production untouched except noted): prosperous-twin fixture owns the chain (forge without ore is blockade, not surplus), market-count tests count consumes UNION produces, coverage needles follow the refactor (produce(kind, gated), scaledRate, 4-good capacities), storm/drought replay mutants retargeted to the moved modifier lines.
+- Validation: 193/1400 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 49/49 (2 new E5 entries). Alphabetical order is defense-in-depth (forward Kahn converges either way here); the verified order property is strict-resume via save-load-pending.
 
 ## E4 — settlement growth, decline, abandonment, recovery (expansion)
 

@@ -131,7 +131,10 @@ describe('closed-world all-systems integration', () => {
         }
         const marketEvents = world.events.filter(event => event.type === 'MARKET_TICK');
         expect(marketEvents.length).toBeGreaterThan(0);
-        const goodsPerTown = Object.keys(world.towns.get('north').consumes).length;
+        const north = world.towns.get('north');
+        // E5: the market loop touches consumes UNION produces (ore/metal
+        // intermediates produce/consume without demand), so count that union.
+        const goodsPerTown = new Set([...Object.keys(north.consumes ?? {}), ...Object.keys(north.produces ?? {})]).size;
         for (const snapshot of world.tickHistory) {
             expect(snapshot.marketPrices).toHaveLength(world.towns.size * goodsPerTown);
         }
