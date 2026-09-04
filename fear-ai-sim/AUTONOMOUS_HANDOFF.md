@@ -1,6 +1,15 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-R5-ORACLE-STRENGTH (Lane B, unaccepted)
+EVID-2026-09-04-R6-GATE-HARDENING (Lane B, unaccepted)
+
+## R6 — gate hardening (authority + evidence rules + CI)
+
+- Authority: --snapshot now requires --reason (refused without, exit 2) and records reason + diff vs previous baseline in the snapshot file. 4 CLI tests (refusal, reason/diff recording, drift still caught, clean pass). Verify semantics unchanged (old snapshots verify fine).
+- Evidence rules: (a) F3 window exclusion — rows observed 2026-08-30..09-03 can never be admissible (WINDOWED status, fails gate; successors/invalidation still retire); (b) declared-vs-derived labels enforced with explicit allowlist (visualization BLOCKED only); (c) CONTRADICTED rows never retire via supersession naming or successors (invalidation path fixed too). 5 new linter detectors (22-26); all 26 green.
+- Closure bound documented (F-GATE-03): depth-5 relative-only import closure stated as incomplete in receipt.mjs; seed authors must list non-import deps explicitly.
+- CI: new gates job (evidence lint + build + authority) on every push/PR. Replay stays manual with written reason (transient source mutation, minutes-long — audit tool, not per-commit gate).
+- The window rule forced a full post-window reseed (all live claims re-proved with post-window observations); lint exit 0 (2380 rows, 8 explained divergences).
+- Validation: 180/1347 suite, 4/15 long-horizon, build green, authority CLEAN, replay 38/38 killed with clean restores.
 
 ## R5 — oracle strength (seeds, holdouts, recovery)
 

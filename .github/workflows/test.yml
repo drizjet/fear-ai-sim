@@ -40,3 +40,40 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         fail_ci_if_error: false
+
+  # R6 (V8 audit F-REPO-01): the status claims depend on more than
+  # jest. The evidence gate, the production build, and the authority
+  # baseline run here on every push/PR so main cannot merge with a
+  # red ledger, a broken build, or control-plane drift.
+  # Deliberately NOT in CI: evidence/replay-mutations.mjs. It
+  # transiently mutates production sources (restoring byte-identical
+  # afterwards) and takes minutes; it is a manual audit tool run
+  # before acceptance audits, not a per-commit gate.
+  gates:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+        cache-dependency-path: fear-ai-sim/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+      working-directory: fear-ai-sim
+
+    - name: Evidence gate (lint:evidence must exit 0)
+      run: npm run lint:evidence
+      working-directory: fear-ai-sim
+
+    - name: Production build
+      run: npm run build
+      working-directory: fear-ai-sim
+
+    - name: Authority baseline (must report CLEAN)
+      run: node tools/guardian/authority-check.mjs --verify
+      working-directory: fear-ai-sim

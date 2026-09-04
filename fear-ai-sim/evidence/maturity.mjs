@@ -129,7 +129,8 @@ export function maturityGate({ domain, ledger = [], contradictions = [] } = {}) 
     // linter-assigned freshness (unit fixtures, unlinted ledgers) stay in.
     const liveRows = evidenceRows.filter(r => r.freshness === undefined
         || r.freshness === 'FRESH' || r.freshness === 'ADMISSIBLE'
-        || r.freshness === 'STALE' || r.freshness === 'INCOMPLETE' || r.freshness === 'CONTRADICTED');
+        || r.freshness === 'STALE' || r.freshness === 'INCOMPLETE' || r.freshness === 'CONTRADICTED'
+        || r.freshness === 'WINDOWED');
 
     // Tally which dimensions are fully met.
     const dimensions = {};

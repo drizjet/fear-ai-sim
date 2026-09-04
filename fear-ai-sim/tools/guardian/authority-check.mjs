@@ -6,7 +6,7 @@
 // Any worker mutation to .fear-guardian-control/ is AUTHORITY_VIOLATION.
 //
 // Usage:
-//   node tools/guardian/authority-check.mjs --snapshot    # hash current state
+//   node tools/guardian/authority-check.mjs --snapshot --reason "<justification>"
 //   node tools/guardian/authority-check.mjs --verify      # compare to last snapshot
 
 import { readdirSync, readFileSync, statSync, writeFileSync, existsSync } from 'node:fs';
@@ -33,15 +33,59 @@ function hashDir(dir, base = dir) {
   return result;
 }
 
+// R6 (V8 audit F-AUTH-01): baselining is authority-sensitive. A bare
+// --snapshot silently blesses whatever drift exists, so the same
+// principal that caused drift can clear it. Snapshots now require an
+// explicit --reason (recorded in the file) and print the diff against
+// the previous baseline. Git history plus the recorded reason is what
+// distinguishes a justified refresh (e.g. line-ending normalization)
+// from blessing. This does not replace principal separation — there
+// is still no signing — but an unsigned silent bless is now refused.
+function snapshotReason() {
+  const idx = process.argv.indexOf('--reason');
+  if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1];
+  const prefixed = process.argv.find(arg => arg.startsWith('--reason='));
+  if (prefixed) return prefixed.slice('--reason='.length);
+  return null;
+}
+
+function diffAgainst(prevFiles, currentFiles) {
+  const diff = { added: [], removed: [], modified: [] };
+  for (const [file, hash] of Object.entries(currentFiles)) {
+    if (!prevFiles[file]) diff.added.push(file);
+    else if (prevFiles[file] !== hash) diff.modified.push(file);
+  }
+  for (const file of Object.keys(prevFiles)) {
+    if (!currentFiles[file]) diff.removed.push(file);
+  }
+  return diff;
+}
+
 function snapshot() {
+  const reason = snapshotReason();
+  if (!reason) {
+    console.error('Usage: node tools/guardian/authority-check.mjs --snapshot --reason "<justification>"');
+    console.error('Refusing unsigned snapshot: a reason is required so the refresh is auditable.');
+    process.exit(2);
+  }
   const hashes = hashDir(CONTROL_DIR);
+  let prev = null;
+  try {
+    if (existsSync(SNAPSHOT_FILE)) prev = JSON.parse(readFileSync(SNAPSHOT_FILE, 'utf8'));
+  } catch {
+    prev = null;
+  }
+  const diff = prev && prev.files ? diffAgainst(prev.files, hashes) : { added: Object.keys(hashes), removed: [], modified: [] };
   const meta = {
     timestamp: new Date().toISOString(),
     fileCount: Object.keys(hashes).length,
     files: hashes,
+    reason,
+    prevTimestamp: prev?.timestamp ?? null,
+    diff,
   };
   writeFileSync(SNAPSHOT_FILE, JSON.stringify(meta, null, 2));
-  console.log(JSON.stringify({ action: 'snapshot', fileCount: meta.fileCount }, null, 2));
+  console.log(JSON.stringify({ action: 'snapshot', fileCount: meta.fileCount, reason, diff }, null, 2));
 }
 
 function verify() {

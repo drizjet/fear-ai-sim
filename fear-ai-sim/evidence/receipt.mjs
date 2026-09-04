@@ -39,7 +39,15 @@ function sortedUniq(items) {
 
 /** Compute the transitive import closure of a file set.
  *  Bounded by a depth limit (default 5) to avoid pathological
- *  cycles in large dep trees. */
+ *  cycles in large dep trees.
+ *  R6 (V8 audit F-GATE-03): known incompleteness, stated plainly.
+ *  The closure follows static relative imports only: bare
+ *  specifiers (npm), dynamic import(), config/data assets, native
+ *  modules, environment, and anything beyond depth 5 are NOT
+ *  tracked. Content-match currency is therefore only as complete
+ *  as this closure — a breaking change in an untracked dependency
+ *  keeps old proof green. Seed authors must list non-import
+ *  dependencies explicitly in sourceFiles when they matter. */
 function importClosure(seedFiles, { depth = 5, root = ROOT } = {}) {
     const seen = new Map(); // file -> depth
     const queue = seedFiles.map(f => ({ f, d: 0 }));

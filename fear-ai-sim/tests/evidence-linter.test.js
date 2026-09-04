@@ -276,7 +276,7 @@ function retireFixture() {
     const evidenceDir = join(rootDir, 'docs', 'evidence');
     mkdirSync(evidenceDir, { recursive: true });
     writeFileSync(join(rootDir, 'source.js'), 'export const value = 1;\n');
-    writeFileSync(join(rootDir, 'docs', 'DOMAIN_MATURITY.md'), '| retire-test | UNIT_VERIFIED | fixture | none | none |\n');
+    writeFileSync(join(rootDir, 'docs', 'DOMAIN_MATURITY.md'), '| retire-test | SPECIFIED | fixture | none | none |\n');
     writeFileSync(join(evidenceDir, 'CONTRADICTIONS.jsonl'), '');
     return { rootDir, evidenceDir };
 }
@@ -286,7 +286,7 @@ function retireRow(overrides = {}) {
         evidenceId: 'EVID-FIXTURE',
         claimId: 'RETIRE-1',
         domain: 'retire-test',
-        dimension: 'UNIT_VERIFIED',
+        dimension: 'SPECIFIED',
         claim: 'fixture claim',
         sourceState: { head: 'no-git', dirty: false, fingerprint: 'bogus', fingerprintFiles: ['source.js'], fileHashes: [] },
         files: ['source.js'],
@@ -389,13 +389,120 @@ describe('maturity declared-label join', () => {
     test('21. backticked maturity labels join as declaredLabel', () => {
         const { rootDir, evidenceDir } = retireFixture();
         try {
-            writeFileSync(join(rootDir, 'docs', 'DOMAIN_MATURITY.md'), '| retire-test | `UNIT_VERIFIED` | fixture | none | none |\n');
+            writeFileSync(join(rootDir, 'docs', 'DOMAIN_MATURITY.md'), '| retire-test | `SPECIFIED` | fixture | none | none |\n');
             const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
             const live = retireRow({ sourceState: { head: fp.head, dirty: fp.dirty, fingerprint: fp.fingerprint, fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes } });
             writeLedgerRows(evidenceDir, [live]);
             const result = runRetireAudit(rootDir);
             const report = JSON.parse(result.stdout);
-            expect(report.domains['retire-test'].declaredLabel).toBe('UNIT_VERIFIED');
+            expect(report.domains['retire-test'].declaredLabel).toBe('SPECIFIED');
+            expect(result.status).toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+});
+
+describe('evidence gate hardening (§F3 window, labels, contradiction bar)', () => {
+    test('22. window-dated row with no successor fails even when bytes are fresh', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
+            const row = retireRow({
+                createdAt: '2026-09-01T12:00:00.000Z',
+                sourceState: { head: fp.head, dirty: fp.dirty, fingerprint: fp.fingerprint, fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes },
+            });
+            writeLedgerRows(evidenceDir, [row]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.domains['retire-test']).toMatchObject({ admissible: 0, windowed: 1 });
+            expect(result.status).not.toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+
+    test('23. window-dated row with a live post-window successor retires', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
+            const stale = retireRow({
+                evidenceId: 'EVID-FIXTURE-OLD',
+                createdAt: '2026-09-01T12:00:00.000Z',
+                sourceState: { head: 'old', dirty: false, fingerprint: 'old', fingerprintFiles: ['source.js'], fileHashes: [] },
+            });
+            const live = retireRow({
+                evidenceId: 'EVID-FIXTURE-NEW',
+                createdAt: '2026-09-04T12:00:00.000Z',
+                sourceState: { head: fp.head, dirty: fp.dirty, fingerprint: fp.fingerprint, fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes },
+            });
+            writeLedgerRows(evidenceDir, [stale, live]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.domains['retire-test']).toMatchObject({ admissible: 1, superseded: 1 });
+            expect(result.status).toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+
+    test('24. contradicted row named by supersession still fails', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
+            const bad = retireRow({
+                knownContradictions: ['c-1'],
+                sourceState: { head: fp.head, dirty: fp.dirty, fingerprint: fp.fingerprint, fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes },
+            });
+            const kill = {
+                evidenceId: 'EVID-FIXTURE-KILL', claimId: 'RETIRE-1', domain: 'retire-test',
+                dimension: 'EVIDENCE_SUPERSESSION', claim: 'fixture invalidation',
+                invalidatedClaimIds: ['RETIRE-1'], commandResults: [], knownContradictions: [],
+            };
+            writeLedgerRows(evidenceDir, [bad, kill]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.domains['retire-test']).toMatchObject({ admissible: 0, contradicted: 1, invalidated: 0 });
+            expect(result.status).not.toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+
+    test('25. declared label above derived evidence fails the gate', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            writeFileSync(join(rootDir, 'docs', 'DOMAIN_MATURITY.md'), '| retire-test | `FULLY_VERIFIED` | fixture | none | none |\n');
+            const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
+            const row = retireRow({
+                dimension: 'CODE_EXISTS',
+                sourceState: { head: fp.head, dirty: fp.dirty, fingerprint: fp.fingerprint, fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes },
+            });
+            writeLedgerRows(evidenceDir, [row]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.labelDivergences.length).toBeGreaterThan(0);
+            expect(result.status).not.toBe(0);
+        } finally {
+            rmSync(rootDir, { recursive: true, force: true });
+        }
+    });
+
+    test('26. allowlisted intentional divergence passes', () => {
+        const { rootDir, evidenceDir } = retireFixture();
+        try {
+            writeFileSync(join(rootDir, 'docs', 'DOMAIN_MATURITY.md'), '| visualization | `BLOCKED` | fixture | none | none |\n');
+            const fp = computeSourceFingerprint({ rootDir, fingerprintFiles: ['source.js'] });
+            const row = retireRow({
+                domain: 'visualization',
+                dimension: 'SPECIFIED',
+                commandResults: [{ ok: true }],
+                sourceState: { head: fp.head, dirty: fp.dirty, fingerprint: fp.fingerprint, fingerprintFiles: ['source.js'], fileHashes: fp.fileHashes },
+            });
+            writeLedgerRows(evidenceDir, [row]);
+            const result = runRetireAudit(rootDir);
+            const report = JSON.parse(result.stdout);
+            expect(report.labelDivergences).toEqual([]);
             expect(result.status).toBe(0);
         } finally {
             rmSync(rootDir, { recursive: true, force: true });

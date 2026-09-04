@@ -12,9 +12,13 @@
 // explicitly retired: INVALIDATED by an EVIDENCE_SUPERSESSION row,
 // or SUPERSEDED by a live re-proof of the same claim. A row whose
 // tracked files still hash as recorded is current (ADMISSIBLE)
-// even across commits that touch nothing it tracks. Exits
-// 1 if any row is CONTRADICTED, STALE with no live successor, or
-// INCOMPLETE, or if any domain has an active contradiction that is
+// even across commits that touch nothing it tracks. Rows observed
+// inside the F3 violation window (2026-08-30..2026-09-03) are never
+// admissible. Declared maturity labels must equal derived labels
+// (modulo the explicit allowlist) or the gate fails. Exits
+// 1 if any row is CONTRADICTED, STALE with no live successor,
+// WINDOWED with no live successor, INCOMPLETE, or divergently
+// labeled, or if any domain has an active contradiction that is
 // not recorded in the evidence.
 // Usage:
 //   node scripts/audit-evidence.mjs [--root <repo-root>]
@@ -127,6 +131,17 @@ function main() {
             && row.commandResults.length > 0
             && row.commandResults.every(cr => cr.ok === true);
         const contradicted = Array.isArray(row.knownContradictions) && row.knownContradictions.length > 0;
+        row._contradicted = contradicted;
+        // R6 (V8 audit F-AUTH-02): the F3 violation window
+        // (2026-08-30 through 2026-09-03) stays admitted-invalid.
+        // Rows observed inside it can never be current evidence,
+        // however fresh their bytes look — claims dated inside the
+        // window were re-proved after it (successors retire them) or
+        // they fail. Taint dominates: checked before freshness.
+        const observedAt = Date.parse(row.createdAt);
+        const inWindow = Number.isFinite(observedAt)
+            && observedAt >= Date.parse('2026-08-30T00:00:00.000Z')
+            && observedAt <= Date.parse('2026-09-03T23:59:59.999Z');
         // V8 corrective checkpoint §7: content-match currency. The
         // fingerprint binds head + dirty + file hashes, so ANY commit
         // stales every row even when the tracked sources are byte-identical.
@@ -140,7 +155,8 @@ function main() {
             && row.sourceState.fileHashes.every(entry =>
                 fresh.fileHashes.some(other => other.path === entry.path && other.hash === entry.hash));
         let status = 'INCOMPLETE';
-        if (contradicted) status = 'CONTRADICTED';
+        if (inWindow) status = 'WINDOWED';
+        else if (contradicted) status = 'CONTRADICTED';
         else if (freshness === 'STALE' && !contentMatches) status = 'STALE';
         else if (freshness === 'INCOMPLETE') status = 'INCOMPLETE';
         else if (!commandOk) status = 'INCOMPLETE';
@@ -157,6 +173,7 @@ function main() {
                 supersession: 0,
                 invalidated: 0,
                 superseded: 0,
+                windowed: 0,
                 derivedLabel: null,
             };
         }
@@ -165,6 +182,7 @@ function main() {
         if (status === 'ADMISSIBLE') d.admissible += 1;
         else if (status === 'STALE') d.stale += 1;
         else if (status === 'CONTRADICTED') d.contradicted += 1;
+        else if (status === 'WINDOWED') d.windowed += 1;
         else d.incomplete += 1;
     }
 
@@ -191,16 +209,21 @@ function main() {
             liveProof.add(proofKey(row));
         }
     }
-    const provisionalBucket = { ADMISSIBLE: 'admissible', STALE: 'stale', CONTRADICTED: 'contradicted', INCOMPLETE: 'incomplete' };
+    const provisionalBucket = { ADMISSIBLE: 'admissible', STALE: 'stale', CONTRADICTED: 'contradicted', INCOMPLETE: 'incomplete', WINDOWED: 'windowed' };
     for (const row of ledger) {
         if (!row || row.freshness === 'ADMISSIBLE' || row.freshness === 'SUPERSESSION' || row.dimension === 'EVIDENCE_SUPERSESSION') {
             delete row._provisional;
+            delete row._contradicted;
             continue;
         }
         let retired = null;
-        if (row.claimId && invalidatedClaimIds.has(row.claimId)) {
+        // R6 (F-GATE-02): a CONTRADICTED row never retires via
+        // self-asserted metadata — neither supersession naming nor a
+        // same-claim successor launders an open contradiction. Only
+        // contradiction resolution (knownContradictions cleared) does.
+        if (!row._contradicted && row.claimId && invalidatedClaimIds.has(row.claimId)) {
             retired = 'INVALIDATED';
-        } else if (row.freshness !== 'CONTRADICTED' && row.domain && row.claimId && row.dimension
+        } else if (!row._contradicted && row.domain && row.claimId && row.dimension
             && liveProof.has(proofKey(row))) {
             retired = 'SUPERSEDED';
         }
@@ -213,6 +236,7 @@ function main() {
             row.freshness = retired;
         }
         delete row._provisional;
+        delete row._contradicted;
     }
     for (const dom of Object.keys(report.domains)) {
         const m = maturityGate({ domain: dom, ledger, contradictions });
@@ -226,11 +250,30 @@ function main() {
         if (!report.domains[domain]) {
             report.domains[domain] = {
                 rows: 0, admissible: 0, stale: 0, contradicted: 0, incomplete: 0, supersession: 0,
+                invalidated: 0, superseded: 0, windowed: 0,
                 derivedLabel: null, declaredLabel,
             };
         }
         report.domains[domain].declaredLabel = declaredLabel;
     }
+
+    // R6 (V8 audit F-GATE-01): declared labels are enforced, not
+    // advisory. A domain whose derived evidence label differs from
+    // its declaration fails the gate — otherwise the tree can claim
+    // arbitrary maturity with green lint. Explicit allowlist for
+    // intentional divergences (scope verdicts, not ladder labels):
+    // visualization declares BLOCKED (deliberate non-goal) while the
+    // ledger can only derive ladder labels for it.
+    const LABEL_ALLOWLIST = new Set(['visualization']);
+    const labelDivergences = [];
+    for (const [domain, info] of Object.entries(report.domains)) {
+        if (!info.declaredLabel || info.derivedLabel === null || info.derivedLabel === undefined) continue;
+        if (LABEL_ALLOWLIST.has(domain)) continue;
+        if (info.declaredLabel !== info.derivedLabel) {
+            labelDivergences.push({ domain, declared: info.declaredLabel, derived: info.derivedLabel });
+        }
+    }
+    report.labelDivergences = labelDivergences;
 
     process.stdout.write(JSON.stringify(report, null, 2) + '\n');
 
@@ -242,13 +285,15 @@ function main() {
     // INVALIDATED (named by a supersession row) and SUPERSEDED (a live
     // re-proof of the same claim exists) rows are history, not drift:
     // they neither pass nor fail the gate and never support maturity.
+    // WINDOWED rows (F3 violation window) always fail: only a
+    // post-window re-proof retires them via SUPERSEDED.
     const retired = new Set(['SUPERSESSION', 'INVALIDATED', 'SUPERSEDED']);
     const hasInadmissible = ledger.some(r => !retired.has(r.freshness) && r.freshness !== 'ADMISSIBLE' && r.dimension !== 'EVIDENCE_SUPERSESSION');
     const activeC = contradictions.filter(c => c.active !== false);
     const hasUntrackedContradiction = activeC.some(c => {
         return !ledger.some(r => r.domain === c.domain && Array.isArray(r.knownContradictions) && r.knownContradictions.includes(c.rowId));
     });
-    if (hasInadmissible || hasUntrackedContradiction) {
+    if (hasInadmissible || hasUntrackedContradiction || labelDivergences.length > 0) {
         return 1;
     }
     return 0;
