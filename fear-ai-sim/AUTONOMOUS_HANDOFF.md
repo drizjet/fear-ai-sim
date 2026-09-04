@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E1-SETTLERS (Lane B, unaccepted)
+EVID-2026-09-05-E2-TRAFFIC-RELOCATION (Lane B, unaccepted)
+
+## E2 — travel-driven relocation: roaming synthesis consumes traffic (expansion)
+
+- Gap (probed, not guessed): relocateBanditViaRoaming ignored bandit.trafficBelief, and its beliefs never set lootOpportunity — leaving the RAID loot term (weight 0.8) dead at 0, so the path ran on resource/distance/danger crumbs (1 relocation / 5000 ticks). tickBandit's payoff path read traffic all along; the two paths could contradict.
+- Fix: per-road lootOpportunity = max(staged loot prior, co-located traffic signal 0.15 x count x recency, capped), observedTick from lastDecayTick. Same lawful R1-gated source both paths consume. Staged-only behavior unchanged (uniform lift, differences preserved).
+- Detectors: unit pull-to-observed (road-c), stale-trace stay, empty-prior stay, live 12-tick agreement ending road-c. Bridge-removal kills exactly the pull test (live agreement still passes via tickBandit — documented as agreement proof, not necessity).
+- Validation: 190/1375 suite, 4/16 long-horizon, lint exit 0 (3555 rows), build green, authority CLEAN, replay 41/41 (new bridge entry).
 
 ## E1 — settler populations: dropped emigrants camp, then found (expansion)
 

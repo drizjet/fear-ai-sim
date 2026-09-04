@@ -3700,7 +3700,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
  * seeded with the bandit's `id` so the live-wire is
  * reproducible across runs.
  */
-function relocateBanditViaRoaming(bandit, routes, { tick = 0 } = {}) {
+export function relocateBanditViaRoaming(bandit, routes, { tick = 0 } = {}) {
     // EVID-2026-08-29-LOOSE-BANDIT-THRASHING-FIX: previously
     // the bandit relocated on every tick because switchMargin
     // was hard-coded to 0 and chooseRoamingDestination always
@@ -3715,20 +3715,50 @@ function relocateBanditViaRoaming(bandit, routes, { tick = 0 } = {}) {
     }
     // Build the belief map. The bandit "knows" the road it
     // is on (its own observation) and has stale beliefs
-    // about the others (loot derived from lootExpectation).
-    // The destination-utility model will use these beliefs
-    // to decide which road is more profitable.
+    // about the others. E2 (travel-driven relocation): the staged
+    // lootExpectation is only the PRIOR. Co-located traffic
+    // observations (bandit.trafficBelief, maintained by tickBandit
+    // behind the R1 co-location gate) refine the per-road LOOT
+    // opportunity via max(): a road with strong fresh traffic
+    // outranks an empty prior, while an unobserved road keeps the
+    // staged value. The loot channel (weight 0.8 in the RAID
+    // profile) is the mechanism's dominant term — resourceValue
+    // alone (weight 0.1 x need 0.5) can never cross the switch
+    // margin, which is why this signal belongs here and not there.
+    // Same lawful source tickBandit consumes, so the two
+    // relocation paths agree instead of contradicting. No distant
+    // truth: trafficBelief only ever counts passersby on the
+    // bandit's own road, aged by recency decay.
     const beliefs = {};
     for (const route of routes) {
         const isCurrent = route.id === bandit.roadId;
+        const stagedLoot = Math.min(0.9, bandit.lootExpectation + 0.1);
+        let lootOpportunity = stagedLoot;
+        let observedTick = isCurrent ? tick : Math.max(0, tick - 5);
+        const traffic = bandit.trafficBelief?.[route.id];
+        const trafficCount = Number(traffic?.estimatedTraffic);
+        const trafficRecency = Number(traffic?.recency);
+        if (Number.isFinite(trafficCount) && Number.isFinite(trafficRecency)
+            && trafficCount > 0 && trafficRecency > 0) {
+            // Scale: 4 fresh sightings ≈ 0.54 against an empty
+            // prior (0.1): 0.8 x 0.44 clears the 0.2 switch margin.
+            // Stale traces (recency → 0) fade back to the prior.
+            // Capped like the staged value so neither explodes.
+            const trafficSignal = Math.min(0.9, trafficCount * trafficRecency * 0.15);
+            if (trafficSignal > lootOpportunity) {
+                lootOpportunity = trafficSignal;
+                if (Number.isFinite(traffic?.lastDecayTick)) {
+                    observedTick = traffic.lastDecayTick;
+                }
+            }
+        }
         beliefs[route.id] = {
-            resourceValue: isCurrent
-                ? 0.2
-                : Math.min(0.9, bandit.lootExpectation + 0.1),
+            resourceValue: isCurrent ? 0.2 : stagedLoot,
+            lootOpportunity,
             distance: route.distance,
             danger: isCurrent ? 0.5 : 0.1,
             informationConfidence: 0.8,
-            observedTick: isCurrent ? tick : Math.max(0, tick - 5)
+            observedTick
         };
     }
     // Deterministic rng seeded by the bandit's id.

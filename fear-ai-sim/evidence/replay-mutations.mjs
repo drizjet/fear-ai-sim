@@ -365,6 +365,14 @@ const MUTATIONS = [
         note: 'E1 dropped-transfer formation skipped; camps and settler conservation must fail',
     },
     {
+        id: 'traffic-relocation-bridge',
+        file: 'closed-world.js',
+        target: 'if (trafficSignal > lootOpportunity) {',
+        replacement: 'if (false && trafficSignal > lootOpportunity) {',
+        detectors: 'bandit-traffic-relocation',
+        note: 'E2 traffic bridge disabled; observed-road pull must fail while stale/empty/live-agreement hold',
+    },
+    {
         id: 'settler-founding',
         file: 'closed-world.js',
         target: 'group.beliefs[site] = { perceivedDanger: 0.2, confidence: 0.5, tick, source: \'settler-survey\' };',
