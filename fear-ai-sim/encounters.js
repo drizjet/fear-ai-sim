@@ -71,6 +71,16 @@ export function encounterCatalog() {
             id: 'refugee-group',
             description: 'A war-driven refugee group approaches a settlement, seeking entry.',
             priority: 1,
+            // R8 (rate calibration): at most one firing per 15
+            // ticks. Each firing absorbs 1-3 refugees while
+            // demography births floor(pop * 0.01) per tick — an
+            // uncooled type fires every tick that grievance
+            // exceeds 0.3 and swamps births in quiet worlds. A
+            // 15-tick floor caps inflow at ~0.2/tick, a bounded
+            // supplement instead of the dominant pump. Enforced
+            // generically in tickClosedWorld via
+            // world.encounterCooldowns.
+            cooldownTicks: 15,
             check(world) {
                 // A refugee encounter is plausible when there is
                 // recent faction conflict (grievance > 0) and a

@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-R7-FIDELITY-MATERIAL (Lane B, unaccepted)
+EVID-2026-09-04-R8-ENCOUNTERS (Lane B, unaccepted)
+
+## R8 — encounter rate calibration + bandit initiative
+
+- Refugee rate: refugee-group carries cooldownTicks 15 (1-3 refugees per firing vs floor(pop*0.01) births — uncooled it fired every grievance>0.3 tick and swamped births). Generic mechanism: world.encounterCooldowns (templateId -> last tick, JSON-safe), scheduler lists/fires only fireable templates, firing stamps the ledger. Detector: 60 pinned-grievance ticks yield 1-5 refugee groups.
+- Bandit initiative: contact-starved bandits (locationAge >= 15, lootExpectation < 0.3 — own-state only, no distant truth) scout a neighboring road (shared-town topology) when the utility path says stay, recorded as reason starvation-scout. The 15-tick floor sits past the 10-tick relocation cooldown so utility moves on real beliefs go first. Detectors: idle bandit relocates within 40 ticks; fed bandit (loot 0.7) never scouts. A first temperature-only attempt failed structurally (switch-margin gate filters before softmax) — replaced with the topology scout, not stacked on top.
+- Self-caught: a range edit dropped the instantiateEncounter call line (ReferenceError on first probe run); repaired and diff-audited the whole encounter block.
+- Every change mutation-tested. Validation: 186/1358 suite, 4/15 long-horizon, lint exit 0 (2850 rows), build green, authority CLEAN, replay 38/38.
 
 ## R7 — fidelity and material edge cases (F3, F4, MAT-002/003/004)
 

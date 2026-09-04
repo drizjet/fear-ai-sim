@@ -930,6 +930,9 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
             },
         },
         pendingTrips: [],
+        // R8 (rate calibration): templateId -> last fired tick.
+        // Plain object: JSON-safe across save/load and fork.
+        encounterCooldowns: {},
         scheduledConsequences: [],
         routeCommitments: [],
         patrolAssignments: [],
@@ -3427,7 +3430,20 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         };
     }
     const eligibleEncounters = evaluateEncounterEligibility(world, { tick });
-    if (eligibleEncounters.length > 0) {
+    // R8 (rate calibration): templates with cooldownTicks sit out
+    // until the floor elapses since their last firing. The ledger
+    // only ever lists fireable candidates. Plain object, JSON-safe
+    // across save/load and fork.
+    if (!world.encounterCooldowns || typeof world.encounterCooldowns !== 'object') {
+        world.encounterCooldowns = {};
+    }
+    const fireableEncounters = eligibleEncounters.filter(template => {
+        const floor = Number(template.cooldownTicks) || 0;
+        if (!(floor > 0)) return true;
+        const last = Number(world.encounterCooldowns[template.id]);
+        return !Number.isFinite(last) || (tick - last) >= floor;
+    });
+    if (fireableEncounters.length > 0) {
         // R2b: the candidate heads the encounter chain. Its parents
         // are the route exposures that motivated consideration; with
         // none, it declares its root (candidate consideration starts
@@ -3437,7 +3453,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             type: 'CANDIDATE_ENCOUNTER',
             tick,
             requestedAttackRoadId: requestedAttackRoute,
-            candidates: eligibleEncounters.map(template => ({
+            candidates: fireableEncounters.map(template => ({
                 id: template.id,
                 description: template.description,
                 priority: template.priority
@@ -3469,7 +3485,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // priority DESC before shuffling, so the highest-
         // priority eligible encounter is statistically the
         // most likely to be picked first.
-        const eligibleByPriority = eligibleEncounters.slice().sort((a, b) => (b.priority || 0) - (a.priority || 0));
+        const eligibleByPriority = fireableEncounters.slice().sort((a, b) => (b.priority || 0) - (a.priority || 0));
         // A requested attack route is an explicit action input, so select the
         // plausible bandit-ambush deterministically rather than allowing a
         // lower-priority wildlife/checkpoint template to consume the request.
@@ -3480,6 +3496,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             ? [requestedAmbush]
             : selectEncounterCandidates(eligibleByPriority, { rng: activeRng, maxCandidates: 1 });
         for (const template of selected) {
+            // R8: firing stamps the cooldown ledger so the next
+            // consideration sits this template out until its floor.
+            if ((Number(template.cooldownTicks) || 0) > 0) {
+                world.encounterCooldowns[template.id] = tick;
+            }
             const firstCreatedIndex = world.events.length;
             const result = instantiateEncounter(template, world, { tick, rng: activeRng, parentEventIds: [candidateEvent.eventId] });
             const createdEvents = world.events.slice(firstCreatedIndex);
@@ -3706,6 +3727,12 @@ function relocateBanditViaRoaming(bandit, routes, { tick = 0 } = {}) {
     // Deterministic rng seeded by the bandit's id.
     const seed = hashStringToSeed(bandit.id);
     const rng = makeXorShift32(seed);
+    // R8 (bandit initiative): contact starvation is the bandit's
+    // own state — locationAge counts ticks since arrival and
+    // lootExpectation is its own loot history. No distant truth
+    // is read. Evaluated after the utility path says stay.
+    const idleTicks = Number.isFinite(bandit.locationAge) ? bandit.locationAge : 0;
+    const starved = idleTicks >= 15 && (bandit.lootExpectation ?? 0) < 0.3;
     const group = createRoamingGroup({
         id: bandit.id,
         currentLocation: bandit.roadId,
@@ -3725,6 +3752,29 @@ function relocateBanditViaRoaming(bandit, routes, { tick = 0 } = {}) {
     // chooseRoamingDestination returned the current
     // location, the bandit stays put (no relocation event).
     if (nextLocation === bandit.roadId) {
+        // R8: starvation scout. The utility path keeps a bandit
+        // with empty beliefs put (other roads score below the
+        // switch margin when lootExpectation is 0), so without a
+        // fallback it freezes forever. A starved bandit scouts a
+        // neighboring road — topology only (roads sharing a town
+        // with the current road), own-state trigger, encounter
+        // ledger records reason 'starvation-scout'. The draw
+        // advances with idleness so successive scouts vary while
+        // staying deterministic for (bandit, tick).
+        if (starved) {
+            const here = routes.find(route => route.id === bandit.roadId);
+            const endpoints = new Set([here?.from, here?.to].filter(Boolean));
+            const neighbors = routes
+                .map(route => route.id)
+                .filter(id => id !== bandit.roadId && routes.some(route =>
+                    route.id === id && (endpoints.has(route.from) || endpoints.has(route.to))));
+            if (neighbors.length > 0) {
+                const scoutRng = makeXorShift32(seed ^ (idleTicks & 0xffff));
+                const pick = neighbors[Math.floor(scoutRng() * neighbors.length) % neighbors.length];
+                bandit._lastRelocationTick = tick;
+                return { relocated: true, from: bandit.roadId, to: pick, reason: 'starvation-scout' };
+            }
+        }
         return { relocated: false, from: bandit.roadId, to: bandit.roadId, reason: 'stay' };
     }
     bandit._lastRelocationTick = tick;
