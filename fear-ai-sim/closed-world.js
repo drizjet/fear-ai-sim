@@ -573,6 +573,7 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
         trip.lastEventId = exposure.eventId;
         if (trip.remainingTicks === 0) {
             trip.status = 'ARRIVED';
+            trip.arrivedTick = tick;
             const arrival = emitPendingWorldEvent(world, {
                 type: 'TRIP_ARRIVAL',
                 actionId: trip.actionId,
@@ -590,7 +591,42 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
         const trip = world.pendingTrips.find(item => item.tripId === consequence.tripId);
         if (!trip || trip.status !== 'ARRIVED') continue;
         const destination = world.towns?.get?.(trip.destinationTownId);
-        if (!destination?.market || typeof destination.market.deliverCargo !== 'function') continue;
+        if (!destination?.market || typeof destination.market.deliverCargo !== 'function') {
+            // R7 (V8 audit MAT-004): terminal expiry for arrivals
+            // that can never deliver. Without this, a trip whose
+            // destination market is gone sits ARRIVED forever with
+            // its consequence PENDING and its route commitment /
+            // patrol assignment ACTIVE forever. The cargo was
+            // already debited at shipment; the expiry names the
+            // loss instead of leaving it in limbo.
+            consequence.status = 'EXPIRED';
+            consequence.expiredTick = tick;
+            consequence.expiredReason = 'NO_DELIVERY_MARKET';
+            trip.status = 'EXPIRED';
+            trip.expiredTick = tick;
+            const expiry = emitPendingWorldEvent(world, {
+                type: 'TRIP_EXPIRED',
+                actionId: trip.actionId,
+                tripId: trip.tripId,
+                tick,
+                destinationTownId: trip.destinationTownId,
+                reason: 'NO_DELIVERY_MARKET',
+            }, [trip.arrivalEventId ?? trip.lastEventId, ...consequence.parentEventIds]);
+            trip.lastEventId = expiry.eventId;
+            for (const commitment of world.routeCommitments) {
+                if (commitment.tripId === trip.tripId && commitment.status === 'ACTIVE') {
+                    commitment.status = 'EXPIRED';
+                    commitment.completedTick = tick;
+                }
+            }
+            for (const assignment of world.patrolAssignments) {
+                if (assignment.tripId === trip.tripId && assignment.status === 'ACTIVE') {
+                    assignment.status = 'EXPIRED';
+                    assignment.completedTick = tick;
+                }
+            }
+            continue;
+        }
         const delivery = destination.market.deliverCargo(trip.cargo.kind, trip.cargo.amount, {
             routeRisk: 0,
             confidence: 1,
@@ -675,8 +711,10 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
     // only looks at IN_TRANSIT / ARRIVED, which never accumulates, but
     // the retained objects still leaked memory and save payload size).
     // Delivered trips are removed here so the in-flight set stays small.
+    // R7 (MAT-004): EXPIRED trips prune the same way — their record
+    // lives on in TRIP_EXPIRED and the closed commitments.
     if (Array.isArray(world.pendingTrips)) {
-        world.pendingTrips = world.pendingTrips.filter(trip => trip.status !== 'DELIVERED');
+        world.pendingTrips = world.pendingTrips.filter(trip => trip.status !== 'DELIVERED' && trip.status !== 'EXPIRED');
     }
 
     for (const rumor of world.rumorsInTransit) {
@@ -923,7 +961,13 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         // this set and skip. This prevents the same physical
         // incident from being debited twice (BANDIT_ATTACK
         // + CONVOY_AMBUSH) on the same tick.
-        consumedAttackIds: new Set()
+        consumedAttackIds: new Set(),
+        // R7 (V8 audit MAT-003): one interception per opportunity.
+        // A successful PATROL_INTERCEPTION records its
+        // attackOpportunityId here so a second patrol (or the
+        // second view of the same incident) cannot recover the
+        // same loss again. Serializes as a Set like its sibling.
+        interceptedAttackIds: new Set()
     };
 
     // Constitution §395 / §538: wire a FactionRelationshipVector between
@@ -1877,9 +1921,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             const sourceId = isAttack ? 'attack-witness' : 'relocation-witness';
             const evidenceType = sourceIdToEvidenceType(sourceId);
             const strength = evidenceStrength(evidenceType);
-            const observedDanger = isAttack
+            // R7 (V8 audit F3): witnesses never receive the exact
+            // ground truth. Observation adds ±0.1 noise drawn from
+            // the serializable encounter stream, so save/load and
+            // fork stay exact while no merchant holds actualDanger.
+            const dangerTruth = isAttack
                 ? route.actualDanger
                 : (event.relocation?.roadId === roadId ? route.actualDanger : route.actualDanger * 0.1);
+            const observedDanger = clamp01(dangerTruth + (nextEncounterRandom(world) * 2 - 1) * 0.1);
             const evidence = new Evidence({
                 subject: roadId,
                 claim: 'perceivedDanger',

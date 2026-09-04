@@ -1,6 +1,15 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-04-R6-GATE-HARDENING (Lane B, unaccepted)
+EVID-2026-09-04-R7-FIDELITY-MATERIAL (Lane B, unaccepted)
+
+## R7 — fidelity and material edge cases (F3, F4, MAT-002/003/004)
+
+- F3: the closed-world reducer no longer hands witnesses exact actualDanger. Observations carry ±0.1 encounter-stream noise (save/load exact, no merchant holds ground truth). Detector: 6 successive witnesses vary within [0.7, 0.9] around road-a truth 0.8.
+- F4: chooseMerchantRouteDecision ranked entries carry belief snapshots, not live handles into merchant.routeBeliefs. Detector mutates ranked beliefs and asserts the store is untouched.
+- MAT-002: tickPatrol intercepts CONVOY_AMBUSH as well as BANDIT_ATTACK (derived convoy views skipped — no loss to recover). Recovery splits evenly across memberIds with transitLoss reversal and per-member belief updates.
+- MAT-003: one interception per opportunity via world.interceptedAttackIds (serialized Set): dual views sharing an id and two patrols on one road each recover exactly once. 4 detectors incl. derived-view skip.
+- MAT-004: ARRIVED trips with no deliverable market reach terminal EXPIRED (consequence, trip, commitment, assignment all close with TRIP_EXPIRED event; expired trips prune like delivered). Arrival tick recorded. Success path untouched.
+- Every fix mutation-tested (gate removal fails its detector, restore passes). Validation: 184/1355 suite, 4/15 long-horizon, lint exit 0 (2615 rows), build green, authority CLEAN, replay 38/38.
 
 ## R6 — gate hardening (authority + evidence rules + CI)
 

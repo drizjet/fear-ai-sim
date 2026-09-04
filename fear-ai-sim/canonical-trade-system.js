@@ -282,7 +282,11 @@ export function chooseMerchantRouteDecision(merchant, routes, perception, { tick
             route,
             index,
             score,
-            belief,
+            // R7 (V8 audit F4): the ranking carries a snapshot, not
+            // a live handle into merchant.routeBeliefs. Readers of
+            // the decision (WHY audit, rejected list) must not be
+            // able to mutate the merchant's belief store.
+            belief: { perceivedDanger: belief.perceivedDanger, confidence: belief.confidence },
             cargoLossRisk,
             distanceCost,
             dangerPenalty,
@@ -737,13 +741,32 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
         return { ok: true, events: [], reason: 'NO_RESOURCES', gated: true };
     }
     if (!Array.isArray(world.events)) world.events = [];
+    // R7 (V8 audit MAT-002): the convoy is interceptable too. A
+    // CONVOY_AMBUSH is a loss-bearing attack view on the deployed
+    // road; without this the convoy has no recoverability while
+    // lone merchants do. Derived convoy views (the direct attack
+    // already debited) carry no loss and are skipped.
     const eventsThisTick = getWorldEvents(world, {
-        type: 'BANDIT_ATTACK',
+        types: ['BANDIT_ATTACK', 'CONVOY_AMBUSH'],
         tick,
-    }).filter(e => e.roadId === patrol.deployedRoute);
+    }).filter(e => e.roadId === patrol.deployedRoute
+        && !(e.type === 'CONVOY_AMBUSH' && e.derived === true));
     if (eventsThisTick.length === 0) return { ok: true, events: [] };
+    // R7 (V8 audit MAT-003): one interception per opportunity. Two
+    // views of the same incident share an attackOpportunityId, and
+    // two patrols may sweep the same road on the same tick. The
+    // first interception wins; the rest skip so recovered cargo is
+    // never credited twice.
+    if (!(world.interceptedAttackIds instanceof Set)) {
+        world.interceptedAttackIds = new Set(world.interceptedAttackIds ?? []);
+    }
     const produced = [];
+    const claimedThisTick = new Set();
     for (const attack of eventsThisTick) {
+        const opportunityKey = attack.attackOpportunityId ?? attack.eventId ?? null;
+        if (opportunityKey !== null
+            && (world.interceptedAttackIds.has(opportunityKey) || claimedThisTick.has(opportunityKey))) continue;
+        if (opportunityKey !== null) claimedThisTick.add(opportunityKey);
         const attacker = world.bandits?.find(bandit => bandit.id === attack.banditId);
         const violatorFactionId = attack.factionId ?? attacker?.factionId ?? null;
         // Treaty observations are observer-scoped. A patrol consumes only
@@ -808,39 +831,50 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
             const interceptRoll = rng();
             if (interceptRoll < patrol.interceptionRate) {
                 patrol.interceptions += 1;
+                if (opportunityKey !== null) world.interceptedAttackIds.add(opportunityKey);
                 // Reverse the cargo loss: restore the lost cargo to the
                 // merchant (cargo was set to 0 by resolveBanditAttack).
-                const merchant = (world.merchants || []).find(m => m.id === attack.merchantId);
-                if (merchant) {
-                    merchant.cargo = (merchant.cargo || 0) + (attack.lost || 0);
-                    // R2-W1: interception reverses the loss-sink booking
-                    // made at attack time — the cargo is recovered, not
-                    // destroyed. Without this the global mass identity
-                    // would double-count the recovered material.
-                    if (world.transitLoss && typeof world.transitLoss === 'object') {
-                        const kind = merchant.cargoKind ?? 'food';
-                        world.transitLoss[kind] = Math.max(0, (Number(world.transitLoss[kind]) || 0) - (attack.lost || 0));
-                    }
+                // R7 (MAT-002): a convoy ambush debited the group and
+                // redistributed the remainder evenly, so the recovery
+                // returns the loss split evenly across the member list.
+                const recoveredMembers = attack.type === 'CONVOY_AMBUSH' && Array.isArray(attack.merchantIds)
+                    ? attack.merchantIds
+                    : (attack.merchantId ? [attack.merchantId] : []);
+                const memberShare = recoveredMembers.length > 0 ? (attack.lost || 0) / recoveredMembers.length : 0;
+                let recoveryKind = 'food';
+                for (const memberId of recoveredMembers) {
+                    const member = (world.merchants || []).find(m => m.id === memberId);
+                    if (!member) continue;
+                    member.cargo = (member.cargo || 0) + memberShare;
+                    recoveryKind = member.cargoKind ?? recoveryKind;
                     // LIVE_CONSUMER wire: a successful interception is
                     // a positive observation for the merchant about
                     // the deployed route. Lower the merchant's
                     // perceivedDanger for that route (since the route
                     // is being patrolled) and bump confidence.
-                    if (merchant.routeBeliefs && merchant.routeBeliefs[patrol.deployedRoute]) {
-                        const current = merchant.routeBeliefs[patrol.deployedRoute].perceivedDanger ?? 0.5;
-                        merchant.routeBeliefs[patrol.deployedRoute].perceivedDanger = clamp01(current * 0.7);
-                        merchant.routeBeliefs[patrol.deployedRoute].confidence = clamp01(
-                            (merchant.routeBeliefs[patrol.deployedRoute].confidence ?? 0.5) + 0.1
+                    if (member.routeBeliefs && member.routeBeliefs[patrol.deployedRoute]) {
+                        const current = member.routeBeliefs[patrol.deployedRoute].perceivedDanger ?? 0.5;
+                        member.routeBeliefs[patrol.deployedRoute].perceivedDanger = clamp01(current * 0.7);
+                        member.routeBeliefs[patrol.deployedRoute].confidence = clamp01(
+                            (member.routeBeliefs[patrol.deployedRoute].confidence ?? 0.5) + 0.1
                         );
-                        merchant.routeBeliefs[patrol.deployedRoute].source = 'patrol_interception';
+                        member.routeBeliefs[patrol.deployedRoute].source = 'patrol_interception';
                     }
+                }
+                // R2-W1: interception reverses the loss-sink booking
+                // made at attack time — the cargo is recovered, not
+                // destroyed. Without this the global mass identity
+                // would double-count the recovered material.
+                if (world.transitLoss && typeof world.transitLoss === 'object' && (attack.lost || 0) > 0) {
+                    world.transitLoss[recoveryKind] = Math.max(0, (Number(world.transitLoss[recoveryKind]) || 0) - (attack.lost || 0));
                 }
                 const interceptEvent = {
                     type: 'PATROL_INTERCEPTION',
                     tick,
                     patrolId,
                     attackOpportunityId: attack.attackOpportunityId,
-                    merchantId: attack.merchantId,
+                    merchantId: attack.merchantId ?? recoveredMembers[0] ?? null,
+                    ...(recoveredMembers.length > 1 ? { merchantIds: [...recoveredMembers] } : {}),
                     roadId: attack.roadId,
                     recoveredCargo: attack.lost || 0,
                     enforcementWhy,
