@@ -8,7 +8,7 @@ import { JusticeSystem } from './justice.js';
 import { InteractionEngine } from './interactions.js';
 import { FactionRelationshipVector, evaluateStance, chooseStance, StanceLadder } from './factionrelationship.js';
 import { evaluateEncounterEligibility, selectEncounterCandidates, instantiateEncounter } from './encounters.js';
-import { checkTreatyCompliance, activeTreatiesFor, createTreaty } from './treaty.js';
+import { checkTreatyCompliance, activeTreatiesFor, createTreaty, terminateTreaty } from './treaty.js';
 import { createRoamingGroup, chooseRoamingDestination, generateCandidates, startTravel, advanceTravel, tickRoamingGroup, scoutDestination, recordObservation, ROAMING_MODE, makeXorShift32 } from './roaming.js';
 import { tickWildlifeGroup } from './wildlife.js';
 import { tickMerchant as tickCanonicalMerchant, tickBandit as tickCanonicalBandit, tickPatrol as tickCanonicalPatrol, selectMerchantCargoKind } from './canonical-trade-system.js';
@@ -3564,6 +3564,297 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tick,
         }, []);
     }
+    // 7e. E17 (recognition, claims, and secession diplomacy): the
+    // first autonomous diplomacy. Runs BEFORE the 7b takeover contest
+    // (and 7f with it) so verdicts take effect first: a yielded town
+    // is protected before the war machine reads it, and a declaration
+    // breaks the pact before this tick's contest. Recognition and
+    // verdicts read last tick's control (one-tick lag, harmless:
+    // founding-age gates make same-tick interactions nil).
+    // Incumbents observe each secession-born polity once it has
+    // governed a while and grant or refuse recognition through the
+    // existing treaty record — no parallel diplomacy simulator.
+    // Recognition unlocks treaty access (a non-aggression pact
+    // offer); refusal is a one-shot audited event while the grant
+    // question stays open to reform. The former ruler's founding
+    // claim is untouched by recognition (political status is not
+    // absolution. Withdrawal and verdicts live in 7f below.
+    const RECOGNITION_MIN_AGE = 10;
+    const RECOGNITION_MIN_LEGITIMACY = 0.5;
+    const PACT_MIN_AGE = 15;
+    // A polity's live violence record: HARM sourced to it after its
+    // founding tick across all its pairs. The founding claim harm
+    // (tick === foundedTick) is exempt — secession itself is not
+    // violence.
+    const polityHarmSinceBirth = (pol, sinceTick) => {
+        for (const vec of pol?.relationships?.values?.() ?? []) {
+            for (const ev of vec?.events ?? []) {
+                if (ev?.type === 'HARM' && ev?.fromFactionId === pol.id && (ev?.tick ?? 0) > sinceTick) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    };
+    for (const [tId, tTown] of world.towns) {
+        const pId = tTown?.foundedPolityId;
+        if (!pId) continue;
+        const pol = (world.factions ?? []).find(f => f.id === pId);
+        if (!pol) continue;
+        // Exile rule: diplomacy serves the polity that holds its
+        // town. A conquered (landless) polity has no standing here.
+        if (tTown.controlledBy !== pId) continue;
+        const pFounded = world.events ? findLatestWorldEvent(world,
+            event => event.type === 'POLITY_FOUNDED' && event.polityId === pId, 'POLITY_FOUNDED') : null;
+        const pFoundedTick = Number.isFinite(pFounded?.tick) ? pFounded.tick : tick;
+        if (tick - pFoundedTick < RECOGNITION_MIN_AGE) continue;
+        if (!Array.isArray(pol.refusedBy)) pol.refusedBy = [];
+        for (const incumbent of world.factions ?? []) {
+            if (!incumbent || incumbent.id === pId) continue;
+            const pPair = pol.relationships?.get?.(incumbent.id) ?? null;
+            const priorRecognition = (world.treaties ?? []).some(treaty =>
+                treaty?.terms?.kind === 'recognition'
+                && (treaty.participants ?? []).includes(incumbent.id)
+                && (treaty.participants ?? []).includes(pId));
+            if (!priorRecognition) {
+                const harmful = polityHarmSinceBirth(pol, pFoundedTick);
+                const legitimate = (Number(pol.legitimacy) || 0) >= RECOGNITION_MIN_LEGITIMACY;
+                if (!harmful && legitimate) {
+                    const treaty = createTreaty({
+                        id: `treaty-recognition-${incumbent.id}-${pId}-${tick}`,
+                        participants: [incumbent.id, pId],
+                        // Direction lives in the terms: the polity is
+                        // the recognized party, never the granter.
+                        // (The polity grants recognition to OTHER
+                        // polities in their towns' passes.)
+                        terms: { kind: 'recognition', scope: tId, polityId: pId, recognizerId: incumbent.id },
+                        startTick: tick,
+                    });
+                    if (!Array.isArray(world.treaties)) world.treaties = [];
+                    world.treaties.push(treaty);
+                    // Priced, not free: the grant is the recognizer's
+                    // cooperative act, so its perspective earns the
+                    // trade-dimension dividend (recordTrade credits the
+                    // fromFactionId perspective by contract).
+                    if (pPair && typeof pPair.recordTrade === 'function') {
+                        pPair.recordTrade({ value: 1, tick, fromFactionId: incumbent.id });
+                    }
+                    appendWorldEvent(world, {
+                        type: 'TREATY_FORMED',
+                        treatyId: treaty.id,
+                        treaty: { ...treaty, participants: treaty.participants.slice() },
+                        participants: treaty.participants.slice(),
+                        terms: { ...treaty.terms },
+                        polityId: pId,
+                        recognizerId: incumbent.id,
+                        tick,
+                        rootReason: 'RECOGNITION_GRANTED',
+                    }, pFounded?.eventId ? [pFounded.eventId] : []);
+                } else if (!pol.refusedBy.includes(incumbent.id)) {
+                    pol.refusedBy.push(incumbent.id);
+                    appendWorldEvent(world, {
+                        type: 'RECOGNITION_REFUSED',
+                        recognizerId: incumbent.id,
+                        polityId: pId,
+                        townId: tId,
+                        reason: harmful ? 'POLITY_HARM_RECORD' : 'LOW_LEGITIMACY',
+                        polityLegitimacy: Number(pol.legitimacy) || 0,
+                        tick,
+                    }, pFounded?.eventId ? [pFounded.eventId] : []);
+                }
+            }
+            // Treaty access: an ACTIVE recognition unlocks a pact
+            // offer from the recognizer. Same non-aggression record
+            // the manual path makes (same id shape), parented to the
+            // recognition formation so the chain reads grant -> pact.
+            if (tick - pFoundedTick >= PACT_MIN_AGE) {
+                const recognition = (world.treaties ?? []).find(treaty =>
+                    treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'recognition'
+                    && (treaty.participants ?? []).includes(incumbent.id)
+                    && (treaty.participants ?? []).includes(pId));
+                const pactPrior = (world.treaties ?? []).some(treaty =>
+                    treaty?.terms?.kind === 'non-aggression'
+                    && (treaty.participants ?? []).includes(incumbent.id)
+                    && (treaty.participants ?? []).includes(pId));
+                if (recognition && !pactPrior && !polityHarmSinceBirth(pol, pFoundedTick)) {
+                    const pact = createTreaty({
+                        id: `treaty-nonaggression-${incumbent.id}-${pId}-${tick}`,
+                        participants: [incumbent.id, pId],
+                        terms: { kind: 'non-aggression', scope: 'all' },
+                        startTick: tick,
+                    });
+                    if (!Array.isArray(world.treaties)) world.treaties = [];
+                    world.treaties.push(pact);
+                    const recognitionFormed = world.events ? findLatestWorldEvent(world,
+                        event => event.type === 'TREATY_FORMED' && event.treatyId === recognition.id, 'TREATY_FORMED') : null;
+                    appendWorldEvent(world, {
+                        type: 'TREATY_FORMED',
+                        treatyId: pact.id,
+                        treaty: { ...pact, participants: pact.participants.slice() },
+                        participants: pact.participants.slice(),
+                        terms: { ...pact.terms },
+                        tick,
+                        rootReason: 'PACT_AFTER_RECOGNITION',
+                    }, recognitionFormed?.eventId ? [recognitionFormed.eventId]
+                        : (pFounded?.eventId ? [pFounded.eventId] : []));
+                }
+            }
+        }
+    }
+    // 7f. E18 (reconquest and reintegration): the former ruler's
+    // claim gets a verdict, and betrayal costs recognition. The pass
+    // deliberates only over HOT claims (the former's own directional
+    // stance at WAR): cold claims stay silent, so reconquest is never
+    // automatic. Three exits, decided once per (former, polity):
+    // overwhelming threat plus a failing polity yields peace
+    // (demand -> reintegrate, no battle, no occupation); an
+    // affordable war over a worthwhile town declares (pacts and
+    // recognition with the polity are terminated first as casus
+    // belli, then the EXISTING contest machinery decides what war
+    // wins — declaration is not conquest); anything poorer is
+    // accepted (claim released through the trade dimension). The
+    // verdict waits until the post-recognition order settles
+    // (RECONQUEST_MIN_AGE) so E17 protection means something.
+    // Withdrawal is separate: a polity that harms or raids after
+    // being recognized loses the recognition (binding pacts stand).
+    const RECONQUEST_MIN_AGE = 50;
+    const RECONQUEST_TAKEOVER_COST = 2;
+    const RECONQUEST_MIN_TOWN_POP = 10;
+    const RECONQUEST_YIELD_LEGITIMACY = 0.4;
+    // Standing betrayed: polity-sourced HARM on any of its pairs, or
+    // an executed raid (INVASION), after the recognition started.
+    for (const treaty of world.treaties ?? []) {
+        if (!treaty || treaty.status !== 'ACTIVE' || treaty.terms?.kind !== 'recognition') continue;
+        const wPolityId = treaty.terms?.polityId;
+        if (!wPolityId) continue;
+        const wPol = (world.factions ?? []).find(f => f.id === wPolityId);
+        if (!wPol) continue;
+        let betrayed = false;
+        for (const vec of wPol.relationships?.values?.() ?? []) {
+            for (const ev of vec?.events ?? []) {
+                if (ev?.type === 'HARM' && ev?.fromFactionId === wPolityId && (ev?.tick ?? 0) > treaty.startTick) {
+                    betrayed = true;
+                    break;
+                }
+            }
+            if (betrayed) break;
+        }
+        if (!betrayed) {
+            const raids = getWorldEvents(world, { type: 'INVASION' });
+            betrayed = raids.some(event => event.factionId === wPolityId && (event.tick ?? 0) > treaty.startTick);
+        }
+        if (betrayed) terminateTreaty({ treaty, reason: 'POLITY_BETRAYAL', world, tick });
+    }
+    // One verdict per (former, polity), read off the ledger so
+    // save/load and forks cannot double-deliberate.
+    const decidedE18 = (formerId, pId, tId) => getWorldEvents(world, {
+        types: ['INDEPENDENCE_ACCEPTED', 'RECONQUEST_DECLARED', 'REINTEGRATION_DEMANDED', 'TOWN_REINTEGRATED'],
+    }).some(event =>
+        ((event.polityId === pId || event.fromFactionId === pId)
+            && (event.formerId === formerId || event.toFactionId === formerId))
+        || (event.type === 'TOWN_REINTEGRATED' && event.townId === tId
+            && event.fromFactionId === pId && event.toFactionId === formerId));
+    for (const [tId, tTown] of world.towns) {
+        const pId = tTown?.foundedPolityId;
+        if (!pId) continue;
+        // Exile rule (mirrors 7e): verdicts serve the polity that
+        // holds its town.
+        if (tTown.controlledBy !== pId) continue;
+        const pol = (world.factions ?? []).find(f => f.id === pId);
+        if (!pol) continue;
+        const pFounded = world.events ? findLatestWorldEvent(world,
+            event => event.type === 'POLITY_FOUNDED' && event.polityId === pId, 'POLITY_FOUNDED') : null;
+        const pFoundedTick = Number.isFinite(pFounded?.tick) ? pFounded.tick : tick;
+        if (tick - pFoundedTick < RECONQUEST_MIN_AGE) continue;
+        const fromId = pFounded?.fromFactionId ?? null;
+        const former = fromId ? (world.factions ?? []).find(f => f.id === fromId) : null;
+        if (!former) continue;
+        if (decidedE18(fromId, pId, tId)) continue;
+        // Hot claims only: the relationship machine must itself
+        // want war. A calm former keeps a cold claim (silence).
+        const fPair = world.relationships.get(`${fromId}::${pId}`)
+            ?? world.relationships.get(`${pId}::${fromId}`) ?? null;
+        const fStance = fPair && typeof fPair.stanceFrom === 'function'
+            ? fPair.stanceFrom(fromId) : null;
+        if (!Number.isFinite(fStance) || fStance < StanceLadder.WAR) continue;
+        // Cost the war on live books: the contest's own defender
+        // formula prices the town, so declaration and conquest agree
+        // on what is being weighed.
+        const formerPower = Math.max(0, Number(former.resources) || 0);
+        const townPop = Math.max(0, Number(tTown.population) || 0);
+        const polityPower = Math.max(0, Number(pol.resources) || 0) + townPop * 0.1;
+        const founderParents = pFounded?.eventId ? [pFounded.eventId] : [];
+        if (formerPower >= 2 * polityPower && (Number(pol.legitimacy) || 0) < RECONQUEST_YIELD_LEGITIMACY) {
+            // Overwhelming threat meets a failing polity: demand, and
+            // it yields without battle. No occupation follows a war
+            // that never happened; the polity survives landless.
+            const demand = appendWorldEvent(world, {
+                type: 'REINTEGRATION_DEMANDED',
+                formerId: fromId,
+                polityId: pId,
+                townId: tId,
+                formerPower,
+                polityPower,
+                tick,
+            }, founderParents);
+            tTown.controlledBy = fromId;
+            appendWorldEvent(world, {
+                type: 'TOWN_REINTEGRATED',
+                townId: tId,
+                fromFactionId: pId,
+                toFactionId: fromId,
+                tick,
+            }, demand?.eventId ? [demand.eventId] : founderParents);
+        } else if (formerPower >= RECONQUEST_TAKEOVER_COST && townPop >= RECONQUEST_MIN_TOWN_POP) {
+            // Worth the gamble: break faith first (pacts and standing
+            // terminate as casus belli), then let the contest speak.
+            const broken = [];
+            for (const treaty of world.treaties ?? []) {
+                if (!treaty || treaty.status !== 'ACTIVE') continue;
+                const parts = treaty.participants ?? [];
+                if (!parts.includes(fromId) || !parts.includes(pId)) continue;
+                if (treaty.terms?.kind !== 'non-aggression' && treaty.terms?.kind !== 'recognition') continue;
+                terminateTreaty({ treaty, reason: 'RECONQUEST', world, tick });
+                broken.push(treaty.id);
+            }
+            if (fPair && typeof fPair.recordHarm === 'function') {
+                fPair.recordHarm({ severity: 0.5, tick, fromFactionId: fromId });
+            }
+            const parents = founderParents.slice();
+            for (const treatyId of broken) {
+                const termEvent = world.events ? findLatestWorldEvent(world,
+                    event => event.type === 'TREATY_TERMINATED' && event.treatyId === treatyId, 'TREATY_TERMINATED') : null;
+                if (termEvent?.eventId) parents.push(termEvent.eventId);
+            }
+            appendWorldEvent(world, {
+                type: 'RECONQUEST_DECLARED',
+                formerId: fromId,
+                polityId: pId,
+                townId: tId,
+                formerPower,
+                polityPower,
+                townPop,
+                brokenTreatyIds: broken,
+                tick,
+            }, parents);
+        } else {
+            // Not worth another war: release the claim through the
+            // trade dimension and record the peace. Terminal.
+            if (fPair && typeof fPair.recordTrade === 'function') {
+                fPair.recordTrade({ value: 1, tick, fromFactionId: fromId });
+            }
+            appendWorldEvent(world, {
+                type: 'INDEPENDENCE_ACCEPTED',
+                formerId: fromId,
+                polityId: pId,
+                townId: tId,
+                formerPower,
+                polityPower,
+                townPop,
+                tick,
+            }, founderParents);
+        }
+    }
     // 7b. E8 (settlement takeover): raids on bandits never move
     // borders. A RAID faction at WAR stance toward a rival, with
     // the resources to win the contest, takes an inhabited rival
@@ -4106,138 +4397,6 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             provisionalLegitimacy,
             tick,
         }, secessionEvent?.eventId ? [secessionEvent.eventId] : []);
-    }
-    // 7e. E17 (recognition, claims, and secession diplomacy): the
-    // first autonomous diplomacy. Incumbents observe each
-    // secession-born polity once it has governed a while and grant
-    // or refuse recognition through the existing treaty record —
-    // no parallel diplomacy simulator. Recognition unlocks treaty
-    // access (a non-aggression pact offer); refusal is a one-shot
-    // audited event while the grant question stays open to reform.
-    // The former ruler's founding claim is untouched by recognition
-    // (political status is not absolution — E18 fuel). Withdrawal
-    // and reconquest are E18 work, not here.
-    const RECOGNITION_MIN_AGE = 10;
-    const RECOGNITION_MIN_LEGITIMACY = 0.5;
-    const PACT_MIN_AGE = 15;
-    // A polity's live violence record: HARM sourced to it after its
-    // founding tick across all its pairs. The founding claim harm
-    // (tick === foundedTick) is exempt — secession itself is not
-    // violence.
-    const polityHarmSinceBirth = (pol, sinceTick) => {
-        for (const vec of pol?.relationships?.values?.() ?? []) {
-            for (const ev of vec?.events ?? []) {
-                if (ev?.type === 'HARM' && ev?.fromFactionId === pol.id && (ev?.tick ?? 0) > sinceTick) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    };
-    for (const [tId, tTown] of world.towns) {
-        const pId = tTown?.foundedPolityId;
-        if (!pId) continue;
-        const pol = (world.factions ?? []).find(f => f.id === pId);
-        if (!pol) continue;
-        // Exile rule: diplomacy serves the polity that holds its
-        // town. A conquered (landless) polity has no standing here.
-        if (tTown.controlledBy !== pId) continue;
-        const pFounded = world.events ? findLatestWorldEvent(world,
-            event => event.type === 'POLITY_FOUNDED' && event.polityId === pId, 'POLITY_FOUNDED') : null;
-        const pFoundedTick = Number.isFinite(pFounded?.tick) ? pFounded.tick : tick;
-        if (tick - pFoundedTick < RECOGNITION_MIN_AGE) continue;
-        if (!Array.isArray(pol.refusedBy)) pol.refusedBy = [];
-        for (const incumbent of world.factions ?? []) {
-            if (!incumbent || incumbent.id === pId) continue;
-            const pPair = pol.relationships?.get?.(incumbent.id) ?? null;
-            const priorRecognition = (world.treaties ?? []).some(treaty =>
-                treaty?.terms?.kind === 'recognition'
-                && (treaty.participants ?? []).includes(incumbent.id)
-                && (treaty.participants ?? []).includes(pId));
-            if (!priorRecognition) {
-                const harmful = polityHarmSinceBirth(pol, pFoundedTick);
-                const legitimate = (Number(pol.legitimacy) || 0) >= RECOGNITION_MIN_LEGITIMACY;
-                if (!harmful && legitimate) {
-                    const treaty = createTreaty({
-                        id: `treaty-recognition-${incumbent.id}-${pId}-${tick}`,
-                        participants: [incumbent.id, pId],
-                        // Direction lives in the terms: the polity is
-                        // the recognized party, never the granter.
-                        // (The polity grants recognition to OTHER
-                        // polities in their towns' passes.)
-                        terms: { kind: 'recognition', scope: tId, polityId: pId, recognizerId: incumbent.id },
-                        startTick: tick,
-                    });
-                    if (!Array.isArray(world.treaties)) world.treaties = [];
-                    world.treaties.push(treaty);
-                    // Priced, not free: the grant is the recognizer's
-                    // cooperative act, so its perspective earns the
-                    // trade-dimension dividend (recordTrade credits the
-                    // fromFactionId perspective by contract).
-                    if (pPair && typeof pPair.recordTrade === 'function') {
-                        pPair.recordTrade({ value: 1, tick, fromFactionId: incumbent.id });
-                    }
-                    appendWorldEvent(world, {
-                        type: 'TREATY_FORMED',
-                        treatyId: treaty.id,
-                        treaty: { ...treaty, participants: treaty.participants.slice() },
-                        participants: treaty.participants.slice(),
-                        terms: { ...treaty.terms },
-                        polityId: pId,
-                        recognizerId: incumbent.id,
-                        tick,
-                        rootReason: 'RECOGNITION_GRANTED',
-                    }, pFounded?.eventId ? [pFounded.eventId] : []);
-                } else if (!pol.refusedBy.includes(incumbent.id)) {
-                    pol.refusedBy.push(incumbent.id);
-                    appendWorldEvent(world, {
-                        type: 'RECOGNITION_REFUSED',
-                        recognizerId: incumbent.id,
-                        polityId: pId,
-                        townId: tId,
-                        reason: harmful ? 'POLITY_HARM_RECORD' : 'LOW_LEGITIMACY',
-                        polityLegitimacy: Number(pol.legitimacy) || 0,
-                        tick,
-                    }, pFounded?.eventId ? [pFounded.eventId] : []);
-                }
-            }
-            // Treaty access: an ACTIVE recognition unlocks a pact
-            // offer from the recognizer. Same non-aggression record
-            // the manual path makes (same id shape), parented to the
-            // recognition formation so the chain reads grant -> pact.
-            if (tick - pFoundedTick >= PACT_MIN_AGE) {
-                const recognition = (world.treaties ?? []).find(treaty =>
-                    treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'recognition'
-                    && (treaty.participants ?? []).includes(incumbent.id)
-                    && (treaty.participants ?? []).includes(pId));
-                const pactPrior = (world.treaties ?? []).some(treaty =>
-                    treaty?.terms?.kind === 'non-aggression'
-                    && (treaty.participants ?? []).includes(incumbent.id)
-                    && (treaty.participants ?? []).includes(pId));
-                if (recognition && !pactPrior && !polityHarmSinceBirth(pol, pFoundedTick)) {
-                    const pact = createTreaty({
-                        id: `treaty-nonaggression-${incumbent.id}-${pId}-${tick}`,
-                        participants: [incumbent.id, pId],
-                        terms: { kind: 'non-aggression', scope: 'all' },
-                        startTick: tick,
-                    });
-                    if (!Array.isArray(world.treaties)) world.treaties = [];
-                    world.treaties.push(pact);
-                    const recognitionFormed = world.events ? findLatestWorldEvent(world,
-                        event => event.type === 'TREATY_FORMED' && event.treatyId === recognition.id, 'TREATY_FORMED') : null;
-                    appendWorldEvent(world, {
-                        type: 'TREATY_FORMED',
-                        treatyId: pact.id,
-                        treaty: { ...pact, participants: pact.participants.slice() },
-                        participants: pact.participants.slice(),
-                        terms: { ...pact.terms },
-                        tick,
-                        rootReason: 'PACT_AFTER_RECOGNITION',
-                    }, recognitionFormed?.eventId ? [recognitionFormed.eventId]
-                        : (pFounded?.eventId ? [pFounded.eventId] : []));
-                }
-            }
-        }
     }
     for (const faction of world.factions) {
         // A faction that just raided does not regen this tick — the cost

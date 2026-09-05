@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E17-RECOGNITION (Lane B, unaccepted)
+EVID-2026-09-05-E18-VERDICT (Lane B, unaccepted)
+
+## E18 — reconquest and reintegration: claims get verdicts (expansion)
+
+- Gap (probed, not guessed): former rulers kept hot claims forever with no verdict machinery — no acceptance, no demand, no declaration, no withdrawal — while autonomous pacts made their towns untouchable without any legal way back to war.
+- Fix: step-7f verdict pass (moved with 7e before the 7b contest so yields protect and declarations break pacts before this tick's fight; verdicts read post-tax, pre-spend books). Hot claims only (former stance WAR, cold claims silent — reconquest never automatic): overwhelming threat plus failing polity yields peace (demand -> reintegrate, no battle, no occupation, polity survives landless); affordable war over a worthwhile town declares (recognition and pacts terminate as casus belli, the existing contest decides — capped power fizzles honestly); poor towns are accepted (claim released, terminal). Betrayal (post-recognition HARM or executed raid) withdraws recognition; binding pacts stand.
+- Wild proof: declaration, conquest, occupation, taxation, and revolt-back-to-the-polity close the full arc live in one fixture.
+- Fallout restaged honestly: none beyond new files — all 207 prior suites pass unmodified (stance-gating plus age 50 keeps every earlier fixture silent).
+- Validation: 207/1483 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 74/74 (2 new E18 entries), coverage 115 rows.
 
 ## E17 — recognition, claims, and secession diplomacy (expansion)
 

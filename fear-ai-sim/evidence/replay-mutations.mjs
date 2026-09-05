@@ -551,6 +551,22 @@ const MUTATIONS = [
         note: 'E17 pact access cut; recognition never unlocks protection',
     },
     {
+        id: 'reconquest-verdict',
+        file: 'closed-world.js',
+        target: 'const RECONQUEST_MIN_AGE = 50;',
+        replacement: 'const RECONQUEST_MIN_AGE = 999999;',
+        detectors: 'reconquest-reintegration',
+        note: 'E18 verdict age cut; hot claims never deliberate',
+    },
+    {
+        id: 'reconquest-casus-belli',
+        file: 'closed-world.js',
+        target: `terminateTreaty({ treaty, reason: 'RECONQUEST', world, tick });`,
+        replacement: 'void treaty;',
+        detectors: 'reconquest-reintegration',
+        note: 'E18 pact-break cut; declarations leave protection intact',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',
