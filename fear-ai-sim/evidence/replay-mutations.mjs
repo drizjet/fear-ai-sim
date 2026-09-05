@@ -423,6 +423,22 @@ const MUTATIONS = [
         note: 'E4 raid exposure ignored; migrants must not divert from the raided road',
     },
     {
+        id: 'bandit-heat-marking',
+        file: 'closed-world.js',
+        target: 'raider.heat = Math.min(1, Math.max(0, Number(raider.heat) || 0) + 0.2);',
+        replacement: 'void raider;',
+        detectors: 'bandit-heat',
+        note: 'E10 raid marking cut; notoriety never accumulates',
+    },
+    {
+        id: 'bandit-heat-bonus',
+        file: 'canonical-trade-system.js',
+        target: 'const heatBonus = banditHeat * 0.3;',
+        replacement: 'const heatBonus = 0;',
+        detectors: 'bandit-heat',
+        note: 'E10 heat bonus cut; hot bandits detect like fresh ones',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

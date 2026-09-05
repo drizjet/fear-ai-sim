@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E9-MERCHANT-CAPITAL (Lane B, unaccepted)
+EVID-2026-09-05-E10-BANDIT-HEAT (Lane B, unaccepted)
+
+## E10 — bandit heat: raiding marks the raider (expansion)
+
+- Gap (probed, not guessed): 30 successful raids left the bandit untouched (loot 0.7, no cost, no state) — predation was free on the predator side (only factions paid, via retaliation).
+- Fix: raid heat on the bandit object (+0.2/raid, cap 1, 0.95/tick elapsed-tick cooling in tickBandit, clock anchored at marking). Heat raises patrol detection wherever the bandit goes (+0.3 at full heat), audited in enforcementWhy beside familiarity and lawfulness. Unknown attackers contribute 0.
+- Loop closed: notoriety follows the bandit to fresh roads/patrols; caps at 1; cools below the marginal draw after 60 quiet ticks; per-bandit; save/load identical.
+- Fallout restaged honestly (production untouched except noted): law-lawfulness unknown pin now detects via heat (isolation holds in the Why decomposition, not the outcome); storm Why pins compose heat additively with unchanged outcomes.
+- Validation: 198/1427 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 58/58 (2 new E10 entries), coverage 106 rows.
 
 ## E9 — merchant capital: trade has a downside (expansion)
 

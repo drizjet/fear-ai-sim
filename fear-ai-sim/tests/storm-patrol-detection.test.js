@@ -36,22 +36,26 @@ describe('storms blind patrol detection (slice AG)', () => {
     test('enforcementWhy audits the weather exposure', () => {
         const { world, patrol } = stagedWorld({ stormRoadId: 'road-a', weatherCost: 5 });
         const result = tickPatrol(world, patrol.id, { tick: 5, rng: () => 0.3 });
+        // E10: the staged raid heats the bandit (+0.2 → +0.06), so
+        // the stormed rate is (0.4 + 0.06) * 0.5 ≈ 0.23. Outcomes
+        // are unchanged (0.3 still misses under the storm).
         expect(result.events[0].enforcementWhy).toMatchObject({
             baseDetectionRate: 0.4,
             weatherCost: 5,
             weatherFactor: 0.5,
-            effectiveDetectionRate: 0.2,
         });
+        expect(result.events[0].enforcementWhy.heatBonus).toBeCloseTo(0.06, 10);
+        expect(result.events[0].enforcementWhy.effectiveDetectionRate).toBeCloseTo(0.23, 10);
     });
 
-    test('calm patrols factor exactly 1 and keep the legacy rate', () => {
+    test('calm patrols factor exactly 1 while heat composes additively', () => {
         const { world, patrol } = stagedWorld({});
         const result = tickPatrol(world, patrol.id, { tick: 5, rng: () => 0.3 });
         expect(result.events[0].enforcementWhy).toMatchObject({
             weatherCost: 0,
             weatherFactor: 1,
-            effectiveDetectionRate: 0.4,
         });
+        expect(result.events[0].enforcementWhy.effectiveDetectionRate).toBeCloseTo(0.46, 10);
     });
 
     test('storm on an unrelated road does not blind this patrol', () => {

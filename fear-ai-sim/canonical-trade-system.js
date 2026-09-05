@@ -720,6 +720,19 @@ export function tickBandit(world, banditId, { tick = 0, rng = deterministicRng(1
             belief.lastDecayTick = tick;
         }
     }
+    // E10: heat cools 0.95/tick on the same elapsed-tick basis as
+    // recency (V8 checkpoint §8: wall ticks, not invocations).
+    // Quiet bandits go cold; raiding re-marks them above.
+    if (Number.isFinite(bandit.heat) && bandit.heat > 0) {
+        const lastHeatTick = Number.isFinite(bandit.lastHeatTick) ? bandit.lastHeatTick : tick;
+        const heatElapsed = Math.max(0, tick - lastHeatTick);
+        if (heatElapsed > 0) {
+            bandit.heat = Math.max(0, bandit.heat * Math.pow(0.95, heatElapsed));
+            bandit.lastHeatTick = tick;
+        }
+    } else if (bandit.heat !== undefined) {
+        bandit.lastHeatTick = tick;
+    }
     for (const merchant of (world.merchants || [])) {
         const route = merchant.selectedRoute || merchant.lastRoute;
         // R1 (V8 audit F2-BANDIT-PANOPTICON): co-location boundary. The
@@ -909,7 +922,13 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
         if (!patrol.roadFamiliarity || typeof patrol.roadFamiliarity !== 'object') patrol.roadFamiliarity = {};
         const roadSeen = Math.max(0, Number(patrol.roadFamiliarity[patrol.deployedRoute]) || 0);
         const familiarityBonus = Math.min(1, roadSeen / 10) * 0.2;
-        const effectiveDetectionRate = clamp01((patrol.detectionRate + lawfulnessAttentionBonus + familiarityBonus) * weatherFactor);
+        // E10: notoriety follows the bandit, not the road. A hot
+        // bandit is easier to spot anywhere (+0.3 at full heat).
+        // Unknown attackers (no bandit object) contribute exactly 0,
+        // so factionless-fixture behavior is unchanged.
+        const banditHeat = Math.min(1, Math.max(0, Number(attacker?.heat) || 0));
+        const heatBonus = banditHeat * 0.3;
+        const effectiveDetectionRate = clamp01((patrol.detectionRate + lawfulnessAttentionBonus + familiarityBonus + heatBonus) * weatherFactor);
         const enforcementWhy = {
             violatorFactionId,
             lawfulnessObserverId: patrolFaction?.id ?? null,
@@ -918,6 +937,8 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
             lawfulnessAttentionBonus,
             roadFamiliarity: roadSeen,
             familiarityBonus,
+            banditHeat,
+            heatBonus,
             baseDetectionRate: patrol.detectionRate,
             weatherCost: patrolWeatherCost,
             weatherFactor,

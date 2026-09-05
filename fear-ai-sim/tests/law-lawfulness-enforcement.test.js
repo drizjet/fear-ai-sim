@@ -81,10 +81,15 @@ describe('law violation -> lawfulness -> patrol attention (slice V)', () => {
         expect(unknownEvent.enforcementWhy).toMatchObject({
             lawfulnessObserved: false,
             lawfulnessAttentionBonus: 0,
-            effectiveDetectionRate: 0.4,
+            // E10: the staged raid heats the bandit (+0.2 → +0.06),
+            // so the unobserved patrol now detects via heat, not
+            // law. Channel isolation holds in the decomposition
+            // (lawfulness 0, heat ≈0.06), not in the outcome.
         });
+        expect(unknownEvent.enforcementWhy.heatBonus).toBeCloseTo(0.06, 10);
+        expect(unknownEvent.enforcementWhy.effectiveDetectionRate).toBeCloseTo(0.46, 10);
         expect(observedPatrol.detections).toBe(1);
-        expect(unknownPatrol.detections).toBe(0);
+        expect(unknownPatrol.detections).toBe(1);
     });
 
     test('encounter-path LAW_VIOLATED carries faction identity for patrol', () => {

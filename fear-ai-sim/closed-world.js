@@ -919,6 +919,11 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
                 // the default scenario) so a north↔south
                 // non-aggression pact would block the raid.
                 { roadId: 'road-a', alternateRoadId: 'road-b', lootExpectation: 0.7, factionId: 'south-faction',
+                    // E10: raid heat (0..1). Every successful raid
+                    // marks the bandit (+0.2); heat raises patrol
+                    // detection wherever it goes and cools 0.95/tick
+                    // when quiet. Plain number, save/load-safe.
+                    heat: 0,
                     // EVID-2026-08-29-CANONICAL-TRADE-INTEGRATION:
                     // traffic-belief + relocation threshold so
                     // tickBandit (canonical-trade-system.js)
@@ -1207,6 +1212,16 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         ? destination.market.deliverCargo(cargoKind, remaining, { disruption: 0 })
         : null;
     merchant.cargo = 0; // the merchant's cargo has been resolved by the attack
+    // E10: every successful raid marks the bandit (+0.2 heat, cap
+    // 1). Heat raises patrol detection wherever the bandit goes
+    // and cools when quiet (tickBandit). Older saves and hand-built
+    // bandits without the field start at 0. (attackingBandit is
+    // resolved below; roadId is already in scope here.)
+    const raider = world.bandits?.find(b => b?.roadId === roadId);
+    if (raider && typeof raider === 'object') {
+        raider.heat = Math.min(1, Math.max(0, Number(raider.heat) || 0) + 0.2);
+        raider.lastHeatTick = tick;
+    }
     // E9: the raid bleeds the merchant at live quotes. Stolen goods
     // cost replacement value at the origin market (route.from); the
     // surviving remainder is a forced sale at the pre-landing quote.

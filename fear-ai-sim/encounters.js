@@ -207,6 +207,13 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
             result.stolen = before - merchant.cargo;
             result.merchantId = merchant.id;
             result.capitalHit = -((before - merchant.cargo) * ambushPrice);
+            // E10: the ambush marks whoever worked this road (+0.2
+            // heat, cap 1), same as the direct raid path.
+            const ambusher = world.bandits?.find(b => b?.roadId === (ambushRoute?.id ?? null));
+            if (ambusher && typeof ambusher === 'object') {
+                ambusher.heat = Math.min(1, Math.max(0, Number(ambusher.heat) || 0) + 0.2);
+                ambusher.lastHeatTick = tick;
+            }
             applied = true;
         }
     } else if (template.id === 'broken-caravan') {
