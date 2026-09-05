@@ -353,7 +353,10 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
         encounterId: template.id,
         tick,
         result,
-        ...(parents.length === 0 ? { rootReason: 'ENCOUNTER_TRIGGERED' } : {}),
+        // E11: every capital booking is audited at top level
+        // (E9 exact-once economics). Only the ambush books
+        // merchant capital today; other templates carry no key.
+        ...(Number.isFinite(result?.capitalHit) ? { capitalDelta: result.capitalHit } : {}),
     }, parents);
     // EVID-2026-08-29-BANDIT-ATTACK-WIRE: when the encounter
     // engine runs a bandit-ambush, also push a BANDIT_ATTACK

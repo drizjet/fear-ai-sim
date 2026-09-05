@@ -73,7 +73,14 @@ describe('E9 merchant capital', () => {
             resolveBanditAttack(world, { merchantId: 'merchant-1', roadId: 'road-a', tick: guard });
         }
         expect(merchant.capital).toBeLessThan(0);
-        runTicks(world, 21, 25);
+        // E11: bankrupt firms get no free restock, so top the hold
+        // manually — the gate must refuse a SHIPPABLE cargo, not an
+        // empty one (which refuses for want of goods instead).
+        for (let t = 21; t <= 25; t++) {
+            merchant.cargo = 20;
+            merchant.cargoKind = 'food';
+            tickClosedWorld(world, { tick: t, perceivedDanger: 0.0, encounterRng: () => 0.999 });
+        }
         const bankrupts = world.events.filter(e => e.type === 'MERCHANT_BANKRUPT' && e.merchantId === 'merchant-1');
         expect(bankrupts.length).toBe(1);
         const shipped = world.events.filter(e =>

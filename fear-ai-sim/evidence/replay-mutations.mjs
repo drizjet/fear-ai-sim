@@ -439,6 +439,22 @@ const MUTATIONS = [
         note: 'E10 heat bonus cut; hot bandits detect like fresh ones',
     },
     {
+        id: 'convoy-escort-economics',
+        file: 'closed-world.js',
+        target: 'if (expectedUnescortedLoss <= escortCost + expectedEscortedLoss) {',
+        replacement: 'if (false) {',
+        detectors: 'convoy-escort',
+        note: 'E11 escort economics cut; safe routes hire regardless of risk',
+    },
+    {
+        id: 'convoy-escort-strength',
+        file: 'convoy.js',
+        target: 'const effectiveDanger = clamp(roadDanger - clamp(escortStrength) * 0.5);',
+        replacement: 'const effectiveDanger = clamp(roadDanger);',
+        detectors: 'convoy-escort',
+        note: 'E11 escort protection cut; escorted ambushes lose like lone ones',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

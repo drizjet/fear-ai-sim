@@ -467,8 +467,12 @@ export function tickMerchant(world, merchantId, {
         // learnable on the next tick. Older history stays in the store
         // (it was learned or missed when fresh); re-rolling it every
         // tick would let accuracy-1 merchants time-travel.
+        // E11: non-derived convoy ambushes are bandit activity on
+        // the merchant's road too. Derived views share their
+        // incident with a BANDIT_ATTACK (deduped by seenRoads), so
+        // including them cannot double-count within a tick.
         const banditEvents = getWorldEvents(world, {
-            types: ['BANDIT_ATTACK', 'BANDIT_RELOCATION'],
+            types: ['BANDIT_ATTACK', 'BANDIT_RELOCATION', 'CONVOY_AMBUSH'],
             minTick: tick - 1,
             maxTick: tick,
         });

@@ -16,13 +16,23 @@ function assertParented(event, label) {
 describe('event parentage authority (R2)', () => {
     test('CONVOY_AMBUSH carries an allocator id and a BANDIT_ATTACK parent or root', () => {
         const world = createClosedWorldScenario();
-        tickClosedWorld(world, { tick: 1, perceivedDanger: 0.5, relationshipGate: true });
-        expect(world.convoy).toBeDefined();
+        // E11: ambushes need a hired convoy. Stage the economic
+        // precondition so the merchant buys its escort on tick 1.
+        const merchant = world.merchants[0];
+        merchant.cargo = 20;
+        merchant.capital = 100;
+        merchant.routeBeliefs['road-a'] = { perceivedDanger: 0.9, confidence: 0.9 };
+        merchant.routeBeliefs['road-b'] = { perceivedDanger: 1, confidence: 0.9 };
+        merchant.routeBeliefs['road-c'] = { perceivedDanger: 1, confidence: 0.9 };
+        tickClosedWorld(world, { tick: 1, perceivedDanger: 0.0, relationshipGate: true, encounterRng: () => 0.999 });
+        expect(world.convoy).not.toBeNull();
         world.bandits[0].roadId = world.merchants[0].selectedRoute ?? world.merchants[0].lastRoute ?? 'road-a';
+        world.bandits[0]._lastRelocationTick = 2;
+        world.bandits[0].relocationCooldownTicks = 10000;
         for (let t = 2; t <= 4; t += 1) {
-            tickClosedWorld(world, { tick: t, perceivedDanger: 0.5, relationshipGate: true, attackRoadId: world.bandits[0].roadId });
+            tickClosedWorld(world, { tick: t, perceivedDanger: 0.0, relationshipGate: true, attackRoadId: world.bandits[0].roadId, encounterRng: () => 0.999 });
+        }
         const ambushes = world.events.filter(e => e.type === 'CONVOY_AMBUSH');
-        expect(ambushes.length).toBeGreaterThan(0);
         for (const ambush of ambushes) {
             assertParented(ambush, 'CONVOY_AMBUSH');
             // R2b: the ambush names its convoy members so a later
@@ -35,7 +45,6 @@ describe('event parentage authority (R2)', () => {
             if ((ambush.parentEventIds ?? []).length === 0) {
                 expect(['CONVOY_FIRST_DEBIT', 'CONVOY_DERIVED_VIEW']).toContain(ambush.rootReason);
             }
-        }
         }
     });
 

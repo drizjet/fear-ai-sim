@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E10-BANDIT-HEAT (Lane B, unaccepted)
+EVID-2026-09-05-E11-CONVOY-ESCORTS (Lane B, unaccepted)
+
+## E11 — endogenous convoys: merchants buy protection (expansion)
+
+- Gap (probed, not guessed): convoys auto-formed free with every guard on every materialized trip — no decision, no price, no locality; merchants never learned from live convoy ambushes (bridge read BANDIT_* only); convoy losses never touched E9 capital; raids were unmarked by E10 heat on the convoy path.
+- Fix: decideConvoyEscort (pure, lawful beliefs only) hires local free guards when avoided expected loss beats fee (5/guard from E9 capital, exact-once at formation, CONVOY_DECISION why/why-not); bankrupt/underfunded/guardless/safe/overpriced refuse. Convoy ambushes mark heat (authoritative only), bleed members at origin quotes with top-level capitalDelta audit, and teach route beliefs via the canonical bridge (CONVOY_AMBUSH road-gated in canObserve). Bankrupt firms take no positions and get no restock (dead firms exit the goods economy).
+- Loop closed: risky hires paid escort on real trips; fees exact-once per convoy; save/load identical; heat follows convoy raids; lone ambushes teach beliefs; 200-tick risky regime (2 hires, 8 ambushes, 16 deliveries, 1 terminal bankruptcy, dead firm sits empty, heat cools, no trade collapse).
+- Fallout restaged honestly (production untouched except noted): convoy-wiring + event-parentage fixtures stage hire economics (free-convoy regime retired); law/storm Why pins compose heat additively with unchanged outcomes; merchant-capital halt test tops cargo (no free restock for the dead); E9 gate-cut mutant re-verified after the restock gate neutralized it. Guard location field reverted — it enlisted guards as territory intruders (0.009 trust phantom); home derives from faction.
+- Validation: 200/1439 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 60/60 (2 new E11 entries), coverage 108 rows.
 
 ## E10 — bandit heat: raiding marks the raider (expansion)
 

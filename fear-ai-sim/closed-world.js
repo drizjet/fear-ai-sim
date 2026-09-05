@@ -1074,6 +1074,80 @@ export function formClosedWorldConvoy(world) {
     appendWorldEvent(world, { type: 'CONVOY_FORMED', convoyId: world.convoy.id, rootReason: 'SCENARIO_SETUP' }, []);
     return world.convoy;
 }
+
+// E11 (endogenous escorts): the per-guard fee for a trip. Sized so a
+// normal profitable trip (roughly +10..30 at live quotes) covers one
+// guard, while a stripped or marginal run cannot.
+export const ESCORT_FEE_PER_GUARD = 5;
+
+// E11: the merchant's escort decision. Pure: reads beliefs, capital,
+// cargo value and guard availability, mutates nothing (the fee books
+// at formation). Expected losses use the merchant's PERCEIVED route
+// danger (lawful belief, never actualDanger) times cargo value at
+// the origin quote; the escorted leg assumes the convoy primitive's
+// protection (strength 0.5 per guard, same term resolveConvoyAmbush
+// consumes). The merchant may be wrong — that is the point.
+export function decideConvoyEscort(merchant, world, { routeId, tick = 0, cargoAmount = null, cargoKind = null } = {}) {
+    const route = (world.routes ?? []).find(r => r.id === routeId) ?? null;
+    const perceived = merchant?.routeBeliefs?.[routeId]?.perceivedDanger;
+    const perceivedRisk = Number.isFinite(perceived) ? perceived : 0.5;
+    const confidence = Number.isFinite(merchant?.routeBeliefs?.[routeId]?.confidence)
+        ? merchant.routeBeliefs[routeId].confidence : 0.5;
+    // E11: the convoy escorts the SHIPPED load (the materialized
+    // trip's cargo), not the merchant's leftover hold after
+    // shipment. Callers pass the trip load; the hold is fallback.
+    const cargo = Math.max(0, Number(cargoAmount ?? merchant?.cargo) || 0);
+    const kind = cargoKind ?? merchant?.cargoKind ?? 'food';
+    const originTown = world.towns?.get?.(merchant?.location);
+    const cargoValue = cargo * marketQuotePrice(originTown?.market, kind);
+    const activeEscorts = world.convoy && Array.isArray(world.convoy.escortIds)
+        ? new Set(world.convoy.escortIds) : new Set();
+    // E11: no teleporting guards. Guards carry no position field
+    // (they garrison their faction town and stay invisible to the
+    // territory-intrusion system by design — do NOT add a location
+    // without updating allIntruders). Home is derived from faction.
+    // A guard committed to the live convoy is not free.
+    const guardHome = (guard) => guard?.location
+        ?? (guard?.factionId === 'south-faction' ? 'south'
+            : guard?.factionId === 'north-faction' ? 'north' : 'north');
+    const availableGuards = (world.guards ?? []).filter(guard =>
+        guard && !activeEscorts.has(guard.id) && guardHome(guard) === merchant?.location);
+    const escortStrength = Math.min(1, availableGuards.length);
+    const expectedUnescortedLoss = cargoValue * perceivedRisk;
+    const expectedEscortedLoss = cargoValue * Math.max(0, perceivedRisk - escortStrength * 0.5);
+    const escortCost = availableGuards.length * ESCORT_FEE_PER_GUARD;
+    const capital = Number.isFinite(merchant?.capital) ? merchant.capital : MERCHANT_STARTING_CAPITAL;
+    const base = {
+        merchantId: merchant?.id ?? null, routeId: route?.id ?? routeId ?? null,
+        cargoKind: kind, cargoAmount: cargo, capital,
+        perceivedRisk, confidence, cargoValue,
+        expectedUnescortedLoss, expectedEscortedLoss, escortCost,
+        availableEscortIds: availableGuards.map(g => g.id),
+        chosenEscortIds: [], tick,
+    };
+    if (capital < 0) {
+        return { ...base, decision: 'REFUSE', escortCost: 0, why: [], whyNot: ['merchant bankrupt'] };
+    }
+    if (availableGuards.length === 0) {
+        return { ...base, decision: 'REFUSE', escortCost: 0, why: [], whyNot: ['no local free guards'] };
+    }
+    if (capital < escortCost) {
+        return { ...base, decision: 'REFUSE', escortCost: 0, why: [], whyNot: ['insufficient capital'] };
+    }
+    if (expectedUnescortedLoss <= escortCost + expectedEscortedLoss) {
+        return {
+            ...base, decision: 'REFUSE', escortCost: 0, why: [],
+            whyNot: [perceivedRisk < 0.2
+                ? 'route believed safe'
+                : 'escort price exceeded expected avoided loss'],
+        };
+    }
+    return {
+        ...base, decision: 'HIRE', chosenEscortIds: availableGuards.map(g => g.id),
+        why: [`expected avoided loss ${(expectedUnescortedLoss - expectedEscortedLoss).toFixed(2)} exceeded escort price ${escortCost}`],
+        whyNot: [],
+    };
+}
 // Law slice V: a LAW_VIOLATED event is not terminal audit only. The violated
 // town's controlling faction observes the violator's lawfulness, so the
 // existing patrol attention consumer (canonical-trade-system) can react
@@ -1262,6 +1336,7 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         survivor: true,
         capitalHit,
         capitalGain,
+        capitalDelta: capitalHit + capitalGain,
         merchantCapital: Number.isFinite(merchant?.capital) ? merchant.capital : null,
         tick,
         // RESP-EVENT-ID-AUTHORITY-001: the attack opportunity ITSELF is the
@@ -2215,7 +2290,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 t => t.merchantId === merchant.id
                     && (t.status === 'IN_TRANSIT' || t.status === 'ARRIVED')
             );
-            if (!travelingAlready && destinationTownId && destinationTownId !== merchant.location) {
+            // E11: bankrupt merchants take no new positions (no buys,
+            // no swaps). They hold what they hold; the ship gate
+            // already refuses them below.
+            const exchangeBankrupt = (Number.isFinite(merchant.capital)
+                ? merchant.capital : MERCHANT_STARTING_CAPITAL) < 0;
+            if (!travelingAlready && destinationTownId && destinationTownId !== merchant.location && !exchangeBankrupt) {
                 let selection = null;
                 try {
                     selection = selectMerchantCargoKind(merchant, { world, destinationTownId });
@@ -2469,7 +2549,47 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     if (world.convoy == null && world.merchants.length > 0 && world.guards.length > 0) {
         const merchant = world.merchants[0];
         if ((merchant.cargo ?? 0) > 0 && merchantMaterialized) {
-            world.convoy = formConvoy([merchant], world.guards, { escortRatio: 1 });
+            // E11: the escort is hired, not granted. The merchant
+            // buys protection from capital when the avoided expected
+            // loss beats the fee; otherwise it travels lone (the
+            // convoy-ambush path still runs with zero escorts).
+            const activeTrip = (world.pendingTrips ?? []).find(t =>
+                t.tripId === merchantCommitment?.tripId) ?? null;
+            const decision = decideConvoyEscort(merchant, world, {
+                routeId: merchant.selectedRoute, tick,
+                cargoAmount: activeTrip?.cargo?.amount ?? merchant.cargo,
+                cargoKind: activeTrip?.cargo?.kind ?? merchant.cargoKind,
+            });
+            appendWorldEvent(world, {
+                type: 'CONVOY_DECISION',
+                tick,
+                merchantId: decision.merchantId,
+                routeId: decision.routeId,
+                cargoKind: decision.cargoKind,
+                cargoAmount: decision.cargoAmount,
+                capital: decision.capital,
+                perceivedRisk: decision.perceivedRisk,
+                confidence: decision.confidence,
+                expectedUnescortedLoss: decision.expectedUnescortedLoss,
+                expectedEscortedLoss: decision.expectedEscortedLoss,
+                escortCost: decision.escortCost,
+                availableEscortIds: decision.availableEscortIds,
+                chosenEscortIds: decision.chosenEscortIds,
+                decision: decision.decision,
+                why: decision.why,
+                whyNot: decision.whyNot,
+                ...(merchantCommitment?.commitmentEventId
+                    ? {} : { rootReason: 'ESCORT_DECISION' }),
+            }, merchantCommitment?.commitmentEventId
+                ? [merchantCommitment.commitmentEventId] : []);
+            if (decision.decision === 'HIRE') {
+            // Exact-once fee: one formation, one charge. The convoy
+            // persists until disbanded, so reloads and later ticks
+            // cannot recharge an existing escort.
+            bookMerchantCapital(merchant, -decision.escortCost);
+            const hiredGuards = (world.guards ?? []).filter(g =>
+                decision.chosenEscortIds.includes(g.id));
+            world.convoy = formConvoy([merchant], hiredGuards, { escortRatio: 1 });
             world.convoy.routeId = merchant.selectedRoute;
             appendWorldEvent(world, {
                 type: 'CONVOY_FORMED',
@@ -2477,11 +2597,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 merchantIds: world.convoy.merchantIds,
                 escortIds: world.convoy.escortIds,
                 cargo: world.convoy.cargo,
+                escortCost: decision.escortCost,
+                merchantCapital: Number.isFinite(merchant?.capital) ? merchant.capital : null,
                 tick,
                 ...(merchantCommitment?.commitmentEventId
                     ? {} : { rootReason: 'ESCORT_FORMED' }),
             }, merchantCommitment?.commitmentEventId
                 ? [merchantCommitment.commitmentEventId] : []);
+            }
         }
     } else if (world.convoy) {
         // Update the convoy's route to follow the merchant.
@@ -2549,6 +2672,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 }
             );
             if (result.ok) {
+                let convoyCapitalHit = 0;
                 if (!alreadyConsumed) {
                     // The convoy ambush is the *first* debit for
                     // this opportunity. Mark it consumed and
@@ -2560,9 +2684,26 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     // Distribute the convoy's cargo back to the merchants.
                     if (world.convoy.merchantIds.length > 0) {
                         const perMerchant = world.convoy.cargo / world.convoy.merchantIds.length;
+                        // E11: the authoritative ambush marks the
+                        // bandit (E10 heat, same increment/clock) and
+                        // bleeds each member at the origin replacement
+                        // price (E9 P&L covers convoy losses too —
+                        // previously only direct raids booked).
+                        banditOnRoute.heat = Math.min(1,
+                            Math.max(0, Number(banditOnRoute.heat) || 0) + 0.2);
+                        banditOnRoute.lastHeatTick = tick;
+                        const lossRoute = world.routes.find(r => r.id === world.convoy.routeId);
+                        const lossOrigin = world.towns?.get?.(lossRoute?.from);
                         for (const merchantId of world.convoy.merchantIds) {
                             const merchant = world.merchants.find(m => m.id === merchantId);
-                            if (merchant) merchant.cargo = perMerchant;
+                            if (merchant) {
+                                merchant.cargo = perMerchant;
+                                const share = result.lost / world.convoy.merchantIds.length;
+                                const shareHit = -share
+                                    * marketQuotePrice(lossOrigin?.market, merchant.cargoKind ?? 'food');
+                                bookMerchantCapital(merchant, shareHit);
+                                convoyCapitalHit += shareHit;
+                            }
                         }
                     }
                 }
@@ -2585,6 +2726,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     convoyId: world.convoy.id,
                     lost: result.lost,
                     survivors: result.survivors,
+                    capitalDelta: convoyCapitalHit,
                     roadId: result.roadId,
                     merchantIds: [...world.convoy.merchantIds],
                     derived: alreadyConsumed, // true = derived/child view, no mutation
@@ -2594,13 +2736,18 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             }
         }
     }
-
     // 3. Merchants whose cargo is empty respawn at their origin town with a
     //    fresh load. This is the cross-tick persistence the north-star chain
     //    needs: a town that keeps losing cargo eventually stops sending
     //    merchants, and a town that gets safe deliveries keeps trading.
     for (const merchant of world.merchants) {
-        if (merchant.cargo <= 0 && merchant.location) {
+        // E11: bankrupt firms exit the goods economy entirely — no
+        // free restock for the dead (otherwise exogenous gifts keep
+        // a corpse trading at bandits' expense forever). They sit
+        // empty; the town that lost them simply trades less.
+        const restockBankrupt = (Number.isFinite(merchant.capital)
+            ? merchant.capital : MERCHANT_STARTING_CAPITAL) < 0;
+        if (merchant.cargo <= 0 && merchant.location && !restockBankrupt) {
             // R2-W1: restock is a declared exogenous injection; without
             // the booking the global mass identity would break by ~20
             // each respawn (unexplained mass creation).
@@ -4309,7 +4456,9 @@ function sourceIdToEvidenceType(sourceId) {
  */
 export function canObserve(actor, event, world) {
     if (!actor || !event || !world) return false;
-    if (event.type !== 'BANDIT_RELOCATION' && event.type !== 'BANDIT_ATTACK') return true; // non-bandit events observable by default
+    // E11: convoy ambushes are bandit-activity observations too — a
+    // merchant learns them only on its own road (same R1 gate).
+    if (event.type !== 'BANDIT_RELOCATION' && event.type !== 'BANDIT_ATTACK' && event.type !== 'CONVOY_AMBUSH') return true; // non-bandit events observable by default
     const roadId = event.roadId
         ?? event.relocation?.roadId
         ?? event.relocation?.to
