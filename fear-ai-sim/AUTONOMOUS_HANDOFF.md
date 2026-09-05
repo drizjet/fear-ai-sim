@@ -7,7 +7,7 @@ EVID-2026-09-05-E9-MERCHANT-CAPITAL (Lane B, unaccepted)
 - Gap (probed, not guessed): a merchant stripped bare 40/40 ticks still shipped 40 trips with no balance sheet (capital undefined) — predation could never kill trade.
 - Fix: working capital (100 start, plain number) with P&L at live quotes via bookMerchantCapital: E3 swap net, trip-delivery revenue (pre-landing price), raid loss at origin replacement price plus forced-sale salvage, encounter-ambush theft. Below zero the merchant holds its load and stops shipping (terminal), with exact-once MERCHANT_BANKRUPT and BANKRUPT deferrals. Partial markets price at 1 via marketQuotePrice instead of throwing.
 - Loop closed: deliveries earn (exact stored x price pin); raids book loss+salvage; stripped merchants bankrupt once and halt; quiet 120-tick loops never dip below start; save/load identical.
-- Validation: 197/1421 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 56/56 (2 new E9 entries), coverage 105 rows.
+- Validation: 197/1422 suite (1421 local + exact-credit pin; clone proves 1422), 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 56/56 (2 new E9 entries), coverage 105 rows.
 
 ## E8 — settlement takeover: WAR moves borders, raids do not (expansion)
 
