@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E12-OCCUPATION (Lane B, unaccepted)
+EVID-2026-09-05-E13-TAXATION (Lane B, unaccepted)
+
+## E13 — taxation and garrison budgets: land funds rule (expansion)
+
+- Gap (probed, not guessed): a pop-50 town and a pop-1 town funded their controller identically (22.00 both over 20 ticks) — faction income was purely exogenous refill, blind to the economy it ruled.
+- Fix: step-7a budget pass before campaigns. Controllers tax living towns 0.02/head (scaled by occupation foot-dragging, so resistance discounts automatically), pay 0.15 per meaningfully occupied town, book net into capped floored resources, audit TAX_COLLECTED per faction per tick. Dead ground pays nothing.
+- Loop closed: income spread equals audited tax spread exactly; garrison math audited; caps bind; dead towns yield zero; save/load identical.
+- Fallout restaged honestly (production untouched except noted): faction-recovery window 260->600 (measured holdAt 442 — tax-funded chests fight ~3x longer past solved grievance, then still stand down); refill and E8 weaker-attacker pins read audited tax deltas instead of bare constants. Capability coherence documented (big maxResources downgrades staged WAR via the stance machine).
+- Validation: 202/1450 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 64/64 (2 new E13 entries), coverage 110 rows.
 
 ## E12 — occupation costs: conquest must be administered (expansion)
 

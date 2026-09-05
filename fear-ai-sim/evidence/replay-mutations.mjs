@@ -471,6 +471,22 @@ const MUTATIONS = [
         note: 'E12 occupation debit cut; reported crime judges occupiers free',
     },
     {
+        id: 'taxation-income',
+        file: 'closed-world.js',
+        target: 'const levy = heads * TAX_PER_HEAD * (1 - 0.5 * penalty);',
+        replacement: 'const levy = 0;',
+        detectors: 'taxation-budget',
+        note: 'E13 tax income cut; big and small towns fund identically',
+    },
+    {
+        id: 'taxation-garrison',
+        file: 'closed-world.js',
+        target: 'garrison = GARRISON_PER_OCCUPIED_TOWN;',
+        replacement: 'garrison = 0;',
+        detectors: 'taxation-budget',
+        note: 'E13 garrison cost cut; occupations are free to hold',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

@@ -3517,6 +3517,52 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     //    below regains 1 resource per tick for factions in HOLD or
     //    DEFENSIVE — but a faction that just raided does NOT regen, so
     //    each raid has a real cost.
+    // 7a. E13 (taxation and garrison budgets): controllers tax
+    // living towns per head, scaled by occupation foot-dragging
+    // (occupied towns yield less — resistance discounts the base
+    // automatically, no special case). Meaningfully occupied towns
+    // cost a flat garrison each. Net books into faction resources
+    // floored at 0 and capped at maxResources, audited per faction
+    // per tick. Runs before the campaign passes so fresh income
+    // funds this tick's raids and takeovers. Dead ground (abandoned
+    // or empty towns, null controllers) pays and costs nothing.
+    const TAX_PER_HEAD = 0.02;
+    const GARRISON_PER_OCCUPIED_TOWN = 0.15;
+    const GARRISON_PENALTY_FLOOR = 0.005;
+    for (const faction of world.factions) {
+        const taxed = [];
+        let gross = 0;
+        let garrisonCost = 0;
+        for (const [townId, town] of world.towns) {
+            if (!town || town.abandoned) continue;
+            if (town.controlledBy !== faction.id) continue;
+            const heads = Math.max(0, Number(town.population) || 0);
+            if (!(heads > 0)) continue;
+            const penalty = occupationPenalty(town, tick);
+            const levy = heads * TAX_PER_HEAD * (1 - 0.5 * penalty);
+            gross += levy;
+            let garrison = 0;
+            if (town.occupation && penalty > GARRISON_PENALTY_FLOOR) {
+                garrison = GARRISON_PER_OCCUPIED_TOWN;
+                garrisonCost += garrison;
+            }
+            taxed.push({ townId, heads, levy, garrison });
+        }
+        if (taxed.length === 0) continue;
+        const net = gross - garrisonCost;
+        const cap = Math.max(0, Number(faction.maxResources) || 0);
+        faction.resources = Math.min(cap, Math.max(0, (Number(faction.resources) || 0) + net));
+        appendWorldEvent(world, {
+            type: 'TAX_COLLECTED',
+            factionId: faction.id,
+            towns: taxed,
+            gross,
+            garrisonCost,
+            net,
+            resourcesAfter: faction.resources,
+            tick,
+        }, []);
+    }
     // 7b. E8 (settlement takeover): raids on bandits never move
     // borders. A RAID faction at WAR stance toward a rival, with
     // the resources to win the contest, takes an inhabited rival

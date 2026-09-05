@@ -522,8 +522,12 @@ describe('tickClosedWorld', () => {
         south.resources = 1;
         south.maxResources = 3;
         tickClosedWorld(world, { tick: 1, perceivedDanger: 0.0 });
-        // Refill brings resources from 1 to 2 (capped at 3).
-        expect(south.resources).toBe(2);
+        // Refill brings resources from 1 to 2 (capped at 3); E13 tax
+        // adds the south town's head levy on top (audited, not guessed).
+        const taxSouth = world.events
+            .filter(e => e.type === 'TAX_COLLECTED' && e.factionId === 'south-faction')
+            .reduce((s, e) => s + (e.net ?? 0), 0);
+        expect(south.resources).toBeCloseTo(Math.min(3, 1 + 1 + taxSouth), 10);
         // Already at cap; refill is a no-op.
         south.resources = 3;
         tickClosedWorld(world, { tick: 2, perceivedDanger: 0.0 });

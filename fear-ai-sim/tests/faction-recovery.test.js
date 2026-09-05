@@ -66,12 +66,16 @@ describe('A5-F5 — shocked factions recover when the stimulus ends', () => {
         // Relief: fix the structural production deficit.
         world.towns.get('north').produces.tools = 1.5;
         let holdAt = -1;
-        for (let t = 121; t <= 260; t++) {
+        for (let t = 121; t <= 600; t++) {
             tickClosedWorld(world, { tick: t, perceivedDanger: 0.5, encounterRng: rng });
             if (north.lastDecision === 'HOLD') { holdAt = t; break; }
         }
         // Probed shape: shortage clears ~tick 134, HOLD follows as
-        // grievance falls below the raid threshold. 260 is ~2x margin.
+        // grievance falls below the raid threshold. E13 stretches the
+        // window (measured holdAt 442 at 0.02/head): tax-funded war
+        // chests keep raiding affordable past the original grievance,
+        // so richer factions take ~3x longer to stand down. The
+        // recovery still lands; 600 keeps margin past it.
         expect(holdAt).toBeGreaterThan(0);
         expect(north.grievance).toBeLessThan(0.9);
     });

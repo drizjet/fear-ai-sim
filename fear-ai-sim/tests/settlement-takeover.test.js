@@ -65,10 +65,15 @@ describe('E8 settlement takeover', () => {
         north.resources = 2;
         world.factions.find(f => f.id === SOUTH).resources = 5;
         world.towns.get('south').population = 50;
-        // attacker 2 vs defender 5 + 5 = 10: loses, pays 1.
+        // attacker 2 vs defender 5 + 5 = 10: loses, pays 1. E13:
+        // the head levy lands before the campaign, so the bill is
+        // read off the audited tax event, not a bare constant.
         tickOnce(world);
         expect(world.towns.get('south').controlledBy).toBe(SOUTH);
-        expect(north.resources).toBe(1);
+        const levy = world.events
+            .filter(e => e.type === 'TAX_COLLECTED' && e.factionId === NORTH)
+            .reduce((s, e) => s + (e.net ?? 0), 0);
+        expect(north.resources).toBeCloseTo(2 + levy - 1, 10);
         expect(takeoverGate(world)).toMatchObject({ allowed: true });
         expect(world.events.some(e => e.type === 'TOWN_TAKEN')).toBe(false);
         expect(world.events.filter(e => e.type === 'TOWN_HELD' && e.townId === 'south').length).toBe(1);
