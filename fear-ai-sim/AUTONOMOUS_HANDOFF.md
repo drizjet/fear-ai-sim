@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E18-VERDICT (Lane B, unaccepted)
+EVID-2026-09-05-E19-PATRON (Lane B, unaccepted)
+
+## E19 — external patrons and guarantees: deterrence has books (expansion)
+
+- Gap (probed, not guessed): guaranteed protection did not exist — polities faced reconquest alone, and no incumbent ever weighed another polity's survival as its own interest.
+- Fix: step-7g patronage pass. Governed landheld polities ask their most-trusted unasked non-former incumbent from age 30 (evaluation always open; first contact audited once); a patron at power 3+ backing a polity at legitimacy 0.4+ seals a one-unit booked endowment (reserve never breached, absorption capped) plus full-weight deterrence through the shared book both the verdict and the contest read. Betrayal withdraws guarantees like recognition; binding pacts stand.
+- Wild proof: an overmatching attack (5 vs 1+3 bare) holds only through patron weight, then recalculates into acceptance — fog declares, facts negotiate.
+- Fallout restaged honestly: none beyond new files — all 208 prior suites pass unmodified (default caps sit below patron power, so the machinery stays silent in every earlier fixture).
+- Validation: 208/1491 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 76/76 (2 new E19 entries), coverage 116 rows.
 
 ## E18 — reconquest and reintegration: claims get verdicts (expansion)
 

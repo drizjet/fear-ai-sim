@@ -3564,6 +3564,18 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tick,
         }, []);
     }
+    // E19 helpers (defined before 7e so 7b, 7f, and 7g share one
+    // deterrence book): the ACTIVE guarantee shielding a polity,
+    // and the guarantor weight it lends the town's defense.
+    const activeGuaranteeFor = (pId) => (world.treaties ?? []).find(treaty =>
+        treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'guarantee'
+        && treaty?.terms?.polityId === pId) ?? null;
+    const guaranteeBacking = (defenderId) => {
+        const guarantee = activeGuaranteeFor(defenderId);
+        if (!guarantee) return 0;
+        const guarantor = (world.factions ?? []).find(f => f.id === guarantee.terms?.guarantorId);
+        return Math.max(0, Number(guarantor?.resources) || 0);
+    };
     // 7e. E17 (recognition, claims, and secession diplomacy): the
     // first autonomous diplomacy. Runs BEFORE the 7b takeover contest
     // (and 7f with it) so verdicts take effect first: a yielded town
@@ -3722,9 +3734,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     const RECONQUEST_MIN_TOWN_POP = 10;
     const RECONQUEST_YIELD_LEGITIMACY = 0.4;
     // Standing betrayed: polity-sourced HARM on any of its pairs, or
-    // an executed raid (INVASION), after the recognition started.
+    // an executed raid (INVASION), after the standing started. Covers
+    // recognition and guarantees alike (E19); binding pacts stand.
     for (const treaty of world.treaties ?? []) {
-        if (!treaty || treaty.status !== 'ACTIVE' || treaty.terms?.kind !== 'recognition') continue;
+        if (!treaty || treaty.status !== 'ACTIVE') continue;
+        if (treaty.terms?.kind !== 'recognition' && treaty.terms?.kind !== 'guarantee') continue;
         const wPolityId = treaty.terms?.polityId;
         if (!wPolityId) continue;
         const wPol = (world.factions ?? []).find(f => f.id === wPolityId);
@@ -3782,7 +3796,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // on what is being weighed.
         const formerPower = Math.max(0, Number(former.resources) || 0);
         const townPop = Math.max(0, Number(tTown.population) || 0);
-        const polityPower = Math.max(0, Number(pol.resources) || 0) + townPop * 0.1;
+        const polityPower = Math.max(0, Number(pol.resources) || 0) + townPop * 0.1 + guaranteeBacking(pId);
         const founderParents = pFounded?.eventId ? [pFounded.eventId] : [];
         if (formerPower >= 2 * polityPower && (Number(pol.legitimacy) || 0) < RECONQUEST_YIELD_LEGITIMACY) {
             // Overwhelming threat meets a failing polity: demand, and
@@ -3855,6 +3869,126 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             }, founderParents);
         }
     }
+    // Recalculation: a declared, guaranteed war that fizzles on the
+    // contest ends in acceptance. Fog declares; facts negotiate. The
+    // failed attempt must not predate the declaration (>= is sound:
+    // 7f precedes 7b within the tick, so a same-tick HELD already
+    // answers this tick's declaration), and the guarantee must still
+    // shield the polity — unguaranteed fizzles (E18) stay open, and
+    // acceptance stays terminal via decidedE18.
+    for (const [tId, tTown] of world.towns) {
+        const pId = tTown?.foundedPolityId;
+        if (!pId || tTown.controlledBy !== pId) continue;
+        const pFounded = world.events ? findLatestWorldEvent(world,
+            event => event.type === 'POLITY_FOUNDED' && event.polityId === pId, 'POLITY_FOUNDED') : null;
+        const fromId = pFounded?.fromFactionId ?? null;
+        if (!fromId) continue;
+        // Terminal verdicts only: the declaration itself must not gate
+        // recalculation (it is the recalculation's precondition).
+        const terminal = getWorldEvents(world, {
+            types: ['INDEPENDENCE_ACCEPTED', 'REINTEGRATION_DEMANDED', 'TOWN_REINTEGRATED'],
+        }).some(event => (event.polityId === pId || event.fromFactionId === pId)
+            && (event.formerId === fromId || event.toFactionId === fromId));
+        if (terminal) continue;
+        const declaration = getWorldEvents(world, { type: 'RECONQUEST_DECLARED' })
+            .find(event => event.polityId === pId && event.formerId === fromId) ?? null;
+        if (!declaration) continue;
+        if (!activeGuaranteeFor(pId)) continue;
+        const fizzled = getWorldEvents(world, { type: 'TOWN_HELD' }).some(event =>
+            event.townId === tId && (event.tick ?? 0) >= (declaration.tick ?? 0)
+            && event.fromFactionId === pId && event.toFactionId === fromId);
+        if (!fizzled) continue;
+        const fPair = world.relationships.get(`${fromId}::${pId}`)
+            ?? world.relationships.get(`${pId}::${fromId}`) ?? null;
+        if (fPair && typeof fPair.recordTrade === 'function') {
+            fPair.recordTrade({ value: 1, tick, fromFactionId: fromId });
+        }
+        appendWorldEvent(world, {
+            type: 'INDEPENDENCE_ACCEPTED',
+            formerId: fromId,
+            polityId: pId,
+            townId: tId,
+            reason: 'GUARANTEED_FIZZLE',
+            tick,
+        }, declaration?.eventId ? [declaration.eventId] : (pFounded?.eventId ? [pFounded.eventId] : []));
+    }
+    // 7g. E19 (external patrons and guarantees): a governed polity
+    // seeks one protector, and a strong third party may seal it.
+    // The seeker asks its most-trusted unasked incumbent (never its
+    // former — patrons are third parties); the patron pays a booked
+    // one-unit endowment (never disarming below its own takeover
+    // cost) and lends its full weight to the town's defense through
+    // the shared deterrence book both contests read. Charity without
+    // standing buys nothing: misruled polities and poor patrons hear
+    // silence (the ask is still recorded once, so refusal is honest).
+    const GUARANTEE_MIN_AGE = 30;
+    const GUARANTEE_MIN_TRUST = 0.5;
+    const GUARANTEE_MIN_PATRON_POWER = 3;
+    const GUARANTEE_MIN_LEGITIMACY = 0.4;
+    for (const [tId, tTown] of world.towns) {
+        const pId = tTown?.foundedPolityId;
+        if (!pId) continue;
+        if (tTown.controlledBy !== pId) continue;
+        const pol = (world.factions ?? []).find(f => f.id === pId);
+        if (!pol) continue;
+        const pFounded = world.events ? findLatestWorldEvent(world,
+            event => event.type === 'POLITY_FOUNDED' && event.polityId === pId, 'POLITY_FOUNDED') : null;
+        const pFoundedTick = Number.isFinite(pFounded?.tick) ? pFounded.tick : tick;
+        if (tick - pFoundedTick < GUARANTEE_MIN_AGE) continue;
+        if (activeGuaranteeFor(pId)) continue;
+        if (!Array.isArray(pol.requestedPatrons)) pol.requestedPatrons = [];
+        const fromId = pFounded?.fromFactionId ?? null;
+        let best = null;
+        let bestTrust = -1;
+        for (const cand of world.factions ?? []) {
+            if (!cand || cand.id === pId || cand.id === fromId) continue;
+            // No permanent skip: a poor patron asked today may be rich
+            // tomorrow (first contact stays audited below, but the
+            // evaluation stays open like the E17 grant question).
+            const vec = pol.relationships?.get?.(cand.id) ?? null;
+            const trust = vec && typeof vec.getTrustFrom === 'function'
+                ? vec.getTrustFrom(pId) : GUARANTEE_MIN_TRUST;
+            if (trust > bestTrust) {
+                bestTrust = trust;
+                best = cand;
+            }
+        }
+        if (!best || bestTrust < GUARANTEE_MIN_TRUST) continue;
+        if (!pol.requestedPatrons.includes(best.id)) pol.requestedPatrons.push(best.id);
+        const patronPower = Math.max(0, Number(best.resources) || 0);
+        const worthy = (Number(pol.legitimacy) || 0) >= GUARANTEE_MIN_LEGITIMACY;
+        // Declined asks leave no treaty and move no books.
+        if (patronPower < GUARANTEE_MIN_PATRON_POWER || !worthy) continue;
+        const grant = 1;
+        best.resources = Math.max(0, patronPower - grant);
+        // Small polities absorb little: the endowment caps at their
+        // maxResources (deterrence, not cash, is the real gift).
+        pol.resources = Math.min(
+            Math.max(0, Number(pol.maxResources) || 0),
+            Math.max(0, Number(pol.resources) || 0) + grant);
+        const treaty = createTreaty({
+            id: `treaty-guarantee-${best.id}-${pId}-${tick}`,
+            participants: [best.id, pId],
+            terms: {
+                kind: 'guarantee', scope: tId, polityId: pId, guarantorId: best.id,
+                grant, patronAfter: best.resources, polityAfter: pol.resources,
+            },
+            startTick: tick,
+        });
+        if (!Array.isArray(world.treaties)) world.treaties = [];
+        world.treaties.push(treaty);
+        appendWorldEvent(world, {
+            type: 'TREATY_FORMED',
+            treatyId: treaty.id,
+            treaty: { ...treaty, participants: treaty.participants.slice() },
+            participants: treaty.participants.slice(),
+            terms: { ...treaty.terms },
+            polityId: pId,
+            guarantorId: best.id,
+            tick,
+            rootReason: 'GUARANTEE_SIGNED',
+        }, pFounded?.eventId ? [pFounded.eventId] : []);
+    }
     // 7b. E8 (settlement takeover): raids on bandits never move
     // borders. A RAID faction at WAR stance toward a rival, with
     // the resources to win the contest, takes an inhabited rival
@@ -3910,7 +4044,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             }
             const attackerPower = Math.max(0, Number(faction.resources) || 0);
             const defenderPower = Math.max(0, Number(defender?.resources) || 0)
-                + Math.max(0, Number(town.population) || 0) * 0.1;
+                + Math.max(0, Number(town.population) || 0) * 0.1
+                // E19: an ACTIVE guarantee lends the guarantor's full
+                // weight to the town's walls (0 when unguaranteed).
+                + guaranteeBacking(defenderId);
             const gateEvent = appendWorldEvent(world, {
                 type: 'TAKEOVER_GATE',
                 factionId: faction.id,

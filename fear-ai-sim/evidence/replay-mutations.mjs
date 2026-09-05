@@ -567,6 +567,22 @@ const MUTATIONS = [
         note: 'E18 pact-break cut; declarations leave protection intact',
     },
     {
+        id: 'patron-seek',
+        file: 'closed-world.js',
+        target: 'const GUARANTEE_MIN_AGE = 30;',
+        replacement: 'const GUARANTEE_MIN_AGE = 999999;',
+        detectors: 'patron-guarantee',
+        note: 'E19 seeker age cut; polities never ask for protectors',
+    },
+    {
+        id: 'patron-deterrence',
+        file: 'closed-world.js',
+        target: '+ guaranteeBacking(defenderId);',
+        replacement: '+ 0;',
+        detectors: 'patron-guarantee',
+        note: 'E19 deterrence cut; guarantees lend no weight to walls',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',
