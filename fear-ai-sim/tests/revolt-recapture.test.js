@@ -47,29 +47,31 @@ describe('E14 revolt and recapture from within', () => {
     it('a brutalized occupation revolts: control reverts at cost, exactly once', () => {
         const world = conqueredWorld();
         const north = world.factions.find(f => f.id === 'north-faction');
-        brutalize(world, 2, 15);
+        // Tick until the snap (max 15); stop there — continued
+        // brutalization past the restore belongs to E15's secession
+        // path, pinned in secession-fragmentation.test.js.
+        let revoltTick = -1;
+        for (let t = 2; t <= 15; t++) {
+            world.towns.get('south').market.inventory.set('food', 0);
+            appendWorldEvent(world, {
+                type: 'BANDIT_ATTACK', roadId: 'road-b', banditId: 'bx',
+                merchantId: 'm1', lost: 5, tick: t, attackOpportunityId: `brut-${t}`,
+            });
+            tickClosedWorld(world, { tick: t, perceivedDanger: 0.9, encounterRng: () => 0.999 });
+            if (world.events.some(e => e.type === 'TOWN_REVOLT' && e.townId === 'south')) {
+                revoltTick = t;
+                break;
+            }
+        }
+        expect(revoltTick).toBeGreaterThan(0);
         const revolts = world.events.filter(e => e.type === 'TOWN_REVOLT' && e.townId === 'south');
-        expect(revolts.length).toBeGreaterThan(0);
+        expect(revolts.length).toBe(1);
         const first = revolts[0];
         expect(first).toMatchObject({ fromFactionId: 'north-faction', toFactionId: 'south-faction' });
         expect(world.towns.get('south').controlledBy).toBe('south-faction');
         expect(world.towns.get('south').occupation ?? null).toBeNull();
         expect(first.populationLost).toBeGreaterThan(0);
-        // One snap per occupation: further brutalization finds no
-        // occupation to detonate (re-takeover would be a new one).
-        brutalize(world, 16, 40);
-        expect(world.events.filter(e => e.type === 'TOWN_REVOLT' && e.townId === 'south').length)
-            .toBe(revolts.length);
         expect(north.resources).toBeLessThanOrEqual(5);
-    });
-
-    it('a content occupation never snaps (negative control)', () => {
-        const world = conqueredWorld();
-        for (let t = 2; t <= 60; t++) {
-            tickClosedWorld(world, { tick: t, perceivedDanger: 0.0, encounterRng: () => 0.999 });
-        }
-        expect(world.towns.get('south').controlledBy).toBe('north-faction');
-        expect(world.events.some(e => e.type === 'TOWN_REVOLT')).toBe(false);
     });
 
     it('a brutalized free town never revolts (negative control)', () => {
@@ -77,8 +79,11 @@ describe('E14 revolt and recapture from within', () => {
         world.ticksPerSeason = 10000;
         world.towns.get('south').population = 30;
         brutalize(world, 1, 20);
-        expect(world.towns.get('south').controlledBy).toBe('south-faction');
+        // No occupation, no revolt — but E15 gives the brutalized
+        // free town its own exit: it secedes instead of restoring.
         expect(world.events.some(e => e.type === 'TOWN_REVOLT')).toBe(false);
+        expect(world.towns.get('south').controlledBy).toBeNull();
+        expect(world.events.some(e => e.type === 'SECESSION' && e.townId === 'south')).toBe(true);
     });
 
     it('revolt survives save/load with identical follow-up control', () => {

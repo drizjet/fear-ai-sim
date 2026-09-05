@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E14-REVOLT (Lane B, unaccepted)
+EVID-2026-09-05-E15-SECESSION (Lane B, unaccepted)
+
+## E15 — secession: misrule has an exit even without conquest (expansion)
+
+- Gap (probed, not guessed): a free town at legitimacy 0.00 and grievance 1.00 for dozens of ticks stayed loyal forever — flight was the only exit; no secession machinery existed anywhere.
+- Fix: step-7d secession pass beside the revolt loop. Free towns (no occupation) at legitimacy < 0.3 with grievance > 0.7 declare independence (control null, SECESSION parented to town justice), sticky-absorbing with same-tick revolt grace. Occupied towns revolt first (ledger order); independents pay no tax and present no takeover target (re-conquest is later work).
+- Loop closed: brutalized free towns secede exactly once and leave the tax base; content towns never qualify; occupied towns revolt before any secession; save/load identical.
+- Fallout restaged honestly (production untouched except noted): E14 revolt test stops at the snap (post-restore cascade belongs to E15) and its free-town pin now secedes; live-perspective capability implication narrowed to recorded blocks (gateActive means poverty, not attempted war — secession cuts tax income so poverty sticks).
+- Validation: 204/1457 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 68/68 (2 new E15 entries), coverage 112 rows.
 
 ## E14 — revolt: brutalized occupation snaps from within (expansion)
 

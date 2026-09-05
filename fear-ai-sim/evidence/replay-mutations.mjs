@@ -503,6 +503,24 @@ const MUTATIONS = [
         note: 'E14 control restore cut; revolts cost without recapture',
     },
     {
+        id: 'secession-trigger',
+        file: 'closed-world.js',
+        target: 'if (!(justice.legitimacy < 0.3)) continue;',
+        replacement: 'if (!(justice.legitimacy < -1)) continue;',
+        detectors: 'secession-fragmentation',
+        note: 'E15 secession trigger cut; brutalized free towns stay loyal',
+    },
+    {
+        id: 'secession-transfer',
+        file: 'closed-world.js',
+        target: `const fromFactionId = town.controlledBy;
+        town.controlledBy = null;`,
+        replacement: `const fromFactionId = town.controlledBy;
+        void fromFactionId;`,
+        detectors: 'secession-fragmentation',
+        note: 'E15 control release cut; secessions audit without independence',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

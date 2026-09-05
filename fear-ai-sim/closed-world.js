@@ -3998,6 +3998,42 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tick,
         }, takenEvent?.eventId ? [takenEvent.eventId] : []);
     }
+    // 7d. E15 (secession and fragmentation): misrule has an exit
+    // even without conquest. A FREE town (no occupation record —
+    // occupied towns belong to the revolt pass above) whose justice
+    // reads low legitimacy and high grievance declares independence:
+    // control goes null, no tax flows, no takeover target (no ruler
+    // to depose — re-conquest of independents is later work).
+    // Sticky and absorbing: nothing here re-attaches a controller,
+    // so one town secedes at most once. Same deterministic justice
+    // thresholds family as revolt, slightly stricter legitimacy
+    // (leaving is harder than rising). A town restored by revolt
+    // this same tick gets one tick of grace (no same-tick double
+    // transition); continued brutalization may still secede it next.
+    for (const [townId, town] of world.towns) {
+        if (!town || town.occupation) continue;
+        if (!town.controlledBy) continue;
+        if (!(town.population > 0)) continue;
+        // One tick of grace after a revolt restore: this tick's
+        // rising already spent the town's politics.
+        const restoredNow = getWorldEvents(world, { types: ['TOWN_REVOLT'], tick })
+            .some(e => e.townId === townId);
+        if (restoredNow) continue;
+        const justice = world.justiceState?.get?.(townId);
+        if (!justice) continue;
+        if (!(justice.legitimacy < 0.3)) continue;
+        if (!(justice.grievance > 0.7)) continue;
+        const fromFactionId = town.controlledBy;
+        town.controlledBy = null;
+        const justiceEvent = world.events ? findLatestWorldEvent(world,
+            event => event.type === 'JUSTICE_RESOLVED' && event.townId === townId, 'JUSTICE_RESOLVED') : null;
+        appendWorldEvent(world, {
+            type: 'SECESSION',
+            townId,
+            fromFactionId,
+            tick,
+        }, justiceEvent?.eventId ? [justiceEvent.eventId] : []);
+    }
     for (const faction of world.factions) {
         // A faction that just raided does not regen this tick — the cost
         // is real. A faction in HOLD or DEFENSIVE regens up to its cap,

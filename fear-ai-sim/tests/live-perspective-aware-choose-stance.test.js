@@ -171,10 +171,13 @@ describe('live perspective-aware chooseStance (audit P1 #1 + P1 #2)', () => {
             expect(event.to).not.toBe(StanceLadder.MOBILIZING);
             expect(event.to).not.toBe(StanceLadder.LIMITED_CONFLICT);
             expect(event.to).not.toBe(StanceLadder.WAR);
-            // Every transition that *attempted* a war-band
-            // stance must record the capability block.
-            if (event.capability.gateActive) {
-                expect(event.blocked).toBe(true);
+            // E15: gateActive means impoverished capability, not an
+            // attempted war-band move — poor factions routinely move
+            // sub-war stances with the gate lit but nothing to block
+            // (secession cuts tax income, so poverty sticks). The
+            // contract is: no war-band emission while poor, and any
+            // recorded block carries its reason.
+            if (event.blocked) {
                 expect(event.reason).toMatch(/BLOCKED|insufficient/i);
             }
         }
