@@ -146,6 +146,10 @@ export function createPatrol({
         lawfulnessHalfLifeTicks: Math.max(0, Number.isFinite(lawfulnessHalfLifeTicks) ? lawfulnessHalfLifeTicks : 40),
         detections: 0,
         interceptions: 0,
+        // E6: per-road exposure memory (roadId -> attacks seen).
+        // Plain JSON, save/load-safe. Familiarity is scoped to the
+        // deployed road: redeploying starts over on the new road.
+        roadFamiliarity: {},
         deploymentHistory: [{ tick: 0, route }],
     };
 }
@@ -897,13 +901,23 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
         const patrolWeatherCost = Number(deployedRoute?.weatherCost) || 0;
         const patrolDistance = Number(deployedRoute?.distance) || 0;
         const weatherFactor = patrolDistance > 0 ? patrolDistance / (patrolDistance + patrolWeatherCost) : 1;
-        const effectiveDetectionRate = clamp01((patrol.detectionRate + lawfulnessAttentionBonus) * weatherFactor);
+        // E6: road familiarity (where) is independent of lawfulness
+        // (who). Exposures on the deployed route count toward a
+        // bounded bonus: 10 exposures to full (+0.2). Fresh roads
+        // (and older saves without the map) contribute exactly 0,
+        // so single-attack fixtures behave exactly as before.
+        if (!patrol.roadFamiliarity || typeof patrol.roadFamiliarity !== 'object') patrol.roadFamiliarity = {};
+        const roadSeen = Math.max(0, Number(patrol.roadFamiliarity[patrol.deployedRoute]) || 0);
+        const familiarityBonus = Math.min(1, roadSeen / 10) * 0.2;
+        const effectiveDetectionRate = clamp01((patrol.detectionRate + lawfulnessAttentionBonus + familiarityBonus) * weatherFactor);
         const enforcementWhy = {
             violatorFactionId,
             lawfulnessObserverId: patrolFaction?.id ?? null,
             lawfulness,
             lawfulnessObserved,
             lawfulnessAttentionBonus,
+            roadFamiliarity: roadSeen,
+            familiarityBonus,
             baseDetectionRate: patrol.detectionRate,
             weatherCost: patrolWeatherCost,
             weatherFactor,
@@ -1006,6 +1020,11 @@ export function tickPatrol(world, patrolId, { tick = 0, rng = deterministicRng(1
             );
             produced.push(emittedMiss);
         }
+        // E6: every worked exposure teaches the road, hit or miss.
+        // Counted after the roll so the current attack is judged on
+        // prior familiarity, not its own. (Already-claimed attacks
+        // skip the loop above and teach nothing.)
+        patrol.roadFamiliarity[patrol.deployedRoute] = roadSeen + 1;
     }
     return { ok: true, events: produced };
 }

@@ -421,6 +421,14 @@ const MUTATIONS = [
         note: 'E4 raid exposure ignored; migrants must not divert from the raided road',
     },
     {
+        id: 'patrol-familiarity-bonus',
+        file: 'canonical-trade-system.js',
+        target: 'const familiarityBonus = Math.min(1, roadSeen / 10) * 0.2;',
+        replacement: 'const familiarityBonus = 0;',
+        detectors: 'patrol-road-familiarity',
+        note: 'E6 road learning cut; exposure no longer sharpens detection',
+    },
+    {
         id: 'production-recipe-gate',
         file: 'closed-world.js',
         target: 'gated = Math.min(desired, Math.max(0, inputLimit));',

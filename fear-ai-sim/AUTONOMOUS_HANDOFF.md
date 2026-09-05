@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E5-PRODUCTION-CHAIN (Lane B, unaccepted)
+EVID-2026-09-05-E6-PATROL-ROAD-FAMILIARITY (Lane B, unaccepted)
+
+## E6 — patrols learn the roads they work (expansion)
+
+- Gap (probed, not guessed): 20 staged attacks on a patrol road produced 0 detections with the rate frozen at 0.4 — patrols never adapted to plain bandit pressure (the lawfulness channel only moves for observed faction violators).
+- Fix: per-road exposure memory (roadFamiliarity, plain JSON) on the patrol; every worked exposure counts after its roll toward a bounded bonus (10 exposures to full, +0.2), audited in enforcementWhy beside lawfulness. Familiarity is scoped to the deployed road (redeploy starts over); fresh roads and older saves contribute exactly 0.
+- Loop closed: same-draw detection flips 0/8 to hits from attack 9; bonus caps at 0.2 with base/lawfulness channels intact; save/load identical. Default world ships no patrols, so long-horizon trajectories are untouched (194/1404 + 4/16 green, zero restaging).
+- Validation: 194/1404 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 50/50 (1 new E6 entry), coverage 102 rows. (Lint needed the full reseed battery — canonical-trade-system.js bytes feed memory/observation/belief/diplomacy/justice/demography/ecology/territory/relationships receipts.)
 
 ## E5 — production chains: tools are forged from ore via metal (expansion)
 
