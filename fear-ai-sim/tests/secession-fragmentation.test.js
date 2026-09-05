@@ -29,18 +29,25 @@ describe('E15 secession and fragmentation', () => {
         const secessions = world.events.filter(e => e.type === 'SECESSION' && e.townId === 'south');
         expect(secessions.length).toBeGreaterThan(0);
         expect(secessions[0]).toMatchObject({ fromFactionId: 'south-faction' });
-        expect(world.towns.get('south').controlledBy).toBeNull();
-        // Independence sticks: further brutalization finds no ruler
-        // to reject (re-conquest of independents is later work).
+        // E16: independence means NOT RULED BY THE FORMER RULER —
+        // control passes to the newborn polity, never null forever.
+        const founded = world.events.find(e => e.type === 'POLITY_FOUNDED' && e.townId === 'south');
+        expect(founded).toBeDefined();
+        expect(world.towns.get('south').controlledBy).toBe(founded.polityId);
+        // Independence sticks: further brutalization founds no second
+        // polity (re-conquest of independents is later work).
         brutalize(world, 26, 50);
         expect(world.events.filter(e => e.type === 'SECESSION' && e.townId === 'south').length)
             .toBe(secessions.length);
-        // No controller, no tax — counting only ticks after the snap
-        // (pre-secession levies were legitimate rule, not leakage).
+        // The former ruler never taxes the town again — counting only
+        // ticks after the snap (pre-secession levies were legitimate
+        // rule, not leakage; the new polity's own levies are its
+        // lawful fiscal capacity, proved in E16).
         const snapTick = secessions[0].tick;
         const taxedTowns = new Set();
         for (const e of world.events) {
             if (e.type !== 'TAX_COLLECTED' || !(e.tick > snapTick)) continue;
+            if (e.factionId !== 'south-faction') continue;
             for (const t of e.towns ?? []) taxedTowns.add(t.townId);
         }
         expect(taxedTowns.has('south')).toBe(false);

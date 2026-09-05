@@ -3173,7 +3173,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             };
             world.justiceState.set(townId, recovered);
             // Recover faction legitimacy slowly when no crime (idle justice = steady state, legitimacy drifts back toward 0.9)
-            const idleFaction = world.factions.find(f => f.townId === townId || (townIdle && f.id === townIdle.controlledBy));
+            const idleFaction = world.factions.find(f => townIdle && f.id === townIdle.controlledBy)
+                ?? world.factions.find(f => f.townId === townId);
             if (idleFaction) {
                 idleFaction.legitimacy = clamp(idleFaction.legitimacy * 0.98 + 0.9 * 0.02);
             }
@@ -3213,8 +3214,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // not a unit-only reassess call. Blend slowly to preserve stock-flow
         // and allow recovery when justice recovers (when no crime, legitimacy
         // will drift back via the same blend if justiceState is re-resolved).
-        const town = world.towns.get(townId);
-        const owningFaction = world.factions.find(f => f.townId === townId || (town && f.id === town.controlledBy));
+        const owningFaction = world.factions.find(f => town && f.id === town.controlledBy)
+            ?? world.factions.find(f => f.townId === townId);
         if (owningFaction) {
             owningFaction.legitimacy = clamp(owningFaction.legitimacy * 0.85 + result.legitimacy * 0.15);
         }
@@ -4013,6 +4014,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     for (const [townId, town] of world.towns) {
         if (!town || town.occupation) continue;
         if (!town.controlledBy) continue;
+        // E16: one town founds at most one polity, ever. The marker
+        // survives save/load as a plain field, so neither continued
+        // misrule nor a reload can mint a duplicate sovereignty.
+        if (town.foundedPolityId) continue;
         if (!(town.population > 0)) continue;
         // One tick of grace after a revolt restore: this tick's
         // rising already spent the town's politics.
@@ -4024,15 +4029,83 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         if (!(justice.legitimacy < 0.3)) continue;
         if (!(justice.grievance > 0.7)) continue;
         const fromFactionId = town.controlledBy;
-        town.controlledBy = null;
+        // E16 (sovereign polity formation): secession founds a real
+        // authority in the same pass — never a global generator
+        // noticing a null town later. The id is deterministic from
+        // the town (stable across save/load, unique per town), and
+        // the existence check makes founding idempotent.
+        const polityId = `${townId}-free-polity`;
+        if ((world.factions ?? []).some(f => f.id === polityId)) continue;
+        // No resource creation: the breakaway walks out with at most
+        // one unit of the former ruler's stock, booked below. A
+        // broke ruler founds a broke polity — honestly.
+        const former = (world.factions ?? []).find(f => f.id === fromFactionId) ?? null;
+        const transferredResources = former
+            ? Math.min(1, Math.max(0, Number(former.resources) || 0))
+            : 0;
+        if (former) former.resources = Math.max(0, (Number(former.resources) || 0) - transferredResources);
+        const provisionalLegitimacy = clamp((Number(justice.legitimacy) || 0) + 0.3, 0, 0.6);
+        // Unobserved newcomer: it has lived experience of its town
+        // but no interstate observation history, so confidence starts
+        // below the TOLERANT-escalation gate (0.4). It cannot sprint
+        // to MOBILIZING on founding-day grievance; others still
+        // evaluate it normally. No live confidence accrual exists yet
+        // (E18 work); until then the lock is the honest price of
+        // having seen nothing.
+        const polity = new FactionDecisionModel({
+            id: polityId, townId, resources: transferredResources, maxResources: 1,
+            legitimacy: provisionalLegitimacy, grievance: 0, informationConfidence: 0.3,
+        });
+        polity.relationships = new Map();
+        world.factions.push(polity);
+        // Enter the relationship graph with every incumbent. The
+        // former ruler's perspective takes the territorial claim
+        // through the existing harm dimension (trust debit plus
+        // sticky grievance seed) — a durable, disputable loss, not
+        // a war trigger. All other perspectives start neutral: the
+        // newborn knows nothing it did not experience.
+        if (!world.relationships) world.relationships = new Map();
+        for (const other of world.factions) {
+            if (!other || other.id === polityId) continue;
+            const pairId = `${other.id}::${polityId}`;
+            const pair = new FactionRelationshipVector({ id: pairId, trust: 0.5 });
+            world.relationships.set(pairId, pair);
+            if (!other.relationships) other.relationships = new Map();
+            other.relationships.set(polityId, pair);
+            polity.relationships.set(other.id, pair);
+            if (other.id === fromFactionId) {
+                pair.recordHarm({ severity: 0.5, tick, fromFactionId: polityId });
+            }
+        }
+        // Independence means NOT RULED BY THE FORMER RULER — control
+        // passes to the newborn authority, never null forever. The
+        // town's justice scar is NOT doctored upward: relief that
+        // rewards collapse would read healthier than honest struggle.
+        // Hope lives in the polity's provisional legitimacy; memory
+        // (grievance and low legitimacy) lives in the town until real
+        // governance earns it back through the idle drift and Slice C
+        // blend. Stickiness comes from foundedPolityId, not cosmetics.
+        town.controlledBy = polityId;
+        town.foundedPolityId = polityId;
         const justiceEvent = world.events ? findLatestWorldEvent(world,
             event => event.type === 'JUSTICE_RESOLVED' && event.townId === townId, 'JUSTICE_RESOLVED') : null;
-        appendWorldEvent(world, {
+        const secessionEvent = appendWorldEvent(world, {
             type: 'SECESSION',
             townId,
             fromFactionId,
             tick,
         }, justiceEvent?.eventId ? [justiceEvent.eventId] : []);
+        appendWorldEvent(world, {
+            type: 'POLITY_FOUNDED',
+            polityId,
+            townId,
+            fromFactionId,
+            transferredResources,
+            formerResourcesAfter: former ? former.resources : null,
+            polityResourcesAfter: polity.resources,
+            provisionalLegitimacy,
+            tick,
+        }, secessionEvent?.eventId ? [secessionEvent.eventId] : []);
     }
     for (const faction of world.factions) {
         // A faction that just raided does not regen this tick — the cost

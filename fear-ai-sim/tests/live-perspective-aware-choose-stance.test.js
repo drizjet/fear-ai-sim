@@ -90,7 +90,10 @@ describe('live perspective-aware chooseStance (audit P1 #1 + P1 #2)', () => {
             expect(event.blocked).toBeDefined();
             expect(typeof event.blocked).toBe('boolean');
             expect(event.evaluatorId).toBeDefined();
-            expect(['north-faction', 'south-faction']).toContain(event.evaluatorId);
+            // E16: secession can found live polities mid-run; every
+            // evaluator must be a live faction, with the structured
+            // output contract holding for newborn citizens too.
+            expect(world.factions.some(f => f.id === event.evaluatorId)).toBe(true);
             expect(event.militaryResources).toBeDefined();
             expect(Number.isFinite(event.militaryResources)).toBe(true);
             expect(event.informationConfidence).toBeDefined();

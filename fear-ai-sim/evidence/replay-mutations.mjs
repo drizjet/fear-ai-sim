@@ -513,12 +513,26 @@ const MUTATIONS = [
     {
         id: 'secession-transfer',
         file: 'closed-world.js',
-        target: `const fromFactionId = town.controlledBy;
-        town.controlledBy = null;`,
-        replacement: `const fromFactionId = town.controlledBy;
-        void fromFactionId;`,
+        target: 'town.controlledBy = polityId;',
+        replacement: 'town.controlledBy = null;',
         detectors: 'secession-fragmentation',
-        note: 'E15 control release cut; secessions audit without independence',
+        note: 'E15 control release cut (E16 migration: founding transfers control to the polity, so the mutant leaves the town null instead)',
+    },
+    {
+        id: 'polity-join',
+        file: 'closed-world.js',
+        target: 'world.factions.push(polity);',
+        replacement: 'void polity;',
+        detectors: 'sovereign-polity-formation',
+        note: 'E16 polity join cut; founding audits without a citizen',
+    },
+    {
+        id: 'polity-control',
+        file: 'closed-world.js',
+        target: 'town.controlledBy = polityId;',
+        replacement: 'town.controlledBy = null;',
+        detectors: 'sovereign-polity-formation',
+        note: 'E16 control transfer cut; polity founded but town left uncontrolled',
     },
     {
         id: 'merchant-bankruptcy-gate',

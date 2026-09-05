@@ -81,8 +81,12 @@ describe('E14 revolt and recapture from within', () => {
         brutalize(world, 1, 20);
         // No occupation, no revolt — but E15 gives the brutalized
         // free town its own exit: it secedes instead of restoring.
+        // E16: the exit founds a polity, so control is the newborn
+        // authority rather than null.
         expect(world.events.some(e => e.type === 'TOWN_REVOLT')).toBe(false);
-        expect(world.towns.get('south').controlledBy).toBeNull();
+        const founded = world.events.find(e => e.type === 'POLITY_FOUNDED' && e.townId === 'south');
+        expect(founded).toBeDefined();
+        expect(world.towns.get('south').controlledBy).toBe(founded.polityId);
         expect(world.events.some(e => e.type === 'SECESSION' && e.townId === 'south')).toBe(true);
     });
 

@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E15-SECESSION (Lane B, unaccepted)
+EVID-2026-09-05-E16-POLITY (Lane B, unaccepted)
+
+## E16 — sovereign polity formation: secession founds a real authority (expansion)
+
+- Gap (probed, not guessed): a seceded town sat at controlledBy null forever — politically inert, untaxable by anyone, invisible to diplomacy, with no path to governance or reconquest.
+- Fix: the secession pass founds a sovereign polity from the SECESSION event (never a later global generator). Deterministic town-derived id, booked transfer of at most 1 resource from the former ruler (source decreases, nothing minted), provisional faction legitimacy with inherited town grievance, relationship pairs with every incumbent (former-ruler claim via the existing harm dimension), control to the polity, POLITY_FOUNDED parented to SECESSION. Legitimacy lookups prefer the controller so existing justice loops recognize the newborn; newborn confidence starts 0.3 (below the 0.4 escalation gate — it must earn observation).
+- Deliberate doctrines: town justice scar is NOT doctored upward (relief would reward collapse — probed inversion); recovery follows control (Slice K restaged control-aware); no free patrols; re-conquest and recognition are E17/E18 work (maturity map updated).
+- Fallout restaged honestly: E15 secession/tax pins and E14 free-town pin now expect polity control; perspective evaluator pin admits live factions; Slice K heals whoever rules.
+- Validation: 205/1468 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 70/70 (2 new E16 entries, E15 transfer entry migrated), coverage 113 rows.
 
 ## E15 — secession: misrule has an exit even without conquest (expansion)
 
