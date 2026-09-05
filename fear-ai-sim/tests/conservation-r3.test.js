@@ -46,17 +46,21 @@ describe('R3 conservation closure (MAT-001 / MAT-005)', () => {
         expect(overflow).toBeGreaterThan(0);
     });
 
-    test('refugee-group absorption is booked as declared exogenous inflow', () => {
+    test('refugee-group arrival is booked as declared exogenous inflow', () => {
         // MAT-005a: the encounter creates +N people with no source.
         // Creation is legitimate (refugees arrive from off-map) but it
-        // must be owned by the exogenous-population ledger.
+        // must be owned by the exogenous-population ledger. E7: the
+        // heads camp at the destination — towns plus camps equal the
+        // booked inflow, and the town alone does not move.
         const world = createClosedWorldScenario();
         world.factions[0].grievance = 0.6;
         const template = encounterCatalog().find(t => t.id === 'refugee-group');
         const before = totalPop(world);
         const result = instantiateEncounter(template, world, { tick: 1, rng: () => 0 });
         expect(result?.refugeeCount).toBeGreaterThan(0);
-        expect(totalPop(world) - before).toBe(result.refugeeCount);
+        const camped = (world.refugeeCamps ?? []).reduce((s, c) => s + (Number(c.size) || 0), 0);
+        expect(totalPop(world) - before).toBe(0);
+        expect(totalPop(world) + camped - before).toBe(result.refugeeCount);
         expect(world.exogenousPopulation?.inflow ?? 0).toBe(result.refugeeCount);
     });
 

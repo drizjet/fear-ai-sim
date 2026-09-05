@@ -957,6 +957,10 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         // as persistent groups instead of vanishing into outflow.
         // Plain array of JSON: JSON-safe across save/load and fork.
         settlerGroups: [],
+        // E7 (refugee camps): war-displaced arrivals camp at the
+        // destination instead of teleporting into town population.
+        // Plain array of JSON: JSON-safe across save/load and fork.
+        refugeeCamps: [],
         scheduledConsequences: [],
         routeCommitments: [],
         patrolAssignments: [],
@@ -1487,11 +1491,15 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     //    We call it BEFORE the produce/consume step so the new
     //    population takes effect on the same tick's economy.
     tickDemography(world, tick);
-
     // 0.6. E1 (settler populations): camped settler groups survey
     // then found via settleAttempt. Runs right after demography so
     // groups formed this tick survey immediately and found next.
     tickSettlerGroups(world, { tick });
+
+    // 0.7. E7 (refugee camps): camped arrivals integrate one head
+    // per tick per camp. Runs with the settler pass so camped heads
+    // join the town before this tick's faction/market passes read it.
+    tickRefugeeCamps(world, { tick });
 
     // 1. Faction reassessment driven by the CURRENT tick's flow, not
     //    cumulative history. `newAttacksThisTick` counts only BANDIT_ATTACK
@@ -2546,6 +2554,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const market = town && town.market;
         if (!market || typeof market.setDemand !== 'function') continue;
         const population = Math.max(0, Number(town.population) || 0);
+        // E7: camped refugee mouths join town food demand (they eat
+        // before they produce; production below uses town population
+        // only, so displacement is a net consumption until heads
+        // integrate via tickRefugeeCamps). Older saves without the
+        // array behave exactly as before.
+        let campedMouths = 0;
+        if (Array.isArray(world.refugeeCamps)) {
+            for (const camp of world.refugeeCamps) {
+                if (camp?.townId === townId && camp?.status === 'CAMPED' && camp?.size > 0) {
+                    campedMouths += camp.size;
+                }
+            }
+        }
         const consumes = (town && typeof town.consumes === 'object' && town.consumes)
             || { food: 1 };
         const produces = (town && typeof town.produces === 'object' && town.produces)
@@ -2695,8 +2716,9 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tickFlow.overflow += kindPlan.overflow;
             // Demand + consume.
             const perCapitaDemand = Number(consumes[kind]) || 0;
-            if (Number.isFinite(perCapitaDemand) && perCapitaDemand > 0 && population > 0) {
-                const demand = population * perCapitaDemand;
+            const mouths = population + campedMouths;
+            if (Number.isFinite(perCapitaDemand) && perCapitaDemand > 0 && mouths > 0) {
+                const demand = mouths * perCapitaDemand;
                 market.setDemand(kind, demand, 1);
                 const consResult = market.consume(kind, demand);
                 if (consResult) {
@@ -4932,6 +4954,46 @@ export function tickSettlerGroups(world, { tick = 0 } = {}) {
         if (!result.ok) remaining.push(group);
     }
     world.settlerGroups = remaining;
+    return events;
+}
+
+/**
+ * E7 — integrate camped refugees one head per tick per camp.
+ * Arrival books the exogenous inflow (owned creation); integration
+ * is an internal transfer (camp -1, town +1, no ledger change), so
+ * population conservation holds across both steps. Camped heads
+ * consume town food via the market step but produce nothing until
+ * integrated — displacement costs before it pays. An emptied camp
+ * closes with exactly one REFUGEE_INTEGRATED event and leaves the
+ * array. Camps whose town vanished integrate into nothing and are
+ * dropped silently (no people created, no event).
+ */
+export function tickRefugeeCamps(world, { tick = 0 } = {}) {
+    if (!world || typeof world !== 'object') return [];
+    if (!Array.isArray(world.refugeeCamps)) world.refugeeCamps = [];
+    const events = [];
+    const remaining = [];
+    for (const camp of world.refugeeCamps) {
+        if (!camp || camp.status !== 'CAMPED' || !(camp.size > 0)) continue;
+        const town = world.towns?.get?.(camp.townId);
+        if (!town) continue;
+        town.population = (Number(town.population) || 0) + 1;
+        camp.size -= 1;
+        camp.integrated = (Number(camp.integrated) || 0) + 1;
+        if (camp.size <= 0) {
+            camp.status = 'INTEGRATED';
+            events.push(appendWorldEvent(world, {
+                type: 'REFUGEE_INTEGRATED',
+                campId: camp.id,
+                townId: camp.townId,
+                integrated: camp.integrated,
+                tick,
+            }, []));
+        } else {
+            remaining.push(camp);
+        }
+    }
+    world.refugeeCamps = remaining;
     return events;
 }
 

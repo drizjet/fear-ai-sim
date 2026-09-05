@@ -87,11 +87,11 @@ describe('encounter apply functions (Constitution §89 / §96 / §532)', () => {
         expect(encEvent.result.guardFactionId).toBe('north-faction');
     });
 
-    it('refugee-group apply increments the destination town population', () => {
-        // The apply: a refugee group of size N (a fraction
-        // of the source faction's grievance, capped at 3)
-        // approaches a settlement. The settlement's
-        // population increases.
+    it('refugee-group apply camps the arrivals at the destination town', () => {
+        // E7: a refugee group of size N (a fraction of the source
+        // faction's grievance, capped at 3) approaches a settlement.
+        // Arrival camps — the town population does not move until
+        // heads integrate via tickRefugeeCamps.
         const world = createClosedWorldScenario();
         const template = encounterCatalog().find(t => t.id === 'refugee-group');
         // Set up the precondition: faction with grievance > 0.3.
@@ -99,9 +99,11 @@ describe('encounter apply functions (Constitution §89 / §96 / §532)', () => {
         const northPop = world.towns.get('north').population;
         const result = instantiateEncounter(template, world, { tick: 1, rng: () => 0.5 });
         expect(result).toBeDefined();
-        // The destination town's population increased.
-        const totalPop = [...world.towns.values()].reduce((s, t) => s + t.population, 0);
-        expect(totalPop).toBeGreaterThan(northPop + world.towns.get('south').population);
+        expect(world.towns.get('north').population).toBe(northPop);
+        const camps = (world.refugeeCamps ?? []).filter(c => c.status === 'CAMPED');
+        expect(camps.length).toBe(1);
+        expect(camps[0].size).toBe(result.refugeeCount);
+        expect(result.campId).toBe(camps[0].id);
         const encEvent = world.events.find(e => e.type === 'ENCOUNTER' && e.encounterId === 'refugee-group');
         expect(encEvent).toBeDefined();
         expect(encEvent.result.refugeeCount).toBeGreaterThan(0);

@@ -258,20 +258,33 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
         }
     } else if (template.id === 'refugee-group') {
         // The §89 narrative: a war-driven refugee group
-        // approaches a settlement, seeking entry. The
-        // apply: the destination town's population
-        // increases by N refugees. N is derived from the
+        // approaches a settlement, seeking entry. E7: arrival
+        // camps instead of teleporting into town population.
+        // The camp is visible, countable, and eating (its mouths
+        // join town food demand in the market step) while its
+        // hands join production only as heads integrate, one per
+        // tick via tickRefugeeCamps. N is derived from the
         // highest-grievance faction (the source of the
         // refugees), capped at 3.
         const sourceFaction = world.factions?.find(f => (f.grievance ?? 0) > 0.3);
         if (sourceFaction) {
             const refugeeCount = Math.min(3, Math.max(1, Math.floor(sourceFaction.grievance * 3)));
-            // The destination is the first town (the
-            // closed-world's towns are an iterable Map;
-            // we pick the first one for the MVP).
-            const destination = world.towns?.values?.()?.next?.()?.value;
+            // The destination is the first LIVE town (abandoned
+            // husks take no campers; E4). Falls back to the first
+            // town when no live ground exists, preserving legacy
+            // behavior in worlds without abandonment.
+            const towns = [...(world.towns?.values?.() ?? [])];
+            const destination = towns.find(t => !t?.abandoned) ?? towns[0];
             if (destination) {
-                destination.population = (destination.population ?? 0) + refugeeCount;
+                if (!Array.isArray(world.refugeeCamps)) world.refugeeCamps = [];
+                const camp = {
+                    id: `refugees-${tick}-${world.refugeeCamps.length}`,
+                    townId: destination.id,
+                    size: refugeeCount,
+                    arrivedTick: tick,
+                    status: 'CAMPED',
+                };
+                world.refugeeCamps.push(camp);
                 // R3 (V8 audit MAT-005a): refugees arrive from off-map —
                 // creation is legitimate, but it must be owned. Book
                 // the headcount into the exogenous-population ledger.
@@ -279,6 +292,7 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
                 result.sourceFactionId = sourceFaction.id;
                 result.destinationTownId = destination.id;
                 result.refugeeCount = refugeeCount;
+                result.campId = camp.id;
                 applied = true;
             }
         }

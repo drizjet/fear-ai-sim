@@ -147,6 +147,7 @@ ROWS.push(
 ROWS.push(
 ['refugees', 'CODE_EXISTS', 'refugees-code', 'The reducer runs an immigration pass that moves population into destination towns under migration pressure with world-total conservation.', [T('migration-immigration.test.js')], ['closed-world.js', 'justice.js'], ['toTownId', 'MIGRATION', 'migrationPressure']],
 ['refugees', 'UNIT_VERIFIED', 'refugees-unit', 'Immigration tests prove named destinations distinct from origins, world-total conservation with vital terms (births/deaths resolve even at tiny pops under living demography), and camp growth absorbed as town population.', [T('migration-immigration.test.js')], ['closed-world.js'], ['expect(m.toTownId).toBeDefined()', 'expect(finalTotal - (exo.inflow ?? 0) + (exo.outflow ?? 0)).toBe(initialTotal + births - deaths)', 'expect(immigrationsToRefugee.length).toBeGreaterThan(0)']],
+['refugees', 'LIVE_PRODUCER', 'refugees-camps', 'War-displaced arrivals camp at the destination instead of teleporting into town population: camps eat town food, integrate one head per tick, and close with exactly one REFUGEE_INTEGRATED event.', [T('refugee-camps.test.js')], ['encounters.js', 'closed-world.js'], ['result.campId', 'tickRefugeeCamps(world, { tick })', "type: 'REFUGEE_INTEGRATED'"]],
 );
 
 function assertNeedles(files, needles, claimId) {

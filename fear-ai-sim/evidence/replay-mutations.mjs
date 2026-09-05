@@ -207,9 +207,11 @@ const MUTATIONS = [
         file: 'encounters.js',
         target: `result.destinationTownId = destination.id;
                 result.refugeeCount = refugeeCount;
+                result.campId = camp.id;
                 applied = true;`,
         replacement: `result.destinationTownId = destination.id;
                 result.refugeeCount = refugeeCount;
+                result.campId = camp.id;
                 applied = false;`,
         detectors: 'conservation-r3',
         note: 'R3 refugee apply reverted; inflow booking must vanish',
@@ -419,6 +421,22 @@ const MUTATIONS = [
         replacement: 'const score = candShortage;',
         detectors: 'settlement-lifecycle',
         note: 'E4 raid exposure ignored; migrants must not divert from the raided road',
+    },
+    {
+        id: 'refugee-camp-formation',
+        file: 'encounters.js',
+        target: 'world.refugeeCamps.push(camp);',
+        replacement: 'destination.population = (destination.population ?? 0) + refugeeCount;',
+        detectors: 'refugee-camps',
+        note: 'E7 arrival camps cut; instant teleport absorption must fail',
+    },
+    {
+        id: 'refugee-camp-integration',
+        file: 'closed-world.js',
+        target: 'tickRefugeeCamps(world, { tick });',
+        replacement: 'void tick;',
+        detectors: 'refugee-camps',
+        note: 'E7 integration pass cut; camps never empty, trickle must fail',
     },
     {
         id: 'patrol-familiarity-bonus',

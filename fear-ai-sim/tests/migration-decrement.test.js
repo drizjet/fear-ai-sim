@@ -67,6 +67,9 @@ describe('MIGRATION event decrements town population (Constitution §69 / §164)
         // identity closes with each town's ENCOUNTER-attributed
         // refugee share; low-pressure tiny pops keep births,
         // deaths, and drops at exactly 0.
+        // E7: arrivals camp — the identity counts town population
+        // plus camped heads at each town (integration moves heads
+        // between the two pools without changing their sum).
         const world = createClosedWorldScenario();
         const initialPop = {};
         for (const [townId, town] of world.towns) {
@@ -81,8 +84,14 @@ describe('MIGRATION event decrements town population (Constitution §69 / §164)
             const dest = event.result.destinationTownId;
             influxByTown[dest] = (influxByTown[dest] ?? 0) + event.result.refugeeCount;
         }
+        const campedByTown = {};
+        for (const camp of world.refugeeCamps ?? []) {
+            if (camp?.status !== 'CAMPED') continue;
+            campedByTown[camp.townId] = (campedByTown[camp.townId] ?? 0) + (Number(camp.size) || 0);
+        }
         for (const [townId, town] of world.towns) {
-            expect(town.population).toBe((initialPop[townId] ?? 0) + (influxByTown[townId] ?? 0));
+            expect(town.population + (campedByTown[townId] ?? 0))
+                .toBe((initialPop[townId] ?? 0) + (influxByTown[townId] ?? 0));
         }
     });
 });

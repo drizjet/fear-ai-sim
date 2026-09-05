@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E6-PATROL-ROAD-FAMILIARITY (Lane B, unaccepted)
+EVID-2026-09-05-E7-REFUGEE-CAMPS (Lane B, unaccepted)
+
+## E7 — refugee camps: displacement stages before it settles (expansion)
+
+- Gap (probed, not guessed): 8 war-displaced arrivals teleported +16 heads straight into town population for free — no camp entity (world.refugees undefined), no delay, no food cost at arrival.
+- Fix: arrivals camp at the first live town (plain-JSON world.refugeeCamps, husk-skipping with first-town fallback); tickRefugeeCamps integrates one head/tick/camp (internal transfer, no ledger change); camped mouths join town food demand in the market step while producing nothing until integrated. Empty camps close with exactly one REFUGEE_INTEGRATED event.
+- Loop closed: arrival holds town pop flat with camps countable and inflow still booked; trickle integrates 1/tick to exact-once close; camped demand prices mouths without production; towns+camps conserve against the ledger; save/load identical; arrivals skip abandoned ground.
+- Validation: 195/1410 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 52/52 (2 new E7 entries; refugee-applied retargeted to the campId line), coverage 103 rows.
 
 ## E6 — patrols learn the roads they work (expansion)
 

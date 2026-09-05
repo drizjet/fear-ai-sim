@@ -29,6 +29,11 @@ describe('population balance property test (Constitution §156 / §18)', () => {
         for (const [, town] of world.towns) {
             total += Math.max(0, Number(town.population) || 0);
         }
+        // E7: camped refugees are world population too (booked
+        // inflow, not yet integrated into any town).
+        for (const camp of world.refugeeCamps ?? []) {
+            total += Math.max(0, Number(camp.size) || 0);
+        }
         return total;
     }
 
