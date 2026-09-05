@@ -3268,8 +3268,121 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     //    below regains 1 resource per tick for factions in HOLD or
     //    DEFENSIVE — but a faction that just raided does NOT regen, so
     //    each raid has a real cost.
+    // 7b. E8 (settlement takeover): raids on bandits never move
+    // borders. A RAID faction at WAR stance toward a rival, with
+    // the resources to win the contest, takes an inhabited rival
+    // town. One town per faction per tick; a 10-tick takeover
+    // cooldown separates campaigns. Non-aggression treaties block.
+    // Abandoned husks (E4 refounding) and the attacker's own or
+    // unaffiliated towns are never targets. The contest is
+    // deterministic (no new RNG): attacker resources vs defender
+    // resources plus town population weight. Control reroutes the
+    // existing justice/legitimacy channels (Slice W/C) with no new
+    // wiring — the defender's loss and the attacker's bill are the
+    // only mutations besides the flag.
+    const TAKEOVER_COST = 2;
+    const TAKEOVER_COOLDOWN = 10;
     for (const faction of world.factions) {
         if (faction.lastDecision !== 'RAID') continue;
+        if (!(faction.resources >= TAKEOVER_COST)) continue;
+        if (faction.lastTakeoverTick != null
+            && (tick - faction.lastTakeoverTick) < TAKEOVER_COOLDOWN) continue;
+        for (const [townId, town] of world.towns) {
+            if (!town || town.abandoned) continue;
+            if (!(town.population > 0)) continue;
+            const defenderId = town.controlledBy;
+            if (!defenderId || defenderId === faction.id) continue;
+            const defender = (world.factions ?? []).find(f => f.id === defenderId) ?? null;
+            const pair = (world.relationships.get(`${faction.id}::${defenderId}`)
+                ?? world.relationships.get(`${defenderId}::${faction.id}`)
+                ?? null);
+            const stance = pair && typeof pair.stanceFrom === 'function'
+                ? pair.stanceFrom(faction.id)
+                : null;
+            const blockingTreaty = activeTreatiesFor(faction.id, world, { kind: 'non-aggression' })
+                .find(treaty => treaty.participants.includes(defenderId)) ?? null;
+            let allowed = true;
+            let reason = 'WAR_STANCE_AUTHORIZES_TAKEOVER';
+            const why = [`${faction.id} decision is RAID`, `${townId} is an inhabited ${defenderId} town`];
+            const whyNot = [];
+            // Treaties are hard action constraints (Slice P doctrine):
+            // they bind before anything else and no override waives
+            // them. The WAR threshold is likewise unwaivable: the
+            // relationshipGate=false override exists for the
+            // bandit-raid path's epistemic blocks, but town conquest
+            // always requires observed WAR stance. The flag is still
+            // audited below for transparency.
+            if (blockingTreaty) {
+                allowed = false;
+                reason = 'TAKEOVER_TREATY_BLOCKED';
+                whyNot.push(`Active non-aggression treaty ${blockingTreaty.id} blocks takeover of ${townId}`);
+            } else if (!Number.isFinite(stance) || stance < StanceLadder.WAR) {
+                allowed = false;
+                reason = 'TAKEOVER_STANCE_BELOW_WAR';
+                whyNot.push(`${faction.id} stance toward ${defenderId} is ${stance}, below WAR (${StanceLadder.WAR})`);
+            }
+            const attackerPower = Math.max(0, Number(faction.resources) || 0);
+            const defenderPower = Math.max(0, Number(defender?.resources) || 0)
+                + Math.max(0, Number(town.population) || 0) * 0.1;
+            const gateEvent = appendWorldEvent(world, {
+                type: 'TAKEOVER_GATE',
+                factionId: faction.id,
+                townId,
+                defenderFactionId: defenderId,
+                pairId: pair?.id ?? null,
+                stance: Number.isFinite(stance) ? stance : null,
+                attackerPower,
+                defenderPower,
+                allowed,
+                reason,
+                why,
+                whyNot,
+                relationshipGateEnabled: Boolean(relationshipGate),
+                treatyId: blockingTreaty?.id ?? null,
+                tick,
+            }, []);
+            if (!allowed) continue;
+            // One campaign per tick: an attempted takeover (won or
+            // lost) preempts the bandit raid below and starts the
+            // takeover cooldown. Gate-blocked factions spend nothing
+            // and may still raid.
+            faction.lastTakeoverTick = tick;
+            if (attackerPower > defenderPower) {
+                faction.resources = Math.max(0, attackerPower - TAKEOVER_COST);
+                town.controlledBy = faction.id;
+                if (pair && typeof pair.recordHarm === 'function') {
+                    pair.recordHarm({ severity: 0.5, tick, fromFactionId: faction.id });
+                }
+                appendWorldEvent(world, {
+                    type: 'TOWN_TAKEN',
+                    townId,
+                    fromFactionId: defenderId,
+                    toFactionId: faction.id,
+                    attackerPower,
+                    defenderPower,
+                    tick,
+                }, [gateEvent.eventId]);
+            } else {
+                faction.resources = Math.max(0, attackerPower - 1);
+                appendWorldEvent(world, {
+                    type: 'TOWN_HELD',
+                    townId,
+                    fromFactionId: defenderId,
+                    toFactionId: faction.id,
+                    attackerPower,
+                    defenderPower,
+                    tick,
+                }, [gateEvent.eventId]);
+            }
+            break;
+        }
+    }
+    for (const faction of world.factions) {
+        if (faction.lastDecision !== 'RAID') continue;
+        // E8: one campaign per tick. A faction that attempted a
+        // takeover above (won or lost) spends its campaign there
+        // and does not also raid bandits below.
+        if (faction.lastTakeoverTick === tick) continue;
         if (!(faction.resources > 0)) continue;
         // Per-faction raid cooldown. A faction that raided in the
         // last `raidCooldown` ticks cannot raid again. The default

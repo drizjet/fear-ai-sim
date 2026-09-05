@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E7-REFUGEE-CAMPS (Lane B, unaccepted)
+EVID-2026-09-05-E8-SETTLEMENT-TAKEOVER (Lane B, unaccepted)
+
+## E8 — settlement takeover: WAR moves borders, raids do not (expansion)
+
+- Gap (probed, not guessed): 500 raid-heavy ticks never changed town control (north-faction,south-faction -> identical) while stances peaked at HOSTILE — authorized force had no territorial consequence; E4 explicitly deferred this.
+- Fix: step-7 takeover pass before the bandit-raid loop. A RAID faction with 2+ resources at WAR stance toward a rival takes one inhabited rival town per tick on winning a deterministic contest (resources vs resources + pop*0.1), preempting its bandit raid (one campaign per tick, 10-tick cooldown). Treaties block unwaivably, WAR is unwaivable by relationshipGate=false, husks/own/null towns never targets. Transfer reroutes existing justice channels with no new wiring; defender takes recordHarm trust debit.
+- Loop closed: WAR winner takes + pays 2 with parented TOWN_TAKEN; weaker holds + pays 1 (TOWN_HELD); HOSTILE raids but never towns; treaty blocks; husks safe (raids proceed instead); taken towns tick on.
+- Validation: 196/1416 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 54/54 (2 new E8 entries), coverage 104 rows.
 
 ## E7 — refugee camps: displacement stages before it settles (expansion)
 

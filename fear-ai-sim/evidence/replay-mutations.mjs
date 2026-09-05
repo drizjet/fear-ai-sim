@@ -423,6 +423,22 @@ const MUTATIONS = [
         note: 'E4 raid exposure ignored; migrants must not divert from the raided road',
     },
     {
+        id: 'takeover-transfer',
+        file: 'closed-world.js',
+        target: 'town.controlledBy = faction.id;',
+        replacement: 'void town;',
+        detectors: 'settlement-takeover',
+        note: 'E8 control transfer cut; authorized wins must fail',
+    },
+    {
+        id: 'takeover-war-gate',
+        file: 'closed-world.js',
+        target: '} else if (!Number.isFinite(stance) || stance < StanceLadder.WAR) {',
+        replacement: '} else if (false) {',
+        detectors: 'settlement-takeover',
+        note: 'E8 WAR threshold cut; HOSTILE must not take towns',
+    },
+    {
         id: 'refugee-camp-formation',
         file: 'encounters.js',
         target: 'world.refugeeCamps.push(camp);',
