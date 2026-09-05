@@ -146,9 +146,20 @@ describe('non-aggression treaties and the invasion gate (Constitution §12 / §2
             });
         }
         const invasionCount = world.events.filter(e => e.type === 'INVASION').length;
-        const blockedCount = world.events.filter(e => e.type === 'TREATY_BLOCKED_RAID').length;
+        const blocked = world.events.filter(e => e.type === 'TREATY_BLOCKED_RAID');
         expect(invasionCount).toBeGreaterThan(0);
-        expect(blockedCount).toBe(0);
+        // E17: brutal conditions secede towns mid-run and the newborn
+        // polities earn autonomous pacts that block raids on THEIR
+        // behalf — but no incumbent-incumbent pact exists, so every
+        // block must reference a polity pact, never a north::south one.
+        expect(world.treaties.some(t => t?.terms?.kind === 'non-aggression'
+            && t.status === 'ACTIVE'
+            && t.participants.includes('north-faction')
+            && t.participants.includes('south-faction'))).toBe(false);
+        for (const b of blocked) {
+            const treaty = world.treaties.find(t => t.id === b.treatyId);
+            expect(treaty.participants.some(p => p.includes('-free-polity'))).toBe(true);
+        }
     });
 
     it('a non-aggression treaty between two factions does not block raids against unaligned bandits', () => {

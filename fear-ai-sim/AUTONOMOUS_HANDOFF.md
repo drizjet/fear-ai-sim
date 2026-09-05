@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E16-POLITY (Lane B, unaccepted)
+EVID-2026-09-05-E17-RECOGNITION (Lane B, unaccepted)
+
+## E17 — recognition, claims, and secession diplomacy (expansion)
+
+- Gap (probed, not guessed): newborn polities governed in a vacuum — incumbents never reacted, treaties never formed autonomously (no live formation caller existed), and the former-ruler claim had no political future.
+- Fix: step-7e autonomous diplomacy pass. Incumbents observe each landholding polity from age 10: clean record plus legitimacy >= 0.5 grants a directed recognition treaty (parented to POLITY_FOUNDED, recognizer trust dividend via recordTrade), else one-shot RECOGNITION_REFUSED (grant stays open to reform). From age 15 an ACTIVE recognition unlocks a non-aggression pact parented to the recognition formation. The founding claim survives recognition (HARM on record, trust below pristine). Withdrawal and reconquest are E18 work.
+- Wild proof: an unmodified war fixture now secedes, recognizes, pacts, and blocks newborn raids through autonomous pacts (12 TREATY_BLOCKED_RAID) — diplomacy bites live without staging.
+- Fallout restaged honestly: treaty control case now scopes blocks to polity pacts (incumbent-incumbent treaty still absent); recognition direction lives in treaty terms (polities also grant to each other).
+- Validation: 206/1475 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 72/72 (2 new E17 entries), coverage 114 rows.
 
 ## E16 — sovereign polity formation: secession founds a real authority (expansion)
 

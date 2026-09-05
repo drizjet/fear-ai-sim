@@ -535,6 +535,22 @@ const MUTATIONS = [
         note: 'E16 control transfer cut; polity founded but town left uncontrolled',
     },
     {
+        id: 'recognition-grant',
+        file: 'closed-world.js',
+        target: 'if (!harmful && legitimate) {',
+        replacement: 'if (false && legitimate) {',
+        detectors: 'recognition-claims-diplomacy',
+        note: 'E17 recognition grant cut; governed polities are refused forever',
+    },
+    {
+        id: 'pact-access',
+        file: 'closed-world.js',
+        target: `terms: { kind: 'non-aggression', scope: 'all' },`,
+        replacement: `terms: { kind: 'non-aggression-broken', scope: 'all' },`,
+        detectors: 'recognition-claims-diplomacy',
+        note: 'E17 pact access cut; recognition never unlocks protection',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',
