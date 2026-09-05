@@ -583,6 +583,22 @@ const MUTATIONS = [
         note: 'E19 deterrence cut; guarantees lend no weight to walls',
     },
     {
+        id: 'autonomy-offer',
+        file: 'closed-world.js',
+        target: 'const AUTONOMY_MIN_AGE = 60;',
+        replacement: 'const AUTONOMY_MIN_AGE = 999999;',
+        detectors: 'autonomy-tribute',
+        note: 'E20 offer age cut; suzerainty is never proposed',
+    },
+    {
+        id: 'autonomy-flow',
+        file: 'closed-world.js',
+        target: 'tribute = levy * rate;',
+        replacement: 'tribute = 0;',
+        detectors: 'autonomy-tribute',
+        note: 'E20 tribute flow cut; deals audit without payment',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

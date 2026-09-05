@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E19-PATRON (Lane B, unaccepted)
+EVID-2026-09-05-E20-SUZERAINTY (Lane B, unaccepted)
+
+## E20 — autonomy, tribute, and negotiated orders: the middle holds (expansion)
+
+- Gap (probed, not guessed): every secession conflict resolved binary — independence, return, or conquest — with no negotiated intermediate order anywhere in the ledger.
+- Fix: step-7h suzerainty pass. Strong formers offer governed breakaways self-rule under 25% split tribute from age 60 (standing capacity, cold claims only — hot claims belong to verdicts, settled claims never renegotiate); weaker polities take it, stronger refuse once, poor overlords and failed states hear silence. The tax loop splits the levy at the source (one payment, two books); the town-scoped deal binds the overlord ahead of the blanket pact; verdicts skip honored deals; betrayal ends them; acceptance and reintegration close them.
+- Doctrines hardened by probes: no town relief bump (rewards collapse); negotiation weighs capacity while battles weigh the till; stance — not bandit-poisoned trust — divides deals from verdicts.
+- Fallout restaged honestly: one misplaced edit briefly ate the tax credit line (caught by E13/E8 pins, restored byte-exact); all 209 suites pass unmodified otherwise.
+- Validation: 209/1500 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 78/78 (2 new E20 entries), coverage 117 rows.
 
 ## E19 — external patrons and guarantees: deterrence has books (expansion)
 
