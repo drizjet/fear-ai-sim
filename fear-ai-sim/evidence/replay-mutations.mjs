@@ -457,7 +457,7 @@ const MUTATIONS = [
     {
         id: 'occupation-record',
         file: 'closed-world.js',
-        target: 'town.occupation = { byFactionId: faction.id, sinceTick: tick };',
+        target: 'town.occupation = { byFactionId: faction.id, priorControllerId: defenderId, sinceTick: tick };',
         replacement: 'void town;',
         detectors: 'occupation-legitimacy',
         note: 'E12 occupation record cut; conquest administers itself free',
@@ -485,6 +485,22 @@ const MUTATIONS = [
         replacement: 'garrison = 0;',
         detectors: 'taxation-budget',
         note: 'E13 garrison cost cut; occupations are free to hold',
+    },
+    {
+        id: 'revolt-trigger',
+        file: 'closed-world.js',
+        target: 'if (!(justice.legitimacy < 0.4)) continue;',
+        replacement: 'if (!(justice.legitimacy < -1)) continue;',
+        detectors: 'revolt-recapture',
+        note: 'E14 revolt trigger cut; brutalized occupations never snap',
+    },
+    {
+        id: 'revolt-transfer',
+        file: 'closed-world.js',
+        target: 'town.controlledBy = restored;',
+        replacement: 'void restored;',
+        detectors: 'revolt-recapture',
+        note: 'E14 control restore cut; revolts cost without recapture',
     },
     {
         id: 'merchant-bankruptcy-gate',

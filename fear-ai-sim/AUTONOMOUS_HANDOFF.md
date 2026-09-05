@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E13-TAXATION (Lane B, unaccepted)
+EVID-2026-09-05-E14-REVOLT (Lane B, unaccepted)
+
+## E14 — revolt: brutalized occupation snaps from within (expansion)
+
+- Gap (probed, not guessed): an occupied town starved 99 ticks (pop 30->7, grievance pinned) never snapped — control held, zero revolt-type events anywhere. Flight existed; rebellion did not.
+- Fix: step-7c revolt pass. Occupied towns (penalty > 0.02, pop > 0) reading legitimacy < 0.4 with grievance > 0.6 throw off the controller: control reverts to the recorded prior ruler (or null independence), the rising costs 20% of the town and the garrison 1 resource, the occupation closes (one snap per conquest), TOWN_REVOLT parents the TOWN_TAKEN chain. Deterministic thresholds, no new RNG. Takeover stamps priorControllerId (older saves revolt to independence).
+- Loop closed: brutalized occupations revolt exactly once and restore the prior ruler; content occupations and brutalized free towns never qualify; save/load identical.
+- Fallout restaged honestly (production untouched except noted): none — WAR-gated transitively (revolt needs conquest first), zero restaging (203/1454 green as-is).
+- Validation: 203/1454 suite, 4/16 long-horizon, build green, authority CLEAN, replay 66/66 (2 new E14 entries; occupation-record retargeted to the priorControllerId line), coverage 111 rows. Lint pending at handoff time.
 
 ## E13 — taxation and garrison budgets: land funds rule (expansion)
 

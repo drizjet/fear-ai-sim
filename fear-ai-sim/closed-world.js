@@ -3649,7 +3649,9 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 // starts at full penalty and assimilates over tens
                 // of ticks (occupationPenalty). Re-takeover refreshes
                 // the clock; the record is plain JSON (save/load-free).
-                town.occupation = { byFactionId: faction.id, sinceTick: tick };
+                // E14: the prior controller is recorded so a revolt
+                // knows whom to restore (null means independence).
+                town.occupation = { byFactionId: faction.id, priorControllerId: defenderId, sinceTick: tick };
                 if (pair && typeof pair.recordHarm === 'function') {
                     pair.recordHarm({ severity: 0.5, tick, fromFactionId: faction.id });
                 }
@@ -3956,6 +3958,45 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 tick
             }, [actionEvent.eventId]);
         }
+    }
+    // 7c. E14 (revolt and recapture from within): occupation plus
+    // sustained brutalization snaps. An occupied town whose justice
+    // reads low legitimacy and high grievance throws off its
+    // controller and restores its prior ruler (or stands independent
+    // when the prior is gone — older saves predate the field).
+    // The rising costs lives (20% of the town) and overruns the
+    // garrison (controller -1 resource); the occupation record
+    // closes, so one occupation snaps at most once. Deterministic:
+    // thresholds on live justice state, no new RNG. Content
+    // occupations and free towns never qualify.
+    for (const [townId, town] of world.towns) {
+        if (!town || !town.occupation) continue;
+        if (!(town.population > 0)) continue;
+        if (occupationPenalty(town, tick) <= 0.02) continue;
+        const justice = world.justiceState?.get?.(townId);
+        if (!justice) continue;
+        if (!(justice.legitimacy < 0.4)) continue;
+        if (!(justice.grievance > 0.6)) continue;
+        const fromFactionId = town.controlledBy;
+        const priorId = town.occupation.priorControllerId ?? null;
+        const restored = priorId
+            && (world.factions ?? []).some(f => f.id === priorId) ? priorId : null;
+        const populationLost = (Number(town.population) || 0) * 0.2;
+        town.population = Math.max(0, (Number(town.population) || 0) - populationLost);
+        town.controlledBy = restored;
+        town.occupation = null;
+        const controller = (world.factions ?? []).find(f => f.id === fromFactionId) ?? null;
+        if (controller) controller.resources = Math.max(0, (Number(controller.resources) || 0) - 1);
+        const takenEvent = world.events ? findLatestWorldEvent(world,
+            event => event.type === 'TOWN_TAKEN' && event.townId === townId, 'TOWN_TAKEN') : null;
+        appendWorldEvent(world, {
+            type: 'TOWN_REVOLT',
+            townId,
+            fromFactionId,
+            toFactionId: restored,
+            populationLost,
+            tick,
+        }, takenEvent?.eventId ? [takenEvent.eventId] : []);
     }
     for (const faction of world.factions) {
         // A faction that just raided does not regen this tick — the cost
