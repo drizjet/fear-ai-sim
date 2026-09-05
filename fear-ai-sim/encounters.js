@@ -1,4 +1,4 @@
-import { appendWorldEvent, bookExogenousPopulation } from './closed-world.js';
+import { appendWorldEvent, bookExogenousPopulation, bookMerchantCapital, marketQuotePrice } from './closed-world.js';
 
 // Constitution §89 / §90 / §91 / §94 / §532.
 //
@@ -198,8 +198,15 @@ export function instantiateEncounter(template, world, { tick = 0, rng = Math.ran
             const stolen = Math.max(1, Math.floor(merchant.cargo * 0.3));
             const before = merchant.cargo;
             merchant.cargo = Math.max(0, merchant.cargo - stolen);
+            // E9: stolen goods cost replacement value at the origin
+            // market (the route the merchant sailed from).
+            const ambushRoute = world.routes?.find(r => r.id === merchant.selectedRoute);
+            const ambushOrigin = world.towns?.get?.(ambushRoute?.from);
+            const ambushPrice = marketQuotePrice(ambushOrigin?.market, merchant.cargoKind ?? 'food');
+            bookMerchantCapital(merchant, -(before - merchant.cargo) * ambushPrice);
             result.stolen = before - merchant.cargo;
             result.merchantId = merchant.id;
+            result.capitalHit = -((before - merchant.cargo) * ambushPrice);
             applied = true;
         }
     } else if (template.id === 'broken-caravan') {

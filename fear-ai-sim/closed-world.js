@@ -150,6 +150,29 @@ export function bookExogenousPopulation(world, direction, amount) {
     if ((direction !== 'inflow' && direction !== 'outflow') || !Number.isFinite(amt) || amt <= 0) return;
     world.exogenousPopulation[direction] = (Number(world.exogenousPopulation[direction]) || 0) + amt;
 }
+// E9 (merchant capital): starting balance and the single booking
+// point for merchant P&L. Every delta is valued at a live market
+// quote at the transaction site (buys cost, sales earn, raids
+// destroy). Older saves and hand-built merchants without the field
+// open at the starting balance — no migration needed. Capital is a
+// plain number so save/load round-trips it untouched.
+export const MERCHANT_STARTING_CAPITAL = 100;
+export function bookMerchantCapital(merchant, delta) {
+    if (!merchant || typeof merchant !== 'object') return 0;
+    if (!Number.isFinite(merchant.capital)) merchant.capital = MERCHANT_STARTING_CAPITAL;
+    const change = Number(delta);
+    if (!Number.isFinite(change) || change === 0) return merchant.capital;
+    merchant.capital += change;
+    return merchant.capital;
+}
+export function marketQuotePrice(market, kind) {
+    try {
+        const price = market?.getQuote?.(kind)?.price;
+        return Number.isFinite(price) ? price : 1;
+    } catch {
+        return 1;
+    }
+}
 
 function allocateWorldActionId(world) {
     ensurePendingWorldState(world);
@@ -638,10 +661,18 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
             }
             continue;
         }
+        // E9: the delivery is a sale at the destination quote
+        // (pre-landing price — the offer the merchant sailed into).
+        // Only stored goods earn; capacity overflow is already lost.
+        const salePrice = marketQuotePrice(destination.market, trip.cargo.kind);
         const delivery = destination.market.deliverCargo(trip.cargo.kind, trip.cargo.amount, {
             routeRisk: 0,
             confidence: 1,
         });
+        const deliveryRevenue = (delivery.stored ?? 0) * salePrice;
+        bookMerchantCapital(
+            (world.merchants ?? []).find(item => item.id === trip.merchantId),
+            deliveryRevenue);
         // The merchant now owns a durable, dimension-specific observation of
         // this shipment outcome. Reliability is based on usable destination
         // storage, so a full delivery is successful while capacity overflow
@@ -687,6 +718,8 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
             destinationTownId: trip.destinationTownId,
             cargo: trip.cargo,
             delivery,
+            capitalDelta: deliveryRevenue,
+            merchantCapital: Number.isFinite(merchant?.capital) ? merchant.capital : null,
             reputation: tradeReliability
                 ? {
                     dimension: 'tradeReliability',
@@ -902,6 +935,11 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         ],
         merchants: [{
             id: 'merchant-1', location: 'north', cargo: 20, cargoKind: 'food', beliefs: new BeliefStore(),
+            // E9: working capital. Spawn cargo is a free gift (founder
+            // stock); everything after is bought, sold, or lost at
+            // live quotes via bookMerchantCapital. Below zero the
+            // merchant stops shipping (terminal, no bailout).
+            capital: MERCHANT_STARTING_CAPITAL,
             // EVID-2026-08-29-CANONICAL-TRADE-INTEGRATION:
             // heterogeneous merchant identity consumed by
             // tickMerchant (canonical-trade-system.js). Default
@@ -1162,10 +1200,21 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
     // Default preserves the legacy one-shot/test contract.
     const cargoKind = merchant.cargoKind ?? 'food';
     const destination = world.towns.get(destinationTownId);
+    // E9: value the forced salvage at the pre-landing offer price
+    // (same basis as trip-delivery revenue).
+    const salvagePrice = marketQuotePrice(destination?.market, cargoKind);
     const marketResult = destination?.market?.deliverCargo
         ? destination.market.deliverCargo(cargoKind, remaining, { disruption: 0 })
         : null;
     merchant.cargo = 0; // the merchant's cargo has been resolved by the attack
+    // E9: the raid bleeds the merchant at live quotes. Stolen goods
+    // cost replacement value at the origin market (route.from); the
+    // surviving remainder is a forced sale at the pre-landing quote.
+    const originTown = world.towns?.get?.(road.from);
+    const replacementPrice = marketQuotePrice(originTown?.market, cargoKind);
+    const capitalHit = -(lost * replacementPrice);
+    const capitalGain = (marketResult?.stored ?? 0) * salvagePrice;
+    bookMerchantCapital(merchant, capitalHit + capitalGain);
     // R3 (V8 audit MAT-001): book the bandit-path delivery into the
     // cumulative market-flow ledger immediately. Unlike trip
     // deliveries (booked into deliveredThisTick before the same
@@ -1196,6 +1245,9 @@ export function resolveBanditAttack(world, { merchantId = 'merchant-1', roadId =
         delivered: remaining,
         marketResult,
         survivor: true,
+        capitalHit,
+        capitalGain,
+        merchantCapital: Number.isFinite(merchant?.capital) ? merchant.capital : null,
         tick,
         // RESP-EVENT-ID-AUTHORITY-001: the attack opportunity ITSELF is the
         // root; the allocator id is minted by appendWorldEvent so later
@@ -2163,6 +2215,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     if (localMarket && buyAmount >= 1) {
                         const holdKind = merchant.cargoKind ?? 'food';
                         const holdAmount = Math.max(0, Number(merchant.cargo) || 0);
+                        // E9: the swap is a real trade at the local
+                        // quote. The sold hold earns, the bought load
+                        // costs; the net books into merchant capital.
+                        const salePrice = marketQuotePrice(localMarket, holdKind);
+                        const buyPrice = marketQuotePrice(localMarket, selection.cargoKind);
                         const sale = holdAmount > 0 && typeof localMarket.deliverCargo === 'function'
                             ? localMarket.deliverCargo(holdKind, holdAmount, { routeRisk: 0, confidence: 1 })
                             : { stored: 0, overflow: 0 };
@@ -2177,6 +2234,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                             : { consumed: 0, unmet: buyAmount };
                         merchant.cargo = Number(bought.consumed) || 0;
                         merchant.cargoKind = selection.cargoKind;
+                        const capitalDelta = (sale.stored ?? 0) * salePrice - merchant.cargo * buyPrice;
+                        bookMerchantCapital(merchant, capitalDelta);
                         appendWorldEvent(world, {
                             type: 'CARGO_EXCHANGED',
                             tick,
@@ -2192,6 +2251,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                             buyUnmet: bought.unmet ?? 0,
                             margin: selection.margin,
                             scores: selection.scores,
+                            capitalDelta,
+                            merchantCapital: Number.isFinite(merchant.capital) ? merchant.capital : null,
                         }, [routeResult.event.eventId]);
                     }
                 }
@@ -2237,8 +2298,24 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // husk market forever. The causal chain still fires.
             const destAbandoned = Boolean(destinationTownId
                 && world.towns?.get?.(destinationTownId)?.abandoned);
+            // E9: a bankrupt merchant holds its load and stops
+            // shipping (terminal, no bailout). Legacy and hand-built
+            // merchants without the field open at starting capital.
+            const merchantCapital = Number.isFinite(merchant.capital)
+                ? merchant.capital
+                : MERCHANT_STARTING_CAPITAL;
+            const bankrupt = merchantCapital < 0;
+            if (bankrupt && !merchant.bankruptDeclared) {
+                merchant.bankruptDeclared = true;
+                appendWorldEvent(world, {
+                    type: 'MERCHANT_BANKRUPT',
+                    tick,
+                    merchantId: merchant.id,
+                    capital: merchantCapital,
+                }, [routeResult.event.eventId]);
+            }
             const canShip = cargoAmount > 0 && route
-                && destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned;
+                && destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;
             try {
                 let commitmentEventId;
                 let trip;
@@ -2266,7 +2343,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                         routeId: chosenRoute,
                         status: 'DEFERRED',
                         materialized: false,
-                        reason: alreadyTraveling ? 'ALREADY_TRAVELING' : (destAbandoned ? 'ABANDONED_DESTINATION' : 'NO_CARGO_OR_ROUTE'),
+                        reason: bankrupt ? 'BANKRUPT' : (alreadyTraveling ? 'ALREADY_TRAVELING' : (destAbandoned ? 'ABANDONED_DESTINATION' : 'NO_CARGO_OR_ROUTE')),
                     }, [routeResult.event.eventId]);
                     commitmentEventId = deferred.eventId;
                 }

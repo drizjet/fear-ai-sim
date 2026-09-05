@@ -423,6 +423,22 @@ const MUTATIONS = [
         note: 'E4 raid exposure ignored; migrants must not divert from the raided road',
     },
     {
+        id: 'merchant-bankruptcy-gate',
+        file: 'closed-world.js',
+        target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',
+        replacement: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned;',
+        detectors: 'merchant-capital',
+        note: 'E9 bankruptcy gate cut; broke merchants keep shipping',
+    },
+    {
+        id: 'merchant-delivery-revenue',
+        file: 'closed-world.js',
+        target: 'bookMerchantCapital(\n            (world.merchants ?? []).find(item => item.id === trip.merchantId),\n            deliveryRevenue);',
+        replacement: 'void deliveryRevenue;',
+        detectors: 'merchant-capital',
+        note: 'E9 delivery revenue cut; sales stop earning',
+    },
+    {
         id: 'takeover-transfer',
         file: 'closed-world.js',
         target: 'town.controlledBy = faction.id;',
