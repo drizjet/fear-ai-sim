@@ -2863,6 +2863,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     && (route.from === townId || route.to === townId));
                 if (stormRoad) pcp *= Math.max(0, 1 - clamp01(Number(world.storm.severity) || 0) * 0.3);
             }
+            // E12: the occupied work less. Foot-dragging scales output
+            // down up to 15% at fresh conquest (0.3 penalty), fading
+            // with assimilation. No occupation record prices exactly 1.
+            pcp *= 1 - occupationPenalty(town, tick) * 0.5;
             return pcp;
         };
         const producePlan = new Map();
@@ -3157,14 +3161,18 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // it stays scarred while faction heals, and next crime pulls stale-low
         // justice via 0.15 blend. Drift both together.
         if (!reportedCrime) {
+            // E12: occupation caps idle recovery. A quietly occupied
+            // town drifts toward (0.9 - penalty), not 0.9 — foreign
+            // rule is never fully legitimate, even without crime.
+            const townIdle = world.towns.get(townId);
+            const idlePenalty = occupationPenalty(townIdle, tick);
             const recovered = {
                 ...previous,
-                legitimacy: clamp(previous.legitimacy * 0.98 + 0.9 * 0.02),
+                legitimacy: clamp(previous.legitimacy * 0.98 + (0.9 - idlePenalty) * 0.02),
                 grievance: clamp(previous.grievance * 0.98 + 0.1 * 0.02),
             };
             world.justiceState.set(townId, recovered);
             // Recover faction legitimacy slowly when no crime (idle justice = steady state, legitimacy drifts back toward 0.9)
-            const townIdle = world.towns.get(townId);
             const idleFaction = world.factions.find(f => f.townId === townId || (townIdle && f.id === townIdle.controlledBy));
             if (idleFaction) {
                 idleFaction.legitimacy = clamp(idleFaction.legitimacy * 0.98 + 0.9 * 0.02);
@@ -3180,18 +3188,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const corruption = 0.1;
         // Slice W: mean LAW_VIOLATED penalty for this town in the window.
         // Zero when no violation exists — missing law history stays neutral.
-        // (This branch only runs when reportedCrime is true; the idle path
-        // above already returned, so a hand-forged LAW without any attack
-        // cannot erode legitimacy on its own.)
         const townLawEvents = recentLawsByTown(townId);
         const lawPenalty = townLawEvents.length === 0 ? 0 : townLawEvents.reduce((sum, ev) => sum + (Number.isFinite(ev.penalty) ? ev.penalty : 0), 0) / townLawEvents.length;
+        // E12: foreign-rule debit, same shape as lawPenalty (0 when
+        // unoccupied — quiet control stays neutral).
+        const occupationPenaltyValue = occupationPenalty(townRef, tick);
         const result = world.justiceSystem.resolve({
             legitimacy: previous.legitimacy,
             grievance: previous.grievance,
             reportedCrime,
             investigationQuality,
             corruption,
-            lawPenalty
+            lawPenalty,
+            occupationPenalty: occupationPenaltyValue
         });
         const changed = result.legitimacy !== previous.legitimacy
             || result.grievance !== previous.grievance;
@@ -3241,7 +3250,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 justiceAccess: result.justiceAccess,
                 investigationQuality,
                 lawPenalty,
-                lawViolationCount: townLawEvents.length
+                lawViolationCount: townLawEvents.length,
+                occupationPenalty: occupationPenaltyValue,
             }, [...upstreamAttackIds, ...upstreamLawIds]);
         }
         // V8 corrective checkpoint §4: emit an explicit
@@ -3589,6 +3599,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             if (attackerPower > defenderPower) {
                 faction.resources = Math.max(0, attackerPower - TAKEOVER_COST);
                 town.controlledBy = faction.id;
+                // E12: conquest opens an occupation. Foreign rule
+                // starts at full penalty and assimilates over tens
+                // of ticks (occupationPenalty). Re-takeover refreshes
+                // the clock; the record is plain JSON (save/load-free).
+                town.occupation = { byFactionId: faction.id, sinceTick: tick };
                 if (pair && typeof pair.recordHarm === 'function') {
                     pair.recordHarm({ severity: 0.5, tick, fromFactionId: faction.id });
                 }
@@ -5309,6 +5324,20 @@ export function tickSettlerGroups(world, { tick = 0 } = {}) {
     }
     world.settlerGroups = remaining;
     return events;
+}
+
+/**
+ * E12 — occupation penalty. Foreign rule starts at 0.3 and
+ * assimilates geometrically (0.966/tick, ~20-tick half-life, under
+ * 0.01 past ~100 ticks). No occupation record means no penalty, so
+ * quiet control and older saves behave exactly as before. Pure:
+ * the same (town, tick) always yields the same number.
+ */
+export function occupationPenalty(town, tick = 0) {
+    const since = Number(town?.occupation?.sinceTick);
+    if (!Number.isFinite(since)) return 0;
+    const elapsed = Math.max(0, (Number(tick) || 0) - since);
+    return 0.3 * Math.pow(0.966, elapsed);
 }
 
 /**

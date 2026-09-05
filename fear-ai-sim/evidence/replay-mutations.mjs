@@ -455,6 +455,22 @@ const MUTATIONS = [
         note: 'E11 escort protection cut; escorted ambushes lose like lone ones',
     },
     {
+        id: 'occupation-record',
+        file: 'closed-world.js',
+        target: 'town.occupation = { byFactionId: faction.id, sinceTick: tick };',
+        replacement: 'void town;',
+        detectors: 'occupation-legitimacy',
+        note: 'E12 occupation record cut; conquest administers itself free',
+    },
+    {
+        id: 'occupation-debit',
+        file: 'justice.js',
+        target: 'const occupationDebit = clamp(occupationPenalty) * 0.15;',
+        replacement: 'const occupationDebit = 0;',
+        detectors: 'occupation-legitimacy',
+        note: 'E12 occupation debit cut; reported crime judges occupiers free',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

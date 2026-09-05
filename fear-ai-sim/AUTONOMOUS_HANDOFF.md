@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E11-CONVOY-ESCORTS (Lane B, unaccepted)
+EVID-2026-09-05-E12-OCCUPATION (Lane B, unaccepted)
+
+## E12 — occupation costs: conquest must be administered (expansion)
+
+- Gap (probed, not guessed): an E8-taken town was bit-identical to its untaken twin after 60 ticks (legitimacy 0.781, grievance 0.100, pop 13 both) — conquest changed the flag and nothing else.
+- Fix: TOWN_TAKEN stamps town.occupation (plain JSON, refreshed on recapture); occupationPenalty 0.3 decaying 0.966/tick feeds justice resolve (same 0.15 bound/gating as lawPenalty), caps idle recovery at 0.9-penalty, audits on JUSTICE_RESOLVED, and scales production down up to 15% (foot-dragging). Existing migration/faction channels carry the rest with no new wiring.
+- Loop closed: taken legitimacy trails then converges over the assimilation window (ceiling-shaped recovery documented); occupied production trails; reported crime judges occupiers harder; recapture refreshes; save/load identical; quiet control untouched.
+- Fallout restaged honestly (production untouched except noted): none — WAR-gated like E8, zero restaging (201/1445 green as-is).
+- Validation: 201/1445 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 62/62 (2 new E12 entries), coverage 109 rows.
 
 ## E11 — endogenous convoys: merchants buy protection (expansion)
 
