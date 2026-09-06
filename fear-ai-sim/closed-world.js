@@ -797,7 +797,7 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
     return world;
 }
 
-export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
+export function createClosedWorldScenario({ season = 'SPRING', confederations = [] } = {}) {
     // Per-town economy schema. `consumes` is the demand per population
     // (existing). `produces` is the supply per population — the audit
     // asked for a real stock-flow loop. `storageCapacity` caps inventory
@@ -1004,6 +1004,9 @@ export function createClosedWorldScenario({ season = 'SPRING' } = {}) {
         // destination instead of teleporting into town population.
         // Plain array of JSON: JSON-safe across save/load and fork.
         refugeeCamps: [],
+        // E25 (nomadic confederations): non-territorial nomadic empires
+        // with seasonal capitals and protection tribute extraction.
+        confederations: [...confederations],
         scheduledConsequences: [],
         routeCommitments: [],
         patrolAssignments: [],
@@ -1496,6 +1499,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     // entries are left for the per-tick loop to skip honestly.
     if (!Array.isArray(world.wildlifeGroups)) world.wildlifeGroups = [];
     if (!Array.isArray(world.wildlife)) world.wildlife = [];
+    if (!Array.isArray(world.confederations)) world.confederations = [];
     // Law slice: ensure every town has its prohibitions materialized.
     if (world.towns && typeof world.towns.get === 'function') {
         for (const [, town] of world.towns) ensureTownLaws(town);
@@ -3638,7 +3642,32 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 }
                 tributePaid += tribute;
             }
-            taxed.push({ townId, heads, levy, garrison, tribute, tributeOverlord });
+            // E25: Nomadic confederation protection tribute.
+            let confTribute = 0;
+            let confId = null;
+            for (const conf of world.confederations ?? []) {
+                if (!conf || conf.status !== 'ACTIVE') continue;
+                const agr = (conf.tributeAgreements ?? []).find(a =>
+                    a.status === 'ACTIVE' && a.townId === townId && a.controllerId === faction.id);
+                if (agr) {
+                    const cRate = Math.min(1, Math.max(0, Number(agr.tributeRate) || 0.15));
+                    confTribute = levy * cRate;
+                    confId = conf.id;
+                    conf.power = (Number(conf.power) || 0) + confTribute;
+                    tributePaid += confTribute;
+                    appendWorldEvent(world, {
+                        type: 'CONFEDERATION_TRIBUTE_PAID',
+                        confederationId: conf.id,
+                        townId,
+                        controllerId: faction.id,
+                        amount: confTribute,
+                        confederationPower: conf.power,
+                        tick,
+                    }, []);
+                    break;
+                }
+            }
+            taxed.push({ townId, heads, levy, garrison, tribute, tributeOverlord, ...(confTribute > 0 ? { confTribute, confId } : {}) });
         }
         if (taxed.length === 0) continue;
         const net = gross - garrisonCost - tributePaid;
@@ -3701,12 +3730,28 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 }
             }
         }
+        // E25: Nomadic confederation backing — if an active confederation tribute agreement
+        // covers this defender (or town), the confederation's nomadic power lends wall defense weight.
+        for (const conf of world.confederations ?? []) {
+            if (!conf || conf.status !== 'ACTIVE') continue;
+            const deal = (conf.tributeAgreements ?? []).find(a =>
+                a.status === 'ACTIVE' && (a.controllerId === defenderId || a.townId === defenderId));
+            if (deal) {
+                weight += Math.max(0, Number(conf.power) || 0) * 0.5;
+            }
+        }
         return weight;
     };
     // E21: any standing shield (guarantee, federation seat,
     // vassalage cover) for the recalculation gate.
     const alliedShield = (pId) => {
         if (activeGuaranteeFor(pId)) return true;
+        for (const conf of world.confederations ?? []) {
+            if (!conf || conf.status !== 'ACTIVE') continue;
+            const deal = (conf.tributeAgreements ?? []).find(a =>
+                a.status === 'ACTIVE' && (a.controllerId === pId || a.townId === pId));
+            if (deal) return true;
+        }
         return (world.treaties ?? []).some(treaty => {
             if (!treaty || treaty.status !== 'ACTIVE') return false;
             const kind = treaty.terms?.kind;
@@ -4469,6 +4514,60 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     treatyId: treaty.id,
                     tick,
                 }, treaty.eventId ? [treaty.eventId] : []);
+            }
+        }
+    }
+    // 7i. E25: Nomadic confederations and dynamic seasonal capitals.
+    for (const conf of world.confederations ?? []) {
+        if (!conf || conf.status !== 'ACTIVE') continue;
+        const targetCapital = (world.season === 'SPRING' || world.season === 'SUMMER')
+            ? conf.seasonalCapitals?.summer
+            : conf.seasonalCapitals?.winter;
+        if (targetCapital && conf.currentCapital !== targetCapital) {
+            const fromCapital = conf.currentCapital;
+            conf.currentCapital = targetCapital;
+            appendWorldEvent(world, {
+                type: 'SEASONAL_CAPITAL_RELOCATED',
+                confederationId: conf.id,
+                fromCapital,
+                toCapital: targetCapital,
+                season: world.season,
+                tick,
+            }, []);
+        }
+
+        if ((Number(conf.power) || 0) <= 0) {
+            conf.status = 'DISSOLVED';
+            appendWorldEvent(world, {
+                type: 'CONFEDERATION_DISSOLVED',
+                confederationId: conf.id,
+                tick,
+            }, []);
+            continue;
+        }
+
+        for (const agr of conf.tributeAgreements ?? []) {
+            if (agr.status !== 'ACTIVE') continue;
+            const controller = (world.factions ?? []).find(f => f.id === agr.controllerId);
+            const town = world.towns.get(agr.townId);
+            if (!controller || !town || (Number(town.population) || 0) <= 0) continue;
+
+            const pair = world.relationships?.get?.(`${controller.id}::${conf.id}`)
+                ?? world.relationships?.get?.(`${conf.id}::${controller.id}`);
+            const stance = pair && typeof pair.stanceFrom === 'function' ? pair.stanceFrom(controller.id) : null;
+            const atWar = Number.isFinite(stance) && stance >= StanceLadder.WAR;
+            const broke = (Number(controller.resources) || 0) <= 0 && (Number(town.population) || 0) <= 0;
+
+            if (atWar || broke) {
+                agr.status = 'BROKEN';
+                appendWorldEvent(world, {
+                    type: 'CONFEDERATION_RAID_MOBILIZED',
+                    confederationId: conf.id,
+                    townId: agr.townId,
+                    controllerId: agr.controllerId,
+                    reason: atWar ? 'CONTROLLER_WAR_STANCE' : 'CONTROLLER_DEFAULT',
+                    tick,
+                }, []);
             }
         }
     }
@@ -6790,3 +6889,33 @@ export function advanceRoamingTravel(group, ticks, { exposure = null, world = nu
     }
     return result;
 }
+
+/**
+ * E25: Create a nomadic confederation.
+ *
+ * @param {object} options
+ * @returns {object} nomadic confederation plain object
+ */
+export function createNomadicConfederation({
+    id,
+    name,
+    members = [],
+    seasonalCapitals = { summer: 'north', winter: 'south' },
+    currentCapital = 'north',
+    power = 6,
+    tributeAgreements = [],
+    status = 'ACTIVE',
+} = {}) {
+    if (!id) throw new TypeError('createNomadicConfederation requires an id');
+    return {
+        id,
+        name: name ?? id,
+        members: [...members],
+        seasonalCapitals: { ...seasonalCapitals },
+        currentCapital,
+        power,
+        tributeAgreements: tributeAgreements.map(a => ({ ...a })),
+        status,
+    };
+}
+

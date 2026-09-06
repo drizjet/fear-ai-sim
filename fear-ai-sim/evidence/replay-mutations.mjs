@@ -690,6 +690,22 @@ const MUTATIONS = [
         note: 'E24 hierarchy contention cut; war between overlords never triggers contention',
     },
     {
+        id: 'nomadic-capital-relocation',
+        file: 'closed-world.js',
+        target: 'conf.currentCapital = targetCapital;',
+        replacement: 'void targetCapital;',
+        detectors: 'nomadic-confederations',
+        note: 'E25 seasonal capital relocation cut; nomadic capital never migrates with season',
+    },
+    {
+        id: 'nomadic-tribute-booking',
+        file: 'closed-world.js',
+        target: 'conf.power = (Number(conf.power) || 0) + confTribute;',
+        replacement: 'void confTribute;',
+        detectors: 'nomadic-confederations',
+        note: 'E25 nomadic tribute booking cut; confederation power never increases from tribute',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

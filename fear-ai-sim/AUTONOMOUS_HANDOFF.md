@@ -1,6 +1,16 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-06-E24-CHAINED (Lane B, unaccepted)
+EVID-2026-09-06-E25-NOMADIC (Lane B, unaccepted)
+
+## E25 — nomadic confederations and dynamic seasonal capitals: the steppe moves (expansion)
+
+- Gap (probed, not guessed): polities were strictly territorial and bound to fixed town coordinates — no non-territorial nomadic empires existed to extract protection tribute from sedentary town controllers, migrate seasonal capitals across ecological pasture cycles, dissolve upon resource exhaustion, or mobilize punitive raids upon default or war.
+- Fix: implemented `createNomadicConfederation` and integrated nomadic confederations into `closed-world.js`:
+  1. Step 7a (Protection Tribute): Settled town controllers pay tribute rate-governed resources to nomadic confederations (`CONFEDERATION_TRIBUTE_PAID`), increasing confederation power.
+  2. Wall Defense Backing: Active confederations lend 50% power cavalry defense weight to tributary town walls (`guaranteeBacking` / `alliedShield`).
+  3. Step 7i (Nomadic Pass): Dynamic seasonal capital migration (`SEASONAL_CAPITAL_RELOCATED`) synchronizing capital between summer/spring pastures and winter/autumn shelters; dissolution on <= 0 power (`CONFEDERATION_DISSOLVED`); punitive raid mobilization on default or WAR stance (`CONFEDERATION_RAID_MOBILIZED`).
+- Fallout restaged honestly: none beyond new files — all 218 prior suites pass unmodified (sedentary worlds have empty confederations, pass zero tribute, and emit zero nomadic events).
+- Validation: 218/1549 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 88/88 (2 new E25 entries), coverage 122 rows.
 
 ## E24 — chained allegiances and hierarchy contention: the pyramid holds (expansion)
 
