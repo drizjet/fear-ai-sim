@@ -670,6 +670,26 @@ const MUTATIONS = [
         note: 'E23 queue audit cut; stacking stays silent',
     },
     {
+        id: 'chained-pass-through',
+        file: 'closed-world.js',
+        target: 'tributePassedUp = tribute * superiorRate;',
+        replacement: 'tributePassedUp = 0;',
+        detectors: 'chained-allegiances',
+        note: 'E24 tribute pass-through cut; intermediate overlord retains all',
+    },
+    {
+        id: 'hierarchy-contention',
+        file: 'closed-world.js',
+        target: `appendWorldEvent(world, {
+                    type: 'HIERARCHY_CONTESTED',
+                    superiorOverlordId: supId,`,
+        replacement: `appendWorldEvent(world, {
+                    type: 'HIERARCHY_CONTESTED_CUT',
+                    superiorOverlordId: supId,`,
+        detectors: 'chained-allegiances',
+        note: 'E24 hierarchy contention cut; war between overlords never triggers contention',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

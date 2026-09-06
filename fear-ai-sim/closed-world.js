@@ -3600,9 +3600,41 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 const overlord = tributeOverlord
                     ? (world.factions ?? []).find(f => f.id === tributeOverlord) : null;
                 if (overlord) {
+                    // E24: Chained suzerainty — if intermediate overlord is itself
+                    // a vassal to a grand overlord, tribute passes up the chain.
+                    const superiorDeal = (world.treaties ?? []).find(t =>
+                        t?.status === 'ACTIVE'
+                        && (t?.terms?.kind === 'autonomy' || t?.terms?.kind === 'vassalage')
+                        && t?.terms?.polityId === overlord.id);
+                    let tributePassedUp = 0;
+                    let retainedTribute = tribute;
+                    if (superiorDeal) {
+                        const superiorRate = Math.min(1, Math.max(0, Number(superiorDeal.terms?.tributeRate) || 0.25));
+                        tributePassedUp = tribute * superiorRate;
+                        retainedTribute = Math.max(0, tribute - tributePassedUp);
+                        const superiorOverlordId = superiorDeal.terms?.overlordId;
+                        const grandOverlord = superiorOverlordId
+                            ? (world.factions ?? []).find(f => f.id === superiorOverlordId) : null;
+                        if (grandOverlord) {
+                            const grandCap = Math.max(0, Number(grandOverlord.maxResources) || 0);
+                            grandOverlord.resources = Math.min(grandCap,
+                                Math.max(0, (Number(grandOverlord.resources) || 0) + tributePassedUp));
+                        }
+                        appendWorldEvent(world, {
+                            type: 'TRIBUTE_PASSED_UP',
+                            fromOverlordId: overlord.id,
+                            toOverlordId: superiorOverlordId,
+                            polityId: faction.id,
+                            townId,
+                            tributeReceived: tribute,
+                            tributePassedUp,
+                            retainedTribute,
+                            tick,
+                        }, deal.eventId ? [deal.eventId] : []);
+                    }
                     const overlordCap = Math.max(0, Number(overlord.maxResources) || 0);
                     overlord.resources = Math.min(overlordCap,
-                        Math.max(0, (Number(overlord.resources) || 0) + tribute));
+                        Math.max(0, (Number(overlord.resources) || 0) + retainedTribute));
                 }
                 tributePaid += tribute;
             }
@@ -3646,11 +3678,27 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 }
             } else if (kind === 'vassalage' && treaty.terms?.polityId === defenderId) {
                 weight += factionPowerNow(treaty.terms?.overlordId);
+                // E24: Chained suzerainty — grand overlord weight cascades down
+                const superiorDeal = (world.treaties ?? []).find(t =>
+                    t?.status === 'ACTIVE'
+                    && (t?.terms?.kind === 'autonomy' || t?.terms?.kind === 'vassalage')
+                    && t?.terms?.polityId === treaty.terms?.overlordId);
+                if (superiorDeal && superiorDeal.terms?.overlordId && superiorDeal.terms.overlordId !== defenderId) {
+                    weight += factionPowerNow(superiorDeal.terms.overlordId) * 0.5;
+                }
             } else if (kind === 'autonomy' && treaty.terms?.polityId === defenderId) {
                 // E23: autonomy restraint carries half weight; vassalage
                 // carries full weight. Rank discounts junior shields.
                 const rank = serviceRankOf(treaty);
                 weight += factionPowerNow(treaty.terms?.overlordId) * (rank <= 1 ? 0.5 : 0.25);
+                // E24: Chained suzerainty — grand overlord weight cascades down
+                const superiorDeal = (world.treaties ?? []).find(t =>
+                    t?.status === 'ACTIVE'
+                    && (t?.terms?.kind === 'autonomy' || t?.terms?.kind === 'vassalage')
+                    && t?.terms?.polityId === treaty.terms?.overlordId);
+                if (superiorDeal && superiorDeal.terms?.overlordId && superiorDeal.terms.overlordId !== defenderId) {
+                    weight += factionPowerNow(superiorDeal.terms.overlordId) * 0.25;
+                }
             }
         }
         return weight;
@@ -3905,7 +3953,9 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // on what is being weighed.
         const formerPower = Math.max(0, Number(former.resources) || 0);
         const townPop = Math.max(0, Number(tTown.population) || 0);
-        const polityPower = Math.max(0, Number(pol.resources) || 0) + townPop * 0.1 + guaranteeBacking(pId);
+        const basePower = Math.max(0, Number(pol.resources) || 0) + townPop * 0.1;
+        const alliedWeight = Math.min(basePower, guaranteeBacking(pId));
+        const polityPower = basePower + alliedWeight;
         const founderParents = pFounded?.eventId ? [pFounded.eventId] : [];
         if (formerPower >= 2 * polityPower && (Number(pol.legitimacy) || 0) < RECONQUEST_YIELD_LEGITIMACY) {
             // Overwhelming threat meets a failing polity: demand, and
@@ -4392,6 +4442,34 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 tick,
                 rootReason: 'FEDERATION_SEALED',
             }, parents);
+        }
+    }
+    // 7h4. E24 (hierarchy contention): when a superior overlord and an
+    // intermediate overlord enter WAR stance, the superior overlord
+    // contests the subordinate hierarchy.
+    for (const treaty of world.treaties ?? []) {
+        if (!treaty || treaty.status !== 'ACTIVE') continue;
+        if (treaty.terms?.kind !== 'autonomy' && treaty.terms?.kind !== 'vassalage') continue;
+        const supId = treaty.terms?.overlordId;
+        const midId = treaty.terms?.polityId;
+        if (!supId || !midId) continue;
+        const pair = world.relationships?.get?.(`${supId}::${midId}`)
+            ?? world.relationships?.get?.(`${midId}::${supId}`) ?? null;
+        const stance = pair && typeof pair.stanceFrom === 'function'
+            ? pair.stanceFrom(supId) : null;
+        if (Number.isFinite(stance) && stance >= StanceLadder.WAR) {
+            const alreadyContested = world.events ? findLatestWorldEvent(world,
+                event => event.type === 'HIERARCHY_CONTESTED' && event.superiorOverlordId === supId
+                    && event.intermediateOverlordId === midId && event.tick === tick, 'HIERARCHY_CONTESTED') : null;
+            if (!alreadyContested) {
+                appendWorldEvent(world, {
+                    type: 'HIERARCHY_CONTESTED',
+                    superiorOverlordId: supId,
+                    intermediateOverlordId: midId,
+                    treatyId: treaty.id,
+                    tick,
+                }, treaty.eventId ? [treaty.eventId] : []);
+            }
         }
     }
     // 7b. E8 (settlement takeover): raids on bandits never move

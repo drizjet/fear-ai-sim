@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E23-HIERARCHY (Lane B, unaccepted)
+EVID-2026-09-06-E24-CHAINED (Lane B, unaccepted)
+
+## E24 — chained allegiances and hierarchy contention: the pyramid holds (expansion)
+
+- Gap (probed, not guessed): hierarchies stopped at two shields per town with no overlord-of-overlord chains — an intermediate overlord that became a vassal had nowhere to pass tribute and grand overlords had no standing interest in defending junior vassals.
+- Fix: chained feudal hierarchies with tribute pass-through, chained defense, and contention cascades. In the tax loop, if an intermediate overlord is itself a vassal/tributary to a superior overlord, tribute passes through to the grand overlord according to the superior treaty's rate, audited via TRIBUTE_PASSED_UP. Grand overlords lend cascaded defense weight down the chain in guaranteeBacking. Intermediate betrayal terminates the chain and stops pass-through; war stance between overlords triggers audited HIERARCHY_CONTESTED events. Reconciled 7f reconquest deliberation formula with 7b takeover contest by capping alliedWeight at basePower.
+- Fallout restaged honestly: none beyond new files — all 213 prior suites pass unmodified (non-chained worlds pass zero tribute up and emit zero contention).
+- Validation: 213/1527 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 86/86 (2 new E24 entries), coverage 121 rows.
 
 ## E23 — layered allegiances and contested hierarchies: the stack holds (expansion)
 

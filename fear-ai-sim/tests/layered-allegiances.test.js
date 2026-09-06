@@ -81,7 +81,7 @@ describe('E23 layered allegiances and contested hierarchies', () => {
         }
     });
 
-    it('rival claimants queue: only one ACTIVE deal per town, others wait', () => {
+    it('rival claimants queue: junior shields stack active walls while queuing behind rank 1 for tribute and vetoes', () => {
         const world = lonePolityWorld();
         const { snap, founded } = sealAutonomy(world);
         const north = world.factions.find(f => f.id === 'north-faction');
@@ -90,8 +90,10 @@ describe('E23 layered allegiances and contested hierarchies', () => {
         govern(world, snap + 81, snap + 100);
         const active = serviceDeals(world, founded.polityId).filter(t => t.status === 'ACTIVE');
         const queued = world.events.filter(e => e.type === 'HIERARCHY_QUEUED' && e.polityId === founded.polityId);
-        expect(active.length).toBeLessThanOrEqual(2);
+        expect(active.length).toBe(2);
         expect(queued.length).toBeGreaterThan(0);
+        expect(queued[0].rank).toBe(2);
+        expect(queued[0].overlordId).toBe('north-faction');
         expect(world.towns.get('south').controlledBy).toBe(founded.polityId);
     });
 
