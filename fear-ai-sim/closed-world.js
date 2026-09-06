@@ -3532,10 +3532,19 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     const GARRISON_PENALTY_FLOOR = 0.005;
     // E22 helper: the ACTIVE service deal (autonomy or vassalage)
     // covering a polity-held town. One record covers status and flow.
-    const serviceDealFor = (tId, pId) => (world.treaties ?? []).find(treaty =>
-        treaty?.status === 'ACTIVE'
-        && (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
-        && treaty?.terms?.townId === tId && treaty?.terms?.polityId === pId) ?? null;
+    // E23: rank 1 is primary (missing rank means 1 for older saves);
+    // tributaries form an ordered stack, not a fork.
+    const serviceRankOf = (treaty) => {
+        const rank = Number(treaty?.terms?.rank);
+        return Number.isFinite(rank) && rank >= 1 ? Math.floor(rank) : 1;
+    };
+    const serviceDealsFor = (tId, pId) => (world.treaties ?? [])
+        .filter(treaty => treaty?.status === 'ACTIVE'
+            && (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
+            && treaty?.terms?.townId === tId && treaty?.terms?.polityId === pId)
+        .sort((a, b) => serviceRankOf(a) - serviceRankOf(b)
+            || String(a?.id ?? '').localeCompare(String(b?.id ?? '')));
+    const serviceDealFor = (tId, pId) => serviceDealsFor(tId, pId)[0] ?? null;
     // E22: barren ticks a covered town may miss before the deal lapses.
     const TRIBUTE_LAPSE_TOLERANCE = 5;
     for (const faction of world.factions) {
@@ -3557,6 +3566,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     barren.lapseStreak = (Number(barren.lapseStreak) || 0) + 1;
                     if (barren.lapseStreak >= TRIBUTE_LAPSE_TOLERANCE) {
                         terminateTreaty({ treaty: barren, reason: 'TRIBUTE_LAPSED', world, tick });
+                        // E23: the junior shield inherits primary rank so
+                        // the ordered stack never gaps.
+                        const junior = serviceDealsFor(townId, faction.id)[0] ?? null;
+                        if (junior && serviceRankOf(junior) !== 1) {
+                            junior.terms = { ...junior.terms, rank: 1 };
+                        }
                     }
                 }
                 continue;
@@ -3611,8 +3626,6 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     }
     // E19 helpers (defined before 7e so 7b, 7f, and 7g share one
     // deterrence book): the ACTIVE guarantee shielding a polity.
-    // E21 extends the book: federation kin and vassalage overlords
-    // lend weight too — every standing shield counts, summed.
     const activeGuaranteeFor = (pId) => (world.treaties ?? []).find(treaty =>
         treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'guarantee'
         && treaty?.terms?.polityId === pId) ?? null;
@@ -3633,6 +3646,11 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 }
             } else if (kind === 'vassalage' && treaty.terms?.polityId === defenderId) {
                 weight += factionPowerNow(treaty.terms?.overlordId);
+            } else if (kind === 'autonomy' && treaty.terms?.polityId === defenderId) {
+                // E23: autonomy restraint carries half weight; vassalage
+                // carries full weight. Rank discounts junior shields.
+                const rank = serviceRankOf(treaty);
+                weight += factionPowerNow(treaty.terms?.overlordId) * (rank <= 1 ? 0.5 : 0.25);
             }
         }
         return weight;
@@ -4121,12 +4139,17 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // Settled claims never negotiate; one live-or-betrayed deal per
         // town ever (lapsed deals below stay renegotiable).
         if (decidedE18(fromId, pId, tId)) continue;
-        // One intermediate order per town ever — except lapsed ones:
-        // a barren death is renegotiable, betrayal stays dead.
+        // E23: ordered stack of at most two ACTIVE shields. A lapsed
+        // death stays renegotiable, betrayal stays dead, and the same
+        // overlord never stacks with itself.
+        const stack = serviceDealsFor(tId, pId);
+        if (stack.length >= 2) continue;
+        if (stack.length === 1 && stack[0].terms?.overlordId === fromId) continue;
         const priorDeal = (world.treaties ?? []).some(treaty =>
             (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
             && treaty?.terms?.polityId === pId
             && treaty?.terms?.townId === tId
+            && treaty.status !== 'ACTIVE'
             && !(treaty.status === 'TERMINATED' && treaty.termination?.reason === 'TRIBUTE_LAPSED'));
         if (priorDeal) continue;
         const priorRefusal = world.events ? findLatestWorldEvent(world,
@@ -4168,12 +4191,13 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             }, pFounded?.eventId ? [pFounded.eventId] : []);
             continue;
         }
+        const rank = serviceDealsFor(tId, pId).length + 1;
         const treaty = createTreaty({
             id: `treaty-autonomy-${fromId}-${pId}-${tick}`,
             participants: [fromId, pId],
             terms: {
                 kind: 'autonomy', townId: tId, overlordId: fromId, polityId: pId,
-                tributeRate: AUTONOMY_TRIBUTE_RATE,
+                tributeRate: AUTONOMY_TRIBUTE_RATE, rank,
             },
             startTick: tick,
         });
@@ -4190,6 +4214,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tick,
             rootReason: 'AUTONOMY_AGREED',
         }, pFounded?.eventId ? [pFounded.eventId] : []);
+        if (rank > 1) {
+            appendWorldEvent(world, {
+                type: 'HIERARCHY_QUEUED',
+                townId: tId,
+                polityId: pId,
+                overlordId: fromId,
+                rank,
+                tick,
+            }, pFounded?.eventId ? [pFounded.eventId] : []);
+        }
     }
     // 7h2. E21 (vassalage with teeth): like autonomy but open to any
     // strong stranger — and protection, not forbearance, is the
@@ -4215,21 +4249,27 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         if (tick - pFoundedTick < AUTONOMY_MIN_AGE) continue;
         const fromId = pFounded?.fromFactionId ?? null;
         if (decidedE18(fromId, pId, tId)) continue;
+        // E23: ordered stack of at most two ACTIVE shields; betrayed
+        // deals still block, lapsed ones stay renegotiable.
+        const stack = serviceDealsFor(tId, pId);
+        if (stack.length >= 2) continue;
+        const stackedOverlords = new Set(stack.map(treaty => treaty?.terms?.overlordId));
         const priorOrder = (world.treaties ?? []).some(treaty =>
             (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
             && treaty?.terms?.polityId === pId
             && treaty?.terms?.townId === tId
+            && treaty.status !== 'ACTIVE'
             && !(treaty.status === 'TERMINATED' && treaty.termination?.reason === 'TRIBUTE_LAPSED'));
         if (priorOrder) continue;
-        if ((Number(pol.legitimacy) || 0) < AUTONOMY_MIN_LEGITIMACY) continue;
-        if (Math.max(0, Number(tTown.population) || 0) < AUTONOMY_MIN_TOWN_POP) continue;
         // Strongest qualifying stranger: capacity first, faction order
-        // breaks ties (deterministic). No prior refusal from this one.
+        // breaks ties (deterministic). Stacked overlords and prior
+        // refusals never re-offer.
         let best = null;
         let bestCap = -1;
         for (const cand of world.factions ?? []) {
             if (!cand || cand.id === pId || cand.id === fromId) continue;
             if (isPolityFaction(cand.id)) continue;
+            if (stackedOverlords.has(cand.id)) continue;
             const refused = world.events ? findLatestWorldEvent(world,
                 event => event.type === 'VASSALAGE_REFUSED' && event.polityId === pId
                     && event.overlordId === cand.id, 'VASSALAGE_REFUSED') : null;
@@ -4264,12 +4304,13 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             }, pFounded?.eventId ? [pFounded.eventId] : []);
             continue;
         }
+        const rank = serviceDealsFor(tId, pId).length + 1;
         const treaty = createTreaty({
             id: `treaty-vassalage-${best.id}-${pId}-${tick}`,
             participants: [best.id, pId],
             terms: {
                 kind: 'vassalage', townId: tId, overlordId: best.id, polityId: pId,
-                tributeRate: AUTONOMY_TRIBUTE_RATE,
+                tributeRate: AUTONOMY_TRIBUTE_RATE, rank,
             },
             startTick: tick,
         });
@@ -4286,6 +4327,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tick,
             rootReason: 'VASSALAGE_SWORN',
         }, pFounded?.eventId ? [pFounded.eventId] : []);
+        if (rank > 1) {
+            appendWorldEvent(world, {
+                type: 'HIERARCHY_QUEUED',
+                townId: tId,
+                polityId: pId,
+                overlordId: best.id,
+                rank,
+                tick,
+            }, pFounded?.eventId ? [pFounded.eventId] : []);
+        }
     }
     // 7h3. E21 (federation between polities): kin bind mutual
     // restraint and mutual walls. Two landheld polities at standing
@@ -4377,12 +4428,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // E20: the town-scoped autonomy deal binds first (most
             // specific restraint wins) — tribute already buys what war
             // would take — then the blanket pact.
-            const blockingTreaty = (world.treaties ?? []).find(treaty =>
-                    treaty?.status === 'ACTIVE'
-                    && (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
-                    && treaty?.terms?.overlordId === faction.id
-                    && treaty?.terms?.polityId === defenderId
-                    && treaty?.terms?.townId === townId)
+            // E23: only the primary (rank 1) service deal restrains;
+            // junior shields add walls, not vetoes.
+            const primaryDeal = serviceDealFor(townId, defenderId);
+            const blockingTreaty = (primaryDeal
+                    && primaryDeal.terms?.overlordId === faction.id
+                    ? primaryDeal : null)
                 // E21: kinship bond next — federates never take each other.
                 ?? (world.treaties ?? []).find(treaty =>
                     treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'federation'
@@ -4411,11 +4462,12 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 whyNot.push(`${faction.id} stance toward ${defenderId} is ${stance}, below WAR (${StanceLadder.WAR})`);
             }
             const attackerPower = Math.max(0, Number(faction.resources) || 0);
-            const defenderPower = Math.max(0, Number(defender?.resources) || 0)
-                + Math.max(0, Number(town.population) || 0) * 0.1
-                // E19: an ACTIVE guarantee lends the guarantor's full
-                // weight to the town's walls (0 when unguaranteed).
-                + guaranteeBacking(defenderId);
+            const basePower = Math.max(0, Number(defender?.resources) || 0)
+                + Math.max(0, Number(town.population) || 0) * 0.1;
+            // E23: ordered shields sum, but the booked allied weight is
+            // capped at the bare defense so walls cannot explode.
+            const alliedWeight = Math.min(basePower, guaranteeBacking(defenderId));
+            const defenderPower = basePower + alliedWeight;
             const gateEvent = appendWorldEvent(world, {
                 type: 'TAKEOVER_GATE',
                 factionId: faction.id,
@@ -4425,6 +4477,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 stance: Number.isFinite(stance) ? stance : null,
                 attackerPower,
                 defenderPower,
+                alliedWeight,
                 allowed,
                 reason,
                 why,

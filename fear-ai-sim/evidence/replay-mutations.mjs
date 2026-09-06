@@ -577,10 +577,10 @@ const MUTATIONS = [
     {
         id: 'patron-deterrence',
         file: 'closed-world.js',
-        target: '+ guaranteeBacking(defenderId);',
-        replacement: '+ 0;',
+        target: 'const alliedWeight = Math.min(basePower, guaranteeBacking(defenderId));',
+        replacement: 'const alliedWeight = 0;',
         detectors: 'patron-guarantee',
-        note: 'E19 deterrence cut; guarantees lend no weight to walls',
+        note: 'E19 deterrence cut, E23 migration: allied weight never books (guarantees lend no weight to walls)',
     },
     {
         id: 'autonomy-offer',
@@ -629,13 +629,45 @@ const MUTATIONS = [
             (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
             && treaty?.terms?.polityId === pId
             && treaty?.terms?.townId === tId
+            && treaty.status !== 'ACTIVE'
             && !(treaty.status === 'TERMINATED' && treaty.termination?.reason === 'TRIBUTE_LAPSED'));`,
         replacement: `const priorDeal = (world.treaties ?? []).some(treaty =>
             (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
             && treaty?.terms?.polityId === pId
-            && treaty?.terms?.townId === tId);`,
+            && treaty?.terms?.townId === tId
+            && treaty.status !== 'ACTIVE');`,
         detectors: 'tribute-lapse',
-        note: 'E22 lapse exemption cut; repopulated towns never reseal',
+        note: 'E22 lapse exemption cut, E23 migration: repopulated towns never reseal',
+    },
+    {
+        id: 'hierarchy-stack',
+        file: 'closed-world.js',
+        target: `const stack = serviceDealsFor(tId, pId);
+        if (stack.length >= 2) continue;
+        const stackedOverlords`,
+        replacement: `const stack = serviceDealsFor(tId, pId);
+        if (stack.length >= 1) continue;
+        const stackedOverlords`,
+        detectors: 'layered-allegiances',
+        note: 'E23 stack cap cut; second shields never seal',
+    },
+    {
+        id: 'hierarchy-queue',
+        file: 'closed-world.js',
+        target: `if (rank > 1) {
+            appendWorldEvent(world, {
+                type: 'HIERARCHY_QUEUED',
+                townId: tId,
+                polityId: pId,
+                overlordId: best.id,`,
+        replacement: `if (false) {
+            appendWorldEvent(world, {
+                type: 'HIERARCHY_QUEUED',
+                townId: tId,
+                polityId: pId,
+                overlordId: best.id,`,
+        detectors: 'layered-allegiances',
+        note: 'E23 queue audit cut; stacking stays silent',
     },
     {
         id: 'merchant-bankruptcy-gate',

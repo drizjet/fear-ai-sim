@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E22-LAPSE (Lane B, unaccepted)
+EVID-2026-09-05-E23-HIERARCHY (Lane B, unaccepted)
+
+## E23 — layered allegiances and contested hierarchies: the stack holds (expansion)
+
+- Gap (probed, not guessed): one order per town forced every secession conflict back to binary once the first deal existed — second shields had nowhere to stand and rival claimants forked nothing.
+- Fix: ordered service stacks of at most two ACTIVE shields. Tribute follows rank 1 only (missing rank means 1, older saves read primary); defense sums ordered shields under an audited cap booked on the gate (autonomy half weight, vassalage full, junior discounted); rival claimants queue audited HIERARCHY_QUEUED events; lapse promotes the junior to primary with no gap; only rank 1 restrains takeovers.
+- Fallout restaged honestly: E19/E22 replay entries migrated to the E23 text they target (allied weight, lapsed-deal exemption); one edit round ate the tax credit line and two helper definitions plus a barren continue (all caught by E13/E8/E22 pins, restored byte-exact against HEAD).
+- Validation: 212/1521 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 84/84 (2 new E23 entries), coverage 120 rows.
 
 ## E22 — tribute lapse and renegotiation: dead ground pays nothing (expansion)
 
