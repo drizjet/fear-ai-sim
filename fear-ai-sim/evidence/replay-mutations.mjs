@@ -706,6 +706,22 @@ const MUTATIONS = [
         note: 'E25 nomadic tribute booking cut; confederation power never increases from tribute',
     },
     {
+        id: 'nomadic-succession-council',
+        file: 'closed-world.js',
+        target: "type: 'CONFEDERATION_COUNCIL_CONVENED',",
+        replacement: "type: 'CONFEDERATION_COUNCIL_CUT',",
+        detectors: 'nomadic-succession',
+        note: 'E26 council cut; succession never convenes tribal council',
+    },
+    {
+        id: 'nomadic-fracture-power-split',
+        file: 'closed-world.js',
+        target: 'conf.power = Math.max(0, conf.power - powerSplit);',
+        replacement: 'void powerSplit;',
+        detectors: 'nomadic-succession',
+        note: 'E26 fracture power split cut; confederation power never drops upon clan splintering',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

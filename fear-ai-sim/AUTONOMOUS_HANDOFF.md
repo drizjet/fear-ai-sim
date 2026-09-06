@@ -1,6 +1,18 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-06-E25-NOMADIC (Lane B, unaccepted)
+EVID-2026-09-06-E26-SUCCESSION (Lane B, unaccepted)
+
+## E26 — confederation tribal councils and nomadic succession dynamics: the kurultai decides (expansion)
+
+- Gap (probed, not guessed): nomadic confederations had no constituent clan representation, no tribal council election mechanisms, and no succession crisis resolution — when a khagan died or power fractured, confederations had no internal political life or splintering mechanics.
+- Fix: implemented constituent clans, tribal council assembly, and dynamic succession crises:
+  1. Leadership & Clan Structure: `createNomadicConfederation` accepts `clans` (`[{ id, name, influence, loyalty, candidate }]`), `khagan` (`{ id, name, health, age }`), and `successionCrisis`.
+  2. Step 7i (Succession Trigger): Khagan mortality (`khagan.health <= 0`) or vacant leadership triggers `CONFEDERATION_SUCCESSION_TRIGGERED` with previous khagan identity and cause.
+  3. Step 7i (Tribal Council Assembly): Active clans convene in council (`CONFEDERATION_COUNCIL_CONVENED`) casting votes weighted by clan influence and loyalty (`influence * (0.5 + 0.5 * loyalty)`).
+  4. Step 7i (Fracturing & Proportional Power Split): Dissident clans who backed losing candidates and have low loyalty (`loyalty < 0.35`) fracture away into splinter hordes (`CONFEDERATION_FRACTURED`), taking their exact proportional share of confederation power (`conf.power * (influence / totalInfluence)`). Power is strictly conserved.
+  5. Step 7i (Succession Resolution or Dissolution): Winning candidate is installed as new khagan (`CONFEDERATION_SUCCESSION_RESOLVED`); if all power is fractured away, confederation dissolves cleanly (`CONFEDERATION_DISSOLVED`).
+- Fallout restaged honestly: none beyond new files — all 218 prior suites pass unmodified (confederations without clans or healthy khagans never trigger councils or emit succession events).
+- Validation: 219/1555 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 90/90 (2 new E26 entries), coverage 123 rows.
 
 ## E25 — nomadic confederations and dynamic seasonal capitals: the steppe moves (expansion)
 

@@ -4570,6 +4570,112 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 }, []);
             }
         }
+
+        // E26: Tribal Councils and Succession Dynamics
+        const hasClans = Array.isArray(conf.clans) && conf.clans.length > 0;
+        const khaganDead = conf.khagan && (Number(conf.khagan.health) || 0) <= 0;
+        const vacantLeadership = !conf.khagan && hasClans;
+        const crisisActive = conf.successionCrisis && conf.successionCrisis.active;
+
+        if (hasClans && (khaganDead || vacantLeadership || crisisActive)) {
+            const previousKhaganId = conf.khagan?.id ?? null;
+            if (!crisisActive) {
+                const reason = khaganDead ? 'KHAGAN_DEATH' : 'VACANT_LEADERSHIP';
+                conf.successionCrisis = {
+                    active: true,
+                    reason,
+                    tickStarted: tick,
+                };
+                appendWorldEvent(world, {
+                    type: 'CONFEDERATION_SUCCESSION_TRIGGERED',
+                    confederationId: conf.id,
+                    previousKhaganId,
+                    reason,
+                    tick,
+                }, []);
+            }
+
+            // Convene tribal council
+            const activeClans = conf.clans.filter(c => c.status !== 'SEPARATED');
+            if (activeClans.length > 0) {
+                const votes = {};
+                let totalVotes = 0;
+                for (const clan of activeClans) {
+                    const cand = clan.candidate ?? clan.leader ?? clan.id;
+                    const inf = Math.max(0.1, Number(clan.influence) || 1);
+                    const loy = Math.max(0, Math.min(1, Number(clan.loyalty) ?? 0.5));
+                    const weight = inf * (0.5 + 0.5 * loy);
+                    votes[cand] = (votes[cand] || 0) + weight;
+                    totalVotes += weight;
+                }
+
+                appendWorldEvent(world, {
+                    type: 'CONFEDERATION_COUNCIL_CONVENED',
+                    confederationId: conf.id,
+                    attendees: activeClans.map(c => c.id),
+                    votes: { ...votes },
+                    tick,
+                }, []);
+
+                // Determine winner: candidate with highest total vote weight
+                let bestCandidate = null;
+                let maxVote = -1;
+                for (const [cand, v] of Object.entries(votes)) {
+                    if (v > maxVote) {
+                        maxVote = v;
+                        bestCandidate = cand;
+                    }
+                }
+
+                // Check for dissident clans fracturing
+                // A clan is dissident if it backed a losing candidate and has low loyalty (< 0.35)
+                const totalInfluence = activeClans.reduce((sum, c) => sum + (Number(c.influence) || 1), 0);
+                for (const clan of activeClans) {
+                    const backed = clan.candidate ?? clan.leader ?? clan.id;
+                    const loy = Number(clan.loyalty) ?? 0.5;
+                    if (backed !== bestCandidate && loy < 0.35) {
+                        clan.status = 'SEPARATED';
+                        const clanInf = Number(clan.influence) || 1;
+                        const powerSplit = totalInfluence > 0 ? (conf.power * (clanInf / totalInfluence)) : 0;
+                        conf.power = Math.max(0, conf.power - powerSplit);
+                        appendWorldEvent(world, {
+                            type: 'CONFEDERATION_FRACTURED',
+                            confederationId: conf.id,
+                            splinterClanId: clan.id,
+                            powerSplit,
+                            remainingPower: conf.power,
+                            tick,
+                        }, []);
+                    }
+                }
+
+                if (conf.power <= 0) {
+                    conf.status = 'DISSOLVED';
+                    conf.successionCrisis = null;
+                    appendWorldEvent(world, {
+                        type: 'CONFEDERATION_DISSOLVED',
+                        confederationId: conf.id,
+                        tick,
+                    }, []);
+                } else if (bestCandidate) {
+                    const winningClan = activeClans.find(c => (c.candidate ?? c.leader ?? c.id) === bestCandidate);
+                    conf.khagan = {
+                        id: bestCandidate,
+                        name: winningClan?.leader ?? winningClan?.name ?? bestCandidate,
+                        health: 1.0,
+                        age: 30,
+                    };
+                    conf.successionCrisis = null;
+                    appendWorldEvent(world, {
+                        type: 'CONFEDERATION_SUCCESSION_RESOLVED',
+                        confederationId: conf.id,
+                        newKhaganId: bestCandidate,
+                        voteShare: totalVotes > 0 ? maxVote / totalVotes : 1,
+                        tick,
+                    }, []);
+                }
+            }
+        }
     }
     // 7b. E8 (settlement takeover): raids on bandits never move
     // borders. A RAID faction at WAR stance toward a rival, with
@@ -6905,6 +7011,9 @@ export function createNomadicConfederation({
     power = 6,
     tributeAgreements = [],
     status = 'ACTIVE',
+    khagan = null,
+    clans = [],
+    successionCrisis = null,
 } = {}) {
     if (!id) throw new TypeError('createNomadicConfederation requires an id');
     return {
@@ -6916,6 +7025,9 @@ export function createNomadicConfederation({
         power,
         tributeAgreements: tributeAgreements.map(a => ({ ...a })),
         status,
+        khagan: khagan ? { ...khagan } : null,
+        clans: clans.map(c => ({ ...c })),
+        successionCrisis: successionCrisis ? { ...successionCrisis } : null,
     };
 }
 
