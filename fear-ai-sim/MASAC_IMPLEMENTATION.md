@@ -1,3 +1,11 @@
+---
+title: "MASAC Deep RL Implementation Summary"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # MASAC Deep RL Implementation Summary
 
 ## What Was Built

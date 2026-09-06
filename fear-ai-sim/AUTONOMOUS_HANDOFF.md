@@ -1,3 +1,11 @@
+---
+title: "AUTONOMOUS HANDOFF"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # AUTONOMOUS HANDOFF
 
 EVID-2026-09-06-E28-STEPPE-EMPORIUMS (Lane B, unaccepted)

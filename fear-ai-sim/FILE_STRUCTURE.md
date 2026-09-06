@@ -1,3 +1,11 @@
+---
+title: "FearDataGen v2.0 - File Structure"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # FearDataGen v2.0 - File Structure
 
 ## Core Modules (14 files)

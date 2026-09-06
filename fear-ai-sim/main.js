@@ -1,5 +1,7 @@
 import { Simulation } from './simulation.js';
 import { MobileOptimizer } from './mobile.js';
+import { PredatorLearning } from './predator.js';
+import { AgentLearning } from './learningagent.js';
 
 /**
  * Integrated Terminal Logger (T13 refinement)
@@ -407,44 +409,35 @@ exportBtn?.addEventListener('click', () => {
 // Export AI Learning Data
 const exportLearningBtn = document.getElementById('btn-export-learning');
 exportLearningBtn?.addEventListener('click', () => {
-    import('./predator.js').then(({ PredatorLearning }) => {
-        const data = PredatorLearning.exportData();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `predator-ai-learning-${Date.now()}.json`;
-        a.click();
-        addLog('AI Learning data exported.', 'info');
-    });
+    const data = PredatorLearning.exportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `predator-ai-learning-${Date.now()}.json`;
+    a.click();
+    addLog('AI Learning data exported.', 'info');
 });
 
 // Reset AI Learning
 const resetLearningBtn = document.getElementById('btn-reset-learning');
 resetLearningBtn?.addEventListener('click', () => {
-    Promise.all([
-        import('./predator.js'),
-        import('./learningagent.js')
-    ]).then(([{ PredatorLearning }, { AgentLearning }]) => {
-        PredatorLearning.reset();
-        AgentLearning.reset();
-        addLog('AI Learning data reset. Both systems will start fresh.', 'system');
-    });
+    PredatorLearning.reset();
+    AgentLearning.reset();
+    addLog('AI Learning data reset. Both systems will start fresh.', 'system');
 });
 
 // Export Prey Learning Data
 const exportPreyLearningBtn = document.getElementById('btn-export-prey-learning');
 exportPreyLearningBtn?.addEventListener('click', () => {
-    import('./learningagent.js').then(({ AgentLearning }) => {
-        const data = AgentLearning.exportData();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `prey-ai-learning-${Date.now()}.json`;
-        a.click();
-        addLog('Prey AI Learning data exported.', 'info');
-    });
+    const data = AgentLearning.exportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `prey-ai-learning-${Date.now()}.json`;
+    a.click();
+    addLog('Prey AI Learning data exported.', 'info');
 });
 
 // Update AI Learning stats display
@@ -453,41 +446,34 @@ let lastPreyData = null;
 function updateAILearningStats() {
     if (!aiLearningEl || sim.frameCount % 60 !== 0) return; // Update every 60 frames
     
-    Promise.all([
-        import('./predator.js').catch(() => null),
-        import('./learningagent.js').catch(() => null)
-    ]).then(([predatorModule, preyModule]) => {
-        if (predatorModule && preyModule) {
-            const predatorData = predatorModule.PredatorLearning.exportData();
-            const preyData = preyModule.AgentLearning.exportData();
-            
-            // Only update if data changed
-            const predKills = predatorData.huntStats.successfulPursuits;
-            const preyEscapes = preyData.survivalStats.totalEscapes;
-            
-            if (!lastPredatorData || lastPredatorData.huntStats.successfulPursuits !== predKills ||
-                !lastPreyData || lastPreyData.survivalStats.totalEscapes !== preyEscapes) {
-                
-                lastPredatorData = predatorData;
-                lastPreyData = preyData;
-                
-                const killRate = (predatorData.huntStats.successRate * 100).toFixed(0);
-                const escapeRate = parseFloat(preyData.survivalStats.survivalRate).toFixed(0);
-                
-                // Show competition: P=kills vs E=escapes
-                aiLearningEl.textContent = `P:${predKills}(${killRate}%) vs E:${preyEscapes}(${escapeRate}%)`;
-                
-                // Color based on who's winning
-                if (parseFloat(killRate) > 60) {
-                    aiLearningEl.style.color = '#ff5555'; // Predators winning
-                } else if (parseFloat(escapeRate) > 60) {
-                    aiLearningEl.style.color = '#55ff55'; // Prey winning
-                } else {
-                    aiLearningEl.style.color = '#d800ff'; // Balanced
-                }
-            }
+    const predatorData = PredatorLearning.exportData();
+    const preyData = AgentLearning.exportData();
+    
+    // Only update if data changed
+    const predKills = predatorData.huntStats.successfulPursuits;
+    const preyEscapes = preyData.survivalStats.totalEscapes;
+    
+    if (!lastPredatorData || lastPredatorData.huntStats.successfulPursuits !== predKills ||
+        !lastPreyData || lastPreyData.survivalStats.totalEscapes !== preyEscapes) {
+        
+        lastPredatorData = predatorData;
+        lastPreyData = preyData;
+        
+        const killRate = (predatorData.huntStats.successRate * 100).toFixed(0);
+        const escapeRate = parseFloat(preyData.survivalStats.survivalRate).toFixed(0);
+        
+        // Show competition: P=kills vs E=escapes
+        aiLearningEl.textContent = `P:${predKills}(${killRate}%) vs E:${preyEscapes}(${escapeRate}%)`;
+        
+        // Color based on who's winning
+        if (parseFloat(killRate) > 60) {
+            aiLearningEl.style.color = '#ff5555'; // Predators winning
+        } else if (parseFloat(escapeRate) > 60) {
+            aiLearningEl.style.color = '#55ff55'; // Prey winning
+        } else {
+            aiLearningEl.style.color = '#d800ff'; // Balanced
         }
-    });
+    }
 }
 
 clearDataBtn?.addEventListener('click', () => {

@@ -1,3 +1,11 @@
+---
+title: "FearDataGen - Deterministic Fear Trajectory Generator"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # FearDataGen - Deterministic Fear Trajectory Generator
 
 A high-performance data collection system for generating ML-ready fear behavior datasets.

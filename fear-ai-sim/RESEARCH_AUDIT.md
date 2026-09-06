@@ -1,3 +1,11 @@
+---
+title: "RESEARCH AUDIT: MASAC & Multi-Agent RL for Predator-Prey Systems"
+created: 2026-08-28
+updated: 2026-09-06
+type: audit
+status: active
+---
+
 # RESEARCH AUDIT: MASAC & Multi-Agent RL for Predator-Prey Systems
 
 ## EXECUTIVE SUMMARY

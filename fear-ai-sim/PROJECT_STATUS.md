@@ -1,3 +1,11 @@
+---
+title: "FEAR AI SIMULATOR - PROJECT STATUS REPORT"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # FEAR AI SIMULATOR - PROJECT STATUS REPORT
 
 **Date:** March 2026  

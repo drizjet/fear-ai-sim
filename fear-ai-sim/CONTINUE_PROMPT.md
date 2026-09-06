@@ -1,3 +1,11 @@
+---
+title: "STALE as of 2026-08-31; ignore; read AUTONOMOUS_HANDOFF.md"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # STALE as of 2026-08-31; ignore; read AUTONOMOUS_HANDOFF.md
 
 # Continue Fear-AI Development - Ready-to-Use Prompt (STALE)

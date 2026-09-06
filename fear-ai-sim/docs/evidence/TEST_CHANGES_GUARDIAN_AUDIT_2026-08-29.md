@@ -1,3 +1,11 @@
+---
+title: "TEST CONTRACT RESTORATION AUDIT — EVID-2026-08-29"
+created: 2026-08-28
+updated: 2026-09-06
+type: audit
+status: active
+---
+
 # TEST CONTRACT RESTORATION AUDIT — EVID-2026-08-29
 
 Per FEAR_GUARDIAN_GOAL.md §1.1.

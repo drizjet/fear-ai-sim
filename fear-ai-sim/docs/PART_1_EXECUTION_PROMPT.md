@@ -1,3 +1,11 @@
+---
+title: "Part 1 — FearCore Execution Prompt"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # Part 1 — FearCore Execution Prompt
 
 Copy this prompt into a future coding session when beginning or continuing Part 1.

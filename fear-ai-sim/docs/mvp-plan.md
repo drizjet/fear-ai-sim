@@ -1,3 +1,11 @@
+---
+title: "Fear AI / BadAI — Comprehensive Product Specification and Build Plan"
+created: 2026-08-28
+updated: 2026-09-06
+type: specification
+status: active
+---
+
 # Fear AI / BadAI — Comprehensive Product Specification and Build Plan
 
 **Document status:** Planning baseline  

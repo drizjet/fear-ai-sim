@@ -1,3 +1,11 @@
+---
+title: "Domain Maturity Map — Fear AI World-Completion View"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # Domain Maturity Map — Fear AI World-Completion View
 
 EVID-2026-08-28-DOMAIN-MATURITY-MAP

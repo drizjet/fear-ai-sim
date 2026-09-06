@@ -1,3 +1,11 @@
+---
+title: "SUBAGENT REPAIR PLAYBOOK"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # SUBAGENT REPAIR PLAYBOOK
 
 **Project:** `/c/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim`

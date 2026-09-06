@@ -1,3 +1,11 @@
+---
+title: "Provenance Record Templates"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # Provenance Record Templates
 
 Use these templates for future work. IDs must be stable and unique.

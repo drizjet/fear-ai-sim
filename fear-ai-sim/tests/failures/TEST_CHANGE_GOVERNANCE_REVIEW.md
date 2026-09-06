@@ -1,3 +1,11 @@
+---
+title: "TEST-CHANGE GOVERNANCE REVIEW — Territory Vertical Slice"
+created: 2026-08-28
+updated: 2026-09-06
+type: audit
+status: active
+---
+
 # TEST-CHANGE GOVERNANCE REVIEW — Territory Vertical Slice
 
 EVID-2026-08-28-TEST-CHANGE-GOVERNANCE-REVIEW

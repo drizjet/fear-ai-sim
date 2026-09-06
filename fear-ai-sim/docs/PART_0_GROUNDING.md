@@ -1,3 +1,11 @@
+---
+title: "Part 0 — Grounding and Inheritance Lock"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # Part 0 — Grounding and Inheritance Lock
 
 **Status:** `PARTIALLY_COMPLETE`  

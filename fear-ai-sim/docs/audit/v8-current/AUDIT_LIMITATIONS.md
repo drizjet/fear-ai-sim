@@ -1,3 +1,11 @@
+---
+title: "V8 audit — limitations (candidate 79f287c)"
+created: 2026-08-28
+updated: 2026-09-06
+type: audit
+status: active
+---
+
 # V8 audit — limitations (candidate 79f287c)
 
 1. Auditor independence is bounded: the five auditors are same-model

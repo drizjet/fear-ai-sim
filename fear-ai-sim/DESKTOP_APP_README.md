@@ -1,3 +1,11 @@
+---
+title: "Fear AI Tester - Desktop App"
+created: 2026-08-28
+updated: 2026-09-06
+type: documentation
+status: active
+---
+
 # Fear AI Tester - Desktop App
 
 A high-performance **native desktop application** for deterministic fear AI testing and data collection.
