@@ -1,6 +1,14 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E20-SUZERAINTY (Lane B, unaccepted)
+EVID-2026-09-05-E21-ALLIANCE (Lane B, unaccepted)
+
+## E21 — federation between polities and vassalage with teeth (expansion)
+
+- Gap (probed, not guessed): kin polities stood alone (no mutual bond existed) and strong strangers had no shield to sell — suzerainty covered former-to-breakaway forbearance only.
+- Fix: 7h2 vassalage (any strong stranger binds a weak polity: same tribute split, plus overlord weight on the walls; strong refuse once) and 7h3 federation (landheld kin at standing peace seal mutual restraint and mutual walls, no tribute). The shared deterrence book sums every standing shield for both contests; betrayal ends either bond; verdicts skip ordered towns.
+- Wild proof: gate audits book allied weight a full point above bare defense; an overmatching storm holds only through the bond.
+- Fallout restaged honestly: E20 refusal now weighs the own sword (borrowed weight defends but does not decide tribute) — behavior-neutral where no shields exist; all 210 prior suites pass unmodified.
+- Validation: 210/1509 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 80/80 (2 new E21 entries), coverage 118 rows.
 
 ## E20 — autonomy, tribute, and negotiated orders: the middle holds (expansion)
 

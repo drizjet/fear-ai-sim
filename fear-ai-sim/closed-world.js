@@ -3555,7 +3555,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             let tribute = 0;
             let tributeOverlord = null;
             const deal = (world.treaties ?? []).find(treaty =>
-                treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'autonomy'
+                treaty?.status === 'ACTIVE'
+                && (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
                 && treaty?.terms?.townId === townId && treaty?.terms?.polityId === faction.id);
             if (deal) {
                 const rate = Math.min(1, Math.max(0, Number(deal.terms?.tributeRate) || 0));
@@ -3589,25 +3590,45 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         }, []);
     }
     // E19 helpers (defined before 7e so 7b, 7f, and 7g share one
-    // deterrence book): the ACTIVE guarantee shielding a polity,
-    // and the guarantor weight it lends the town's defense.
+    // deterrence book): the ACTIVE guarantee shielding a polity.
+    // E21 extends the book: federation kin and vassalage overlords
+    // lend weight too — every standing shield counts, summed.
     const activeGuaranteeFor = (pId) => (world.treaties ?? []).find(treaty =>
         treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'guarantee'
         && treaty?.terms?.polityId === pId) ?? null;
-    const guaranteeBacking = (defenderId) => {
-        const guarantee = activeGuaranteeFor(defenderId);
-        if (!guarantee) return 0;
-        const guarantor = (world.factions ?? []).find(f => f.id === guarantee.terms?.guarantorId);
-        return Math.max(0, Number(guarantor?.resources) || 0);
+    const factionPowerNow = (fid) => {
+        const faction = (world.factions ?? []).find(f => f.id === fid);
+        return Math.max(0, Number(faction?.resources) || 0);
     };
-    // E20 helper: the ACTIVE autonomy treaty binding an overlord to a
-    // polity's town (suzerainty). One deal per town; status and flow
-    // share one record so neither outlives the other.
-    const activeAutonomy = (overlordId, pId, tId) => (world.treaties ?? []).find(treaty =>
-        treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'autonomy'
-        && treaty?.terms?.overlordId === overlordId
-        && treaty?.terms?.polityId === pId
-        && treaty?.terms?.townId === tId) ?? null;
+    const guaranteeBacking = (defenderId) => {
+        let weight = 0;
+        const guarantee = activeGuaranteeFor(defenderId);
+        if (guarantee) weight += factionPowerNow(guarantee.terms?.guarantorId);
+        for (const treaty of world.treaties ?? []) {
+            if (!treaty || treaty.status !== 'ACTIVE') continue;
+            const kind = treaty.terms?.kind;
+            if (kind === 'federation' && (treaty.participants ?? []).includes(defenderId)) {
+                for (const member of treaty.participants ?? []) {
+                    if (member !== defenderId) weight += factionPowerNow(member);
+                }
+            } else if (kind === 'vassalage' && treaty.terms?.polityId === defenderId) {
+                weight += factionPowerNow(treaty.terms?.overlordId);
+            }
+        }
+        return weight;
+    };
+    // E21: any standing shield (guarantee, federation seat,
+    // vassalage cover) for the recalculation gate.
+    const alliedShield = (pId) => {
+        if (activeGuaranteeFor(pId)) return true;
+        return (world.treaties ?? []).some(treaty => {
+            if (!treaty || treaty.status !== 'ACTIVE') return false;
+            const kind = treaty.terms?.kind;
+            if (kind === 'federation') return (treaty.participants ?? []).includes(pId);
+            if (kind === 'vassalage') return treaty.terms?.polityId === pId;
+            return false;
+        });
+    };
     // 7e. E17 (recognition, claims, and secession diplomacy): the
     // first autonomous diplomacy. Runs BEFORE the 7b takeover contest
     // (and 7f with it) so verdicts take effect first: a yielded town
@@ -3765,29 +3786,39 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     const RECONQUEST_TAKEOVER_COST = 2;
     const RECONQUEST_MIN_TOWN_POP = 10;
     const RECONQUEST_YIELD_LEGITIMACY = 0.4;
-    // Standing betrayed: polity-sourced HARM on any of its pairs, or
+    // Standing betrayed: member-sourced HARM on any of its pairs, or
     // an executed raid (INVASION), after the standing started. Covers
-    // recognition and guarantees alike (E19); binding pacts stand.
+    // recognition, guarantees, autonomy, vassalage (E19-E21) —
+    // federations watch both kin; binding pacts stand.
     for (const treaty of world.treaties ?? []) {
         if (!treaty || treaty.status !== 'ACTIVE') continue;
-        if (treaty.terms?.kind !== 'recognition' && treaty.terms?.kind !== 'guarantee' && treaty.terms?.kind !== 'autonomy') continue;
-        const wPolityId = treaty.terms?.polityId;
-        if (!wPolityId) continue;
-        const wPol = (world.factions ?? []).find(f => f.id === wPolityId);
-        if (!wPol) continue;
+        const wKind = treaty.terms?.kind;
+        if (wKind !== 'recognition' && wKind !== 'guarantee' && wKind !== 'autonomy'
+            && wKind !== 'vassalage' && wKind !== 'federation') continue;
+        const watched = wKind === 'federation'
+            ? (treaty.participants ?? []).slice()
+            : [treaty.terms?.polityId];
+        const wPols = watched
+            .map(fid => (world.factions ?? []).find(f => f.id === fid))
+            .filter(Boolean);
+        if (wPols.length === 0) continue;
+        const wIds = new Set(wPols.map(f => f.id));
         let betrayed = false;
-        for (const vec of wPol.relationships?.values?.() ?? []) {
-            for (const ev of vec?.events ?? []) {
-                if (ev?.type === 'HARM' && ev?.fromFactionId === wPolityId && (ev?.tick ?? 0) > treaty.startTick) {
-                    betrayed = true;
-                    break;
+        for (const wPol of wPols) {
+            for (const vec of wPol.relationships?.values?.() ?? []) {
+                for (const ev of vec?.events ?? []) {
+                    if (ev?.type === 'HARM' && wIds.has(ev?.fromFactionId) && (ev?.tick ?? 0) > treaty.startTick) {
+                        betrayed = true;
+                        break;
+                    }
                 }
+                if (betrayed) break;
             }
             if (betrayed) break;
         }
         if (!betrayed) {
             const raids = getWorldEvents(world, { type: 'INVASION' });
-            betrayed = raids.some(event => event.factionId === wPolityId && (event.tick ?? 0) > treaty.startTick);
+            betrayed = raids.some(event => wIds.has(event.factionId) && (event.tick ?? 0) > treaty.startTick);
         }
         if (betrayed) terminateTreaty({ treaty, reason: 'POLITY_BETRAYAL', world, tick });
     }
@@ -3816,9 +3847,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const former = fromId ? (world.factions ?? []).find(f => f.id === fromId) : null;
         if (!former) continue;
         if (decidedE18(fromId, pId, tId)) continue;
-        // Negotiated orders hold while honored: a tributary town is
-        // not re-deliberated (betrayal ends the deal elsewhere).
-        if (activeAutonomy(fromId, pId, tId)) continue;
+        // Negotiated orders hold while honored: a town under autonomy
+        // or vassalage is not re-deliberated (betrayal ends the deal
+        // elsewhere, any overlord).
+        const orderedTown = (world.treaties ?? []).some(treaty =>
+            treaty?.status === 'ACTIVE'
+            && (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
+            && treaty?.terms?.polityId === pId && treaty?.terms?.townId === tId);
+        if (orderedTown) continue;
         // Hot claims only: the relationship machine must itself
         // want war. A calm former keeps a cold claim (silence).
         const fPair = world.relationships.get(`${fromId}::${pId}`)
@@ -3849,7 +3885,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tTown.controlledBy = fromId;
             // The town is home: any autonomy deal covering it ends.
             for (const treaty of world.treaties ?? []) {
-                if (!treaty || treaty.status !== 'ACTIVE' || treaty.terms?.kind !== 'autonomy') continue;
+                if (!treaty || treaty.status !== 'ACTIVE') continue;
+                if (treaty.terms?.kind !== 'autonomy' && treaty.terms?.kind !== 'vassalage') continue;
                 if (treaty.terms?.townId === tId) terminateTreaty({ treaty, reason: 'REINTEGRATED', world, tick });
             }
             appendWorldEvent(world, {
@@ -3940,7 +3977,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const declaration = getWorldEvents(world, { type: 'RECONQUEST_DECLARED' })
             .find(event => event.polityId === pId && event.formerId === fromId) ?? null;
         if (!declaration) continue;
-        if (!activeGuaranteeFor(pId)) continue;
+        if (!alliedShield(pId)) continue;
         const fizzled = getWorldEvents(world, { type: 'TOWN_HELD' }).some(event =>
             event.townId === tId && (event.tick ?? 0) >= (declaration.tick ?? 0)
             && event.fromFactionId === pId && event.toFactionId === fromId);
@@ -4064,9 +4101,10 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // Settled claims never negotiate; one deal per town ever
         // (any status — a terminated deal stays dead).
         if (decidedE18(fromId, pId, tId)) continue;
+        // One intermediate order per town ever: autonomy and vassalage
+        // exclude each other (terminated deals stay dead).
         const priorDeal = (world.treaties ?? []).some(treaty =>
-            treaty?.terms?.kind === 'autonomy'
-            && treaty?.terms?.overlordId === fromId
+            (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
             && treaty?.terms?.polityId === pId
             && treaty?.terms?.townId === tId);
         if (priorDeal) continue;
@@ -4095,7 +4133,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         // The polity weighs the sword: weaker takes shelter, stronger
         // refuses once (its verdict, audited, never re-offered).
         const townPop = Math.max(0, Number(tTown.population) || 0);
-        const polityPower = Math.max(0, Number(pol.maxResources) || 0) + townPop * 0.1 + guaranteeBacking(pId);
+        // Own sword only, as in 7h2 below.
+        const polityPower = Math.max(0, Number(pol.maxResources) || 0) + townPop * 0.1;
         if (polityPower >= formerPower) {
             appendWorldEvent(world, {
                 type: 'AUTONOMY_REFUSED',
@@ -4130,6 +4169,157 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             tick,
             rootReason: 'AUTONOMY_AGREED',
         }, pFounded?.eventId ? [pFounded.eventId] : []);
+    }
+    // 7h2. E21 (vassalage with teeth): like autonomy but open to any
+    // strong stranger — and protection, not forbearance, is the
+    // product. The overlord's weight joins the town's walls through
+    // the shared book; the levy splits the same way. Polities are
+    // never overlords and formers never vassalize (those relations
+    // already have names). One order per town with 7h.
+    const isPolityFaction = (fid) => {
+        for (const [, town] of world.towns ?? []) {
+            if (town?.foundedPolityId === fid) return true;
+        }
+        return false;
+    };
+    for (const [tId, tTown] of world.towns) {
+        const pId = tTown?.foundedPolityId;
+        if (!pId) continue;
+        if (tTown.controlledBy !== pId) continue;
+        const pol = (world.factions ?? []).find(f => f.id === pId);
+        if (!pol) continue;
+        const pFounded = world.events ? findLatestWorldEvent(world,
+            event => event.type === 'POLITY_FOUNDED' && event.polityId === pId, 'POLITY_FOUNDED') : null;
+        const pFoundedTick = Number.isFinite(pFounded?.tick) ? pFounded.tick : tick;
+        if (tick - pFoundedTick < AUTONOMY_MIN_AGE) continue;
+        const fromId = pFounded?.fromFactionId ?? null;
+        if (decidedE18(fromId, pId, tId)) continue;
+        const priorOrder = (world.treaties ?? []).some(treaty =>
+            (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
+            && treaty?.terms?.polityId === pId
+            && treaty?.terms?.townId === tId);
+        if (priorOrder) continue;
+        if ((Number(pol.legitimacy) || 0) < AUTONOMY_MIN_LEGITIMACY) continue;
+        if (Math.max(0, Number(tTown.population) || 0) < AUTONOMY_MIN_TOWN_POP) continue;
+        // Strongest qualifying stranger: capacity first, faction order
+        // breaks ties (deterministic). No prior refusal from this one.
+        let best = null;
+        let bestCap = -1;
+        for (const cand of world.factions ?? []) {
+            if (!cand || cand.id === pId || cand.id === fromId) continue;
+            if (isPolityFaction(cand.id)) continue;
+            const refused = world.events ? findLatestWorldEvent(world,
+                event => event.type === 'VASSALAGE_REFUSED' && event.polityId === pId
+                    && event.overlordId === cand.id, 'VASSALAGE_REFUSED') : null;
+            if (refused) continue;
+            const pair = pol.relationships?.get?.(cand.id)
+                ?? world.relationships.get(`${cand.id}::${pId}`)
+                ?? world.relationships.get(`${pId}::${cand.id}`) ?? null;
+            const stance = pair && typeof pair.stanceFrom === 'function'
+                ? pair.stanceFrom(cand.id) : null;
+            if (Number.isFinite(stance) && stance >= StanceLadder.WAR) continue;
+            const cap = Math.max(0, Number(cand.maxResources) || 0);
+            if (cap < AUTONOMY_MIN_OVERLORD_POWER) continue;
+            if (cap > bestCap) {
+                bestCap = cap;
+                best = cand;
+            }
+        }
+        if (!best) continue;
+        const townPop = Math.max(0, Number(tTown.population) || 0);
+        // Own sword only: borrowed patron weight defends walls but
+        // does not decide tribute — patrons come and go.
+        const polityPower = Math.max(0, Number(pol.maxResources) || 0) + townPop * 0.1;
+        if (polityPower >= bestCap) {
+            appendWorldEvent(world, {
+                type: 'VASSALAGE_REFUSED',
+                overlordId: best.id,
+                polityId: pId,
+                townId: tId,
+                formerPower: bestCap,
+                polityPower,
+                tick,
+            }, pFounded?.eventId ? [pFounded.eventId] : []);
+            continue;
+        }
+        const treaty = createTreaty({
+            id: `treaty-vassalage-${best.id}-${pId}-${tick}`,
+            participants: [best.id, pId],
+            terms: {
+                kind: 'vassalage', townId: tId, overlordId: best.id, polityId: pId,
+                tributeRate: AUTONOMY_TRIBUTE_RATE,
+            },
+            startTick: tick,
+        });
+        if (!Array.isArray(world.treaties)) world.treaties = [];
+        world.treaties.push(treaty);
+        appendWorldEvent(world, {
+            type: 'TREATY_FORMED',
+            treatyId: treaty.id,
+            treaty: { ...treaty, participants: treaty.participants.slice() },
+            participants: treaty.participants.slice(),
+            terms: { ...treaty.terms },
+            polityId: pId,
+            overlordId: best.id,
+            tick,
+            rootReason: 'VASSALAGE_SWORN',
+        }, pFounded?.eventId ? [pFounded.eventId] : []);
+    }
+    // 7h3. E21 (federation between polities): kin bind mutual
+    // restraint and mutual walls. Two landheld polities at standing
+    // peace seal once; either's later betrayal ends it. No tribute —
+    // kinship is priced in shared risk, not levies.
+    for (const [tIdA, tTownA] of world.towns) {
+        const pIdA = tTownA?.foundedPolityId;
+        if (!pIdA || tTownA.controlledBy !== pIdA) continue;
+        for (const [tIdB, tTownB] of world.towns) {
+            if (tIdB <= tIdA) continue;
+            const pIdB = tTownB?.foundedPolityId;
+            if (!pIdB || tTownB.controlledBy !== pIdB) continue;
+            const polA = (world.factions ?? []).find(f => f.id === pIdA);
+            const polB = (world.factions ?? []).find(f => f.id === pIdB);
+            if (!polA || !polB) continue;
+            const foundA = world.events ? findLatestWorldEvent(world,
+                event => event.type === 'POLITY_FOUNDED' && event.polityId === pIdA, 'POLITY_FOUNDED') : null;
+            const foundB = world.events ? findLatestWorldEvent(world,
+                event => event.type === 'POLITY_FOUNDED' && event.polityId === pIdB, 'POLITY_FOUNDED') : null;
+            const ageA = Number.isFinite(foundA?.tick) ? tick - foundA.tick : 0;
+            const ageB = Number.isFinite(foundB?.tick) ? tick - foundB.tick : 0;
+            if (ageA < AUTONOMY_MIN_AGE || ageB < AUTONOMY_MIN_AGE) continue;
+            const priorBond = (world.treaties ?? []).some(treaty =>
+                treaty?.terms?.kind === 'federation'
+                && (treaty.participants ?? []).includes(pIdA)
+                && (treaty.participants ?? []).includes(pIdB));
+            if (priorBond) continue;
+            if ((Number(polA.legitimacy) || 0) < AUTONOMY_MIN_LEGITIMACY) continue;
+            if ((Number(polB.legitimacy) || 0) < AUTONOMY_MIN_LEGITIMACY) continue;
+            const pair = world.relationships.get(`${pIdA}::${pIdB}`)
+                ?? world.relationships.get(`${pIdB}::${pIdA}`) ?? null;
+            const trustA = pair && typeof pair.getTrustFrom === 'function'
+                ? pair.getTrustFrom(pIdA) : 0.5;
+            const trustB = pair && typeof pair.getTrustFrom === 'function'
+                ? pair.getTrustFrom(pIdB) : 0.5;
+            if (trustA < 0.5 || trustB < 0.5) continue;
+            const treaty = createTreaty({
+                id: `treaty-federation-${pIdA}-${pIdB}-${tick}`,
+                participants: [pIdA, pIdB],
+                terms: { kind: 'federation' },
+                startTick: tick,
+            });
+            if (!Array.isArray(world.treaties)) world.treaties = [];
+            world.treaties.push(treaty);
+            const parents = [];
+            if (foundA?.eventId) parents.push(foundA.eventId);
+            if (foundB?.eventId) parents.push(foundB.eventId);
+            appendWorldEvent(world, {
+                type: 'TREATY_FORMED',
+                treatyId: treaty.id,
+                participants: treaty.participants.slice(),
+                terms: { ...treaty.terms },
+                tick,
+                rootReason: 'FEDERATION_SEALED',
+            }, parents);
+        }
     }
     // 7b. E8 (settlement takeover): raids on bandits never move
     // borders. A RAID faction at WAR stance toward a rival, with
@@ -4166,10 +4356,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             // specific restraint wins) — tribute already buys what war
             // would take — then the blanket pact.
             const blockingTreaty = (world.treaties ?? []).find(treaty =>
-                    treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'autonomy'
+                    treaty?.status === 'ACTIVE'
+                    && (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
                     && treaty?.terms?.overlordId === faction.id
                     && treaty?.terms?.polityId === defenderId
                     && treaty?.terms?.townId === townId)
+                // E21: kinship bond next — federates never take each other.
+                ?? (world.treaties ?? []).find(treaty =>
+                    treaty?.status === 'ACTIVE' && treaty?.terms?.kind === 'federation'
+                    && (treaty.participants ?? []).includes(faction.id)
+                    && (treaty.participants ?? []).includes(defenderId))
                 ?? activeTreatiesFor(faction.id, world, { kind: 'non-aggression' })
                     .find(treaty => treaty.participants.includes(defenderId)) ?? null;
             let allowed = true;

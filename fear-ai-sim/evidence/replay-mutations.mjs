@@ -599,6 +599,22 @@ const MUTATIONS = [
         note: 'E20 tribute flow cut; deals audit without payment',
     },
     {
+        id: 'federation-seal',
+        file: 'closed-world.js',
+        target: `terms: { kind: 'federation' },`,
+        replacement: `terms: { kind: 'federation-broken' },`,
+        detectors: 'federation-vassalage',
+        note: 'E21 federation seal cut; kin polities never bind',
+    },
+    {
+        id: 'vassalage-seal',
+        file: 'closed-world.js',
+        target: `kind: 'vassalage', townId: tId, overlordId: best.id, polityId: pId,`,
+        replacement: `kind: 'vassalage-broken', townId: tId, overlordId: best.id, polityId: pId,`,
+        detectors: 'federation-vassalage',
+        note: 'E21 vassalage seal cut; strangers buy no shields',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',
