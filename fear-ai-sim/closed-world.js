@@ -3530,6 +3530,14 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     const TAX_PER_HEAD = 0.02;
     const GARRISON_PER_OCCUPIED_TOWN = 0.15;
     const GARRISON_PENALTY_FLOOR = 0.005;
+    // E22 helper: the ACTIVE service deal (autonomy or vassalage)
+    // covering a polity-held town. One record covers status and flow.
+    const serviceDealFor = (tId, pId) => (world.treaties ?? []).find(treaty =>
+        treaty?.status === 'ACTIVE'
+        && (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
+        && treaty?.terms?.townId === tId && treaty?.terms?.polityId === pId) ?? null;
+    // E22: barren ticks a covered town may miss before the deal lapses.
+    const TRIBUTE_LAPSE_TOLERANCE = 5;
     for (const faction of world.factions) {
         const taxed = [];
         let gross = 0;
@@ -3539,7 +3547,20 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             if (!town || town.abandoned) continue;
             if (town.controlledBy !== faction.id) continue;
             const heads = Math.max(0, Number(town.population) || 0);
-            if (!(heads > 0)) continue;
+            // E22: dead ground pays nothing — count the missed tribute
+            // on the covering deal; at tolerance the deal lapses
+            // (control stays put, verdicts do not ride along).
+            if (!(heads > 0)) {
+                const barren = town.controlledBy === faction.id
+                    ? serviceDealFor(townId, faction.id) : null;
+                if (barren) {
+                    barren.lapseStreak = (Number(barren.lapseStreak) || 0) + 1;
+                    if (barren.lapseStreak >= TRIBUTE_LAPSE_TOLERANCE) {
+                        terminateTreaty({ treaty: barren, reason: 'TRIBUTE_LAPSED', world, tick });
+                    }
+                }
+                continue;
+            }
             const penalty = occupationPenalty(town, tick);
             const levy = heads * TAX_PER_HEAD * (1 - 0.5 * penalty);
             gross += levy;
@@ -3548,17 +3569,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                 garrison = GARRISON_PER_OCCUPIED_TOWN;
                 garrisonCost += garrison;
             }
-            // E20: suzerainty splits the levy at the source. An ACTIVE
-            // autonomy deal sends the treaty rate to the overlord
-            // (capped like any income); the town pays once, and the
-            // row books both halves so the split is auditable.
+            // E20/E22: suzerainty splits the levy at the source. An ACTIVE
+            // service deal (autonomy or vassalage) sends the treaty rate
+            // to the overlord (capped like any income); the town pays
+            // once, and the row books both halves so the split is auditable.
             let tribute = 0;
             let tributeOverlord = null;
-            const deal = (world.treaties ?? []).find(treaty =>
-                treaty?.status === 'ACTIVE'
-                && (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
-                && treaty?.terms?.townId === townId && treaty?.terms?.polityId === faction.id);
+            const deal = serviceDealFor(townId, faction.id);
             if (deal) {
+                // A paying town resets the lapse clock.
+                deal.lapseStreak = 0;
                 const rate = Math.min(1, Math.max(0, Number(deal.terms?.tributeRate) || 0));
                 tribute = levy * rate;
                 tributeOverlord = deal.terms?.overlordId ?? null;
@@ -4098,15 +4118,16 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const fromId = pFounded?.fromFactionId ?? null;
         const former = fromId ? (world.factions ?? []).find(f => f.id === fromId) : null;
         if (!former) continue;
-        // Settled claims never negotiate; one deal per town ever
-        // (any status — a terminated deal stays dead).
+        // Settled claims never negotiate; one live-or-betrayed deal per
+        // town ever (lapsed deals below stay renegotiable).
         if (decidedE18(fromId, pId, tId)) continue;
-        // One intermediate order per town ever: autonomy and vassalage
-        // exclude each other (terminated deals stay dead).
+        // One intermediate order per town ever — except lapsed ones:
+        // a barren death is renegotiable, betrayal stays dead.
         const priorDeal = (world.treaties ?? []).some(treaty =>
             (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
             && treaty?.terms?.polityId === pId
-            && treaty?.terms?.townId === tId);
+            && treaty?.terms?.townId === tId
+            && !(treaty.status === 'TERMINATED' && treaty.termination?.reason === 'TRIBUTE_LAPSED'));
         if (priorDeal) continue;
         const priorRefusal = world.events ? findLatestWorldEvent(world,
             event => event.type === 'AUTONOMY_REFUSED' && event.polityId === pId
@@ -4197,7 +4218,8 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
         const priorOrder = (world.treaties ?? []).some(treaty =>
             (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
             && treaty?.terms?.polityId === pId
-            && treaty?.terms?.townId === tId);
+            && treaty?.terms?.townId === tId
+            && !(treaty.status === 'TERMINATED' && treaty.termination?.reason === 'TRIBUTE_LAPSED'));
         if (priorOrder) continue;
         if ((Number(pol.legitimacy) || 0) < AUTONOMY_MIN_LEGITIMACY) continue;
         if (Math.max(0, Number(tTown.population) || 0) < AUTONOMY_MIN_TOWN_POP) continue;

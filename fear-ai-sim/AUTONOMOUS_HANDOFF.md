@@ -1,6 +1,13 @@
 # AUTONOMOUS HANDOFF
 
-EVID-2026-09-05-E21-ALLIANCE (Lane B, unaccepted)
+EVID-2026-09-05-E22-LAPSE (Lane B, unaccepted)
+
+## E22 — tribute lapse and renegotiation: dead ground pays nothing (expansion)
+
+- Gap (probed, not guessed): tributary towns that emptied kept phantom deals forever — blocking verdicts and takeovers over nothing, with no lapse and no second chance.
+- Fix: lapse streaks on the treaty record. Covered towns yielding zero levy count barren ticks in the tax loop; five running ends the deal (control stays, no verdicts ride along) while paying towns reset the clock. Lapsed deals — and only lapsed deals — stay renegotiable: repopulated towns seal anew and pay again; betrayed deals stay dead. Streaks persist across save/load.
+- Fallout restaged honestly: none beyond new files — all 211 prior suites pass unmodified (no deals exist where tribute never flowed).
+- Validation: 211/1515 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 82/82 (2 new E22 entries), coverage 119 rows.
 
 ## E21 — federation between polities and vassalage with teeth (expansion)
 

@@ -615,6 +615,29 @@ const MUTATIONS = [
         note: 'E21 vassalage seal cut; strangers buy no shields',
     },
     {
+        id: 'tribute-lapse',
+        file: 'closed-world.js',
+        target: 'const TRIBUTE_LAPSE_TOLERANCE = 5;',
+        replacement: 'const TRIBUTE_LAPSE_TOLERANCE = 999999;',
+        detectors: 'tribute-lapse',
+        note: 'E22 lapse tolerance cut; barren towns never end deals',
+    },
+    {
+        id: 'tribute-renegotiate',
+        file: 'closed-world.js',
+        target: `const priorDeal = (world.treaties ?? []).some(treaty =>
+            (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
+            && treaty?.terms?.polityId === pId
+            && treaty?.terms?.townId === tId
+            && !(treaty.status === 'TERMINATED' && treaty.termination?.reason === 'TRIBUTE_LAPSED'));`,
+        replacement: `const priorDeal = (world.treaties ?? []).some(treaty =>
+            (treaty?.terms?.kind === 'autonomy' || treaty?.terms?.kind === 'vassalage')
+            && treaty?.terms?.polityId === pId
+            && treaty?.terms?.townId === tId);`,
+        detectors: 'tribute-lapse',
+        note: 'E22 lapse exemption cut; repopulated towns never reseal',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',
