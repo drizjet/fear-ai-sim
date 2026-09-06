@@ -1,3 +1,11 @@
+---
+title: "BadAI — Master Long-Term Spec, Roadmap & Execution Prompt"
+created: 2026-08-26
+updated: 2026-09-06
+type: master-specification
+status: active
+---
+
 # BADAI — MASTER LONG-TERM SPEC, ROADMAP & EXECUTION PROMPT (v3.0 — 2026-08-26)
 
 > **The mission:** Fear AI is not the end product — it's the inheritance. This plan transforms it, feature by feature, into **BadAI**: a new, better, original system that is yours. Long-term horizon: no deadline, six epochs, each shippable, each with hard exit criteria.

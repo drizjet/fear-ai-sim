@@ -1,3 +1,11 @@
+---
+title: "Fear AI / BadAI — Part 0 Baseline"
+created: 2026-08-26
+updated: 2026-09-06
+type: baseline-report
+status: runtime_verified
+---
+
 # Fear AI / BadAI — Part 0 Baseline
 
 **Status:** `RUNTIME_VERIFIED` for the checks listed below  

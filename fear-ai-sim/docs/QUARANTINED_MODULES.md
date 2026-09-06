@@ -1,3 +1,11 @@
+---
+title: "Quarantined Modules Manifest"
+created: 2026-08-27
+updated: 2026-09-06
+type: quarantine-manifest
+status: active
+---
+
 # Quarantined Modules Manifest
 
 This is the **quarantine manifest** for Fear AI. The audit

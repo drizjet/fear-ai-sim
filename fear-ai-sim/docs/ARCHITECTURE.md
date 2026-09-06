@@ -1,3 +1,11 @@
+---
+title: "Fear AI / BadAI — Current Architecture Map"
+created: 2026-08-26
+updated: 2026-09-06
+type: architecture-documentation
+status: partially_verified
+---
+
 # Fear AI / BadAI — Current Architecture Map
 
 **Status:** `PARTIALLY_VERIFIED`  

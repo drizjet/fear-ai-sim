@@ -1,3 +1,11 @@
+---
+title: "Behavior Contracts — Fear AI"
+created: 2026-08-29
+updated: 2026-09-06
+type: contract-registry
+status: active
+---
+
 # BEHAVIOR CONTRACTS — Fear AI
 
 EVID-2026-08-29-CONTRACTS-REGISTRY

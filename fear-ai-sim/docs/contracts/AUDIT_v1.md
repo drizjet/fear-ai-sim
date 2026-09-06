@@ -1,3 +1,11 @@
+---
+title: "Test-Change Audit v1 — Guardian V3 §2"
+created: 2026-08-29
+updated: 2026-09-06
+type: test-audit
+status: active
+---
+
 # TEST-CHANGE AUDIT v1 — Guardian V3 §2 Movement A §A1
 
 EVID-2026-08-29-AUDIT-V1

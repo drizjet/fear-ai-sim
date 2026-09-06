@@ -1,5 +1,18 @@
 # AUTONOMOUS HANDOFF
 
+EVID-2026-09-06-E27-STEPPE-DIPLOMACY (Lane B, unaccepted)
+
+## E27 — nomadic inter-confederation steppe diplomacy and khaganate unification: the steppe unifies (expansion)
+
+- Gap (probed, not guessed): multiple nomadic confederations existed as isolated actors with no diplomatic demarcation pacts protecting tributary networks, no hegemonic khaganate unification mechanisms to absorb subordinate hordes into unified Great Khaganates, and no seasonal pasture skirmish adjudication when seasonal migrations intersected.
+- Fix: implemented steppe demarcation treaties, hegemonic khaganate unification, and pasture skirmish adjudication in `closed-world.js`:
+  1. Steppe Demarcation Pacts (Step 7j): Peer confederations (power ratio >= 0.4, neither in crisis, non-hostile) seal mutual demarcation treaties (`CONFEDERATION_DEMARCATION_SEALED`), registered in `world.treaties`.
+  2. Tributary Raid Protection (Step 7i): Under an active demarcation treaty, punitive raids against towns paying tribute to partner confederations are prohibited and averted (`CONFEDERATION_DEMARCATION_BLOCKED_RAID`).
+  3. Hegemonic Khaganate Unification (Step 7j): Overwhelming power disparity (power >= 2.5 * other.power) or succession crisis vulnerability triggers absorption of the subordinate horde into a unified Great Khaganate (`KHAGANATE_UNIFICATION_SEALED`), strictly pooling power zero-sum, dampening clan loyalty, and transferring tribute agreements.
+  4. Pasture Skirmish Contestation (Step 7j): Unpacted confederations sharing seasonal pasture destinations contest the territory (`PASTURE_SKIRMISH_CONTESTED`), adjudicating dominance and applying symmetric proportional power attrition (10%).
+- Fallout restaged honestly: none beyond new files — all 219 prior suites pass unmodified (single-confederation and sedentary worlds emit zero steppe diplomacy events).
+- Validation: 220/1562 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 92/92 (2 new E27 entries), coverage 124 rows.
+
 EVID-2026-09-06-E26-SUCCESSION (Lane B, unaccepted)
 
 ## E26 — confederation tribal councils and nomadic succession dynamics: the kurultai decides (expansion)

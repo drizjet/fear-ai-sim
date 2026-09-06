@@ -1,3 +1,11 @@
+---
+title: "Fear AI / BadAI — Decision Register"
+created: 2026-08-26
+updated: 2026-09-06
+type: decision-register
+status: active
+---
+
 # Fear AI / BadAI — Decision Register
 
 **Status:** Active  

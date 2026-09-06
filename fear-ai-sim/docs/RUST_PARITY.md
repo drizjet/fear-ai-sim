@@ -1,3 +1,11 @@
+---
+title: "FearCore / Rust Parity Matrix"
+created: 2026-08-27
+updated: 2026-09-06
+type: parity-matrix
+status: partially_verified
+---
+
 # FearCore / Rust Parity Matrix
 
 **Status:** `PARTIALLY_VERIFIED` — no authoritative Rust fear model exists in the current repository  

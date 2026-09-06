@@ -1,3 +1,11 @@
+---
+title: "BadAI / Fear AI — Canonical Master Plan"
+created: 2026-08-26
+updated: 2026-09-06
+type: master-plan
+status: canonical_planning_index
+---
+
 # BadAI / Fear AI — Canonical Master Plan
 
 **Status:** `CANONICAL PLANNING INDEX`  

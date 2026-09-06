@@ -722,6 +722,22 @@ const MUTATIONS = [
         note: 'E26 fracture power split cut; confederation power never drops upon clan splintering',
     },
     {
+        id: 'nomadic-demarcation-pact',
+        file: 'closed-world.js',
+        target: 'if (ratio >= 0.4 && !existingDemarcation && !hostile) {',
+        replacement: 'if (false) {',
+        detectors: 'nomadic-diplomacy',
+        note: 'E27 demarcation cut; peer confederations never seal demarcation pacts',
+    },
+    {
+        id: 'nomadic-unification-transfer',
+        file: 'closed-world.js',
+        target: 'dominant.power += transferredPower;',
+        replacement: 'void transferredPower;',
+        detectors: 'nomadic-diplomacy',
+        note: 'E27 unification transfer cut; dominant khaganate never gains absorbed power',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',

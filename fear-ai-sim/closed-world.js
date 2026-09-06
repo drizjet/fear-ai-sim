@@ -4559,6 +4559,31 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             const broke = (Number(controller.resources) || 0) <= 0 && (Number(town.population) || 0) <= 0;
 
             if (atWar || broke) {
+                // E27: Check if target town is protected under an active demarcation treaty
+                const isProtectedByDemarcation = (world.confederations ?? []).some(otherConf => {
+                    if (otherConf.id === conf.id || otherConf.status !== 'ACTIVE') return false;
+                    const hasTribute = (otherConf.tributeAgreements ?? []).some(a => a.townId === agr.townId && a.status === 'ACTIVE');
+                    if (!hasTribute) return false;
+                    const hasPact = (world.treaties ?? []).some(t =>
+                        t.status === 'ACTIVE' &&
+                        t.terms?.kind === 'demarcation' &&
+                        t.participants?.includes(conf.id) &&
+                        t.participants?.includes(otherConf.id)
+                    );
+                    return hasPact;
+                });
+
+                if (isProtectedByDemarcation) {
+                    appendWorldEvent(world, {
+                        type: 'CONFEDERATION_DEMARCATION_BLOCKED_RAID',
+                        confederationId: conf.id,
+                        townId: agr.townId,
+                        controllerId: agr.controllerId,
+                        tick,
+                    }, []);
+                    continue;
+                }
+
                 agr.status = 'BROKEN';
                 appendWorldEvent(world, {
                     type: 'CONFEDERATION_RAID_MOBILIZED',
@@ -4671,6 +4696,166 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                         confederationId: conf.id,
                         newKhaganId: bestCandidate,
                         voteShare: totalVotes > 0 ? maxVote / totalVotes : 1,
+                        tick,
+                    }, []);
+                }
+            }
+        }
+    }
+
+    // Step 7j (E27): Inter-Confederation Steppe Diplomacy & Khaganate Unification Pass
+    const activeConfs = (world.confederations ?? []).filter(c => c.status === 'ACTIVE' && (Number(c.power) || 0) > 0);
+    if (activeConfs.length >= 2) {
+        // 1. Demarcation Treaties between balanced peers
+        for (let i = 0; i < activeConfs.length; i++) {
+            for (let j = i + 1; j < activeConfs.length; j++) {
+                const confA = activeConfs[i];
+                const confB = activeConfs[j];
+                if (confA.status !== 'ACTIVE' || confB.status !== 'ACTIVE') continue;
+                if (confA.successionCrisis?.active || confB.successionCrisis?.active) continue;
+
+                const pA = Number(confA.power) || 0;
+                const pB = Number(confB.power) || 0;
+                const ratio = Math.min(pA, pB) / Math.max(pA, pB);
+
+                const existingDemarcation = (world.treaties ?? []).some(t =>
+                    t.status === 'ACTIVE' &&
+                    t.terms?.kind === 'demarcation' &&
+                    t.participants?.includes(confA.id) &&
+                    t.participants?.includes(confB.id)
+                );
+
+                const pair = world.relationships?.get?.(`${confA.id}::${confB.id}`)
+                    ?? world.relationships?.get?.(`${confB.id}::${confA.id}`);
+                const stanceA = pair && typeof pair.stanceFrom === 'function' ? pair.stanceFrom(confA.id) : null;
+                const stanceB = pair && typeof pair.stanceFrom === 'function' ? pair.stanceFrom(confB.id) : null;
+                const hostile = (Number.isFinite(stanceA) && stanceA >= StanceLadder.WAR)
+                    || (Number.isFinite(stanceB) && stanceB >= StanceLadder.WAR);
+
+                // Peer balance threshold: ratio >= 0.4 and not hostile
+                if (ratio >= 0.4 && !existingDemarcation && !hostile) {
+                    const treatyId = `treaty-demarcation-${confA.id}-${confB.id}`;
+                    const treaty = createTreaty({
+                        id: treatyId,
+                        participants: [confA.id, confB.id],
+                        terms: { kind: 'demarcation', scope: 'steppe-pastures' },
+                        startTick: tick,
+                    });
+                    if (!Array.isArray(world.treaties)) world.treaties = [];
+                    world.treaties.push(treaty);
+                    appendWorldEvent(world, {
+                        type: 'CONFEDERATION_DEMARCATION_SEALED',
+                        treatyId,
+                        confederationIdA: confA.id,
+                        confederationIdB: confB.id,
+                        powerA: pA,
+                        powerB: pB,
+                        tick,
+                    }, []);
+                }
+            }
+        }
+
+        // 2. Hegemonic Khaganate Unification / Absorption
+        for (let i = 0; i < activeConfs.length; i++) {
+            for (let j = 0; j < activeConfs.length; j++) {
+                if (i === j) continue;
+                const dominant = activeConfs[i];
+                const weaker = activeConfs[j];
+                if (dominant.status !== 'ACTIVE' || weaker.status !== 'ACTIVE') continue;
+
+                const pDom = Number(dominant.power) || 0;
+                const pWeak = Number(weaker.power) || 0;
+                if (pDom <= 0 || pWeak <= 0) continue;
+
+                // Hegemony condition: dominant power >= 2.5 * weaker power, OR weaker in succession crisis with dominant > weaker
+                const hegemonicRatio = pDom / pWeak >= 2.5;
+                const crisisVulnerable = weaker.successionCrisis?.active && pDom > pWeak;
+
+                if (hegemonicRatio || crisisVulnerable) {
+                    // Check if a demarcation treaty prevents hostile absorption
+                    const pacted = (world.treaties ?? []).some(t =>
+                        t.status === 'ACTIVE' &&
+                        t.terms?.kind === 'demarcation' &&
+                        t.participants?.includes(dominant.id) &&
+                        t.participants?.includes(weaker.id)
+                    );
+                    if (!pacted) {
+                        const transferredPower = pWeak;
+                        dominant.power += transferredPower;
+                        weaker.power = 0;
+                        weaker.status = 'ABSORBED';
+                        weaker.dissolved = true;
+                        weaker.successionCrisis = null;
+
+                        // Conserved clan incorporation
+                        if (Array.isArray(weaker.clans) && weaker.clans.length > 0) {
+                            if (!Array.isArray(dominant.clans)) dominant.clans = [];
+                            for (const clan of weaker.clans) {
+                                dominant.clans.push({
+                                    ...clan,
+                                    loyalty: Math.max(0.2, Number(((Number(clan.loyalty) ?? 0.5) * 0.8).toFixed(2))),
+                                });
+                            }
+                        }
+
+                        // Transfer tribute agreements
+                        if (Array.isArray(weaker.tributeAgreements)) {
+                            if (!Array.isArray(dominant.tributeAgreements)) dominant.tributeAgreements = [];
+                            for (const agr of weaker.tributeAgreements) {
+                                if (agr.status === 'ACTIVE') {
+                                    dominant.tributeAgreements.push({ ...agr });
+                                    agr.status = 'TRANSFERRED';
+                                }
+                            }
+                        }
+
+                        appendWorldEvent(world, {
+                            type: 'KHAGANATE_UNIFICATION_SEALED',
+                            dominantId: dominant.id,
+                            absorbedId: weaker.id,
+                            transferredPower,
+                            totalPower: dominant.power,
+                            absorbedClansCount: weaker.clans?.length ?? 0,
+                            reason: hegemonicRatio ? 'HEGEMONIC_SUPERIORITY' : 'CRISIS_SUBJUGATION',
+                            tick,
+                        }, []);
+                    }
+                }
+            }
+        }
+
+        // 3. Pasture Skirmishes: Overlapping Seasonal Capitals
+        for (let i = 0; i < activeConfs.length; i++) {
+            for (let j = i + 1; j < activeConfs.length; j++) {
+                const confA = activeConfs[i];
+                const confB = activeConfs[j];
+                if (confA.status !== 'ACTIVE' || confB.status !== 'ACTIVE') continue;
+                if (!confA.currentCapital || !confB.currentCapital) continue;
+                if (confA.currentCapital !== confB.currentCapital) continue;
+
+                // Contested pasture
+                const hasPact = (world.treaties ?? []).some(t =>
+                    t.status === 'ACTIVE' &&
+                    t.terms?.kind === 'demarcation' &&
+                    t.participants?.includes(confA.id) &&
+                    t.participants?.includes(confB.id)
+                );
+                if (!hasPact) {
+                    const pA = Number(confA.power) || 0;
+                    const pB = Number(confB.power) || 0;
+                    const attrition = Number((Math.min(pA, pB) * 0.1).toFixed(2));
+                    confA.power = Math.max(0, Number((pA - attrition).toFixed(2)));
+                    confB.power = Math.max(0, Number((pB - attrition).toFixed(2)));
+
+                    appendWorldEvent(world, {
+                        type: 'PASTURE_SKIRMISH_CONTESTED',
+                        pastureId: confA.currentCapital,
+                        confederationIdA: confA.id,
+                        confederationIdB: confB.id,
+                        winnerId: pA >= pB ? confA.id : confB.id,
+                        loserId: pA >= pB ? confB.id : confA.id,
+                        attrition,
                         tick,
                     }, []);
                 }

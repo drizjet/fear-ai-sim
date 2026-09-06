@@ -1,3 +1,11 @@
+---
+title: "Suspicious Module Audit"
+created: 2026-08-27
+updated: 2026-09-06
+type: module-audit
+status: active
+---
+
 # Suspicious Module Audit
 
 Updated 2026-08-27 from source imports, tests, and build output.

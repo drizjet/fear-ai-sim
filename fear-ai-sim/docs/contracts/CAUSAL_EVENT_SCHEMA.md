@@ -1,3 +1,11 @@
+---
+title: "Causal Event Schema"
+created: 2026-08-29
+updated: 2026-09-06
+type: schema-specification
+status: active
+---
+
 # Causal event schema
 
 This is the Lane B development schema for the canonical closed-world reducer. Frozen supervisor acceptance remains pending.

@@ -1,3 +1,11 @@
+---
+title: "Closed-World Persistence Boundary"
+created: 2026-08-29
+updated: 2026-09-06
+type: architecture-specification
+status: active
+---
+
 # Closed-world persistence boundary
 
 This document classifies the production state observed on a canonical world after a reducer tick. It describes the development implementation; it is not frozen supervisor acceptance.
