@@ -38,13 +38,26 @@ function safeReadFile(absPath) {
     }
 }
 
+const fileHashCache = new Map();
+
 function fileHash(absPath) {
-    const data = safeReadFile(absPath);
-    if (data === null) return null;
-    return sha256(data);
+    try {
+        if (!existsSync(absPath)) return null;
+        const st = statSync(absPath);
+        if (!st.isFile()) return null;
+        const key = `${absPath}:${st.mtimeMs}:${st.size}`;
+        const cached = fileHashCache.get(key);
+        if (cached !== undefined) return cached;
+        const data = readFileSync(absPath);
+        const hash = sha256(data);
+        fileHashCache.set(key, hash);
+        return hash;
+    } catch {
+        return null;
+    }
 }
 
-function safeGit(cwd, args) {
+export function safeGit(cwd, args) {
     try {
         const out = execFileSync('git', args, {
             cwd,
@@ -64,16 +77,20 @@ function safeGit(cwd, args) {
  * @param {Object} options
  * @param {string} options.rootDir - the repo root (absolute)
  * @param {string[]} [options.fingerprintFiles] - file paths (relative to rootDir) to hash
+ * @param {string} [options.head] - optional precomputed git HEAD commit
+ * @param {boolean} [options.dirty] - optional precomputed git dirty status
  * @returns {{ head: string, dirty: boolean, fileHashes: Array<{path: string, hash: string|null}>, fingerprint: string }}
  */
-export function computeSourceFingerprint({ rootDir, fingerprintFiles = [] } = {}) {
+export function computeSourceFingerprint({ rootDir, fingerprintFiles = [], head: explicitHead, dirty: explicitDirty } = {}) {
     if (!rootDir) throw new TypeError('computeSourceFingerprint: rootDir is required');
-    const head = safeGit(rootDir, ['rev-parse', 'HEAD']) ?? 'no-git';
+    const head = explicitHead !== undefined ? explicitHead : (safeGit(rootDir, ['rev-parse', 'HEAD']) ?? 'no-git');
     // `git status --porcelain` is non-empty when the worktree has
     // uncommitted or untracked-but-tracked changes. This is a
     // conservative dirty flag.
-    const porcelain = safeGit(rootDir, ['status', '--porcelain']);
-    const dirty = porcelain !== null && porcelain.length > 0;
+    const dirty = explicitDirty !== undefined ? explicitDirty : (() => {
+        const porcelain = safeGit(rootDir, ['status', '--porcelain']);
+        return porcelain !== null && porcelain.length > 0;
+    })();
     const fileHashes = [];
     for (const rel of fingerprintFiles) {
         const abs = join(rootDir, rel);

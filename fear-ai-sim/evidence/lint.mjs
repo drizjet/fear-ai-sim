@@ -26,7 +26,7 @@
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { computeSourceFingerprint, compareFingerprints } from '../evidence/fingerprint.mjs';
+import { computeSourceFingerprint, compareFingerprints, safeGit } from '../evidence/fingerprint.mjs';
 import { maturityGate, readLedger } from '../evidence/maturity.mjs';
 
 const DEFAULT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -96,6 +96,10 @@ function main() {
         errors: [],
     };
 
+    const baseHead = safeGit(rootDir, ['rev-parse', 'HEAD']) ?? 'no-git';
+    const basePorcelain = safeGit(rootDir, ['status', '--porcelain']);
+    const baseDirty = basePorcelain !== null && basePorcelain.length > 0;
+
     for (const row of ledger) {
         if (!row || !row.domain || !row.dimension) {
             report.errors.push(`row ${row?.rowId ?? '?'}: missing domain or dimension`);
@@ -125,7 +129,7 @@ function main() {
             continue;
         }
         const ff = deriveFingerprintFiles(row, rootDir);
-        const fresh = computeSourceFingerprint({ rootDir, fingerprintFiles: ff });
+        const fresh = computeSourceFingerprint({ rootDir, fingerprintFiles: ff, head: baseHead, dirty: baseDirty });
         const freshness = compareFingerprints(row.sourceState, fresh);
         const commandOk = Array.isArray(row.commandResults)
             && row.commandResults.length > 0
