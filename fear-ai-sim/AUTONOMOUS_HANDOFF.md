@@ -1,5 +1,18 @@
 # AUTONOMOUS HANDOFF
 
+EVID-2026-09-06-E28-STEPPE-EMPORIUMS (Lane B, unaccepted)
+
+## E28 — nomadic steppe-sedentary peace conferences and frontier trade emporiums: the border trades (expansion)
+
+- Gap (probed, not guessed): nomadic confederations and sedentary towns had no formal peace conference mechanisms or institutional frontier trade emporiums — nomadic demand for sedentary grain/manufactured goods could only be pursued through raiding or unmediated tribute, with no bilateral market exchanges, trade-driven raid suppression, or war-triggered emporium suspension.
+- Fix: implemented steppe-sedentary peace conferences, frontier trade emporiums, bilateral market trade, and trade-channel raid suppression in `closed-world.js`:
+  1. Peace Conferences & Emporium Establishment (Step 7k): When an active nomadic confederation and a sedentary town controller with peaceful relations seal terms (`frontierEmporium: true` in tribute agreements or emporium treaties), a formal peace conference convenes (`STEPPE_PEACE_CONFERENCE_CONVENED`) establishing a frontier trade emporium (`CONFEDERATION_EMPORIUM_ESTABLISHED`), registered in `world.emporiums` and `conf.emporiums`.
+  2. Bilateral Market Exchange (Step 7k): Active emporiums execute bilateral goods exchange (`CONFEDERATION_EMPORIUM_TRADE_EXECUTED`), infusing town markets with pastoral commodities while bolstering confederation power (+0.5) and town controller resources (+1).
+  3. Frontier Raid Suppression (Step 7i): Under an active frontier trade emporium, punitive raids against defaulting tributary towns are suppressed and averted (`CONFEDERATION_EMPORIUM_BLOCKED_RAID`), satisfying nomadic resource demands peacefully through trade.
+  4. War Suspension & Resumption (Step 7k): Hostile declaration of WAR stance suspends the emporium (`CONFEDERATION_EMPORIUM_SUSPENDED`), removing raid protection; re-establishment of peace resumes active emporium trade (`CONFEDERATION_EMPORIUM_RESUMED`).
+- Fallout restaged honestly: none beyond new files — all 220 prior suites pass unmodified (sedentary worlds without confederation contact or without emporium agreements emit zero emporium events).
+- Validation: 221/1569 suite, 4/16 long-horizon, lint exit 0, build green, authority CLEAN, replay 94/94 (2 new E28 entries), coverage 125 rows.
+
 EVID-2026-09-06-E27-STEPPE-DIPLOMACY (Lane B, unaccepted)
 
 ## E27 — nomadic inter-confederation steppe diplomacy and khaganate unification: the steppe unifies (expansion)

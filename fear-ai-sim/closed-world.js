@@ -797,7 +797,7 @@ export function advancePendingWorldObligations(world, { tick = 0 } = {}) {
     return world;
 }
 
-export function createClosedWorldScenario({ season = 'SPRING', confederations = [] } = {}) {
+export function createClosedWorldScenario({ season = 'SPRING', confederations = [], emporiums = [] } = {}) {
     // Per-town economy schema. `consumes` is the demand per population
     // (existing). `produces` is the supply per population — the audit
     // asked for a real stock-flow loop. `storageCapacity` caps inventory
@@ -1007,6 +1007,8 @@ export function createClosedWorldScenario({ season = 'SPRING', confederations = 
         // E25 (nomadic confederations): non-territorial nomadic empires
         // with seasonal capitals and protection tribute extraction.
         confederations: [...confederations],
+        // E28 (frontier trade emporiums): bilateral steppe-sedentary trade outposts
+        emporiums: [...emporiums],
         scheduledConsequences: [],
         routeCommitments: [],
         patrolAssignments: [],
@@ -1500,6 +1502,7 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     if (!Array.isArray(world.wildlifeGroups)) world.wildlifeGroups = [];
     if (!Array.isArray(world.wildlife)) world.wildlife = [];
     if (!Array.isArray(world.confederations)) world.confederations = [];
+    if (!Array.isArray(world.emporiums)) world.emporiums = [];
     // Law slice: ensure every town has its prohibitions materialized.
     if (world.towns && typeof world.towns.get === 'function') {
         for (const [, town] of world.towns) ensureTownLaws(town);
@@ -4584,6 +4587,23 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
                     continue;
                 }
 
+                // E28: Frontier Trade Emporium raid suppression
+                const isProtectedByEmporium = (world.emporiums ?? []).some(emp =>
+                    emp.status === 'ACTIVE' &&
+                    emp.confederationId === conf.id &&
+                    emp.townId === agr.townId
+                );
+                if (isProtectedByEmporium) {
+                    appendWorldEvent(world, {
+                        type: 'CONFEDERATION_EMPORIUM_BLOCKED_RAID',
+                        confederationId: conf.id,
+                        townId: agr.townId,
+                        controllerId: agr.controllerId,
+                        tick,
+                    }, []);
+                    continue;
+                }
+
                 agr.status = 'BROKEN';
                 appendWorldEvent(world, {
                     type: 'CONFEDERATION_RAID_MOBILIZED',
@@ -4862,6 +4882,127 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
             }
         }
     }
+
+    // Step 7k (E28): Steppe-Sedentary Peace Conferences & Frontier Trade Emporiums
+    if (!Array.isArray(world.emporiums)) world.emporiums = [];
+    for (const conf of world.confederations ?? []) {
+        if (!conf || conf.status !== 'ACTIVE' || (Number(conf.power) || 0) <= 0) continue;
+        if (!Array.isArray(conf.emporiums)) conf.emporiums = [];
+
+        // Convene peace conferences & establish or update frontier trade emporiums
+        if (world.towns && typeof world.towns[Symbol.iterator] === 'function') {
+            for (const [townId, town] of world.towns) {
+                if (!town || town.abandoned || (Number(town.population) || 0) <= 0) continue;
+                const controllerId = town.controlledBy;
+                if (!controllerId) continue;
+                const controller = (world.factions ?? []).find(f => f.id === controllerId);
+                if (!controller) continue;
+
+                const pair = world.relationships?.get?.(`${controller.id}::${conf.id}`)
+                    ?? world.relationships?.get?.(`${conf.id}::${controller.id}`);
+                const stanceFromController = pair && typeof pair.stanceFrom === 'function' ? pair.stanceFrom(controller.id) : null;
+                const stanceFromConf = pair && typeof pair.stanceFrom === 'function' ? pair.stanceFrom(conf.id) : null;
+                const atWar = (Number.isFinite(stanceFromController) && stanceFromController >= StanceLadder.WAR)
+                    || (Number.isFinite(stanceFromConf) && stanceFromConf >= StanceLadder.WAR);
+
+                const existingEmp = world.emporiums.find(e => e.confederationId === conf.id && e.townId === townId);
+
+                if (existingEmp) {
+                    if (atWar && existingEmp.status === 'ACTIVE') {
+                        existingEmp.status = 'SUSPENDED';
+                        appendWorldEvent(world, {
+                            type: 'CONFEDERATION_EMPORIUM_SUSPENDED',
+                            emporiumId: existingEmp.id,
+                            confederationId: conf.id,
+                            townId,
+                            controllerId: controller.id,
+                            reason: 'FACTION_WAR_DECLARED',
+                            tick,
+                        }, []);
+                    } else if (!atWar && existingEmp.status === 'SUSPENDED') {
+                        existingEmp.status = 'ACTIVE';
+                        appendWorldEvent(world, {
+                            type: 'CONFEDERATION_EMPORIUM_RESUMED',
+                            emporiumId: existingEmp.id,
+                            confederationId: conf.id,
+                            townId,
+                            controllerId: controller.id,
+                            tick,
+                        }, []);
+                    }
+                } else if (!atWar) {
+                    const agr = (conf.tributeAgreements ?? []).find(a => a.townId === townId && a.status === 'ACTIVE');
+                    const hasEmporiumAgreement = Boolean(agr?.frontierEmporium || agr?.emporium || town.frontierEmporium);
+                    const hasEmporiumTreaty = (world.treaties ?? []).some(t =>
+                        t.status === 'ACTIVE' &&
+                        (t.terms?.kind === 'frontier-trade' || t.terms?.kind === 'emporium') &&
+                        t.participants?.includes(conf.id) &&
+                        (t.participants?.includes(controller.id) || t.participants?.includes(townId))
+                    );
+
+                    if (hasEmporiumAgreement || hasEmporiumTreaty) {
+                        const emporiumId = `emporium-${conf.id}-${townId}`;
+                        const emporium = {
+                            id: emporiumId,
+                            confederationId: conf.id,
+                            townId,
+                            controllerId: controller.id,
+                            status: 'ACTIVE',
+                            volume: 10,
+                            goodsExchange: { pastoralGoods: 'livestock', sedentaryGoods: 'grain' },
+                            establishedTick: tick,
+                        };
+                        world.emporiums.push(emporium);
+                        conf.emporiums.push({ ...emporium });
+
+                        appendWorldEvent(world, {
+                            type: 'STEPPE_PEACE_CONFERENCE_CONVENED',
+                            confederationId: conf.id,
+                            townId,
+                            controllerId: controller.id,
+                            tick,
+                        }, []);
+
+                        appendWorldEvent(world, {
+                            type: 'CONFEDERATION_EMPORIUM_ESTABLISHED',
+                            emporiumId,
+                            confederationId: conf.id,
+                            townId,
+                            controllerId: controller.id,
+                            volume: emporium.volume,
+                            tick,
+                        }, []);
+                    }
+                }
+            }
+        }
+    }
+
+    // Bilateral Market Exchange on Active Emporiums
+    for (const emp of world.emporiums) {
+        if (emp.status !== 'ACTIVE') continue;
+        const conf = (world.confederations ?? []).find(c => c.id === emp.confederationId && c.status === 'ACTIVE');
+        const town = world.towns?.get?.(emp.townId);
+        const controller = (world.factions ?? []).find(f => f.id === emp.controllerId);
+        if (!conf || !town || !controller || (Number(town.population) || 0) <= 0) continue;
+
+        const exchangeVolume = Math.min(emp.volume ?? 10, 5);
+        conf.power = Number(((Number(conf.power) || 0) + 0.5).toFixed(2));
+        controller.resources = Number(((Number(controller.resources) || 0) + 1).toFixed(2));
+
+        appendWorldEvent(world, {
+            type: 'CONFEDERATION_EMPORIUM_TRADE_EXECUTED',
+            emporiumId: emp.id,
+            confederationId: conf.id,
+            townId: emp.townId,
+            controllerId: controller.id,
+            volume: exchangeVolume,
+            confederationPower: conf.power,
+            controllerResources: controller.resources,
+            tick,
+        }, []);
+    }
+
     // 7b. E8 (settlement takeover): raids on bandits never move
     // borders. A RAID faction at WAR stance toward a rival, with
     // the resources to win the contest, takes an inhabited rival
@@ -7199,6 +7340,7 @@ export function createNomadicConfederation({
     khagan = null,
     clans = [],
     successionCrisis = null,
+    emporiums = [],
 } = {}) {
     if (!id) throw new TypeError('createNomadicConfederation requires an id');
     return {
@@ -7213,6 +7355,7 @@ export function createNomadicConfederation({
         khagan: khagan ? { ...khagan } : null,
         clans: clans.map(c => ({ ...c })),
         successionCrisis: successionCrisis ? { ...successionCrisis } : null,
+        emporiums: emporiums.map(e => ({ ...e })),
     };
 }
 

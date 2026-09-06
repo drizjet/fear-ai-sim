@@ -738,6 +738,22 @@ const MUTATIONS = [
         note: 'E27 unification transfer cut; dominant khaganate never gains absorbed power',
     },
     {
+        id: 'nomadic-emporium-raid-block',
+        file: 'closed-world.js',
+        target: 'if (isProtectedByEmporium) {',
+        replacement: 'if (false) {',
+        detectors: 'nomadic-emporiums',
+        note: 'E28 emporium raid block cut; defaulting tributary town gets raided despite active emporium',
+    },
+    {
+        id: 'nomadic-emporium-trade-power',
+        file: 'closed-world.js',
+        target: 'conf.power = Number(((Number(conf.power) || 0) + 0.5).toFixed(2));',
+        replacement: 'void conf.power;',
+        detectors: 'nomadic-emporiums',
+        note: 'E28 emporium trade power cut; nomadic confederation never gains power from bilateral market trade',
+    },
+    {
         id: 'merchant-bankruptcy-gate',
         file: 'closed-world.js',
         target: '&& destinationTownId !== merchant.location && !alreadyTraveling && !destAbandoned && !bankrupt;',
