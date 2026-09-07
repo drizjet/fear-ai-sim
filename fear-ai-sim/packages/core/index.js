@@ -24,8 +24,18 @@ export {
     PacingDirector,
     SESSION_PHASES
 } from './src/PacingDirector.js';
-export {
-    IntentResolver,
-    ACTION_INTENTS
-} from './src/IntentResolver.js';
+export { IntentResolver, ACTION_INTENTS } from './src/IntentResolver.js';
 export { PsychoacousticSynthesizer } from './src/PsychoacousticSynthesizer.js';
+export {
+    LayeredMemorySystem,
+    MEMORY_LAYERS,
+    EPISODIC_EVENT_TYPES,
+    SEMANTIC_CATEGORIES,
+    DEFAULT_MEMORY_CONFIG
+} from './src/LayeredMemorySystem.js';
+export {
+    RelationshipTensorSystem,
+    INTERACTION_TYPES,
+    DEFAULT_RELATIONSHIP_CONFIG
+} from './src/RelationshipTensorSystem.js';
+

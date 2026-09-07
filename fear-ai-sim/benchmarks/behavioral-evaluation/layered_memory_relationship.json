@@ -1,0 +1,59 @@
+{
+  "benchmark": "Fear AI Layered Memory & Relationship Tensor Benchmark",
+  "version": "1.0.0",
+  "timestamp": "2026-09-07T23:07:27.184Z",
+  "totalTicks": 2000,
+  "phases": {
+    "phase1_baseline": {
+      "sensoryBufferCount": 10,
+      "semanticBeliefsCount": 2,
+      "initialTrust": 0,
+      "initialGrievance": 0
+    },
+    "phase2_bonding_rescue": {
+      "followerLeaderRespect": 0.8,
+      "watcherMedicTrust": 0.8999999999999999,
+      "watcherMedicObligation": 0.6600000000000099,
+      "medicWatcherObligation": 0,
+      "directedAsymmetryVerified": true
+    },
+    "phase3_betrayal": {
+      "betrayalTrust": -1,
+      "betrayalGrievance": 0.8559999999999959,
+      "traumaCuesCount": 2
+    },
+    "phase4_divergence": {
+      "willingnessToHelpBetrayer": 0,
+      "willingnessToHelpAlly": 0.8,
+      "contagionFromBetrayer": 0.09456000000000098,
+      "contagionFromTrustedLeader": 0.3612000000000001,
+      "reassuranceFromLeader": 0.3234,
+      "reassuranceFromBetrayer": 0,
+      "traumaDreadAtAmbushSite": 0.7934352408093898,
+      "traumaDreadAtSafeSite": 0
+    }
+  },
+  "invariants": {
+    "checkpointRestoreDeterminism": {
+      "deterministic": true,
+      "originalFinalGrievance": 0,
+      "replayFinalGrievance": 0,
+      "originalFinalEpisodicCount": 2,
+      "replayFinalEpisodicCount": 2
+    },
+    "boundedCapacityPolicy": {
+      "boundedVerified": true,
+      "sensoryCapacity": "10 / 10",
+      "episodicCapacity": "50 / 50",
+      "semanticCapacity": "100 / 100",
+      "relationshipCapacity": "50 / 50"
+    },
+    "entityPurgeGarbageCollection": true
+  },
+  "metrics": {},
+  "summary": {
+    "allInvariantsPass": true,
+    "forgivenessDecayedGrievance": true,
+    "altruismRefusalPreserved": true
+  }
+}

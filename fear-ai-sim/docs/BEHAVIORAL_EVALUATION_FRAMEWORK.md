@@ -610,5 +610,75 @@ Evaluated via `benchmarks/behavioral-evaluation/long_horizon_affect_identity_ben
 3. **Clinical Trauma Relapse Gradient**: In Epoch 4 (sanctuary-healed agent re-entering the trauma zone without active threats), low-neuroticism / high-resilience archetypes (`stoic_veteran`, `reckless_daredevil`, `resilient_medic`) experience **zero relapse** ($\text{fear} = 0.000$), whereas high-neuroticism / low-resilience archetypes experience marked situational relapse (`cowardly_civilian`: $0.322$, `paranoid_watcher`: $0.324$, `frozen_bystander`: $0.374$).
 4. **Behavioral Repertoire Complexity**: Shannon entropy across 3-gram intent motifs averages **1.453 bits** (with resilient inquisitive archetypes reaching 1.517 bits across 16 distinct motif patterns), confirming rich behavioral diversity under repeated long-horizon cycles without single-state lockouts.
 
+---
+
+## 9. Milestone D: Layered Memory Architecture & Directed Relationship Tensors
+
+Milestone D establishes a reusable, bounded **Multi-Layer Cognitive Memory Architecture** and **Directed Multi-Dimensional Relationship Tensors** (`packages/core/src/LayeredMemorySystem.js` and `packages/core/src/RelationshipTensorSystem.js`), evaluating social evolution, asymmetric obligations, contagion modulation, and forgiveness dynamics over 2,000-tick horizons.
+
+### 9.1 The 4-Tier Cognitive Memory Architecture
+
+$$\mathbf{M}_{\text{agent}} = \langle \mathbf{M}_{\text{sensory}},\, \mathbf{M}_{\text{episodic}},\, \mathbf{M}_{\text{trauma}},\, \mathbf{M}_{\text{semantic}} \rangle$$
+
+1. **Sensory Working Memory ($\mathbf{M}_{\text{sensory}}$)**:
+   - Rolling FIFO buffer of active perceptual inputs (capacity: 10 observations).
+   - Tracks threat distances, audio stimuli, and nearby peer IDs for immediate appraisal.
+2. **Episodic Memory ($\mathbf{M}_{\text{episodic}}$)**:
+   - Discrete salient historical incidents (`SURVIVED_AMBUSH`, `REASSURED_BY_LEADER`, `ABANDONED_BY_PEER`, `ALLIED_EXTRACTION`).
+   - Salience decay function: $\text{salience}(t + \Delta t) = \text{salience}(t) \cdot (1.0 - \lambda_{\text{decay}})^{\Delta t}$.
+   - **Flashbulb Retention Property**: Highly salient traumatic or heroic memories ($\text{salience} \ge 0.80$) decay at $0.1\times$ the rate of mundane episodes ($\lambda_{\text{flash}} = 0.1 \cdot \lambda_{\text{base}}$), ensuring long-term behavioral persistence.
+   - Bounded Capacity: Strictly capped at 50 episodes; lowest-salience entries are pruned upon capacity breach.
+3. **Trauma Memory ($\mathbf{M}_{\text{trauma}}$)**:
+   - Cue-conditioned dread associations: spatial coordinates and entity cues that trigger anticipatory dread before active threats appear.
+   - Distance falloff: $\text{dread}(d) = \text{intensity} \cdot \left(1.0 - \frac{d}{r}\right)$.
+4. **Semantic World Knowledge ($\mathbf{M}_{\text{semantic}}$)**:
+   - Factual beliefs (`HAZARD`, `SANCTUARY`, `CHOKEPOINT`, `RESOURCE`).
+   - **Conflict Resolution Engine**: When conflicting observations arrive for the same coordinate or key, newer observations with higher confidence override outdated beliefs. Stale unrefreshed knowledge degrades slowly over time.
+
+### 9.2 Directed Multi-Dimensional Relationship Tensors ($\mathbf{R}_{ij}$)
+
+Social relationships are modeled as an asymmetric directed tensor: $\mathbf{R}_{ij} \neq \mathbf{R}_{ji}$, where agent $i$'s internal perception of agent $j$ is characterized across 8 continuous dimensions:
+
+$$\mathbf{R}_{ij} = \langle \text{trust} \in [-1, 1],\, \text{fear} \in [0, 1],\, \text{respect} \in [0, 1],\, \text{affection} \in [-1, 1],\, \text{grievance} \in [0, 1],\, \text{familiarity} \in [0, 1],\, \text{obligation} \in [0, 1],\, \text{dominance} \in [-1, 1] \rangle$$
+
+#### Interpersonal Interaction Dynamics
+
+| Interaction Type | Primary Impact on $\mathbf{R}_{\text{source} \to \text{target}}$ | Psychological Mechanism |
+| :--- | :--- | :--- |
+| **`SHARED_SURVIVAL`** | $+0.15\ \text{trust},\, +0.10\ \text{affection},\, +0.12\ \text{familiarity},\, -0.10\ \text{fear}$ | Mutual bonding under acute stress |
+| **`LEADER_CALMING`** | $+0.20\ \text{respect},\, +0.15\ \text{trust},\, -0.15\ \text{fear},\, -0.15\ \text{dominance}$ | Recognition of authority and calming presence |
+| **`RESCUE_CONFIRMED`** | $+0.60\ \text{trust},\, +0.40\ \text{affection},\, +0.50\ \text{obligation},\, +0.30\ \text{respect}$ | Deep gratitude and moral debt to rescuer |
+| **`AID_PROVIDED`** | $+0.20\ \text{trust},\, +0.20\ \text{affection},\, -0.25\ \text{obligation}$ | Warmth towards aided peer, debt repayment |
+| **`ABANDONMENT`** | $-0.50\ \text{trust},\, +0.60\ \text{grievance},\, -0.40\ \text{affection},\, +0.10\ \text{fear}$ | Resentment from perceived cowardice |
+| **`BETRAYAL`** | $-0.85\ \text{trust},\, +0.85\ \text{grievance},\, -0.70\ \text{affection},\, -0.40\ \text{respect}$ | Destructive breach of social contract |
+| **`ATTACK`** | $-0.80\ \text{trust},\, +0.80\ \text{grievance},\, +0.50\ \text{fear},\, -0.60\ \text{affection}$ | Violent hostility and intimidation |
+| **`PEACEFUL_COEXISTENCE`** | $-0.0008/\text{tick}\ \text{grievance},\, -0.0005/\text{tick}\ \text{obligation}$ | Gradual forgiveness and debt decay |
+
+### 9.3 Behavioral Modulation & Social Invariants
+
+1. **Panic Contagion Filtering**:
+   Peer panic susceptibility is modulated by relationship:
+   $$\beta_{\text{social}}(i \leftarrow j) = \beta_{\text{base}} \cdot (0.5 + 0.5 \cdot \text{familiarity}_{ij}) \cdot \max(0.2,\, 1.0 - 0.8 \cdot \text{grievance}_{ij}) \cdot (0.75 + 0.25 \cdot \max(0, \text{trust}_{ij}))$$
+   *Empirical Result*: Panic from a trusted leader propagates at $0.361$, while panic from a resented betrayer is discounted to $0.095$ ($73.7\%$ reduction), modeling psychological skepticism of hysterical or untrustworthy peers.
+
+2. **Leader Reassurance Gating**:
+   Reassurance requires baseline respect and trust:
+   $$\text{reassurance}(i \leftarrow \text{leader}) = \begin{cases} 0.0 & \text{if } \text{grievance}_{i,\text{leader}} > 0.4 \text{ or } \text{trust}_{i,\text{leader}} < -0.3 \\ \text{base} \cdot (0.4 + 0.6 \cdot \text{respect}) \cdot (0.5 + 0.5 \cdot \text{trust}) & \text{otherwise} \end{cases}$$
+   *Empirical Result*: Followers are effectively calmed by trusted leaders ($0.323$), but reassurance from corrupt/resented actors is completely rejected ($0.000$).
+
+3. **Pro-Social Altruism Gating (Refusal to Aid Betrayers)**:
+   Helping/warning propensity is mediated by the relationship tensor:
+   $$\text{willingness}(i \to j) = \begin{cases} 0.0 & \text{if } \text{grievance}_{ij} > 0.5 \\ \text{clamp}_{[0, 1]}\left(A_i + 0.3\,\text{trust} + 0.25\,\text{affection} + 0.25\,\text{obligation} - 0.2\,\text{fear} - 0.5\,\text{grievance}\right) & \text{otherwise} \end{cases}$$
+   *Empirical Result*: Highly agreeable follower ($A = 0.80$) shows $0.800$ willingness to help an allied rescuer, but strictly $0.000$ willingness to help a cowardly betrayer.
+
+4. **Directed Asymmetry Invariant Verified**:
+   When Medic rescues Watcher: Watcher develops $\text{obligation} = 0.660$ and $\text{trust} = 0.900$ towards Medic, while Medic holds $\text{obligation} = 0.000$ towards Watcher, confirming $\mathbf{R}_{ij} \neq \mathbf{R}_{ji}$.
+
+5. **Bounded Resource Policies & Determinism**:
+   - Under 5,000 rapid event insertions, memory stores remained strictly bounded: sensory (10/10), episodic (50/50), semantic (100/100), and social relationships (50/50).
+   - Entity despawn completely purged all inbound and outbound edges (`purgeAgent`).
+   - Checkpoint restoration at tick 700 produced **100% bit-for-bit trajectory equivalence** to tick 2,000.
+
+
 
 
