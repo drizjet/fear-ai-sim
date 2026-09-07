@@ -98,6 +98,30 @@ export class DeterministicRng {
             this.initialSeed = snapshot.initialSeed ?? this.initialSeed;
         }
     }
+
+    /**
+     * Resolve acceleration provider with defensive native fallback
+     * @param {object} [options={}]
+     * @returns {{ accelerated: boolean, provider: string, warning?: string }}
+     */
+    static resolveAcceleration(options = {}) {
+        if (typeof options.loader === 'function') {
+            try {
+                const nativeMod = options.loader();
+                if (nativeMod && typeof nativeMod.random === 'function') {
+                    return { accelerated: true, provider: 'NATIVE_ACCELERATED' };
+                }
+                throw new Error('Native loader did not return valid acceleration module');
+            } catch (err) {
+                return {
+                    accelerated: false,
+                    provider: 'PURE_SOFTWARE_FALLBACK',
+                    warning: `Native acceleration failed: ${err.message}. Falling back to pure software Mulberry32.`
+                };
+            }
+        }
+        return { accelerated: false, provider: 'PURE_SOFTWARE_MULBERRY32' };
+    }
 }
 
 export default DeterministicRng;

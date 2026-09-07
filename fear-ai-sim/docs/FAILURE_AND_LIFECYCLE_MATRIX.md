@@ -73,17 +73,21 @@ graph TD
 | **36** | **Custom Host Metadata** | `persistence-migration.test.js` #3 | Round-trips arbitrary engine metadata (`unrealWorldSessionId`, etc.). | **PASS** |
 | **37** | **Corrupt/Truncated Snapshot** | `persistence-migration.test.js` #4 | Safely handles truncated or partial snapshot payloads without state loss. | **PASS** |
 | **38** | **Habituation Count Continuity** | `persistence-migration.test.js` #5 | Preserves exact stimulus exposure counts across save/load checkpoints. | **PASS** |
+| **39** | **Server Unavailable Pre-Startup** | `lifecycle-and-optional-modules.test.js` #6 | Connection refusal on offline port caught cleanly; zero unhandled crash. | **PASS** |
+| **40** | **Future Snapshot Version Rejection**| `lifecycle-and-optional-modules.test.js` #7 | Snapshot version > 1 rejected with HTTP 400 `UNSUPPORTED_SNAPSHOT_VERSION`. | **PASS** |
+| **41** | **Invalid Agent ID Validation** | `lifecycle-and-optional-modules.test.js` #8 | Empty, whitespace, or non-string agent IDs rejected with HTTP 400. | **PASS** |
+| **42** | **Native Acceleration Failure Path**| `lifecycle-and-optional-modules.test.js` #9 | Loader exception triggers audited pure-software Mulberry32 fallback. | **PASS** |
 
 ---
 
 ## 3. Distributed Test Suite Summary
 
-The 38 failure tests are distributed across these automated suites:
+The 42 failure tests are distributed across these automated suites:
 
 1. `tests/conformance/transport-failure-matrix.test.js` (16 tests)
-2. `tests/conformance/lifecycle-and-optional-modules.test.js` (5 tests)
+2. `tests/conformance/lifecycle-and-optional-modules.test.js` (9 tests)
 3. `tests/conformance/failure-injection.test.js` (7 tests)
 4. `tests/conformance/security-hardening.test.js` (5 tests)
 5. `tests/conformance/persistence-migration.test.js` (5 tests)
 
-**Total Coverage**: **38 / 38 failure & lifecycle tests passing green**.
+**Total Coverage**: **42 / 42 failure & lifecycle tests passing green**.

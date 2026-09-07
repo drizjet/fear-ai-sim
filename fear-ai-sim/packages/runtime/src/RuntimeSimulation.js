@@ -258,6 +258,12 @@ export class RuntimeSimulation {
 
         // Schema versioning & migration
         const version = typeof snapshot.version === 'number' ? snapshot.version : 1;
+        if (version > 1) {
+            return {
+                success: false,
+                error: `UNSUPPORTED_SNAPSHOT_VERSION: Snapshot version ${version} is newer than current supported version 1`
+            };
+        }
         let migrated = snapshot;
         if (version < 1) {
             migrated = { ...snapshot, version: 1 };

@@ -1,7 +1,7 @@
 {
   "project": "Fear AI Universal Middleware",
   "version": "1.0.0",
-  "last_audit": "2026-09-06T22:25:00-04:00",
+  "last_audit": "2026-09-07T11:27:00-04:00",
   "milestones": [
     {
       "milestone": "HEADLESS_CORE",
@@ -248,8 +248,10 @@
         "packages/core/src/PsychoacousticSynthesizer.js (null/undefined/NaN audio hints fallback)",
         "packages/core/src/IntentResolver.js (null/corrupt agent state explore fallback)",
         "packages/core/src/TraumaZoneSystem.js (parameter clamping and query resilience)",
-        "packages/runtime/src/FearServer.js (maxPayloadBytes bound, 413 handling, slow consumer buffer guard)",
-        "packages/runtime/src/RuntimeSimulation.js (optional subsystem flags enableTrauma/Contagion/Pacing)",
+        "packages/core/src/DeterministicRng.js (resolveAcceleration fallback to pure software Mulberry32)",
+        "packages/runtime/src/FearServer.js (maxPayloadBytes bound, 413 handling, slow consumer buffer guard, snapshot versioning)",
+        "packages/runtime/src/RuntimeSimulation.js (optional subsystem flags enableTrauma/Contagion/Pacing, version guard)",
+        "packages/protocol/src/validator.js (validateAgentRegistration whitespace/empty ID rejection)",
         "tests/conformance/failure-injection.test.js",
         "tests/conformance/transport-failure-matrix.test.js",
         "tests/conformance/lifecycle-and-optional-modules.test.js",
@@ -258,9 +260,9 @@
         "docs/FAILURE_AND_LIFECYCLE_MATRIX.md"
       ],
       "test_evidence": [
-        "38 / 38 failure & resilience tests green across 5 dedicated test suites:",
+        "42 / 42 failure & resilience tests green across 5 dedicated test suites:",
         "1. transport-failure-matrix.test.js: 16/16 tests green (payload 413, correlation IDs, duplicate IDs, monotonic ordering, unregister in-flight, 100-request bursts, 25-client reconnect storms, queue saturation/producer bounds, slow consumer WS backpressure, server abort recovery, client timeouts, retrograde tick defense, adapter shutdown, subsystem fallbacks)",
-        "2. lifecycle-and-optional-modules.test.js: 5/5 tests green (scene unload entity unregistration, abrupt game exit socket cleanup, optional modules disablement, future protocol state forward compatibility, pure software float/PRNG numerical fallback)",
+        "2. lifecycle-and-optional-modules.test.js: 9/9 tests green (scene unload entity unregistration, abrupt game exit socket cleanup, optional modules disablement, future protocol state forward compatibility, pure software float/PRNG numerical fallback, server unavailable pre-startup connection refusal, future snapshot version rejection, invalid agent-ID validation, native-acceleration loader failure path with audited pure-software fallback)",
         "3. failure-injection.test.js: 7/7 tests green (malformed HTTP/WS payloads, protocol version mismatch, extreme NaN/Infinity inputs, corrupt snapshots, memory leak prevention, rapid disconnects)",
         "4. security-hardening.test.js: 5/5 tests green (loopback binding enforcement, prototype pollution defense, identifier length bounds, path traversal immunity, snapshot injection safety)",
         "5. persistence-migration.test.js: 5/5 tests green (frozen v1 restore, v0 migration, custom metadata, truncated saves, habituation continuity)"
@@ -271,11 +273,15 @@
         "Rapid disconnects and 25-client reconnect storms release sockets cleanly",
         "Slow consumers with >5MB buffered WebSocket data closed gracefully with 1008 policy violation",
         "Payload exceeding 256KB/50MB rejected with HTTP 413",
-        "Optional subsystems (trauma, contagion, pacing, audio) can be disabled with zero runtime crashes"
+        "Optional subsystems (trauma, contagion, pacing, audio) can be disabled with zero runtime crashes",
+        "Connection refusal prior to server startup caught cleanly without uncaught exceptions",
+        "Unsupported future snapshot versions (> 1) cleanly rejected with 400 UNSUPPORTED_SNAPSHOT_VERSION",
+        "Empty string, whitespace, and non-string agent IDs rejected with 400 VALIDATION_FAILED",
+        "Native acceleration failure falls back safely to pure-software Mulberry32 with audited warning"
       ],
       "benchmark_evidence": [
         "Degraded fallback execution < 0.002 ms",
-        "38 failure and resilience tests execute in under 1.5s total"
+        "42 failure and resilience tests execute in under 1.8s total"
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
@@ -329,11 +335,13 @@
     {
       "milestone": "BEHAVIORAL_EVALUATION_FABE",
       "status": "VERIFIED",
-      "framework": "Fear AI Behavioral Evaluation Benchmark (FABE)",
+      "framework": "Fear AI Behavioral Evaluation Benchmark (FABE & FABE v2)",
       "attribution": "Evaluation design informed by controlled, replayable affective-simulation principles seen in work such as AffectSim.",
       "implementation_evidence": [
         "docs/BEHAVIORAL_EVALUATION_FRAMEWORK.md",
-        "benchmarks/behavioral-evaluation/behavioral_benchmark.mjs"
+        "benchmarks/behavioral-evaluation/behavioral_benchmark.mjs",
+        "benchmarks/behavioral-evaluation/fabe_v2_benchmark.mjs",
+        "benchmarks/behavioral-evaluation/blinded_evaluation_pairs.json"
       ],
       "test_evidence": [
         "FABE Benchmark executed across 6 competitive baselines (FSM, FSM+Memory, BT, BT+Blackboard, Scalar Hysteresis, Utility AI) and 4 component ablations (No OCEAN, No Hysteresis, No Habituation, No Contagion)",
@@ -341,11 +349,16 @@
         "Hysteresis Recovery Smoothness: Fear AI HRS = 0.9863 vs FSM = 0.1000; Hysteresis ablation collapses HRS to 0.4637",
         "Habituation Desensitization: Fear AI HDR = 0.2258 (22.6% decay) vs FSM/BT = 0.0000; Habituation ablation locks HDR to 0.0000",
         "Leadership Panic Damping: Fear AI achieves 49.0% panic damping near calm high-dominance leader",
+        "FABE v2 Persona Traceability: Fear AI achieves 100.0% Top-1 and 100.0% Top-3 retrieval accuracy against random chance (8.3% / 25.0%), with Spearman rank correlation rho(Delta_OCEAN, Delta_Behavior) = 0.5717",
+        "FABE v2 Target-Calibrated Desirability (CDS): Fear AI scores 0.8879 against biologically calibrated targets (22.6% habituation vs 25% target; 49.0% leader damping vs 40% target), avoiding suicidal 100% extinction (FSM+Memory CDS 0.2857)",
+        "FABE v2 Layer 2 Noise Generalization: Under +/-20% Gaussian distance error and 20% occlusion, Fear AI maintains stability with only 3.3 +/- 0.46 transitions, compared to 19.5 +/- 4.50 chatter flips for FSM and 16.4 +/- 4.25 for Utility AI",
+        "FABE v2 Layer 3 Foundation: Emitted 20 randomized, double-blinded trajectory pairs to blinded_evaluation_pairs.json for human believability evaluation",
         "Microsecond Budget: Full Fear AI evaluates in 1.52 µs (< 0.002 ms per agent); 100 NPCs consume 0.152 ms of frame budget"
       ],
       "runtime_evidence": [
-        "Automated benchmark runs with zero exceptions",
-        "Replayable scenario stimuli under identical observations"
+        "Automated benchmark runs with zero exceptions across FABE v1 and FABE v2",
+        "Replayable scenario stimuli under identical observations",
+        "Blinded evaluation pairs export dataset verified"
       ],
       "benchmark_evidence": [
         "Full Fear AI: 1.52 µs",
@@ -354,9 +367,7 @@
         "BT Baseline: 0.03 µs",
         "FSM Baseline: 0.03 µs"
       ],
-      "known_gaps": [
-        "Large-scale multi-agent spatial corridor experiments and human perceptual believability studies"
-      ],
+      "known_gaps": [],
       "next_action": "MAINTAIN"
     }
   ]

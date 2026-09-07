@@ -157,4 +157,84 @@ describe('Lifecycle & Optional Subsystems Verification Suite', () => {
         expect(seq1[0]).toBeGreaterThanOrEqual(0.0);
         expect(seq1[0]).toBeLessThan(1.0);
     });
+
+    it('6. Server Unavailable Before Startup: connection refusal handled gracefully without crash', async () => {
+        const deadPort = 59999;
+
+        // HTTP request to down server
+        let httpErr;
+        try {
+            await rawHttpPost(deadPort, '/api/v1/handshake', '{}');
+        } catch (err) {
+            httpErr = err;
+        }
+        expect(httpErr).toBeDefined();
+        expect(['ECONNREFUSED', 'ENOTFOUND']).toContain(httpErr.code);
+
+        // WebSocket connection to down server
+        const ws = new WebSocket(`ws://127.0.0.1:${deadPort}`);
+        const wsErrPromise = new Promise((resolve) => {
+            ws.on('error', resolve);
+        });
+        const wsErr = await wsErrPromise;
+        expect(wsErr).toBeDefined();
+        expect(['ECONNREFUSED', 'ENOTFOUND']).toContain(wsErr.code);
+    });
+
+    it('7. Unsupported Future Snapshot Version Rejection: rejects version > 1 with 400', async () => {
+        // Direct simulation check
+        const sim = new RuntimeSimulation();
+        const loadResult = sim.loadSnapshot({
+            version: 99,
+            seed: 42,
+            agents: []
+        });
+        expect(loadResult.success).toBe(false);
+        expect(loadResult.error).toContain('UNSUPPORTED_SNAPSHOT_VERSION');
+
+        // Over HTTP REST endpoint
+        const res = await rawHttpPost(testPort, '/api/v1/load', JSON.stringify({
+            snapshot: {
+                version: 99,
+                seed: 42,
+                agents: []
+            }
+        }));
+        expect(res.status).toBe(400);
+        expect(res.body.code).toBe('UNSUPPORTED_SNAPSHOT_VERSION');
+    });
+
+    it('8. Invalid Agent ID Validation: rejects empty, whitespace, and non-string IDs with 400', async () => {
+        // Empty string
+        const emptyRes = await rawHttpPost(testPort, '/api/v1/register', JSON.stringify({
+            agent_id: ''
+        }));
+        expect(emptyRes.status).toBe(400);
+        expect(emptyRes.body.code).toBe('VALIDATION_FAILED');
+
+        // Whitespace only
+        const wsRes = await rawHttpPost(testPort, '/api/v1/register', JSON.stringify({
+            agent_id: '    '
+        }));
+        expect(wsRes.status).toBe(400);
+        expect(wsRes.body.code).toBe('VALIDATION_FAILED');
+
+        // Non-string / object
+        const objRes = await rawHttpPost(testPort, '/api/v1/register', JSON.stringify({
+            agent_id: { invalid: 'type' }
+        }));
+        expect(objRes.status).toBe(400);
+        expect(objRes.body.code).toBe('VALIDATION_FAILED');
+    });
+
+    it('9. Native Acceleration Failure Path: loader failure triggers graceful software fallback with warning', () => {
+        const simulatedFailingLoader = () => {
+            throw new Error('ERR_DLOPEN_FAILED: fear_ai_nif.node binary not found on host');
+        };
+
+        const result = DeterministicRng.resolveAcceleration({ loader: simulatedFailingLoader });
+        expect(result.accelerated).toBe(false);
+        expect(result.provider).toBe('PURE_SOFTWARE_FALLBACK');
+        expect(result.warning).toContain('ERR_DLOPEN_FAILED');
+    });
 });

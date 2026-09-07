@@ -108,8 +108,12 @@ export class ProtocolValidator {
 
     static validateRegisterAgent(raw) {
         const errors = [];
-        if (!raw.agent_id) {
+        if (raw.agent_id === undefined || raw.agent_id === null) {
             errors.push('Missing required property "agent_id"');
+        } else if (typeof raw.agent_id !== 'string' && typeof raw.agent_id !== 'number') {
+            errors.push('Property "agent_id" must be a string or number');
+        } else if (String(raw.agent_id).trim().length === 0) {
+            errors.push('Property "agent_id" cannot be empty or whitespace-only');
         }
         if (errors.length > 0) {
             return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
@@ -129,8 +133,8 @@ export class ProtocolValidator {
             valid: true,
             value: {
                 type: MESSAGE_TYPES.REGISTER_AGENT,
-                agent_id: String(raw.agent_id).slice(0, 256),
-                name: raw.name ? String(raw.name).slice(0, 256) : String(raw.agent_id).slice(0, 256),
+                agent_id: String(raw.agent_id).trim().slice(0, 256),
+                name: raw.name ? String(raw.name).slice(0, 256) : String(raw.agent_id).trim().slice(0, 256),
                 traits: sanitizedTraits,
                 initial_position: raw.initial_position || { x: 0, y: 0, z: 0 }
             }
@@ -138,14 +142,14 @@ export class ProtocolValidator {
     }
 
     static validateUnregisterAgent(raw) {
-        if (!raw.agent_id) {
-            return { valid: false, errors: ['Missing "agent_id"'], code: ERROR_CODES.VALIDATION_FAILED };
+        if (raw.agent_id === undefined || raw.agent_id === null || String(raw.agent_id).trim().length === 0) {
+            return { valid: false, errors: ['Missing or empty "agent_id"'], code: ERROR_CODES.VALIDATION_FAILED };
         }
         return {
             valid: true,
             value: {
                 type: MESSAGE_TYPES.UNREGISTER_AGENT,
-                agent_id: String(raw.agent_id).slice(0, 256)
+                agent_id: String(raw.agent_id).trim().slice(0, 256)
             }
         };
     }

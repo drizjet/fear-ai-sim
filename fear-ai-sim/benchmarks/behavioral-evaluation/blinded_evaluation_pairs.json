@@ -1,0 +1,8013 @@
+{
+  "title": "FABE v2 Layer 3 Blinded Human Believability Trial Pairs",
+  "generated_at": "2026-09-07T15:26:01.136Z",
+  "total_trials": 20,
+  "rubric": [
+    "1. Perceptual Naturalness (1-5): Does the agent feel like a plausible, living human under stress?",
+    "2. Emotional Trajectory Continuity (1-5): Does cooldown occur organically without mechanical state snaps?",
+    "3. Personality Expression (1-5): Does the agent behavior match the assigned psychological archetype?",
+    "4. Overall believability preference (Force-choice A vs B)"
+  ],
+  "trials": [
+    {
+      "trial_id": "TRIAL_001",
+      "scenario": "stalker_approach",
+      "scenario_description": "Lethal predator steadily closing distance from 20m to 2m in darkness",
+      "persona_archetype": "Cowardly Civilian",
+      "ticks": 40,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 25,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 26,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 27,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 28,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 29,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 30,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 31,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 32,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 33,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 34,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 35,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 36,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 37,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 38,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 39,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 124
+        },
+        {
+          "tick": 1,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 136
+        },
+        {
+          "tick": 2,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 147
+        },
+        {
+          "tick": 3,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 159
+        },
+        {
+          "tick": 4,
+          "state": "PANIC",
+          "urgency": 0.989165,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 5,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 6,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 7,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 8,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 9,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 10,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 20,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 21,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 22,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 23,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 24,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 25,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 26,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 27,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 28,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 29,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 30,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 31,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 32,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 33,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 34,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 35,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 36,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 37,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 38,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 39,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "blinded_key": {
+        "model_a": "BehaviorTree Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_002",
+      "scenario": "stalker_approach",
+      "scenario_description": "Lethal predator steadily closing distance from 20m to 2m in darkness",
+      "persona_archetype": "Stoic Veteran",
+      "ticks": 40,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 3,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 4,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 5,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 6,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 7,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 8,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 9,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 10,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 11,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 12,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 13,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 14,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 15,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 16,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 17,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 18,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 19,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 20,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 21,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 22,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 23,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 24,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 25,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 26,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 27,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 28,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 29,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 30,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 31,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 32,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 33,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 34,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 35,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 36,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 37,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 38,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 39,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 73
+        },
+        {
+          "tick": 1,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 81
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 88
+        },
+        {
+          "tick": 3,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 96
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 103
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 111
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 123
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 134
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 146
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 157
+        },
+        {
+          "tick": 10,
+          "state": "PANIC",
+          "urgency": 0.984515,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 169
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 20,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 21,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 22,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 23,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 24,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 25,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 26,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 27,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 28,
+          "state": "HIDE",
+          "urgency": 0.9,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 29,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 30,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 31,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 32,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 33,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 34,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 35,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 36,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 37,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 38,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 39,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "blinded_key": {
+        "model_a": "FSM Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_003",
+      "scenario": "stalker_approach",
+      "scenario_description": "Lethal predator steadily closing distance from 20m to 2m in darkness",
+      "persona_archetype": "Impulsive Scout",
+      "ticks": 40,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 1,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 103
+        },
+        {
+          "tick": 2,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 111
+        },
+        {
+          "tick": 3,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 122
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 134
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 145
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 157
+        },
+        {
+          "tick": 7,
+          "state": "PANIC",
+          "urgency": 0.9836,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 168
+        },
+        {
+          "tick": 8,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 9,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 10,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 20,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 21,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 22,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 23,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 24,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 25,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 26,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 27,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 28,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 29,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 30,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 31,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 32,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 33,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 34,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 35,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 36,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 37,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 38,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 39,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "EXPLORE",
+          "urgency": 0.8526,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "EXPLORE",
+          "urgency": 0.8351999999999999,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "EXPLORE",
+          "urgency": 0.8178000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "EXPLORE",
+          "urgency": 0.8003999999999999,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "EXPLORE",
+          "urgency": 0.783,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "EXPLORE",
+          "urgency": 0.7656000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "EXPLORE",
+          "urgency": 0.7482,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "EXPLORE",
+          "urgency": 0.7308000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "EXPLORE",
+          "urgency": 0.7133999999999999,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "EXPLORE",
+          "urgency": 0.6960000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "EXPLORE",
+          "urgency": 0.6786,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "EXPLORE",
+          "urgency": 0.6612,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "EXPLORE",
+          "urgency": 0.6438,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "EXPLORE",
+          "urgency": 0.6264,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "EXPLORE",
+          "urgency": 0.609,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "EXPLORE",
+          "urgency": 0.5915999999999999,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "EXPLORE",
+          "urgency": 0.5741999999999999,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "EXPLORE",
+          "urgency": 0.5568,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "EXPLORE",
+          "urgency": 0.5393999999999999,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "EXPLORE",
+          "urgency": 0.522,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "EXPLORE",
+          "urgency": 0.5045999999999999,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "EXPLORE",
+          "urgency": 0.48719999999999997,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "EXPLORE",
+          "urgency": 0.46979999999999994,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "FLEE",
+          "urgency": 0.4892160000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 25,
+          "state": "FLEE",
+          "urgency": 0.5096,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 26,
+          "state": "FLEE",
+          "urgency": 0.5299840000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 27,
+          "state": "FLEE",
+          "urgency": 0.550368,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 28,
+          "state": "FLEE",
+          "urgency": 0.570752,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 29,
+          "state": "FLEE",
+          "urgency": 0.591136,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 30,
+          "state": "FLEE",
+          "urgency": 0.61152,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 31,
+          "state": "FLEE",
+          "urgency": 0.631904,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 32,
+          "state": "FLEE",
+          "urgency": 0.652288,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 33,
+          "state": "FLEE",
+          "urgency": 0.672672,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 34,
+          "state": "FLEE",
+          "urgency": 0.693056,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 35,
+          "state": "FLEE",
+          "urgency": 0.71344,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 36,
+          "state": "FLEE",
+          "urgency": 0.733824,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 37,
+          "state": "FLEE",
+          "urgency": 0.754208,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 38,
+          "state": "FLEE",
+          "urgency": 0.7745920000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 39,
+          "state": "FLEE",
+          "urgency": 0.794976,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "Fear AI (Full Middleware)",
+        "model_b": "UtilityAI Baseline"
+      }
+    },
+    {
+      "trial_id": "TRIAL_004",
+      "scenario": "stalker_approach",
+      "scenario_description": "Lethal predator steadily closing distance from 20m to 2m in darkness",
+      "persona_archetype": "Protective Leader",
+      "ticks": 40,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 77
+        },
+        {
+          "tick": 1,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 85
+        },
+        {
+          "tick": 2,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 93
+        },
+        {
+          "tick": 3,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 100
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 108
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 115
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 127
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 138
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 150
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 161
+        },
+        {
+          "tick": 10,
+          "state": "PANIC",
+          "urgency": 0.9959,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 173
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 20,
+          "state": "HIDE",
+          "urgency": 0.9,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 21,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 22,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 23,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 24,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 25,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 26,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 27,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 28,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 29,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 30,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 31,
+          "state": "HIDE",
+          "urgency": 0.9,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 32,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 33,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 34,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 35,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 36,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 37,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 38,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 39,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 25,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 26,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 27,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 28,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 29,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 30,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 31,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 32,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 33,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 34,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 35,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 36,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 37,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 38,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 39,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        }
+      ],
+      "blinded_key": {
+        "model_a": "Fear AI (Full Middleware)",
+        "model_b": "BehaviorTree Baseline"
+      }
+    },
+    {
+      "trial_id": "TRIAL_005",
+      "scenario": "stalker_approach",
+      "scenario_description": "Lethal predator steadily closing distance from 20m to 2m in darkness",
+      "persona_archetype": "Paranoid Watcher",
+      "ticks": 40,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 3,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 4,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 5,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 6,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 7,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 8,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 9,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 10,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 11,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 12,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 13,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 14,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 15,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 16,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 17,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 18,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 19,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 20,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 21,
+          "state": "ALERT",
+          "urgency": 0.4,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 110
+        },
+        {
+          "tick": 22,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 23,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 24,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 25,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 26,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 27,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 28,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 29,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 30,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 31,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 32,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 33,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 34,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 35,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 36,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 37,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 38,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 39,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 116
+        },
+        {
+          "tick": 1,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 128
+        },
+        {
+          "tick": 2,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 139
+        },
+        {
+          "tick": 3,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 151
+        },
+        {
+          "tick": 4,
+          "state": "PANIC",
+          "urgency": 0.978005,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 162
+        },
+        {
+          "tick": 5,
+          "state": "PANIC",
+          "urgency": 0.998005,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 174
+        },
+        {
+          "tick": 6,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 7,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 8,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 9,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 10,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 20,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 21,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 22,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 23,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 24,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 25,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 26,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 27,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 28,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 29,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 30,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 31,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 32,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 33,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 34,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 35,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 36,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 37,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 38,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 39,
+          "state": "FREEZE",
+          "urgency": 1,
+          "posture": "TREMBLING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "blinded_key": {
+        "model_a": "FSM Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_006",
+      "scenario": "sudden_ambush_and_vanish",
+      "scenario_description": "Sudden high-arousal monster breach at 3m that abruptly vanishes after 5 ticks",
+      "persona_archetype": "Cowardly Civilian",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "FLEE",
+          "urgency": 1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "FLEE",
+          "urgency": 1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "FLEE",
+          "urgency": 1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "FLEE",
+          "urgency": 1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "FLEE",
+          "urgency": 1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "EXPLORE",
+          "urgency": 0.5800000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 159
+        },
+        {
+          "tick": 1,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 163
+        },
+        {
+          "tick": 2,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 167
+        },
+        {
+          "tick": 3,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 171
+        },
+        {
+          "tick": 4,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 174
+        },
+        {
+          "tick": 5,
+          "state": "PANIC",
+          "urgency": 0.99125,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 175
+        },
+        {
+          "tick": 6,
+          "state": "PANIC",
+          "urgency": 0.9828062500000001,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 176
+        },
+        {
+          "tick": 7,
+          "state": "PANIC",
+          "urgency": 0.9746580312500001,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 177
+        },
+        {
+          "tick": 8,
+          "state": "PANIC",
+          "urgency": 0.9667950001562501,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 9,
+          "state": "PANIC",
+          "urgency": 0.9592071751507814,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 179
+        },
+        {
+          "tick": 10,
+          "state": "PANIC",
+          "urgency": 0.9518849240205041,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 0.9448189516797865,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 0.9380002883709939,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 0.9314202782780091,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 0.9250705685382787,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 176
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 0.918943098639439,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 173
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 0.9130300901870587,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 171
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 0.9073240370305117,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 169
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 0.9018176957344437,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 167
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 0.8965040763837382,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 164
+        },
+        {
+          "tick": 20,
+          "state": "PANIC",
+          "urgency": 0.8913764337103074,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 161
+        },
+        {
+          "tick": 21,
+          "state": "PANIC",
+          "urgency": 0.8864282585304467,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 158
+        },
+        {
+          "tick": 22,
+          "state": "PANIC",
+          "urgency": 0.881653269481881,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 155
+        },
+        {
+          "tick": 23,
+          "state": "PANIC",
+          "urgency": 0.8770454050500152,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 152
+        },
+        {
+          "tick": 24,
+          "state": "PANIC",
+          "urgency": 0.8725988158732647,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 150
+        }
+      ],
+      "blinded_key": {
+        "model_a": "UtilityAI Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_007",
+      "scenario": "sudden_ambush_and_vanish",
+      "scenario_description": "Sudden high-arousal monster breach at 3m that abruptly vanishes after 5 ticks",
+      "persona_archetype": "Stoic Veteran",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 85
+        },
+        {
+          "tick": 1,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 93
+        },
+        {
+          "tick": 2,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 100
+        },
+        {
+          "tick": 3,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 108
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 116
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 111
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 108
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 104
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 101
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 98
+        },
+        {
+          "tick": 10,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 11,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 92
+        },
+        {
+          "tick": 12,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 90
+        },
+        {
+          "tick": 13,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 88
+        },
+        {
+          "tick": 14,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 86
+        },
+        {
+          "tick": 15,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 84
+        },
+        {
+          "tick": 16,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 82
+        },
+        {
+          "tick": 17,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 80
+        },
+        {
+          "tick": 18,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 79
+        },
+        {
+          "tick": 19,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 77
+        },
+        {
+          "tick": 20,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 76
+        },
+        {
+          "tick": 21,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 75
+        },
+        {
+          "tick": 22,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 74
+        },
+        {
+          "tick": 23,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 73
+        },
+        {
+          "tick": 24,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 72
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 1,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 2,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 3,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 4,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 5,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 6,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 7,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 8,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 9,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "Fear AI (Full Middleware)",
+        "model_b": "BehaviorTree Baseline"
+      }
+    },
+    {
+      "trial_id": "TRIAL_008",
+      "scenario": "sudden_ambush_and_vanish",
+      "scenario_description": "Sudden high-arousal monster breach at 3m that abruptly vanishes after 5 ticks",
+      "persona_archetype": "Impulsive Scout",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 133
+        },
+        {
+          "tick": 1,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 144
+        },
+        {
+          "tick": 2,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 156
+        },
+        {
+          "tick": 3,
+          "state": "PANIC",
+          "urgency": 0.9908695652173913,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 167
+        },
+        {
+          "tick": 4,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 174
+        },
+        {
+          "tick": 5,
+          "state": "PANIC",
+          "urgency": 0.9875,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 174
+        },
+        {
+          "tick": 6,
+          "state": "PANIC",
+          "urgency": 0.975625,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 173
+        },
+        {
+          "tick": 7,
+          "state": "PANIC",
+          "urgency": 0.96434375,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 173
+        },
+        {
+          "tick": 8,
+          "state": "PANIC",
+          "urgency": 0.9536265625,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 173
+        },
+        {
+          "tick": 9,
+          "state": "PANIC",
+          "urgency": 0.943445234375,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 173
+        },
+        {
+          "tick": 10,
+          "state": "PANIC",
+          "urgency": 0.93377297265625,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 173
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 0.9245843240234376,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 173
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 0.9158551078222656,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 172
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 0.9075623524311525,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 169
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 0.8996842348095948,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 0.8922000230691152,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 161
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 0.8850900219156593,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 157
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 0.8783355208198764,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 154
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 0.8719187447788825,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 151
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 0.8658228075399385,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 147
+        },
+        {
+          "tick": 20,
+          "state": "PANIC",
+          "urgency": 0.8600316671629415,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 144
+        },
+        {
+          "tick": 21,
+          "state": "PANIC",
+          "urgency": 0.8545300838047944,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 141
+        },
+        {
+          "tick": 22,
+          "state": "PANIC",
+          "urgency": 0.8493035796145547,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 138
+        },
+        {
+          "tick": 23,
+          "state": "PANIC",
+          "urgency": 0.844338400633827,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 135
+        },
+        {
+          "tick": 24,
+          "state": "PANIC",
+          "urgency": 0.8396214806021357,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 132
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 1,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 2,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 3,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 4,
+          "state": "FLEE",
+          "urgency": 0.9,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 170
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "Fear AI (Full Middleware)",
+        "model_b": "FSM Baseline"
+      }
+    },
+    {
+      "trial_id": "TRIAL_009",
+      "scenario": "sudden_ambush_and_vanish",
+      "scenario_description": "Sudden high-arousal monster breach at 3m that abruptly vanishes after 5 ticks",
+      "persona_archetype": "Protective Leader",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "FLEE",
+          "urgency": 0.49368,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "FLEE",
+          "urgency": 0.49368,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "FLEE",
+          "urgency": 0.49368,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "FLEE",
+          "urgency": 0.49368,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "FLEE",
+          "urgency": 0.49368,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "EXPLORE",
+          "urgency": 0.94,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 94
+        },
+        {
+          "tick": 1,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 101
+        },
+        {
+          "tick": 2,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 109
+        },
+        {
+          "tick": 3,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 116
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 128
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 127
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 122
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 117
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 113
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 108
+        },
+        {
+          "tick": 10,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 104
+        },
+        {
+          "tick": 11,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 100
+        },
+        {
+          "tick": 12,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 97
+        },
+        {
+          "tick": 13,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 93
+        },
+        {
+          "tick": 14,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 91
+        },
+        {
+          "tick": 15,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 89
+        },
+        {
+          "tick": 16,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 87
+        },
+        {
+          "tick": 17,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 85
+        },
+        {
+          "tick": 18,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 83
+        },
+        {
+          "tick": 19,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 82
+        },
+        {
+          "tick": 20,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 80
+        },
+        {
+          "tick": 21,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 79
+        },
+        {
+          "tick": 22,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 77
+        },
+        {
+          "tick": 23,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 76
+        },
+        {
+          "tick": 24,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 75
+        }
+      ],
+      "blinded_key": {
+        "model_a": "UtilityAI Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_010",
+      "scenario": "sudden_ambush_and_vanish",
+      "scenario_description": "Sudden high-arousal monster breach at 3m that abruptly vanishes after 5 ticks",
+      "persona_archetype": "Paranoid Watcher",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 1,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 2,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 3,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 4,
+          "state": "FLEE",
+          "urgency": 0.85,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 165
+        },
+        {
+          "tick": 5,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 6,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 7,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 8,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 9,
+          "state": "FLEE",
+          "urgency": 0.5,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 130
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 159
+        },
+        {
+          "tick": 1,
+          "state": "ANXIOUS",
+          "urgency": 0.65,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 163
+        },
+        {
+          "tick": 2,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 167
+        },
+        {
+          "tick": 3,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 171
+        },
+        {
+          "tick": 4,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 174
+        },
+        {
+          "tick": 5,
+          "state": "PANIC",
+          "urgency": 0.990625,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 175
+        },
+        {
+          "tick": 6,
+          "state": "PANIC",
+          "urgency": 0.9816015625000001,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 175
+        },
+        {
+          "tick": 7,
+          "state": "PANIC",
+          "urgency": 0.9729165039062501,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 176
+        },
+        {
+          "tick": 8,
+          "state": "PANIC",
+          "urgency": 0.9645571350097657,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 177
+        },
+        {
+          "tick": 9,
+          "state": "PANIC",
+          "urgency": 0.9565112424468994,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 10,
+          "state": "PANIC",
+          "urgency": 0.9487670708551408,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 179
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 0.9413133056980729,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 0.9341390567343952,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 179
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 0.9272338421068554,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 176
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 0.9205875730278483,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 174
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 0.914190539039304,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 171
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 0.9080333938253302,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 169
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 0.9021071415568803,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 167
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 0.8964031237484973,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 164
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 0.8909130066079286,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 161
+        },
+        {
+          "tick": 20,
+          "state": "PANIC",
+          "urgency": 0.8856287688601313,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 158
+        },
+        {
+          "tick": 21,
+          "state": "PANIC",
+          "urgency": 0.8805426900278763,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 155
+        },
+        {
+          "tick": 22,
+          "state": "PANIC",
+          "urgency": 0.875647339151831,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 152
+        },
+        {
+          "tick": 23,
+          "state": "PANIC",
+          "urgency": 0.8709355639336374,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 149
+        },
+        {
+          "tick": 24,
+          "state": "PANIC",
+          "urgency": 0.8664004802861259,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 146
+        }
+      ],
+      "blinded_key": {
+        "model_a": "BehaviorTree Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_011",
+      "scenario": "ambiguous_audio_whispers",
+      "scenario_description": "Repeated non-visual auditory cues echoing in empty corridor",
+      "persona_archetype": "Cowardly Civilian",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "FSM Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_012",
+      "scenario": "ambiguous_audio_whispers",
+      "scenario_description": "Repeated non-visual auditory cues echoing in empty corridor",
+      "persona_archetype": "Stoic Veteran",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "EXPLORE",
+          "urgency": 0.92,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "Fear AI (Full Middleware)",
+        "model_b": "UtilityAI Baseline"
+      }
+    },
+    {
+      "trial_id": "TRIAL_013",
+      "scenario": "ambiguous_audio_whispers",
+      "scenario_description": "Repeated non-visual auditory cues echoing in empty corridor",
+      "persona_archetype": "Impulsive Scout",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 1,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 3,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 4,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 5,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 6,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 7,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 8,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 9,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 10,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 11,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 12,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 13,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 14,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 15,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 16,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 17,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 18,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 19,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 20,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 21,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 22,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 23,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        },
+        {
+          "tick": 24,
+          "state": "ALERT",
+          "urgency": 0.35,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 95
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "BehaviorTree Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_014",
+      "scenario": "ambiguous_audio_whispers",
+      "scenario_description": "Repeated non-visual auditory cues echoing in empty corridor",
+      "persona_archetype": "Protective Leader",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "FSM Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_015",
+      "scenario": "ambiguous_audio_whispers",
+      "scenario_description": "Repeated non-visual auditory cues echoing in empty corridor",
+      "persona_archetype": "Paranoid Watcher",
+      "ticks": 25,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "EXPLORE",
+          "urgency": 0.6900000000000001,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 20,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 21,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 22,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 23,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 24,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "UtilityAI Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_016",
+      "scenario": "evacuation_with_calm_leader",
+      "scenario_description": "Civilian facing terrifying peer screaming while an armed calm leader stands close",
+      "persona_archetype": "Cowardly Civilian",
+      "ticks": 20,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 68
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 75
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 83
+        },
+        {
+          "tick": 3,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 90
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 98
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 106
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 113
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 125
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 136
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 148
+        },
+        {
+          "tick": 10,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 159
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 0.99,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 171
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "blinded_key": {
+        "model_a": "BehaviorTree Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_017",
+      "scenario": "evacuation_with_calm_leader",
+      "scenario_description": "Civilian facing terrifying peer screaming while an armed calm leader stands close",
+      "persona_archetype": "Stoic Veteran",
+      "ticks": 20,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 68
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 75
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 83
+        },
+        {
+          "tick": 3,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 90
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 98
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 106
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 113
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 125
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 136
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 148
+        },
+        {
+          "tick": 10,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 159
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 0.99,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 171
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "blinded_key": {
+        "model_a": "FSM Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    },
+    {
+      "trial_id": "TRIAL_018",
+      "scenario": "evacuation_with_calm_leader",
+      "scenario_description": "Civilian facing terrifying peer screaming while an armed calm leader stands close",
+      "persona_archetype": "Impulsive Scout",
+      "ticks": 20,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 68
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 75
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 83
+        },
+        {
+          "tick": 3,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 90
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 98
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 106
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 113
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 125
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 136
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 148
+        },
+        {
+          "tick": 10,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 159
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 0.99,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 171
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "EXPLORE",
+          "urgency": 0.87,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "Fear AI (Full Middleware)",
+        "model_b": "UtilityAI Baseline"
+      }
+    },
+    {
+      "trial_id": "TRIAL_019",
+      "scenario": "evacuation_with_calm_leader",
+      "scenario_description": "Civilian facing terrifying peer screaming while an armed calm leader stands close",
+      "persona_archetype": "Protective Leader",
+      "ticks": 20,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 69
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 76
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 84
+        },
+        {
+          "tick": 3,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 92
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 99
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 107
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 114
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 126
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 137
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 149
+        },
+        {
+          "tick": 10,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 160
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 0.9934375,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 172
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "blinded_key": {
+        "model_a": "Fear AI (Full Middleware)",
+        "model_b": "BehaviorTree Baseline"
+      }
+    },
+    {
+      "trial_id": "TRIAL_020",
+      "scenario": "evacuation_with_calm_leader",
+      "scenario_description": "Civilian facing terrifying peer screaming while an armed calm leader stands close",
+      "persona_archetype": "Paranoid Watcher",
+      "ticks": 20,
+      "trajectory_a": [
+        {
+          "tick": 0,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 1,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 2,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 3,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 4,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 5,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 6,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 7,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 8,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 9,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 10,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 11,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 12,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 13,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 14,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 15,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 16,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 17,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 18,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        },
+        {
+          "tick": 19,
+          "state": "IDLE",
+          "urgency": 0,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 60
+        }
+      ],
+      "trajectory_b": [
+        {
+          "tick": 0,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 68
+        },
+        {
+          "tick": 1,
+          "state": "CALM",
+          "urgency": 0.1,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 75
+        },
+        {
+          "tick": 2,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 83
+        },
+        {
+          "tick": 3,
+          "state": "ALERT",
+          "urgency": 0.3,
+          "posture": "UPRIGHT",
+          "heartbeat_bpm": 90
+        },
+        {
+          "tick": 4,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 98
+        },
+        {
+          "tick": 5,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 106
+        },
+        {
+          "tick": 6,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 113
+        },
+        {
+          "tick": 7,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 125
+        },
+        {
+          "tick": 8,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 136
+        },
+        {
+          "tick": 9,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 148
+        },
+        {
+          "tick": 10,
+          "state": "ANXIOUS",
+          "urgency": 0.45,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 159
+        },
+        {
+          "tick": 11,
+          "state": "PANIC",
+          "urgency": 0.99,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 171
+        },
+        {
+          "tick": 12,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 178
+        },
+        {
+          "tick": 13,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 14,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 15,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 16,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 17,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 18,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 19,
+          "state": "PANIC",
+          "urgency": 1,
+          "posture": "SPRINTING",
+          "heartbeat_bpm": 180
+        }
+      ],
+      "blinded_key": {
+        "model_a": "FSM Baseline",
+        "model_b": "Fear AI (Full Middleware)"
+      }
+    }
+  ]
+}

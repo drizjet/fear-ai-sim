@@ -283,7 +283,10 @@ export class FearServer {
                 if (!body.snapshot) {
                     return this._sendJson(res, 400, { error: 'Missing snapshot object', code: ERROR_CODES.VALIDATION_FAILED });
                 }
-                this.simulation.loadSnapshot(body.snapshot);
+                const loadResult = this.simulation.loadSnapshot(body.snapshot);
+                if (!loadResult.success) {
+                    return this._sendJson(res, 400, { error: loadResult.error, code: 'UNSUPPORTED_SNAPSHOT_VERSION' });
+                }
                 return this._sendJson(res, 200, { status: 'LOADED', tick: this.simulation.tickCount, agentCount: this.simulation.agents.size });
             }
 
