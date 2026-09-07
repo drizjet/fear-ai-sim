@@ -1,0 +1,575 @@
+{
+  "benchmark": "Fear AI Long-Horizon Affect & Identity Separation Benchmark",
+  "version": "1.0.0",
+  "timestamp": "2026-09-07T22:57:20.889Z",
+  "simulationTicksPerAgent": 5000,
+  "archetypesCount": 12,
+  "archetypes": [
+    {
+      "personaId": "cowardly_civilian",
+      "personaName": "Cowardly Civilian",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 11,
+        "shannonEntropy": 1.397,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2987,
+            "probability": 0.5976
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 1003,
+            "probability": 0.2007
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 998,
+            "probability": 0.1997
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "CAUTIOUS_EXPLORE": 20,
+        "IDLE_VIGILANT": 0.02,
+        "FLEE_FROM": 0.1,
+        "FREEZE": 20.1,
+        "RECOVERING": 59.78
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0.322,
+        "relapseSpikeMagnitude": 0.322,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "stoic_veteran",
+      "personaName": "Stoic Veteran",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 16,
+        "shannonEntropy": 1.494,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2991,
+            "probability": 0.5984
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 988,
+            "probability": 0.1977
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 941,
+            "probability": 0.1883
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "INVESTIGATE_SOUND": 0.4,
+        "CAUTIOUS_EXPLORE": 19.62,
+        "IDLE_VIGILANT": 0.06,
+        "FLEE_FROM": 0.26,
+        "FREEZE": 19.8,
+        "RECOVERING": 59.86
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0,
+        "relapseSpikeMagnitude": 0,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "impulsive_scout",
+      "personaName": "Impulsive Scout",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 14,
+        "shannonEntropy": 1.487,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2988,
+            "probability": 0.5978
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 996,
+            "probability": 0.1993
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 940,
+            "probability": 0.1881
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "INVESTIGATE_SOUND": 0.4,
+        "CAUTIOUS_EXPLORE": 19.6,
+        "IDLE_VIGILANT": 0.02,
+        "FLEE_FROM": 0.22,
+        "FREEZE": 19.96,
+        "RECOVERING": 59.8
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0.154,
+        "relapseSpikeMagnitude": 0.154,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "protective_leader",
+      "personaName": "Protective Leader",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 16,
+        "shannonEntropy": 1.494,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2990,
+            "probability": 0.5982
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 990,
+            "probability": 0.1981
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 940,
+            "probability": 0.1881
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "INVESTIGATE_SOUND": 0.4,
+        "CAUTIOUS_EXPLORE": 19.6,
+        "IDLE_VIGILANT": 0.06,
+        "FLEE_FROM": 0.26,
+        "FREEZE": 19.84,
+        "RECOVERING": 59.84
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0,
+        "relapseSpikeMagnitude": 0,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "paranoid_watcher",
+      "personaName": "Paranoid Watcher",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 11,
+        "shannonEntropy": 1.398,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2987,
+            "probability": 0.5976
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 1002,
+            "probability": 0.2005
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 998,
+            "probability": 0.1997
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "CAUTIOUS_EXPLORE": 20,
+        "IDLE_VIGILANT": 0.02,
+        "FLEE_FROM": 0.12,
+        "FREEZE": 20.08,
+        "RECOVERING": 59.78
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0.285,
+        "relapseSpikeMagnitude": 0.285,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "curious_scholar",
+      "personaName": "Curious Scholar",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 15,
+        "shannonEntropy": 1.491,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2989,
+            "probability": 0.598
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 993,
+            "probability": 0.1987
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 940,
+            "probability": 0.1881
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "INVESTIGATE_SOUND": 0.4,
+        "CAUTIOUS_EXPLORE": 19.6,
+        "IDLE_VIGILANT": 0.04,
+        "FLEE_FROM": 0.24,
+        "FREEZE": 19.9,
+        "RECOVERING": 59.82
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0,
+        "relapseSpikeMagnitude": 0,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "compliant_follower",
+      "personaName": "Compliant Follower",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 11,
+        "shannonEntropy": 1.405,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2989,
+            "probability": 0.598
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 998,
+            "probability": 0.1997
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 995,
+            "probability": 0.1991
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "CAUTIOUS_EXPLORE": 20,
+        "IDLE_VIGILANT": 0.02,
+        "FLEE_FROM": 0.22,
+        "FREEZE": 19.94,
+        "RECOVERING": 59.82
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0.181,
+        "relapseSpikeMagnitude": 0.181,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "aggressive_defender",
+      "personaName": "Aggressive Defender",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 15,
+        "shannonEntropy": 1.49,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2990,
+            "probability": 0.5982
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 992,
+            "probability": 0.1985
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 940,
+            "probability": 0.1881
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "INVESTIGATE_SOUND": 0.4,
+        "CAUTIOUS_EXPLORE": 19.6,
+        "IDLE_VIGILANT": 0.04,
+        "FLEE_FROM": 0.24,
+        "FREEZE": 19.88,
+        "RECOVERING": 59.84
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0,
+        "relapseSpikeMagnitude": 0,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "frozen_bystander",
+      "personaName": "Frozen Bystander",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 11,
+        "shannonEntropy": 1.395,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2987,
+            "probability": 0.5976
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 1004,
+            "probability": 0.2009
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 998,
+            "probability": 0.1997
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "CAUTIOUS_EXPLORE": 20,
+        "IDLE_VIGILANT": 0.02,
+        "FLEE_FROM": 0.08,
+        "FREEZE": 20.12,
+        "RECOVERING": 59.78
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0.374,
+        "relapseSpikeMagnitude": 0.374,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "reckless_daredevil",
+      "personaName": "Reckless Daredevil",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 16,
+        "shannonEntropy": 1.492,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2991,
+            "probability": 0.5984
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 989,
+            "probability": 0.1979
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 941,
+            "probability": 0.1883
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "INVESTIGATE_SOUND": 0.4,
+        "CAUTIOUS_EXPLORE": 19.62,
+        "IDLE_VIGILANT": 0.06,
+        "FLEE_FROM": 0.24,
+        "FREEZE": 19.82,
+        "RECOVERING": 59.86
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0,
+        "relapseSpikeMagnitude": 0,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "resilient_medic",
+      "personaName": "Resilient Medic",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 16,
+        "shannonEntropy": 1.493,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2990,
+            "probability": 0.5982
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 991,
+            "probability": 0.1983
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 940,
+            "probability": 0.1881
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "INVESTIGATE_SOUND": 0.4,
+        "CAUTIOUS_EXPLORE": 19.6,
+        "IDLE_VIGILANT": 0.06,
+        "FLEE_FROM": 0.24,
+        "FREEZE": 19.86,
+        "RECOVERING": 59.84
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0,
+        "relapseSpikeMagnitude": 0,
+        "relapseLatencyTicks": 1000
+      }
+    },
+    {
+      "personaId": "despondent_fatalist",
+      "personaName": "Despondent Fatalist",
+      "totalTicks": 5000,
+      "identityInvariance": {
+        "maxTraitDrift": 0,
+        "invariantPreserved": true
+      },
+      "checkpointReplayDeterminism": true,
+      "motifs": {
+        "unique3GramMotifs": 11,
+        "shannonEntropy": 1.4,
+        "top3Motifs": [
+          {
+            "motif": "RECOVERING > RECOVERING > RECOVERING",
+            "count": 2987,
+            "probability": 0.5976
+          },
+          {
+            "motif": "FREEZE > FREEZE > FREEZE",
+            "count": 1001,
+            "probability": 0.2003
+          },
+          {
+            "motif": "CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE > CAUTIOUS_EXPLORE",
+            "count": 998,
+            "probability": 0.1997
+          }
+        ]
+      },
+      "attractorDistribution": {
+        "CAUTIOUS_EXPLORE": 20,
+        "IDLE_VIGILANT": 0.02,
+        "FLEE_FROM": 0.14,
+        "FREEZE": 20.06,
+        "RECOVERING": 59.78
+      },
+      "traumaDynamics": {
+        "epoch1BaselineFear": 0,
+        "epoch2InitialPeakFear": 1,
+        "epoch3SanctuaryHealedFear": 0,
+        "epoch4RelapsePeakFear": 0.29,
+        "relapseSpikeMagnitude": 0.29,
+        "relapseLatencyTicks": 1000
+      }
+    }
+  ],
+  "summary": {
+    "allIdentitiesPreserved": true,
+    "allCheckpointsDeterministic": true,
+    "meanMotifsCount": 13.6,
+    "meanShannonEntropy": 1.453,
+    "meanRelapseSpike": 0.134
+  }
+}
