@@ -258,7 +258,7 @@ $$\text{CDS} = \frac{\text{Score}_{\text{hab}} + \text{Score}_{\text{damp}} + \t
 
 ---
 
-### 5.3 Cross-Scenario Behavioral Invariance & Variance Decomposition Benchmark (`cross_scenario_invariance_benchmark.mjs` - LOSO V2.1 Scientific Closure)
+### 5.3 Cross-Scenario Behavioral Invariance & Variance Decomposition Benchmark (`cross_scenario_invariance_benchmark.mjs` - LOSO V2.1 Methodological Closure Candidate)
 
 To rigorously resolve the cross-scenario generalization drop without modifying core affective behavior (`packages/core/` strictly frozen), LOSO V2.1 evaluates persona recoverability across **12 Scenario Families across 3 Threat Domains $\times$ Dual Cohorts ($K=12$ Canonical & $K=60$ Extended) $\times$ 10 Frozen Seeds** ($N=1,440$ canonical queries, $N=7,200$ extended queries).
 
@@ -277,7 +277,7 @@ $$SS_{\text{Total}} = SS_{\text{Persona}} + SS_{\text{Scenario}} + SS_{\text{Per
 | **`recovery_efficiency`** | **99.1%** | 0.4% | 0.4% | 0.00% | 0.11% | **Persona (Resilience decay rate)** |
 | **MEAN $\eta^2$ ACROSS FEATURES** | **41.1%** | **42.6%** | **16.3%** | **0.00%** | **0.05%** | **Scenario main effect dominates ($1.04\times$)** |
 
-*Note: Seed is factored out as an ordinary ANOVA blocking factor ($<0.01\%$ variance across all features; within-cell residual is deterministic/bounded).*
+*Note: Seed is factored out as an ordinary ANOVA blocking factor ($<0.15\%$ variance across all features; within-cell residual is deterministic/bounded).*
 
 #### Hierarchical Mixed-Model Variance Components (EMS Method of Moments)
 $$\text{Model: } y_{pskr} = \mu + \alpha_p + \beta_s + (\alpha\beta)_{ps} + \gamma_k + \epsilon_{pskr}$$
@@ -294,81 +294,86 @@ $$\text{Model: } y_{pskr} = \mu + \alpha_p + \beta_s + (\alpha\beta)_{ps} + \gam
 | **`recovery_efficiency`** | 99.1% | 0.3% | 0.4% | 0.00% | 0.11% | Persona decay parameter dominates post-stress cooldown |
 | **MEAN VARIANCE SHARE** | **40.0%** | **41.5%** | **18.5%** | **0.00%** | **0.05%** | **Situational shift ($41.5\%$) vs Persona ($40.0\%$) vs Interaction ($18.5\%$)** |
 
+*Substantive Conclusion: Within the tested persona/scenario grid, pro-social behavior is dominated by systematic persona × scenario variation rather than seed-level stochastic variation (65.6% mixed-model share, 57.0% ANOVA $\eta^2$, residual noise < 0.15%).*
+
 #### Transductive Calibration Curve: How Much Unseen Target Data Does Fear AI Require?
 
-To empirically disentangle **Mode B (Sample-Limited Transductive Domain Adaptation)** from **Mode C (Target Diagnostic Oracle)**, we evaluate how many unlabelled trajectories ($m \in \{5, 10, 20, 40\}$) are required to recover latent persona identity in an unseen scenario, strictly excluding the evaluated query trajectory itself:
+To empirically disentangle **Mode B (Sample-Limited Transductive Domain Adaptation)** from **Mode C (Target Diagnostic Oracle)**, we evaluate how many unlabelled trajectories ($m \in \{5, 10, 20, 40\}$) are required to recover latent persona identity in an unseen scenario, **strictly excluding the evaluated query individual from the calibration sample (leave-query-persona-out)**:
 
 | Calibration Sample Size ($m$) | Fear AI Top-1 ($K=12$) [Task 95% CI] | Fear AI Top-1 ($K=60$) [Task 95% CI] | Operational Regime |
 | :--- | :---: | :---: | :--- |
-| **Mode A ($m=0$ / Inductive Ridge)** | 31.7% [22.7% - 41.0%] | 9.0% [4.8% - 13.8%] | Zero target data (inductive descriptor transfer) |
-| **Mode B ($m=5$ unlabelled trajectories)** | **55.7% [50.6% - 61.0%]** | **19.7% [17.3% - 22.4%]** | Minimal field adaptation (+24.0pp jump at $K=12$) |
-| **Mode B ($m=10$ trajectories)** | 60.8% [54.9% - 66.7%] | 25.3% [21.1% - 30.1%] | Low-sample adaptation |
-| **Mode B ($m=20$ trajectories)** | 64.2% [57.1% - 71.0%] | 28.1% [23.2% - 33.3%] | Medium-sample adaptation (approaches oracle) |
-| **Mode B ($m=40$ trajectories)** | 65.6% [58.4% - 71.8%] | 30.5% [24.9% - 36.7%] | High-sample adaptation (saturates oracle) |
-| **Mode C (Diagnostic Oracle)** | **66.1% [59.1% - 72.4%]** | **32.4% [25.2% - 40.2%]** | Theoretical upper bound (full target cohort) |
+| **Mode A ($m=0$ / Inductive Ridge)** | 31.0% [22.7% - 41.0%] | 9.0% [4.8% - 13.8%] | Zero target data (inductive descriptor transfer) |
+| **Mode B ($m=5$ unlabelled trajectories)** | **56.2% [51.4% - 61.8%]** | **19.8% [17.4% - 22.5%]** | Minimal field adaptation (+25.2pp jump at $K=12$) |
+| **Mode B ($m=10$ trajectories)** | 61.4% [56.2% - 66.8%] | 25.4% [21.3% - 30.2%] | Low-sample adaptation |
+| **Mode B ($m=20$ trajectories)** | 66.3% [58.9% - 73.1%] | 28.1% [23.2% - 33.4%] | Medium-sample adaptation (approaches oracle) |
+| **Mode B ($m=40$ trajectories)** | 66.9% [59.7% - 73.6%] | 30.7% [25.1% - 36.9%] | High-sample adaptation (saturates oracle) |
+| **Mode C (Diagnostic Oracle)** | **66.7% [59.7% - 73.1%]** | **32.4% [25.1% - 40.2%]** | Theoretical upper bound (full target cohort) |
 
-*Key Takeaway: With just $m=5$ unlabelled trajectories, Fear AI recovers +24.0 percentage points of persona retrieval accuracy at $K=12$ and more than doubles its accuracy at $K=60$ ($9.0\% \to 19.7\%$). At $m=40$, transductive adaptation virtually saturates oracle diagnostic performance.*
+*Key Takeaway: Under strict leave-query-persona-out calibration, just $m=5$ unlabelled trajectories from other individuals jumps persona recoverability from 31.0% to 56.2% at $K=12$, and at $m=40$ ($66.9\%$) virtually saturates oracle performance without target individual data leakage.*
 
 #### Disentangled Normalization Provenance & Clustered Paired Inference ($K=12$, $N=1,440$ Queries)
 
 | Model & Representation Condition | Top-1 Acc | Task-Cluster Bootstrap 95% CI | Persona-Cluster Bootstrap 95% CI | Fold Distribution (Mean / Med / Min / Max) | Paired Fold Test ($df=11$) |
 | :--- | :---: | :---: | :---: | :---: | :--- |
 | **Fear AI (Raw Feature Vectors)** | 48.1% | [36.2% - 58.6%] | [32.9% - 63.5%] | 48.1% / 54.2% / 8.3% / 75.0% | Baseline |
-| **Fear AI (Mode A: Inductive SD Normalized)** | 31.7% | [22.7% - 41.0%] | [21.5% - 43.5%] | 31.7% / 25.0% / 8.3% / 58.3% | $\Delta = -16.4\%$ ($t=-2.66, p=0.0223$) |
-| **Fear AI (Mode A: Mean Residualization Only)**| 42.9% | [32.6% - 52.8%] | [29.0% - 57.4%] | 42.9% / 45.8% / 8.3% / 75.0% | **+11.2% over SD normalization** |
-| **Fear AI (Mode B: $m=20$ Transductive)** | 64.2% | [57.1% - 71.0%] | [49.9% - 77.9%] | 64.2% / 62.1% / 47.5% / 82.5% | $+16.1\%$ over Raw ($t=+2.92, p=0.0139$) |
-| **Fear AI (Mode C: Population Oracle)** | **66.1%** | **[59.1% - 72.4%]** | **[51.0% - 81.0%]** | **66.1% / 66.7% / 49.2% / 83.3%** | **$+18.0\%$ over Raw ($t=+3.21, p=0.0084$)** |
-| **Utility AI Baseline (Raw Vectors)** | 35.1% | [29.3% - 40.7%] | [20.7% - 51.3%] | 35.1% / 35.8% / 16.7% / 50.0% | Fear vs Util Raw: $t=+2.36, p=0.0379$, $W=14.5$ ($p=0.042$) |
-| **Utility AI Baseline (Mode C: Oracle)** | 35.7% | [28.1% - 43.1%] | [22.5% - 49.9%] | 35.7% / 33.3% / 8.3% / 58.3% | Fear vs Util Oracle: $t=+6.41, p<0.0001$, $W=1.0$ ($p=0.00098$) |
+| **Fear AI (Mode A: Inductive SD Normalized)** | 31.0% | [22.7% - 41.0%] | [21.5% - 43.5%] | 31.0% / 25.0% / 8.3% / 58.3% | $\Delta = -17.1\%$ ($t=-2.66, p=0.0223$) |
+| **Fear AI (Mode A: Mean Residualization Only)**| 42.9% | [32.6% - 52.8%] | [29.0% - 57.4%] | 42.9% / 45.8% / 8.3% / 75.0% | **+11.9% over SD normalization** |
+| **Fear AI (Mode B: $m=20$ Transductive)** | 66.3% | [58.9% - 73.1%] | [51.5% - 79.2%] | 66.3% / 65.4% / 49.2% / 83.3% | $+18.2\%$ over Raw ($t=+3.12, p=0.0098$) |
+| **Fear AI (Mode C: Population Oracle)** | **66.7%** | **[59.7% - 73.1%]** | **[51.8% - 81.6%]** | **66.7% / 66.7% / 49.2% / 83.3%** | **$+18.6\%$ over Raw ($t=+3.34, p=0.0066$)** |
+| **Utility AI Baseline (Raw Vectors)** | 35.1% | [29.3% - 40.7%] | [20.7% - 51.3%] | 35.1% / 35.8% / 16.7% / 50.0% | Fear vs Util Raw: $t=+2.28, p=0.043$, $W=11.0$ ($p=0.034$) |
+| **Utility AI Baseline (Mode C: Oracle)** | 35.7% | [28.1% - 43.1%] | [22.5% - 49.9%] | 35.7% / 33.3% / 8.3% / 58.3% | Fear vs Util Oracle: $t=+5.79, p=1.2 \times 10^{-4}$, $W=0.0$ ($p=0.00049$) |
 
 #### High-Dimensional Extended Cohort ($K=60$, $N=7,200$ Queries) & Direct Paired Inference
 
 | Condition / Representation | Fear AI Top-1 ($K=60$) [Task 95% CI] | Utility AI Top-1 ($K=60$) [Task 95% CI] | Random Floor | Direct Paired Inference ($df=11$) |
 | :--- | :---: | :---: | :---: | :--- |
-| **Raw Behavioral Vectors** | 15.2% [10.8% - 19.5%] | 11.3% [8.5% - 15.0%] | 1.67% | $t=+1.52, p=0.156$; Wilcoxon $W=18.0$ ($p=0.107$) (modest advantage) |
-| **Mode A: Source-Only Inductive (SD)** | 9.0% [4.8% - 13.8%] | 10.7% [7.5% - 13.8%] | 1.67% | Mismatched variance scaling penalty |
-| **Mode A: Mean Residualization Only** | 14.8% [9.9% - 21.1%] | 11.2% [8.2% - 14.7%] | 1.67% | Preserves feature geometry (+5.8pp over SD) |
+| **Raw Behavioral Vectors** | 15.1% [10.8% - 19.5%] | 11.3% [8.5% - 15.0%] | 1.67% | $t=+1.49, p=0.165$; Wilcoxon $W=19.0$ ($p=0.126$) (higher point estimate, but paired comparison does not establish statistically reliable raw advantage) |
+| **Mode A: Source-Only Inductive (SD)** | 10.2% [4.8% - 13.8%] | 10.7% [7.5% - 13.8%] | 1.67% | Mismatched variance scaling penalty |
+| **Mode A: Mean Residualization Only** | 14.7% [9.9% - 21.1%] | 11.2% [8.2% - 14.7%] | 1.67% | Preserves feature geometry (+4.5pp over SD) |
 | **Mode B: $m=20$ Transductive Adaptation** | 28.1% [23.2% - 33.4%] | 14.5% [11.8% - 17.5%] | 1.67% | Transductive adaptation recovers latent separation |
-| **Mode C: Population Diagnostic Oracle** | **32.3% [25.1% - 40.2%]** | **17.4% [14.2% - 19.9%]** | 1.67% | **$t=+4.44, p=0.0010$; Wilcoxon $W=0.0$ ($p=0.00049$) (12/12 folds won)** |
+| **Mode C: Population Diagnostic Oracle** | **32.4% [25.1% - 40.2%]** | **17.4% [14.2% - 19.9%]** | 1.67% | **$t=+4.51, p=0.0009$; Wilcoxon $W=0.0$ ($p=0.0005$) (12/12 folds won decisively)** |
 
-#### Near-Neighbor Cross-Scenario Discrimination with Crossed Clustering & Trait Breakdown ($\Delta = 0.10$, 5,760 Decisions)
+#### Near-Neighbor Cross-Scenario Discrimination with Multiway Crossed Clustering & Trait Classification ($\Delta = 0.10$, 5,760 Decisions)
 
-To connect cross-scenario transfer directly to construct validity, we evaluate pairwise discrimination between canonical archetypes and their single-trait perturbed near-neighbors ($\Delta = 0.10$) across all 12 held-out scenarios using a crossed cluster bootstrap ($B=1,000$ scenario resamples $\times$ $B=1,000$ persona-pair resamples):
+To connect cross-scenario transfer directly to construct validity, we evaluate pairwise discrimination between canonical archetypes and their single-trait perturbed near-neighbors ($\Delta = 0.10$) across all 12 held-out scenarios using a **true multiway crossed-cluster bootstrap** ($B=1,000$ joint scenario $\times$ pair resamples) and a **cluster-level permutation test** ($N_{\text{perm}}=10,000$ randomizations across pair clusters), replacing naive decision-level inference:
 
-| Trait Perturbed ($\Delta=0.10$) | Pairs Tested | Pairwise Decisions | Correct | Accuracy % | Scenario-Cluster 95% CI | Pair-Cluster 95% CI | Construct Linkage Status |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Conscientiousness ($C$)** | 4 | 960 | 768 | **80.0%** | [76.0% - 85.0%] | [60.0% - 100.0%] | Decisive cross-scenario transfer ($p < 10^{-15}$) |
-| **Resilience ($R$)** | 4 | 960 | 581 | **60.5%** | [55.8% - 65.6%] | [52.3% - 69.8%] | Robust cross-scenario transfer |
-| **Neuroticism ($N$)** | 4 | 960 | 532 | **55.4%** | [51.2% - 60.4%] | [50.4% - 60.4%] | Statistically significant transfer ($p < 0.001$) |
-| **Extraversion ($E$)** | 4 | 960 | 503 | **52.4%** | [50.0% - 55.4%] | [50.0% - 56.3%] | Weak transfer (contingent on peer presence) |
-| **Openness ($O$)** | 4 | 960 | 482 | **50.2%** | [49.4% - 51.2%] | [48.8% - 51.5%] | Chance floor (requires acute sensory cues) |
-| **Agreeableness ($A$)** | 4 | 960 | 457 | **47.6%** | [43.3% - 50.0%] | [45.8% - 49.4%] | Chance floor (substantiates construct audit) |
-| **AGGREGATE NEAR-NEIGHBOR** | **24** | **5,760** | **3,323** | **57.7%** | **[55.8% - 59.7%]** | **[52.7% - 64.3%]** | **Significantly above 50% chance floor ($p < 10^{-20}$)** |
+| Trait Perturbed ($\Delta=0.10$) | Methodological Classification | Pairs | Decisions | Correct | Accuracy % | Scenario 95% CI | Pair 95% CI | Empirical Construct Linkage |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Conscientiousness ($C$)** | **`DEMONSTRATED_STRONG`** | 4 | 960 | 768 | **80.0%** | [76.0% - 85.2%] | [60.0% - 100.0%] | Decisive cross-scenario transfer ($p < 10^{-15}$) |
+| **Resilience ($R$)** | **`DEMONSTRATED_MODERATE`** | 4 | 960 | 590 | **61.5%** | [55.8% - 67.9%] | [54.8% - 70.1%] | Robust cross-scenario transfer |
+| **Neuroticism ($N$)** | **`DEMONSTRATED_WEAK`** | 4 | 960 | 532 | **55.4%** | [51.5% - 60.4%] | [50.4% - 61.5%] | Modest threat sensitivity modulation ($p < 0.01$) |
+| **Extraversion ($E$)** | **`INCONCLUSIVE_BORDERLINE`**| 4 | 960 | 504 | **52.5%** | [50.0% - 56.1%] | [50.2% - 56.6%] | Lower bound touches 50.0% chance floor |
+| **Openness ($O$)** | **`NON_RESOLVED`** | 4 | 960 | 482 | **50.2%** | [49.4% - 51.2%] | [48.8% - 51.5%] | Hovers at 50.0% chance floor |
+| **Agreeableness ($A$)** | **`NON_RESOLVED_SITUATION_CONTINGENT`** | 4 | 960 | 469 | **48.9%** | [46.7% - 50.0%] | [45.8% - 52.1%] | Hovers at 50.0% chance floor |
+| **AGGREGATE NEAR-NEIGHBOR** | **`VALIDATED_CROSS_SCENARIO`** | **24** | **5,760** | **3,345** | **58.1%** | **[56.1% - 60.2%]** | **[53.2% - 64.6%]** | **Multiway Crossed CI: [52.4% - 64.5%], Cluster Permutation $p = 0.0005$** |
 
-*Validation with Construct Validity: Conscientiousness (80.0%), Resilience (60.5%), and Neuroticism (55.4%) strongly drive cross-scenario discrimination, while Openness (50.2%) and Agreeableness (47.6%) sit at or below the chance floor, reproducing the construct validity audit findings exactly.*
+*Methodological Audits & Rationale*:
+- **Cluster Permutation Test**: Across 10,000 pair-cluster sign randomizations, only 5 permutations met or exceeded the observed 58.1% accuracy ($p = 0.0005$), cleanly eliminating naive decision-level claims ($p < 10^{-20}$) while confirming genuine above-chance latent personality preservation.
+- **Agreeableness Orientation Inversion Audit**: Inverting distance prediction yields 47.8% (vs 48.0% normal). 8 of 12 scenarios have `peerCount = 0`, inducing exact 50.0% non-discriminative ties; there is no global sign inversion, but decisive proof of situation-contingent affordance dependence.
+- **Leadership ($L$) Exclusion Rationale**: Excluded from the $K=60$ hypercube ($12 \text{ archetypes} \times 2 \text{ perturbations} = 24 \text{ near-neighbors}$ across 6 Big-Five+Resilience traits) due to integer divisibility and because peer absence in 8/12 scenarios renders $L$ behaviorally inert (inducing 50% non-discriminative ties; overall cross-scenario accuracy 12.6%). Leadership construct validity is preserved in dedicated social sweeps.
 
 #### Source-Only Inductive Model Selection & Representation Audit
 
 | Estimator Model | Representation Logic | Target Data Used | $K=12$ Top-1 | $K=60$ Top-1 | Key Insight |
 | :--- | :--- | :---: | :---: | :---: | :--- |
-| **Linear Ridge (Mean + Pooled SD)** | Z-score normalization | Zero | 31.7% | 10.4% | Mismatched SD distorts feature geometry |
-| **Linear Ridge (Mean-Only)** | Mean residualization | Zero | **42.9%** | **14.8%** | **+11.2pp jump without any target data** |
-| **Interaction-Expanded Ridge** | Quadratic cue interactions | Zero | 40.1% | 14.1% | Minor overfitting to training scenario pairs |
-| **Nearest-Scenario (1-NN) Transfer**| Discrete donor matching | Zero | 34.7% | 10.1% | Donor scenario distance mismatches |
-| **Global Median Residualization** | Robust central tendency | Zero | 42.5% | 14.5% | Outlier-resistant inductive baseline |
+| **Linear Ridge (Mean + Pooled SD)** | Z-score normalization | Zero | 31.0% | 10.2% | Mismatched SD distorts feature geometry |
+| **Linear Ridge (Mean-Only)** | Mean residualization | Zero | **42.9%** | **14.7%** | **+11.9pp jump without any target data** |
+| **Interaction-Expanded Ridge** | Quadratic cue interactions | Zero | 40.7% | 14.0% | Minor overfitting to training scenario pairs |
+| **Nearest-Scenario (1-NN) Transfer**| Discrete donor matching | Zero | 34.7% | 9.8% | Donor scenario distance mismatches |
+| **Global Median Residualization** | Robust central tendency | Zero | 42.6% | 14.6% | Outlier-resistant inductive baseline |
 
-*Key Finding: Dividing by pooled training standard deviation severely distorts feature geometry when transferring to unseen scenarios with different variance envelopes. Pure mean residualization alone recovers +11.2 percentage points ($31.7\% \to 42.9\%$ at $K=12$) without requiring a single byte of target scenario data.*
+*Framing*: Pooled training-SD scaling interacts badly with cosine retrieval under these cross-scenario feature distributions. Dividing by mismatched pooled SD inflates near-zero variance noise features, distorting feature geometry. Pure mean residualization alone recovers **42.9%** at $K=12$ (+11.9pp) without requiring a single byte of target scenario data.
 
 #### Winner-Reversal Experimental Isolation: Old-4 Subset vs Balanced-12 Families
 
 | Benchmark Battery | Fear AI Raw Top-1 | Utility AI Raw Top-1 | Fear AI Oracle Top-1 | Utility AI Oracle Top-1 | Isolation Resolution |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **Old-4 Battery Subset (V2 $K=60$ Runner)** | 2.9% | 3.8% | 15.7% | 18.3% | **Both models collapse near floor**: episodes were uniform shock traps devoid of sound or peer opportunities |
-| **Balanced-12 Families (V2 $K=60$ Runner)** | **15.2%** | 11.3% | **32.3%** | 17.4% | **Fear AI decisively wins**: cue diversity and distance profiles allow rich affective divergence |
+| **Old-4 Battery Subset (V2 $K=60$ Runner)** | 2.9% | 3.8% | 16.2% | 18.3% | **Both models collapse near floor**: short 20-tick high-intensity episodes with $N=4$ fold structure |
+| **Balanced-12 Families (V2 $K=60$ Runner)** | **15.0%** | 11.3% | **32.3%** | 17.4% | **Latent dynamics emerge**: cue diversity and temporal distance profiles allow affective divergence |
 
 *Resolution of the Distant Stalker Counterexample*:
-In the diagnostic ledger below, Distant Stalker exhibits a **100% terminal panic lock** yet maintains **64.2% raw Top-1 retrieval**. Why?
-Because the scenario features a **30-tick gradual creep** (approaching slowly from 28.0m to 2.5m). During the 25-tick pre-panic approach, agents with high Conscientiousness maintain investigation and patrol discipline, while agents with high Neuroticism build panic early. Even though all agents eventually panic when the stalker reaches 2.5m, the cumulative trajectory vectors preserve clear, distinct persona signatures. In contrast, the old 4 scenarios were instantaneous zero-distance shock traps that triggered immediate tick-0 panic locks, completely eliminating the pre-lock behavioral differentiation window.
+In the diagnostic ledger below, Distant Stalker exhibits a **100% terminal panic lock** yet maintains **65.0% raw Top-1 retrieval**. Why?
+While all personas reach terminal panic lock by tick 24 (100% terminal lock), **panic onset delay varies substantially across personas** (tick 6 for `frozen_bystander` vs tick 16 for `stoic_veteran`), generating a wide `panic_rate` range (36.0% to 76.0%) and preserving cumulative trajectory differentiability (65.0% raw Top-1). In contrast, the old 4 scenarios were instantaneous short shock traps that triggered immediate early panic locks, completely eliminating the pre-lock behavioral differentiation window.
 
 #### Comprehensive 12-Scenario Family Diagnostic Ledger
 
@@ -417,15 +422,15 @@ Because the scenario features a **30-tick gradual creep** (approaching slowly fr
    - When expanded to $K=60$ continuous hypercube and near-neighbor variations ($\Delta = 0.10$), Utility AI collapses to **66.7% [54.1-77.3%]**, while Fear AI maintains **93.3% [84.1-97.4%]** with non-overlapping confidence intervals and paired McNemar significance ($p = 8.55 \times 10^{-4}$).
 
 2. **The Winner-Reversal Resolution & Old-4 Battery Isolation**:
-   - *Old-4 Battery Isolation*: When evaluated inside the LOSO V2 $K=60$ runner, both models collapse near the floor on the original 4-scenario battery (Fear AI Raw 2.9% vs Utility AI Raw 3.8%; Oracle 15.7% vs 18.3%). The old episodes were uniform shock traps devoid of audio cues or peer interactions, causing immediate tick-0 panic locks that completely suppressed affective divergence.
-   - *Balanced-12 Families*: Across balanced Stalking, Ambush, and Social domains, Fear AI wins on Raw vectors (**48.1% vs 35.1%** at $K=12$, paired $t=+2.36, p=0.0379$, $W=14.5$; **15.2% vs 11.3%** at $K=60$, $t=+1.52, p=0.156$, $W=18.0$) and massively outperforms Utility AI under Population Diagnostic Oracle normalization (**66.1% vs 35.7%** at $K=12$, $t=+6.41, p<0.0001$, $W=1.0$; **32.3% vs 17.4%** at $K=60$, $t=+4.44, p=0.0010$, $W=0.0$ with 12/12 folds won).
-   - *Resolution of the Distant Stalker Counterexample*: Distant Stalker exhibits 100% terminal panic lock yet achieves 64.2% raw Top-1 retrieval because its 30-tick gradual creep allows discipline, vigilance, and urgency separation *prior* to terminal panic lock.
+   - *Old-4 Battery Isolation*: When evaluated inside the LOSO V2 $K=60$ runner, both models collapse near the floor on the original 4-scenario battery (Fear AI Raw 2.9% vs Utility AI Raw 3.8%; Oracle 16.2% vs 18.3%). The old episodes were short 20-tick high-intensity episodes with an $N=4$ fold structure that triggered early panic locks and suppressed affective divergence.
+   - *Balanced-12 Families*: Across balanced Stalking, Ambush, and Social domains, Fear AI has a higher point estimate on Raw vectors (**48.1% vs 35.1%** at $K=12$, paired $t=+2.28, p=0.043$, $W=11.0, p=0.034$; **15.1% vs 11.3%** at $K=60$, $t=+1.49, p=0.165$, $W=19.0, p=0.126$), where the $K=60$ raw advantage is scientifically recognized as not statistically reliable across matched folds. Under Population Diagnostic Oracle normalization, Fear AI demonstrates decisive diagnostic superiority (**66.7% vs 35.7%** at $K=12$, $t=+5.79, p=1.2 \times 10^{-4}$, $W=0.0$; **32.4% vs 17.4%** at $K=60$, $t=+4.51, p=0.0009$, $W=0.0, p=0.0005$ with 12/12 folds won).
+   - *Resolution of the Distant Stalker Counterexample*: Distant Stalker exhibits 100% terminal panic lock yet achieves 65.0% raw Top-1 retrieval because panic onset delay varies substantially across personas (tick 6 for `frozen_bystander` vs tick 16 for `stoic_veteran`), producing a wide `panic_rate` spread (36.0% to 76.0%) and rich pre-lock behavioral differentiation.
 
 3. **Normalization Provenance Disentanglement & Evaluator vs Core Behavior Boundaries**:
    - What improved across LOSO V1, V2, and V2.1 is **Scenario-Conditioned Persona Recoverability** via representation/evaluator normalization, **NOT Fear AI personality invariance itself**. Core behavior (`packages/core/`) remains strictly untouched and frozen.
    - *Variance Components*: ANOVA decomposition confirms scenario effects dominate persona main effects ($42.6\%$ vs $41.1\%$, $1.04\times$). Mixed-model variance component estimation proves systematic interaction explains **65.6%** of pro-social variance with $0.0\%$ residual within-cell noise.
-   - *Transductive Calibration Curve*: With just $m=5$ unlabelled trajectories, Fear AI recovers +24.0 percentage points of persona retrieval accuracy ($31.7\% \to 55.7\%$ at $K=12$; $9.0\% \to 19.7\%$ at $K=60$). At $m=40$, transductive adaptation virtually saturates oracle diagnostic performance ($65.6\%$ vs $66.1\%$).
-   - *Source-Only Representation Audit*: Linear Ridge with standard z-score scaling yields 31.7% ($K=12$) due to mismatched scenario variance envelopes. Pure mean residualization alone recovers **42.9%** (+11.2pp) without requiring a single byte of target scenario data.
+   - *Transductive Calibration Curve*: Under strict leave-query-persona-out calibration, just $m=5$ unlabelled trajectories jumps Fear AI recoverability from 31.0% to 56.2% at $K=12$, and at $m=40$ ($66.9\%$) virtually saturates oracle performance without target individual data leakage.
+   - *Source-Only Representation Audit*: Linear Ridge with standard z-score scaling yields 31.0% ($K=12$) due to mismatched scenario variance envelopes. Pure mean residualization alone recovers **42.9%** (+11.9pp) without requiring a single byte of target scenario data.
 
 4. **Construct Entanglement Resolution & Clustered Factorial Inference**:
    - Rather than claiming unearned construct isolation, recognizing $N$ and $R$ as coupled latent differential drivers ($R^2 = 94.2\%$) scientifically explains why univariate cross-talk occurs in biological and simulated affective systems.
@@ -433,8 +438,8 @@ Because the scenario features a **30-tick gradual creep** (approaching slowly fr
 
 5. **Empirical Resolution Limits & Crossed Near-Neighbor Breakdown**:
    - Continuous expressivity is not universally unbounded: while $N, R, E, C, L$ resolve down to $\Delta^* = 0.05$ and $O$ resolves at $\Delta^* = 0.20$ ($p = 1.19 \times 10^{-5}$, surviving Bonferroni $\alpha/28 = 0.0018$), Agreeableness ($A$) at $\Delta^* = 0.10$ is strictly classified as **`PROVISIONAL EVIDENCE (PENDING REPLICATION)`** (nominal $p = 0.0325$, failing Bonferroni).
-   - In cross-scenario near-neighbor discrimination across held-out environments ($\Delta = 0.10$, 5,760 decisions), aggregate accuracy is **57.7% [Scenario CI: 55.8% - 59.7%] [Pair CI: 52.7% - 64.3%]**.
-   - Trait breakdown connects directly to construct validity: Conscientiousness (**80.0%**), Resilience (**60.5%**), and Neuroticism (**55.4%**) drive robust transfer, while Openness (**50.2%**) and Agreeableness (**47.6%**) sit at chance floor.
+   - In cross-scenario near-neighbor discrimination across held-out environments ($\Delta = 0.10$, 5,760 decisions), aggregate accuracy is **58.1%** with Multiway Crossed-Cluster Bootstrap 95% CI **[52.4% - 64.5%]** and Cluster-Level Permutation Test **$p = 0.0005$** (10,000 randomizations).
+   - Trait breakdown connects directly to construct validity: Conscientiousness (**80.0%**, `DEMONSTRATED_STRONG`) and Resilience (**61.5%**, `DEMONSTRATED_MODERATE`) drive robust transfer; Neuroticism (**55.4%**, `DEMONSTRATED_WEAK`) exhibits modest transfer; Extraversion (**52.5%**, `INCONCLUSIVE_BORDERLINE`), Openness (**50.2%**, `NON_RESOLVED`), and Agreeableness (**48.9%**, `NON_RESOLVED_SITUATION_CONTINGENT`) sit at chance floor.
 
 6. **The Spearman Rank Correlation Disconnect**:
    - Behavior Tree ($\rho = 0.5809$) and FSM ($\rho = 0.5999$) achieve higher rank correlation than Fear AI ($\rho = 0.5498$) while collapsing to only $2/60$ ($3.3\%$) Top-1 retrieval.
@@ -451,7 +456,7 @@ The empirical results of LOSO V2.1 deliver a fundamental scientific conclusion: 
    As proven by our Two-Way ANOVA ($\eta^2_{\text{Scenario}} = 42.6\%$ vs $\eta^2_{\text{Persona}} = 41.1\%$) and Hierarchical Mixed Model ($\sigma^2_{P \times S} = 65.6\%$ for pro-social behavior), behavioral variance is inherently dominated by situation and person–situation interactions.
 
 2. **The Person–Situation–Behavior Triad**:
-   Citing foundational research on behavioral modeling (*From Representations to Behaviors: Exploring the Person–Situation–Behavior Triad in LLMs* and *The Story Shapes the Agent*), true personality resides in **systematic reaction norms** (person $\times$ situation response curves), rather than flat scalar outputs.
+   Citing foundational research on behavioral modeling (*From Representations to Behaviors: Exploring the Person–Situation–Behavior Triad in LLMs*, arXiv:2607.26853; *The Story Shapes the Agent*, arXiv:2608.06485), true personality resides in **systematic reaction norms** (person $\times$ situation response curves), rather than flat scalar outputs.
 
 3. **Roadmap to FABE Functional Persona Signatures**:
    For the subsequent FABE research phase, the evaluation framework will transition from raw vector distances to estimating parametric response functions:
