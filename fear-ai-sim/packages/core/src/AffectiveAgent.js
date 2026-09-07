@@ -31,10 +31,26 @@ export class AffectiveAgent {
         this.id = String(id || 'agent_0');
         this.name = options.name || this.id;
 
-        // Personality profile
+        // Personality profile with defensive numeric clamping
+        const sanitizeTrait = (val, fallback) => {
+            if (typeof val === 'number') {
+                if (Number.isNaN(val)) return fallback;
+                if (val > 1.0) return 1.0;
+                if (val < 0.0) return 0.0;
+                return val;
+            }
+            return fallback;
+        };
+
         this.traits = {
-            ...DEFAULT_TRAITS,
-            ...(traits || {})
+            fear: sanitizeTrait(traits?.fear, DEFAULT_TRAITS.fear),
+            neuroticism: sanitizeTrait(traits?.neuroticism, DEFAULT_TRAITS.neuroticism),
+            resilience: sanitizeTrait(traits?.resilience, DEFAULT_TRAITS.resilience),
+            leadership: sanitizeTrait(traits?.leadership, DEFAULT_TRAITS.leadership),
+            openness: sanitizeTrait(traits?.openness, DEFAULT_TRAITS.openness),
+            conscientiousness: sanitizeTrait(traits?.conscientiousness, DEFAULT_TRAITS.conscientiousness),
+            extraversion: sanitizeTrait(traits?.extraversion, DEFAULT_TRAITS.extraversion),
+            agreeableness: sanitizeTrait(traits?.agreeableness, DEFAULT_TRAITS.agreeableness)
         };
 
         // Spatial state (reported by host game)
@@ -88,6 +104,7 @@ export class AffectiveAgent {
      */
     tick(dt = 0.016, observations = {}, context = {}) {
         this.tickCount++;
+        const safeDt = (typeof dt === 'number' && Number.isFinite(dt) && dt >= 0) ? Math.min(dt, 1.0) : 0.016;
 
         const rng = typeof context.rng === 'function' ? context.rng : Math.random;
         const pacingIntensity = context.pacingIntensity ?? 1.0;
@@ -96,18 +113,22 @@ export class AffectiveAgent {
         const traumaDread = context.traumaDread ?? 0.0;
 
         // 1. Update Spatial Coordinates if supplied by host
-        if (typeof observations.x === 'number') this.x = observations.x;
-        if (typeof observations.y === 'number') this.y = observations.y;
-        if (typeof observations.z === 'number') this.z = observations.z;
+        if (typeof observations.x === 'number' && Number.isFinite(observations.x)) this.x = observations.x;
+        if (typeof observations.y === 'number' && Number.isFinite(observations.y)) this.y = observations.y;
+        if (typeof observations.z === 'number' && Number.isFinite(observations.z)) this.z = observations.z;
         if (observations.velocity) {
             this.lastVelocity = {
-                x: observations.velocity.x ?? 0,
-                y: observations.velocity.y ?? 0,
-                z: observations.velocity.z ?? 0
+                x: Number.isFinite(observations.velocity.x) ? observations.velocity.x : 0,
+                y: Number.isFinite(observations.velocity.y) ? observations.velocity.y : 0,
+                z: Number.isFinite(observations.velocity.z) ? observations.velocity.z : 0
             };
         }
-        if (typeof observations.energy === 'number') this.energy = Math.max(0, Math.min(1.0, observations.energy));
-        if (typeof observations.health === 'number') this.health = Math.max(0, Math.min(1.0, observations.health));
+        if (typeof observations.energy === 'number' && Number.isFinite(observations.energy)) {
+            this.energy = Math.max(0, Math.min(1.0, observations.energy));
+        }
+        if (typeof observations.health === 'number' && Number.isFinite(observations.health)) {
+            this.health = Math.max(0, Math.min(1.0, observations.health));
+        }
 
         // 2. Evaluate Stimuli & Perceived Threats
         const threats = observations.threats || [];
@@ -116,12 +137,18 @@ export class AffectiveAgent {
 
         for (let i = 0; i < threats.length; i++) {
             const threat = threats[i];
-            const dist = Math.max(0.1, threat.distance ?? Math.hypot(
-                (threat.x ?? 0) - this.x,
-                (threat.y ?? 0) - this.y,
-                (threat.z ?? 0) - this.z
-            ));
-            const intensity = threat.intensity ?? 1.0;
+            let dist = 10.0;
+            if (typeof threat.distance === 'number' && Number.isFinite(threat.distance) && threat.distance > 0) {
+                dist = threat.distance;
+            } else {
+                const tx = Number.isFinite(threat.x) ? threat.x : this.x;
+                const ty = Number.isFinite(threat.y) ? threat.y : this.y;
+                const tz = Number.isFinite(threat.z) ? threat.z : this.z;
+                const calculated = Math.hypot(tx - this.x, ty - this.y, tz - this.z);
+                dist = Math.max(0.1, Number.isFinite(calculated) ? calculated : 10.0);
+            }
+            const rawIntensity = Number(threat.intensity);
+            const intensity = (Number.isFinite(rawIntensity) && rawIntensity >= 0) ? Math.min(1.0, rawIntensity) : 1.0;
             const occlusion = threat.occluded ? 0.35 : 1.0;
             const distanceAtten = 1.0 / (1.0 + dist * 0.05);
 
@@ -139,8 +166,18 @@ export class AffectiveAgent {
         // Auditory stimuli
         for (let i = 0; i < sounds.length; i++) {
             const sound = sounds[i];
-            const dist = Math.max(0.1, sound.distance ?? 10);
-            const intensity = sound.intensity ?? 0.5;
+            let dist = 10.0;
+            if (typeof sound.distance === 'number' && Number.isFinite(sound.distance) && sound.distance > 0) {
+                dist = sound.distance;
+            } else {
+                const sx = Number.isFinite(sound.x) ? sound.x : this.x;
+                const sy = Number.isFinite(sound.y) ? sound.y : this.y;
+                const sz = Number.isFinite(sound.z) ? sound.z : this.z;
+                const calculated = Math.hypot(sx - this.x, sy - this.y, sz - this.z);
+                dist = Math.max(0.1, Number.isFinite(calculated) ? calculated : 10.0);
+            }
+            const rawIntensity = Number(sound.intensity);
+            const intensity = (Number.isFinite(rawIntensity) && rawIntensity >= 0) ? Math.min(1.0, rawIntensity) : 0.5;
             const distanceAtten = 1.0 / (1.0 + dist * 0.08);
 
             const habituated = this.habituation.getEffectiveFear(
@@ -182,13 +219,13 @@ export class AffectiveAgent {
             // Sustained threat presence builds acute fear
             this.currentFear = Math.min(1.0, Math.max(this.currentFear + 0.08, fearInput));
         } else {
-            this.currentFear = Math.max(0, this.currentFear * Math.pow(fearDecayRate, dt / 0.016));
+            this.currentFear = Math.max(0, this.currentFear * Math.pow(fearDecayRate, safeDt / 0.016));
         }
 
         // 6. Anger / Fight Response Dynamics
         // Anger only grows when actively provoked or facing rivals, never during calm resting
         if (observations.provoked || observations.hasRivals) {
-            this.currentAnger = Math.min(1.0, this.currentAnger + 0.05 * (dt / 0.016));
+            this.currentAnger = Math.min(1.0, this.currentAnger + 0.05 * (safeDt / 0.016));
         } else if (threats.length > 0) {
             // Predatory threat suppresses anger in favor of survival fear
             this.currentAnger *= 0.85;
@@ -198,16 +235,16 @@ export class AffectiveAgent {
 
         // 7. Update Adrenaline & Morale
         if (this.currentFear > 0.6 || this.currentAnger > 0.6) {
-            this.adrenaline = Math.min(1.0, this.adrenaline + 0.08 * (dt / 0.016));
+            this.adrenaline = Math.min(1.0, this.adrenaline + 0.08 * (safeDt / 0.016));
         } else {
-            this.adrenaline = Math.max(0.0, this.adrenaline - 0.02 * (dt / 0.016));
+            this.adrenaline = Math.max(0.0, this.adrenaline - 0.02 * (safeDt / 0.016));
         }
 
         if (observations.inSafeHaven) {
-            this.morale = Math.min(1.0, this.morale + 0.03 * (dt / 0.016));
+            this.morale = Math.min(1.0, this.morale + 0.03 * (safeDt / 0.016));
             this.currentFear *= 0.85;
         } else if (threats.length > 0) {
-            this.morale = Math.max(0.1, this.morale - 0.02 * (dt / 0.016));
+            this.morale = Math.max(0.1, this.morale - 0.02 * (safeDt / 0.016));
         }
 
         // 8. Update PAD Vector

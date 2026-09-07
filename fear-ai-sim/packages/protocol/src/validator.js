@@ -65,10 +65,7 @@ export class ProtocolValidator {
     }
 
     static validateHandshake(raw) {
-        const errors = [];
-        if (!raw.client_id) {
-            errors.push('Missing required property "client_id"');
-        }
+        const clientId = raw.client_id || raw.client_name || `client_${Date.now()}`;
         if (raw.protocol_version && typeof raw.protocol_version === 'string') {
             const major = raw.protocol_version.split('.')[0];
             const expectedMajor = PROTOCOL_VERSION.split('.')[0];
@@ -80,17 +77,14 @@ export class ProtocolValidator {
                 };
             }
         }
-        if (errors.length > 0) {
-            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
-        }
         return {
             valid: true,
             value: {
                 type: MESSAGE_TYPES.HANDSHAKE_REQUEST,
                 protocol_version: raw.protocol_version || PROTOCOL_VERSION,
-                client_id: String(raw.client_id),
-                client_name: raw.client_name ? String(raw.client_name) : 'unknown_client',
-                engine: raw.engine ? String(raw.engine) : 'custom'
+                client_id: clientId,
+                client_name: raw.client_name || clientId,
+                capabilities: Array.isArray(raw.capabilities) ? raw.capabilities : []
             }
         };
     }
