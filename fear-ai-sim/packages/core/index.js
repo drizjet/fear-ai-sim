@@ -71,6 +71,15 @@ export {
     WORLD_EVENT_TYPES,
     DEFAULT_WORLD_CONFIG
 } from './src/WorldSimulationSystem.js';
+export {
+    BASELINE_MODELS,
+    ABLATION_FLAGS,
+    FiniteStateMachineAgent,
+    UtilityAIAgent,
+    BehaviorTreeAgent,
+    SubsystemAblationHarness
+} from './src/ComparativeBaselines.js';
+
 
 
 

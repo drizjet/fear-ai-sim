@@ -1,0 +1,37 @@
+{
+  "benchmark": "Milestone L: Comparative Behavioral Baselines & Systematic Subsystem Ablations",
+  "timestamp": "2026-09-07T23:41:58.857Z",
+  "boundary_noise_evaluation": {
+    "ticks": 200,
+    "fsm_oscillations": 16,
+    "behavior_tree_oscillations": 16,
+    "utility_ai_oscillations": 0,
+    "fear_ai_oscillations": 0
+  },
+  "post_threat_cooldown": {
+    "fsm_cooldown_ticks": 1,
+    "behavior_tree_cooldown_ticks": 1,
+    "fear_ai_cooldown_ticks": 41
+  },
+  "archetype_expressiveness": {
+    "fsm_shannon_entropy": 0,
+    "fear_ai_shannon_entropy": 1.1489
+  },
+  "ablation_findings": {
+    "FULL_FEAR_AI": {
+      "final_fear_after_repetition": 0.204,
+      "habituation_active": true
+    },
+    "ABLATION_NO_HABITUATION": {
+      "final_fear_after_repetition": 1,
+      "habituation_active": false,
+      "difference_from_full": 0.796
+    },
+    "ABLATION_NO_IDENTITY": {
+      "original_trait_response_delta": 0.1646,
+      "ablated_trait_response_delta": 0,
+      "collapse_to_zero_divergence": true
+    }
+  },
+  "verdict": "FEAR_AI_SUPERIOR_STABILITY_AND_EXPRESSIVENESS"
+}

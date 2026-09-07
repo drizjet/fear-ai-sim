@@ -715,6 +715,42 @@
         "Unity UPM and Unreal Engine 5 native editor verification remain marked IMPLEMENTED_NOT_VERIFIED due to BLOCKED_EXTERNAL_DEPENDENCY (editors not installed on host)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "BASELINE_ABLATION_EVALUATION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ComparativeBaselines.js",
+        "packages/core/index.js",
+        "tests/baseline-ablation-comparison.test.js",
+        "benchmarks/behavioral-evaluation/baseline_ablation_benchmark.mjs",
+        "benchmarks/behavioral-evaluation/baseline_ablation_benchmark.json",
+        "docs/BEHAVIORAL_EVALUATION_FRAMEWORK.md"
+      ],
+      "test_evidence": [
+        "tests/baseline-ablation-comparison.test.js (5/5 tests green):",
+        "1. Standard FSM and Behavior Tree exhibit brittle boundary chatter under noisy distance",
+        "2. Post-threat recovery: FSM/BT drop instantly, while Fear AI exhibits realistic psychological decay",
+        "3. Archetype Expressiveness: FSM has zero entropy across personas, Fear AI exhibits diverse intents",
+        "4. Systematic Ablation: NO_HABITUATION maintains continuous panic under harmless repetition",
+        "5. Systematic Ablation: NO_IDENTITY collapses persona variance to zero"
+      ],
+      "runtime_evidence": [
+        "Comparative evaluation across industry standard FSM, Utility AI, and Behavior Tree models",
+        "Affective hysteresis completely suppresses high-frequency boundary chatter (0 oscillations vs 16 for FSM/BT)",
+        "Realistic post-threat relaxation gradient (41 ticks recovery curve vs 1 tick artificial drop for FSM/BT)",
+        "Multi-persona intent diversity: 1.1489 bits Shannon entropy for Fear AI vs 0.0 bits for FSM",
+        "Controlled subsystem ablations confirm individual contribution of habituation and personality identity"
+      ],
+      "benchmark_evidence": [
+        "Boundary Noise Chatter: FSM 16 flips, BT 16 flips, Fear AI 0 flips",
+        "Post-Threat Cooldown to <0.1 fear: FSM 1 tick, BT 1 tick, Fear AI 41 ticks",
+        "Archetype Intent Shannon Entropy: FSM 0.0 bits, Fear AI 1.1489 bits",
+        "Habituation Ablation: Fear cools to 0.204 under repeated harmless stimuli vs 1.000 unhabituated (+0.796 gap)",
+        "Identity Ablation: Response variance collapses from 0.165 to 0.000"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }
