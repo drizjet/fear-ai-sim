@@ -78,8 +78,30 @@ export class AffectiveAgent {
         this.currentFear = 0.0;
         this.currentAnger = 0.0;
 
+        // Subsystem configuration & ablation flags
+        this.enableHabituation = options.enableHabituation ?? true;
+        this.enablePsychoacoustics = options.enablePsychoacoustics ?? true;
+        this.enableOCEAN = options.enableOCEAN ?? true;
+        this.enableHysteresis = options.enableHysteresis ?? true;
+
+        if (!this.enableOCEAN) {
+            for (const key of Object.keys(this.traits)) {
+                this.traits[key] = 0.5;
+            }
+        }
+
+        const fearCoreConfig = { ...(options.fearCoreConfig || {}) };
+        if (!this.enableHysteresis) {
+            fearCoreConfig.panicLockTicks = 0;
+            fearCoreConfig.exit = {
+                CALM: fearCoreConfig.enter?.ALERT ?? 0.8,
+                ALERT: fearCoreConfig.enter?.ANXIOUS ?? 1.4,
+                ANXIOUS: fearCoreConfig.enter?.PANIC ?? 3.8
+            };
+        }
+
         // Subsystems
-        this.fearCore = new FearCore(options.fearCoreConfig || {});
+        this.fearCore = new FearCore(fearCoreConfig);
         this.habituation = new HabituationSystem(options.habituationConfig || {});
 
         // History trace
@@ -153,12 +175,14 @@ export class AffectiveAgent {
             const distanceAtten = 1.0 / (1.0 + dist * 0.05);
 
             // Habituate threat
-            const habituated = this.habituation.getEffectiveFear(
-                intensity,
-                threat.type || 'PREDATOR',
-                threat.id || null,
-                this.tickCount
-            );
+            const habituated = this.enableHabituation
+                ? this.habituation.getEffectiveFear(
+                    intensity,
+                    threat.type || 'PREDATOR',
+                    threat.id || null,
+                    this.tickCount
+                )
+                : intensity;
 
             rawThreatSum += habituated * distanceAtten * occlusion;
         }
@@ -180,12 +204,14 @@ export class AffectiveAgent {
             const intensity = (Number.isFinite(rawIntensity) && rawIntensity >= 0) ? Math.min(1.0, rawIntensity) : 0.5;
             const distanceAtten = 1.0 / (1.0 + dist * 0.08);
 
-            const habituated = this.habituation.getEffectiveFear(
-                intensity,
-                sound.type || 'SOUND',
-                sound.id || null,
-                this.tickCount
-            );
+            const habituated = this.enableHabituation
+                ? this.habituation.getEffectiveFear(
+                    intensity,
+                    sound.type || 'SOUND',
+                    sound.id || null,
+                    this.tickCount
+                )
+                : intensity;
 
             rawThreatSum += habituated * distanceAtten * 0.6;
         }
@@ -266,18 +292,28 @@ export class AffectiveAgent {
 
         // 10. Resolve Action Intent & Audio Hints
         const actionIntent = IntentResolver.resolveIntent(this, observations);
-        const audioHints = PsychoacousticSynthesizer.computeAudioHints({
-            rawFear: this.currentFear,
-            arousal: this.arousal,
-            valence: this.valence,
-            dominance: this.currentDominance,
-            adrenaline: this.adrenaline,
-            energy: this.energy,
-            state: coreResult.state
-        });
+        const audioHints = this.enablePsychoacoustics
+            ? PsychoacousticSynthesizer.computeAudioHints({
+                rawFear: this.currentFear,
+                arousal: this.arousal,
+                valence: this.valence,
+                dominance: this.currentDominance,
+                adrenaline: this.adrenaline,
+                energy: this.energy,
+                state: coreResult.state
+            })
+            : {
+                heartbeat_bpm: 60,
+                shepard_intensity: 0.0,
+                lpf_cutoff_hz: 20000,
+                infrasound_mix: 0.0,
+                vocalization_hint: 'NONE'
+            };
 
         // 11. Habituation tick
-        this.habituation.tick(1);
+        if (this.enableHabituation) {
+            this.habituation.tick(1);
+        }
 
         const result = {
             agent_id: this.id,

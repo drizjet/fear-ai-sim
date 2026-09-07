@@ -23,6 +23,9 @@ export class RuntimeSimulation {
         this.trauma = new TraumaZoneSystem(options.traumaConfig || {});
         this.contagion = new ContagionGraph(options.contagionConfig || {});
         this.pacing = new PacingDirector(options.pacingConfig || {});
+        this.enableTrauma = options.enableTrauma ?? true;
+        this.enableContagion = options.enableContagion ?? true;
+        this.enablePacing = options.enablePacing ?? true;
         this.tickCount = 0;
     }
 
@@ -105,41 +108,48 @@ export class RuntimeSimulation {
         this.tickCount++;
         this.contagion.clearEdges();
 
-        // 1. Gather peer states for contagion calculation
+        // 1. Gather peer states for contagion calculation (if enabled)
         const peers = [];
         let totalFear = 0;
         let panickingCount = 0;
 
-        for (const agent of this.agents.values()) {
-            const isPanicking = agent.fearCore.state === 'PANIC' || agent.currentFear > 0.8;
-            const isScreaming = agent.lastResult?.audio_hints?.vocalization_hint === 'SCREAM';
-            peers.push({
-                id: agent.id,
-                x: agent.x,
-                y: agent.y,
-                z: agent.z,
-                fearBand: agent.fearCore.state,
-                isPanicking,
-                isScreaming,
-                rawFear: agent.currentFear,
-                leadership: agent.traits.leadership
-            });
-            totalFear += agent.currentFear;
-            if (isPanicking) panickingCount++;
+        if (this.enableContagion || this.enablePacing) {
+            for (const agent of this.agents.values()) {
+                const isPanicking = agent.fearCore.state === 'PANIC' || agent.currentFear > 0.8;
+                const isScreaming = agent.lastResult?.audio_hints?.vocalization_hint === 'SCREAM';
+                peers.push({
+                    id: agent.id,
+                    x: agent.x,
+                    y: agent.y,
+                    z: agent.z,
+                    fearBand: agent.fearCore.state,
+                    isPanicking,
+                    isScreaming,
+                    rawFear: agent.currentFear,
+                    leadership: agent.traits.leadership
+                });
+                totalFear += agent.currentFear;
+                if (isPanicking) panickingCount++;
+            }
         }
 
         const agentCount = this.agents.size;
         const avgFear = agentCount > 0 ? totalFear / agentCount : 0;
 
-        // 2. Advance Pacing & DDA
-        this.pacing.tick(1, {
-            averageFear: avgFear,
-            panickingCount
-        });
-        const pacingIntensity = this.pacing.getTargetIntensity();
+        // 2. Advance Pacing & DDA (if enabled)
+        let pacingIntensity = 1.0;
+        if (this.enablePacing) {
+            this.pacing.tick(1, {
+                averageFear: avgFear,
+                panickingCount
+            });
+            pacingIntensity = this.pacing.getTargetIntensity();
+        }
 
-        // 3. Advance Trauma Decay
-        this.trauma.tick(1);
+        // 3. Advance Trauma Decay (if enabled)
+        if (this.enableTrauma) {
+            this.trauma.tick(1);
+        }
 
         // 4. Tick each agent with contagion, trauma, and pacing context
         const outputs = [];
@@ -148,10 +158,14 @@ export class RuntimeSimulation {
             this.pendingObservations.delete(agent.id);
 
             // Contagion evaluation from surrounding peers
-            const contagionResult = this.contagion.evaluateContagion(agent, peers);
+            const contagionResult = this.enableContagion
+                ? this.contagion.evaluateContagion(agent, peers)
+                : { contagionFear: 0.0, leaderCalm: 0.0 };
 
             // Spatial trauma evaluation at agent coordinates
-            const traumaDread = this.trauma.getTraumaAt(agent.x, agent.y, agent.z);
+            const traumaDread = this.enableTrauma
+                ? this.trauma.getTraumaAt(agent.x, agent.y, agent.z)
+                : 0.0;
 
             const context = {
                 contagionFear: contagionResult.contagionFear,

@@ -244,28 +244,38 @@
       "milestone": "FAILURE_SAFETY",
       "status": "VERIFIED",
       "implementation_evidence": [
-        "packages/core/src/AffectiveAgent.js (safeDt, NaN/Infinity defensive clamping)",
+        "packages/core/src/AffectiveAgent.js (safeDt, NaN/Infinity defensive clamping, ablation guards)",
         "packages/core/src/PsychoacousticSynthesizer.js (null/undefined/NaN audio hints fallback)",
         "packages/core/src/IntentResolver.js (null/corrupt agent state explore fallback)",
         "packages/core/src/TraumaZoneSystem.js (parameter clamping and query resilience)",
         "packages/runtime/src/FearServer.js (maxPayloadBytes bound, 413 handling, slow consumer buffer guard)",
+        "packages/runtime/src/RuntimeSimulation.js (optional subsystem flags enableTrauma/Contagion/Pacing)",
         "tests/conformance/failure-injection.test.js",
-        "tests/conformance/transport-failure-matrix.test.js"
+        "tests/conformance/transport-failure-matrix.test.js",
+        "tests/conformance/lifecycle-and-optional-modules.test.js",
+        "tests/conformance/security-hardening.test.js",
+        "tests/conformance/persistence-migration.test.js",
+        "docs/FAILURE_AND_LIFECYCLE_MATRIX.md"
       ],
       "test_evidence": [
-        "7/7 failure injection tests green",
-        "16/16 transport failure matrix tests green: payload 413, correlation IDs, duplicate IDs, monotonic ordering, unregister in-flight, 100-request bursts, 25-client reconnect storms, queue saturation/producer bounds, slow consumer WS backpressure, server abort recovery, client-side timeouts, retrograde tick defense, adapter in-flight shutdown, and psychoacoustic/intent/trauma fallback safety"
+        "38 / 38 failure & resilience tests green across 5 dedicated test suites:",
+        "1. transport-failure-matrix.test.js: 16/16 tests green (payload 413, correlation IDs, duplicate IDs, monotonic ordering, unregister in-flight, 100-request bursts, 25-client reconnect storms, queue saturation/producer bounds, slow consumer WS backpressure, server abort recovery, client timeouts, retrograde tick defense, adapter shutdown, subsystem fallbacks)",
+        "2. lifecycle-and-optional-modules.test.js: 5/5 tests green (scene unload entity unregistration, abrupt game exit socket cleanup, optional modules disablement, future protocol state forward compatibility, pure software float/PRNG numerical fallback)",
+        "3. failure-injection.test.js: 7/7 tests green (malformed HTTP/WS payloads, protocol version mismatch, extreme NaN/Infinity inputs, corrupt snapshots, memory leak prevention, rapid disconnects)",
+        "4. security-hardening.test.js: 5/5 tests green (loopback binding enforcement, prototype pollution defense, identifier length bounds, path traversal immunity, snapshot injection safety)",
+        "5. persistence-migration.test.js: 5/5 tests green (frozen v1 restore, v0 migration, custom metadata, truncated saves, habituation continuity)"
       ],
       "runtime_evidence": [
         "Server survives malformed HTTP and WS payloads without crashing",
         "Extreme numbers (NaN, Infinity, -99 dt) clamped safely to valid PAD coordinates",
         "Rapid disconnects and 25-client reconnect storms release sockets cleanly",
         "Slow consumers with >5MB buffered WebSocket data closed gracefully with 1008 policy violation",
-        "Payload exceeding 256KB/50MB rejected with HTTP 413"
+        "Payload exceeding 256KB/50MB rejected with HTTP 413",
+        "Optional subsystems (trauma, contagion, pacing, audio) can be disabled with zero runtime crashes"
       ],
       "benchmark_evidence": [
         "Degraded fallback execution < 0.002 ms",
-        "16 transport tests execute in 1.3s"
+        "38 failure and resilience tests execute in under 1.5s total"
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
@@ -314,6 +324,39 @@
         "Frame queries over HTTP loopback average 1.2 - 2.4 ms"
       ],
       "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "BEHAVIORAL_EVALUATION_FABE",
+      "status": "VERIFIED",
+      "framework": "Fear AI Behavioral Evaluation Benchmark (FABE)",
+      "attribution": "Evaluation design informed by controlled, replayable affective-simulation principles seen in work such as AffectSim.",
+      "implementation_evidence": [
+        "docs/BEHAVIORAL_EVALUATION_FRAMEWORK.md",
+        "benchmarks/behavioral-evaluation/behavioral_benchmark.mjs"
+      ],
+      "test_evidence": [
+        "FABE Benchmark executed across 6 competitive baselines (FSM, FSM+Memory, BT, BT+Blackboard, Scalar Hysteresis, Utility AI) and 4 component ablations (No OCEAN, No Hysteresis, No Habituation, No Contagion)",
+        "Personality Differentiation: Fear AI PDI = 0.0387 vs FSM/BT PDI = 0.0000; OCEAN ablation collapses PDI to 0.0000",
+        "Hysteresis Recovery Smoothness: Fear AI HRS = 0.9863 vs FSM = 0.1000; Hysteresis ablation collapses HRS to 0.4637",
+        "Habituation Desensitization: Fear AI HDR = 0.2258 (22.6% decay) vs FSM/BT = 0.0000; Habituation ablation locks HDR to 0.0000",
+        "Leadership Panic Damping: Fear AI achieves 49.0% panic damping near calm high-dominance leader",
+        "Microsecond Budget: Full Fear AI evaluates in 1.52 µs (< 0.002 ms per agent); 100 NPCs consume 0.152 ms of frame budget"
+      ],
+      "runtime_evidence": [
+        "Automated benchmark runs with zero exceptions",
+        "Replayable scenario stimuli under identical observations"
+      ],
+      "benchmark_evidence": [
+        "Full Fear AI: 1.52 µs",
+        "Fear AI (No Audio Hints): 1.18 µs",
+        "Utility AI Baseline: 0.03 µs",
+        "BT Baseline: 0.03 µs",
+        "FSM Baseline: 0.03 µs"
+      ],
+      "known_gaps": [
+        "Large-scale multi-agent spatial corridor experiments and human perceptual believability studies"
+      ],
       "next_action": "MAINTAIN"
     }
   ]
