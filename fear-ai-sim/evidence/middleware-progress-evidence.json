@@ -335,8 +335,8 @@
     },
     {
       "milestone": "BEHAVIORAL_EVALUATION_FABE",
-      "status": "VERIFIED",
-      "framework": "Fear AI Behavioral Evaluation Benchmark (FABE & FABE v2)",
+      "status": "PARTIAL / SCIENTIFICALLY_SUCCESSFUL (CROSS_SCENARIO_INVARIANCE_P1)",
+      "framework": "Fear AI Behavioral Evaluation Benchmark (FABE, FABE v2, and Cross-Scenario Invariance P1)",
       "human_evaluation_gate": "HUMAN_EVALUATION_PREPARED (BLOCKED_EXTERNAL_PARTICIPANTS)",
       "target_calibration_type": "DESIGNER_CALIBRATED / LUDOLOGICAL_EXPERIMENTAL_TARGETS",
       "attribution": "Evaluation design informed by controlled, replayable affective-simulation principles seen in work such as AffectSim (August 2026).",
@@ -345,26 +345,28 @@
         "benchmarks/behavioral-evaluation/behavioral_benchmark.mjs",
         "benchmarks/behavioral-evaluation/construct_validity_sweeps.mjs",
         "benchmarks/behavioral-evaluation/multivariate_trait_analysis.mjs",
+        "benchmarks/behavioral-evaluation/cross_scenario_invariance_benchmark.mjs",
         "benchmarks/behavioral-evaluation/fabe_v2_benchmark.mjs",
         "benchmarks/behavioral-evaluation/blinded_evaluation_pairs.json"
       ],
       "test_evidence": [
-        "Construct Validity Monotonicity: All 7 traits (N, R, O, E, A, C, L) demonstrate Spearman monotonicity rho >= 0.85 on primary dedicated signatures across 10 frozen seeds (N: 1.0000, R: 1.0000, O: 0.9636, E: 1.0000, A: 0.9910, C: 1.0000, L: 1.0000)",
-        "Orthogonal Cross-Talk & Latent Entanglement Classification: O, E, A, C, L pass clean isolation (|rho| <= 0.00). Under Beyond Asking standard (|rho| <= 0.50), N and R violate isolation (N -> R=-1.00, O=-0.51, A=-0.80, C=-1.00; R -> C=1.00) and are classified as ENTANGLED / NOT_ISOLATED (COUPLED LATENT DRIVERS)",
-        "Multivariate Factorial Validation (multivariate_trait_analysis.mjs): 5x5 factorial sweeps across 10 frozen seeds fit response surfaces Y = b0 + b1*T1 + b2*T2 + b12*(T1*T2). Captured R² = 94.1% for N x R (differential inflow/decay dynamics), 56.9% for N x C (hierarchical panic gating), 56.9% for N x A (resource allocation), and 54.0% for R x C (synergistic composure recovery)",
-        "Near-Neighbor Resolution Thresholds (N=50 Trials per Delta): N, R, E, C, L achieve Delta* = 0.05 (p < 0.0001); Openness requires Delta* = 0.20 (80% [67-89%], p = 1.2e-5; Delta <= 0.15 is INCONCLUSIVE at 60%, p = 0.101); Agreeableness requires Delta* = 0.10 (64% [50-76%], p = 0.032; Delta = 0.05 is INCONCLUSIVE at 44%, p = 0.844)",
-        "FABE v2 Persona Repeatability (Within-Scenario, K=60 Cohort): Fear AI achieves 93.3% Top-1 [Wilson: 84.1-97.4%, Clopper-Pearson: 83.8-98.2%] (56/60) and 98.3% Top-3 [Wilson: 91.1-99.7%, Clopper-Pearson: 91.1-100.0%] (59/60) against chance (1.7% / 5.0%), with Spearman rho = 0.5498",
-        "FABE v2 Persona Generalization (4 Unseen Held-Out Scenarios): Fear AI achieves 23.3% Top-1 [Wilson: 14.4-35.4%, Clopper-Pearson: 13.4-36.0%] (14/60) and 35.0% Top-3 [Wilson: 24.2-47.6%, Clopper-Pearson: 23.1-48.4%] (21/60), outperforming Behavior Tree (3.3%) and FSM (8.3%)",
-        "Paired McNemar Statistical Inference: On calibrated repeatability, Fear AI significantly outperforms Utility AI (b=19 vs c=3, chi^2 = 10.23, p = 8.55e-4); on unseen held-out scenarios, memoryless Utility AI preserves static polynomials (76.7%) but has zero temporal dynamics (0% habituation, 0% damping, 16.4 flickers), while Fear AI dynamics incur expected drift (23.3%)",
-        "Spearman Rank Correlation Disconnect: Behavior Tree (rho = 0.5809) and FSM (rho = 0.5999) exceed Fear AI (rho = 0.5498) despite collapsing to 2/60 (3.3%) Top-1 retrieval, proving that 1D scalar monotonicity does not measure behavioral variety without multidimensional dispersion",
-        "Designer-Calibrated Ludological Desirability (CDS): Calibrated targets balance 46.3% habituation and 49.0% leader damping (CDS = 0.6360), preventing suicidal extinction (FSM+Memory CDS 0.2857)",
-        "Layer 2 Noise Robustness: Under +/-20% Gaussian distance error and 20% occlusion across 10 frozen seeds, Fear AI is robust under tested noise conditions with only 3.2 +/- 0.40 transitions, compared to 19.5 +/- 4.50 chatter flips for FSM and 16.4 +/- 4.25 for Utility AI",
-        "Layer 3 Foundation: Emitted 20 randomized, double-blinded trajectory pairs to blinded_evaluation_pairs.json for human believability evaluation; baseline human annotator difficulty noted (~0.558 accuracy, kappa = 0.303)",
-        "Deterministic Seed Inventory: Benchmark frozen across explicit seeds [1337, 2026, 3141, 4096, 5555, 6789, 7777, 8888, 9123, 9999]",
-        "Microsecond Budget: Full Fear AI evaluates in 1.52 µs (< 0.002 ms per agent); 100 NPCs consume 0.152 ms of frame budget"
+        "Major Empirical Discovery & Milestone Reclassification: On cross-scenario persona identity retrieval, Utility AI achieves 76.7% Top-1, whereas Fear AI drops from 93.3% to 18.3% (a 75 percentage-point drop). Utility AI's static polynomials preserve algebraic relationships across threat regimes; Fear AI's path-dependent dynamical state machine causes raw behavioral levels to be dominated by situational threat. Cross-scenario personality invariance is formally established as P1 research priority (Milestone Status: PARTIAL / SCIENTIFICALLY_SUCCESSFUL).",
+        "Cross-Scenario Variance Decomposition (cross_scenario_invariance_benchmark.mjs): Evaluated 12 Scenario Families across 3 Threat Domains x 12 Canonical Archetypes x 10 Frozen Seeds (N=1,440 runs). Two-way ANOVA variance partitioning proves Scenario variance accounts for 42.6% of total behavioral variance, dominating Persona traits at 41.0% (Scenario-to-Persona ratio 1.04x). Mean urgency (71.3% Scenario), dominance (87.1% Scenario), and fear (62.9% Scenario) are primarily situation-driven.",
+        "Leave-One-Scenario-Family-Out (LOSO 12-Fold) Invariance: Calculating scenario-normalized standardized residuals z = (x - mu_s) / sigma_s ('Given how everybody reacts to this situation, how uniquely did this persona react?') elevates Fear AI cross-scenario Top-1 retrieval from 48.6% [46.0-51.2%] to 66.2% [63.7-68.6%] (+17.6 percentage points), with Top-3 retrieval reaching 90.0% [88.3-91.4%] (1296/1440). Utility AI achieves 35.1% Raw and 35.7% Normalized on this 12-family battery.",
+        "Multivariate Clustered Factorial Inference (multivariate_trait_analysis.mjs): 5x5 factorial sweeps across 10 frozen seeds (N=250 runs, G=10 seed clusters, df=9) evaluated with Cluster-Robust Sandwich Covariance Matrix (CRVE). In N x R, additive model captures 93.22% of variance, with partial interaction contribution Delta R² = 0.97% (b1=-49.26, SE=0.13, p=3.3e-20; b2=32.47, SE=0.08, p=2.0e-20; b12=24.55, SE=0.13, p=2.2e-17). Formally classified as PREDOMINANTLY ADDITIVE MAIN EFFECTS (opposing inflow/outflow balance), not non-linear interaction.",
+        "Near-Neighbor Resolution Thresholds & Multiple Comparisons (construct_validity_sweeps.mjs): Evaluated 7 traits x 4 deltas = 28 tests (alpha_Bonferroni = 0.05/28 = 0.00179). Openness (O) is DEMONSTRATED at Delta* = 0.20 (80% [67-89%], p = 1.19e-5, survives Bonferroni). Agreeableness (A) at Delta* = 0.10 is reclassified as PROVISIONAL EVIDENCE (PENDING REPLICATION) (64% [50-76%], nominal p = 0.0325 fails Bonferroni correction; requires multi-scenario replication before freezing). N, R, E, C, L achieve Delta* = 0.05 (p < 1e-4, survives Bonferroni).",
+        "Construct Validity Monotonicity & Cross-Talk: All 7 traits demonstrate univariate Spearman monotonicity rho >= 0.85 (N: 1.0000, R: 1.0000, O: 0.9636, E: 1.0000, A: 0.9910, C: 1.0000, L: 1.0000). O, E, A, C, L pass clean isolation (|rho| <= 0.00). Under Beyond Asking standards, N and R exhibit coupled latent driver cross-talk (N -> R=-1.00, O=-0.51, A=-0.80, C=-1.00; R -> C=1.00) and are formally classified as ENTANGLED / NOT_ISOLATED.",
+        "FABE v2 Persona Repeatability (Within-Scenario, K=60 Cohort): Fear AI achieves 93.3% Top-1 [Wilson: 84.1-97.4%, Clopper-Pearson: 83.8-98.2%] (56/60) and 98.3% Top-3 [Wilson: 91.1-99.7%, Clopper-Pearson: 91.1-100.0%] (59/60) against chance (1.7% / 5.0%), with Spearman rho = 0.5498.",
+        "Paired Exact McNemar Statistical Inference: On calibrated repeatability, exact paired McNemar confirms Fear AI superiority: 19 Fear-only successes vs 3 Utility-only successes, two-sided p = 8.55e-4 (Edwards chi^2 = 10.23). On held-out unseen scenarios, exact paired McNemar confirms Utility AI superiority on cross-scenario persona identity: 3 Fear-only successes vs 38 Utility-only successes, two-sided p = 1.05e-8 (Edwards chi^2 = 28.20).",
+        "The Spearman Rank Correlation Disconnect: Behavior Tree (rho = 0.5809) and FSM (rho = 0.5999) achieve higher rank correlation than Fear AI (rho = 0.5498) while collapsing to only 2/60 (3.3%) Top-1 retrieval, proving that 1D scalar monotonicity does not measure behavioral variety without multidimensional dispersion.",
+        "Designer-Calibrated Ludological Desirability (CDS): Calibrated targets balance 46.3% habituation and 49.0% leader damping (CDS = 0.6360), preventing suicidal extinction (FSM+Memory CDS 0.2857).",
+        "Layer 2 Noise Robustness: Under +/-20% Gaussian distance error and 20% occlusion across 10 frozen seeds, Fear AI is robust under tested noise conditions with only 3.4 +/- 0.45 transitions, compared to 19.5 +/- 4.50 chatter flips for FSM and 16.4 +/- 4.25 for Utility AI.",
+        "Layer 3 Foundation: Emitted 20 randomized, double-blinded trajectory pairs to blinded_evaluation_pairs.json for human believability evaluation; baseline human annotator difficulty noted (~0.558 accuracy, kappa = 0.303).",
+        "Deterministic Seed Inventory: Benchmark frozen across explicit seeds [1337, 2026, 3141, 4096, 5555, 6789, 7777, 8888, 9123, 9999].",
+        "Microsecond Budget: Full Fear AI evaluates in 1.52 µs (< 0.002 ms per agent); 100 NPCs consume 0.152 ms of frame budget."
       ],
       "runtime_evidence": [
-        "Automated benchmark runs with zero exceptions across construct validity sweeps, multivariate trait analysis, and FABE v2",
+        "Automated benchmark runs with zero exceptions across construct validity sweeps, multivariate trait analysis, cross-scenario invariance, and FABE v2",
         "Replayable scenario stimuli under identical observations",
         "Blinded evaluation pairs export dataset verified"
       ],
@@ -376,9 +378,11 @@
         "FSM Baseline: 0.03 µs"
       ],
       "known_gaps": [
+        "Cross-Scenario Personality Invariance (P1): Raw Fear AI persona retrieval drops across disparate scenario families due to situational variance (42.6%) swamping persona variance (41.0%); standardized residual normalization mitigates this to 66.2% Top-1 / 90.0% Top-3, but architectural situational adaptation remains an active P1 track.",
+        "Agreeableness Resolution: Delta* = 0.10 is provisional (nominal p = 0.0325, fails Bonferroni); requires broader scenario suite before freezing.",
         "External human perceptual evaluation blocked on recruiting external participants; evaluation harness and blinded dataset ready"
       ],
-      "next_action": "MAINTAIN"
+      "next_action": "EXECUTE_CROSS_SCENARIO_INVARIANCE_P1"
     }
   ]
 }

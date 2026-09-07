@@ -505,10 +505,19 @@ export function runConstructValiditySweeps() {
 
             // Significance gate: p < 0.05 AND lower Wilson bound > 0.50
             const isSignificant = pVal < 0.05 && wilson[0] > 0.50;
-            const status = isSignificant ? 'VERIFIED' : 'INCONCLUSIVE';
+            const survivesBonferroni = pVal < (0.05 / 28);
+            const status = survivesBonferroni 
+                ? 'VERIFIED' 
+                : (isSignificant ? 'PROVISIONAL' : 'INCONCLUSIVE');
 
             if (isSignificant && results.nearNeighborSensitivity[def.key].deltaStar === null) {
                 results.nearNeighborSensitivity[def.key].deltaStar = delta;
+                results.nearNeighborSensitivity[def.key].resolutionStatus = survivesBonferroni
+                    ? 'VERIFIED'
+                    : 'PROVISIONAL_EVIDENCE (PENDING REPLICATION)';
+                results.nearNeighborSensitivity[def.key].resolutionNote = survivesBonferroni
+                    ? `Demonstrated at Delta* = ${delta.toFixed(2)} (${accuracyPct}%, p = ${pVal.toExponential ? pVal.toExponential(2) : pVal}, survives Bonferroni alpha/28=0.0018)`
+                    : `Provisional at Delta* = ${delta.toFixed(2)} (${accuracyPct}%, nominal p = ${pVal}); does not survive Bonferroni correction (alpha/28 = 0.0018). Requires multi-scenario replication before freezing.`;
             }
 
             results.nearNeighborSensitivity[def.key].deltas[`delta_${delta.toFixed(2)}`] = {
@@ -518,6 +527,7 @@ export function runConstructValiditySweeps() {
                 wilson,
                 clopper,
                 pValue: pVal,
+                survivesBonferroni,
                 status
             };
         }
@@ -578,13 +588,14 @@ export function printConstructValidityReport(results) {
         }
     }
     console.log('\n3. NEAR-NEIGHBOR SENSITIVITY & RESOLUTION (N=50 Trials per Delta)');
-    console.log('------------------------------------------------------------------------------------------------------------------------');
-    console.log('Trait                   Delta=0.05 [Wilson 95%]     Delta=0.10 [Wilson 95%]     Delta=0.15 [Wilson 95%]     Delta=0.20     Delta*');
-    console.log('------------------------------------------------------------------------------------------------------------------------');
+    console.log('---------------------------------------------------------------------------------------------------------------------------------------');
+    console.log('Trait                   Delta=0.05 [Wilson 95%]     Delta=0.10 [Wilson 95%]     Delta=0.15 [Wilson 95%]     Delta=0.20     Delta* (Status)');
+    console.log('---------------------------------------------------------------------------------------------------------------------------------------');
     for (const def of TRAIT_DEFINITIONS) {
         const d = results.nearNeighborSensitivity[def.key].deltas;
         const dStar = results.nearNeighborSensitivity[def.key].deltaStar;
-        const dStarStr = dStar !== null ? `Delta=${dStar.toFixed(2)}` : 'None';
+        const status = results.nearNeighborSensitivity[def.key].resolutionStatus ?? 'NONE';
+        const dStarStr = dStar !== null ? `Delta=${dStar.toFixed(2)} [${status}]` : 'None';
 
         const fmt = (cell) => `${cell.accuracyPct.toFixed(0)}% [${(cell.wilson[0]*100).toFixed(0)}-${(cell.wilson[1]*100).toFixed(0)}%]`;
         const c05 = fmt(d['delta_0.05']);
@@ -594,8 +605,15 @@ export function printConstructValidityReport(results) {
 
         console.log(`${def.name.padEnd(24)} ${c05.padEnd(27)} ${c10.padEnd(27)} ${c15.padEnd(27)} ${c20.padEnd(14)} ${dStarStr}`);
     }
-    console.log('------------------------------------------------------------------------------------------------------------------------');
-    console.log('Resolution Gate: Delta* is the empirical minimum reliably distinguishable increment (p < 0.05, Lower Wilson > 50%).\n');
+    console.log('---------------------------------------------------------------------------------------------------------------------------------------');
+    console.log('Resolution Standard & Multiple Comparisons Audit (7 traits x 4 deltas = 28 tests; alpha_bonferroni = 0.05 / 28 = 0.00179):');
+    for (const def of TRAIT_DEFINITIONS) {
+        const note = results.nearNeighborSensitivity[def.key].resolutionNote;
+        if (note) {
+            console.log(`  - ${def.name}: ${note}`);
+        }
+    }
+    console.log('');
 }
 
 // Execute if run directly

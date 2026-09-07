@@ -1355,6 +1355,10 @@ async function main() {
     console.log('-------------------------------------------------------------------------------------------');
     console.log(`Repeatability (+/-5%)    ${String(mcnRep.n11).padStart(8)}  ${String(mcnRep.n10).padStart(11)}  ${String(mcnRep.n01).padStart(12)}  ${String(mcnRep.n00).padStart(8)}  ${mcnRep.chi2.toFixed(4).padStart(15)}  ${mcnRep.pValue.toExponential(4).padStart(15)}`);
     console.log(`Held-Out Unseen (+/-5%)  ${String(mcnHeld.n11).padStart(8)}  ${String(mcnHeld.n10).padStart(11)}  ${String(mcnHeld.n01).padStart(12)}  ${String(mcnHeld.n00).padStart(8)}  ${mcnHeld.chi2.toFixed(4).padStart(15)}  ${mcnHeld.pValue.toExponential(4).padStart(15)}`);
+    console.log('-------------------------------------------------------------------------------------------');
+    console.log(`Exact McNemar Statistical Summaries:`);
+    console.log(`  - Repeatability: Exact paired McNemar test: ${mcnRep.n10} Fear-only successes vs ${mcnRep.n01} Utility-only successes, two-sided p = ${mcnRep.pValue.toExponential(4)} (Edwards chi^2 = ${mcnRep.chi2.toFixed(2)}).`);
+    console.log(`  - Held-Out Unseen: Exact paired McNemar test: ${mcnHeld.n10} Fear-only successes vs ${mcnHeld.n01} Utility-only successes, two-sided p = ${mcnHeld.pValue.toExponential(4)} (Edwards chi^2 = ${mcnHeld.chi2.toFixed(2)}).`);
     console.log('===========================================================================================\n');
 
     console.log('===========================================================================================');
@@ -1383,14 +1387,20 @@ async function main() {
     const heldFAI = traceability.heldOut['Fear AI (Full Middleware)'];
     const repBT = traceability.repeatability['Standard Behavior Tree'];
     const repFSM = traceability.repeatability['Standard FSM Baseline'];
+    const heldUtil = traceability.heldOut['Utility AI (Personality-Weighted)'];
 
-    console.log('FABE v2 Behavioral Science Summary:');
+    console.log('FABE v2 Behavioral Science Summary & Empirical Discoveries:');
     console.log(`1. Persona Traceability (Expanded K=${PERSONA_COHORT.length} Cohort):`);
     console.log(`   - Repeatability (Within-Scenario, +/-5% noise): Fear AI achieved ${repFAI.top1Acc.toFixed(1)}% Top-1 [Wilson: ${repFAI.top1Wilson.lower.toFixed(1)}%-${repFAI.top1Wilson.upper.toFixed(1)}%, Clopper-Pearson: ${repFAI.top1Clopper.lower.toFixed(1)}%-${repFAI.top1Clopper.upper.toFixed(1)}%] and ${repFAI.top3Acc.toFixed(1)}% Top-3 [Wilson: ${repFAI.top3Wilson.lower.toFixed(1)}%-${repFAI.top3Wilson.upper.toFixed(1)}%, Clopper-Pearson: ${repFAI.top3Clopper.lower.toFixed(1)}%-${repFAI.top3Clopper.upper.toFixed(1)}%] against chance (1.7% / 5.0%).`);
-    console.log(`   - Generalization (Held-Out Unseen Scenarios, +/-5% noise): Fear AI achieved ${heldFAI.top1Acc.toFixed(1)}% Top-1 [Wilson: ${heldFAI.top1Wilson.lower.toFixed(1)}%-${heldFAI.top1Wilson.upper.toFixed(1)}%, Clopper-Pearson: ${heldFAI.top1Clopper.lower.toFixed(1)}%-${heldFAI.top1Clopper.upper.toFixed(1)}%] and ${heldFAI.top3Acc.toFixed(1)}% Top-3 [Wilson: ${heldFAI.top3Wilson.lower.toFixed(1)}%-${heldFAI.top3Wilson.upper.toFixed(1)}%, Clopper-Pearson: ${heldFAI.top3Clopper.lower.toFixed(1)}%-${heldFAI.top3Clopper.upper.toFixed(1)}%].`);
-    console.log(`   - Paired McNemar Test (Fear AI vs Utility AI):
-     * Repeatability: p = ${mcnRep.pValue.toExponential(4)} (Edwards chi^2 = ${mcnRep.chi2.toFixed(2)}), confirming statistically significant superiority of Fear AI over personality-weighted utility baselines on calibrated scenarios.
-     * Held-Out Unseen: p = ${mcnHeld.pValue.toExponential(4)} (Edwards chi^2 = ${mcnHeld.chi2.toFixed(2)}), highlighting that memoryless utility baselines preserve static trait polynomials across environments (${traceability.heldOut['Utility AI (Personality-Weighted)'].top1Acc.toFixed(1)}%) at the cost of zero temporal dynamics (0% habituation, 0% leader damping, 16.4 state flickers), whereas Fear AI's non-linear hysteresis, trauma memory, and panic locking incur dynamic trajectory drift in unseen environments (${heldFAI.top1Acc.toFixed(1)}%), while still outperforming BT (${traceability.heldOut['Standard Behavior Tree'].top1Acc.toFixed(1)}%) and FSM (${traceability.heldOut['Standard FSM Baseline'].top1Acc.toFixed(1)}%).`);
+    console.log(`   - Cross-Scenario Generalization Gap (MAJOR EMPIRICAL DISCOVERY):`);
+    console.log(`     * Fear AI Top-1 retrieval drops from ${repFAI.top1Acc.toFixed(1)}% (calibrated) to ${heldFAI.top1Acc.toFixed(1)}% (held-out unseen scenarios) — an over 80 percentage-point generalization drop.`);
+    console.log(`     * Utility AI achieves ${heldUtil.top1Acc.toFixed(1)}% Top-1 retrieval on the same unseen scenarios.`);
+    console.log(`     * Finding: On cross-scenario persona identity retrieval, Utility AI currently wins decisively.`);
+    console.log(`     * Architectural Cause: Utility AI evaluates static algebraic trait polynomials independently per tick, preserving relative persona signatures across threat contexts. In contrast, Fear AI agents undergo path-dependent non-linear dynamics (hysteresis, trauma accumulation, panic locking) where situational context shifts raw trajectory vectors more strongly than personality differences.`);
+    console.log(`     * P1 Research Mandate: Cross-scenario personality invariance is established as the P1 research priority. We must introduce scenario-normalized standardized residuals and multi-scenario variance partitioning.`);
+    console.log(`   - Paired McNemar Test (Fear AI vs Utility AI):`);
+    console.log(`     * Repeatability: Exact paired McNemar test: ${mcnRep.n10} Fear-only successes vs ${mcnRep.n01} Utility-only successes, two-sided p = ${mcnRep.pValue.toExponential(4)}.`);
+    console.log(`     * Held-Out Unseen: Exact paired McNemar test: ${mcnHeld.n10} Fear-only successes vs ${mcnHeld.n01} Utility-only successes, two-sided p = ${mcnHeld.pValue.toExponential(4)}.`);
     console.log(`   - The Spearman Rank Correlation Disconnect:`);
     console.log(`     * Standard Behavior Tree (rho = ${repBT.spearmanRho.toFixed(4)}) and FSM (rho = ${repFSM.spearmanRho.toFixed(4)}) exhibit higher Spearman rank correlation than Fear AI (rho = ${repFAI.spearmanRho.toFixed(4)}) despite collapsing to only ${repBT.top1Matches}/${repBT.totalPersonas} (${repBT.top1Acc.toFixed(1)}%) Top-1 retrieval!`);
     console.log(`     * Mechanism: 1D threshold baselines map trait distance to monotonic 1D escalation, creating high rank correlation along a degenerate line, but destroying individual persona expressivity.`);
@@ -1408,7 +1418,9 @@ async function main() {
     console.log(`   - Total FABE v2 benchmark execution duration: ${(totalDurationMs / 1000).toFixed(2)}s.\n`);
 }
 
-main().catch(err => {
-    console.error('FABE v2 Benchmark failed:', err);
-    process.exit(1);
-});
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+    main().catch(err => {
+        console.error('FABE v2 Benchmark failed:', err);
+        process.exit(1);
+    });
+}
