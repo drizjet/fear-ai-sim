@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "seed": 42,
+  "tickCount": 1,
+  "rng": {
+    "initialSeed": 42,
+    "state": 42
+  },
+  "pacing": {
+    "currentTick": 1,
+    "totalSessionTicks": 36000,
+    "ddaIntensityModifier": 1.002,
+    "pacingOverride": null,
+    "progress": 0.00002777777777777778,
+    "phase": "EXPOSITION",
+    "targetIntensity": 0.20040000000000002
+  },
+  "trauma": {
+    "nextZoneId": 2,
+    "zones": [
+      {
+        "id": 1,
+        "x": 10,
+        "y": 20,
+        "z": 0,
+        "intensity": 0.7992,
+        "radius": 50,
+        "lifetimeTicks": 999,
+        "maxLifetime": 1000
+      }
+    ]
+  },
+  "agents": [
+    {
+      "id": "survivor_01",
+      "name": "survivor_01",
+      "traits": {
+        "fear": 0.6,
+        "neuroticism": 0.7,
+        "resilience": 0.5,
+        "leadership": 0.5,
+        "openness": 0.5,
+        "conscientiousness": 0.5,
+        "extraversion": 0.5,
+        "agreeableness": 0.5
+      },
+      "x": 10,
+      "y": 20,
+      "z": 0,
+      "lastVelocity": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "energy": 1,
+      "health": 1,
+      "morale": 1,
+      "adrenaline": 0.08,
+      "uncertainty": 0.5,
+      "valence": 0.01724104685714284,
+      "arousal": 0.522850704,
+      "currentDominance": 0.4675894306898285,
+      "currentFear": 0.7126438628571429,
+      "currentAnger": 0,
+      "tickCount": 1,
+      "fearCore": {
+        "state": "ALERT",
+        "tickCount": 1,
+        "panicLockedUntil": null,
+        "recoveryProgress": 0,
+        "stateTimer": 1,
+        "traceCount": 1
+      },
+      "habituation": {
+        "totalExposures": 1,
+        "habituationEvents": 0,
+        "entries": [
+          [
+            "SOUND:thump",
+            {
+              "count": 1,
+              "habituationLevel": 0,
+              "lastExposureTick": 1,
+              "totalFearReduced": 0
+            }
+          ]
+        ]
+      }
+    }
+  ],
+  "customMetadata": {
+    "gameLevel": "Bunker_04",
+    "checkpointName": "GeneratorRoom"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "com.fearai.middleware",
+  "version": "1.0.0",
+  "displayName": "Fear AI Universal Middleware",
+  "description": "Universal engine-agnostic Fear AI affective state and behavioral intent middleware for Unity.",
+  "unity": "2022.3",
+  "author": {
+    "name": "Google DeepMind Fear AI Team"
+  },
+  "keywords": [
+    "ai",
+    "horror",
+    "fear",
+    "affective",
+    "middleware",
+    "agent"
+  ],
+  "dependencies": {}
+}

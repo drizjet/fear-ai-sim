@@ -1,0 +1,46 @@
+{
+  "version": "1.0.0",
+  "id": "trauma",
+  "name": "Spatial Trauma Memory Dread",
+  "seed": 555,
+  "dt": 0.016,
+  "total_ticks": 10,
+  "agents": [
+    {
+      "id": "wanderer",
+      "personality": {
+        "neuroticism": 0.8,
+        "fear": 0.7
+      },
+      "position": { "x": 50.0, "y": 0.0, "z": 0.0 }
+    }
+  ],
+  "trauma_zones": [
+    {
+      "x": 50.0,
+      "y": 0.0,
+      "z": 0.0,
+      "intensity": 1.0,
+      "radius": 100.0,
+      "decay": 1800.0
+    }
+  ],
+  "stimuli_timeline": [
+    {
+      "from_tick": 0,
+      "to_tick": 9,
+      "observations": {
+        "wanderer": {
+          "threats": [],
+          "sounds": []
+        }
+      }
+    }
+  ],
+  "assertions": {
+    "wanderer": {
+      "fear_min": 0.25,
+      "fear_band_options": ["ALERT", "ANXIOUS", "PANIC"]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "id": "sudden-threat",
+  "name": "Immediate Threat Proximity Escalation",
+  "seed": 42,
+  "dt": 0.016,
+  "total_ticks": 21,
+  "agents": [
+    {
+      "id": "agent_escalate",
+      "personality": {
+        "neuroticism": 0.7,
+        "fear": 0.8
+      },
+      "position": { "x": 0.0, "y": 0.0, "z": 0.0 }
+    }
+  ],
+  "trauma_zones": [],
+  "stimuli_timeline": [
+    {
+      "from_tick": 0,
+      "to_tick": 0,
+      "observations": {
+        "agent_escalate": {
+          "threats": [],
+          "sounds": [
+            { "id": "creak", "type": "SOUND", "distance": 20, "intensity": 0.5 }
+          ]
+        }
+      }
+    },
+    {
+      "from_tick": 1,
+      "to_tick": 5,
+      "observations": {
+        "agent_escalate": {
+          "threats": [
+            { "id": "stalker", "type": "PREDATOR", "distance": 25, "intensity": 0.8 }
+          ],
+          "sounds": []
+        }
+      }
+    },
+    {
+      "from_tick": 6,
+      "to_tick": 20,
+      "observations": {
+        "agent_escalate": {
+          "threats": [
+            { "id": "stalker", "type": "PREDATOR", "distance": 3, "intensity": 1.0 }
+          ],
+          "sounds": []
+        }
+      }
+    }
+  ],
+  "assertions": {
+    "agent_escalate": {
+      "fear_band": "PANIC",
+      "intent_type": "FLEE_FROM",
+      "urgency_min": 0.7,
+      "heartbeat_bpm_min": 130,
+      "lowpass_cutoff_hz_max": 8000,
+      "vocalization_options": ["SCREAM", "DESPERATE_SHOUT"]
+    }
+  }
+}

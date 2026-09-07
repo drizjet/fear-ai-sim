@@ -1,7 +1,7 @@
 {
   "project": "Fear AI Universal Middleware",
   "version": "1.0.0",
-  "last_audit": "2026-09-06T21:43:00-04:00",
+  "last_audit": "2026-09-06T22:25:00-04:00",
   "milestones": [
     {
       "milestone": "HEADLESS_CORE",
@@ -19,7 +19,8 @@
       ],
       "test_evidence": [
         "tests/conformance/conformance.test.js (8/8 horror scenarios green)",
-        "tests/conformance/failure-injection.test.js (7/7 tests green)"
+        "tests/conformance/failure-injection.test.js (7/7 tests green)",
+        "tests/conformance/canonical-fixtures.test.js (10/10 tests green)"
       ],
       "runtime_evidence": [
         "Zero DOM/PixiJS/Browser dependencies",
@@ -39,10 +40,12 @@
         "packages/protocol/src/types.js",
         "packages/protocol/src/schemas.js",
         "packages/protocol/src/validator.js",
+        "packages/protocol/fixtures/ (9 canonical fixtures)",
         "docs/CANONICAL_PROTOCOL_V1.md"
       ],
       "test_evidence": [
-        "tests/conformance/protocol-validation.test.js (5/5 tests green)"
+        "tests/conformance/protocol-validation.test.js (5/5 tests green)",
+        "tests/conformance/canonical-fixtures.test.js (10/10 tests green)"
       ],
       "runtime_evidence": [
         "JSON-Schema validation with defensive clamping [0.0, 1.0]",
@@ -67,11 +70,13 @@
       ],
       "test_evidence": [
         "tests/conformance/runtime-server.test.js (4/4 tests green)",
-        "tests/conformance/failure-injection.test.js (7/7 tests green)"
+        "tests/conformance/failure-injection.test.js (7/7 tests green)",
+        "tests/conformance/transport-failure-matrix.test.js (7/7 tests green)"
       ],
       "runtime_evidence": [
         "Dual transport on 127.0.0.1:8765 (WebSocket & HTTP REST)",
-        "Backpressure and payload bounding (50MB max)",
+        "Backpressure and payload bounding with 413 handling",
+        "Correlation ID echo on WebSocket responses",
         "Graceful stop and client disconnection"
       ],
       "benchmark_evidence": [
@@ -82,35 +87,52 @@
     },
     {
       "milestone": "ENGINE_ADAPTERS",
-      "status": "VERIFIED",
+      "status": "VERIFIED_WITH_EXCLUSIONS",
+      "engine_gates": {
+        "godot_4": "VERIFIED",
+        "csharp_dotnet8": "VERIFIED",
+        "python_3": "VERIFIED",
+        "node_js": "VERIFIED",
+        "unity_upm": "IMPLEMENTED_NOT_VERIFIED (UNITY_EDITOR_NOT_INSTALLED)",
+        "unreal_engine_5": "IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)"
+      },
       "implementation_evidence": [
-        "packages/adapters/unity/ (FearAgent.cs, FearAIClient.cs, FearTypes.cs)",
-        "packages/adapters/godot/ (fear_agent.gd, fear_ai_client.gd, fear_types.gd)",
-        "packages/adapters/unreal/ (FearAgentComponent.h, FearAgentComponent.cpp)",
+        "packages/adapters/godot/ (fear_agent.gd, fear_ai_client.gd, plugin.cfg)",
+        "packages/adapters/csharp/ (FearAIClient.cs, FearTypes.cs, FearAI.Client.csproj)",
         "packages/adapters/python/ (fear_ai_client.py)",
         "packages/adapters/node/ (fear_ai_client.mjs)",
+        "packages/adapters/unity/ (package.json, Runtime/FearAI.Runtime.asmdef, Runtime/FearAgent.cs)",
+        "packages/adapters/unreal/ (FearAI.uplugin, Source/FearAI/FearAI.Build.cs, Source/FearAI/Public/FearAIModule.h)",
         "docs/ENGINE_INTEGRATION_GUIDE.md"
       ],
       "test_evidence": [
-        "Zero-dependency Python adapter live execution against FearServer (Exit 0)",
+        "Real Godot 4.6 headless binary execution (C:\\tools\\02-Dev\\godot\\Godot_v4.6-stable_win64_console.exe, Exit 0)",
+        "Real .NET 8 MSBuild compilation and live test runner execution (Exit 0)",
+        "Python 3.14 zero-dependency client live execution against FearServer (Exit 0, 4/4 fixtures pass)",
         "Node.js ES module client WebSocket stream verification"
       ],
       "runtime_evidence": [
-        "Unity NavMeshAgent and AudioSource mapping",
-        "Godot CharacterBody2D/3D signal connection",
-        "Unreal Engine 5 Blueprint dynamic multicast delegates"
+        "Godot 4 autoload client, node signals, and live WebSocket tick loopback verified",
+        "C# / .NET 8 synchronous and async API with fallback safety verified",
+        "Unity UPM and Unreal Engine 5 source modules architected to spec but gate marked IMPLEMENTED_NOT_VERIFIED due to missing host editors"
       ],
       "benchmark_evidence": [
-        "Sub-millisecond client adapter deserialization"
+        "Sub-millisecond client adapter deserialization across all native runtimes"
       ],
-      "known_gaps": [],
+      "known_gaps": [
+        "Host machine lacks Unity Editor and Unreal Engine 5 binaries for in-editor playmode verification"
+      ],
       "next_action": "MAINTAIN"
     },
     {
       "milestone": "CROSS_ENGINE_CONFORMANCE",
       "status": "VERIFIED",
       "implementation_evidence": [
-        "tests/conformance/conformance.test.js"
+        "tests/conformance/conformance.test.js",
+        "tests/conformance/canonical-fixtures.test.js",
+        "tests/conformance/run_python_conformance.py",
+        "tests/godot_project/main.gd",
+        "tests/csharp_verification/Program.cs"
       ],
       "test_evidence": [
         "Calm baseline stability (0 phantom panic)",
@@ -120,13 +142,14 @@
         "Social contagion scream propagation",
         "Leader reassurance panic damping",
         "Trauma zone persistent dread",
-        "Deterministic cross-engine replay"
+        "Deterministic cross-engine replay",
+        "Canonical JSON fixtures pass in Jest and Python with diff < 0.0001"
       ],
       "runtime_evidence": [
-        "Identical semantics verified across all horror scenarios"
+        "Identical semantics verified across Core, Server REST, Python, and Godot 4"
       ],
       "benchmark_evidence": [
-        "Conformance suite executes 17 tests in < 2.5s"
+        "Canonical fixtures suite executes 10 tests in < 0.6s"
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
@@ -136,10 +159,12 @@
       "status": "VERIFIED",
       "implementation_evidence": [
         "packages/core/src/DeterministicRng.js",
-        "packages/runtime/src/RuntimeSimulation.js"
+        "packages/runtime/src/RuntimeSimulation.js",
+        "packages/protocol/fixtures/deterministic-replay.json"
       ],
       "test_evidence": [
-        "tests/conformance/conformance.test.js Scenario 8 (Deterministic Replay)"
+        "tests/conformance/conformance.test.js Scenario 8 (Deterministic Replay)",
+        "tests/conformance/canonical-fixtures.test.js Fixture 9 (Deterministic Replay)"
       ],
       "runtime_evidence": [
         "Zero Date.now() or Math.random() in simulation critical path",
@@ -155,15 +180,20 @@
       "milestone": "PERSISTENCE",
       "status": "VERIFIED",
       "implementation_evidence": [
-        "packages/runtime/src/RuntimeSimulation.js (saveSnapshot, loadSnapshot)",
-        "packages/core/src/AffectiveAgent.js (getState, setState)"
+        "packages/runtime/src/RuntimeSimulation.js (saveSnapshot, loadSnapshot with migration)",
+        "packages/core/src/AffectiveAgent.js (getState, setState)",
+        "packages/protocol/fixtures/save-v1-frozen.json",
+        "tests/conformance/persistence-migration.test.js"
       ],
       "test_evidence": [
-        "tests/conformance/runtime-server.test.js Snapshot Test",
-        "tests/conformance/failure-injection.test.js Corrupt Snapshot Test"
+        "Frozen v1 snapshot restoration test (5/5 tests green)",
+        "Legacy v0 unversioned migration test",
+        "Round-trip custom host metadata preservation",
+        "Defensive malformed and truncated save handling",
+        "RNG and habituation continuity"
       ],
       "runtime_evidence": [
-        "Complete save/load round-trip equivalence",
+        "Complete save/load round-trip equivalence with 0.000000 diff",
         "Defensive error handling on corrupt snapshot inputs"
       ],
       "benchmark_evidence": [
@@ -199,16 +229,19 @@
       "status": "VERIFIED",
       "implementation_evidence": [
         "packages/core/src/AffectiveAgent.js (safeDt, NaN/Infinity defensive clamping)",
-        "packages/runtime/src/FearServer.js (_readJsonBody 50MB bound, error frames)",
-        "tests/conformance/failure-injection.test.js"
+        "packages/runtime/src/FearServer.js (maxPayloadBytes bound, 413 handling, error frames)",
+        "tests/conformance/failure-injection.test.js",
+        "tests/conformance/transport-failure-matrix.test.js"
       ],
       "test_evidence": [
-        "7/7 failure injection tests green"
+        "7/7 failure injection tests green",
+        "7/7 transport failure matrix tests green"
       ],
       "runtime_evidence": [
         "Server survives malformed HTTP and WS payloads without crashing",
         "Extreme numbers (NaN, Infinity, -99 dt) clamped safely to valid PAD coordinates",
-        "Rapid disconnects release sockets with zero dangling listeners"
+        "Rapid disconnects and 25-client reconnect storms release sockets cleanly",
+        "Payload exceeding 256KB/50MB rejected with HTTP 413"
       ],
       "benchmark_evidence": [
         "Degraded fallback execution < 0.002 ms"
@@ -225,14 +258,17 @@
         "packages/dist/fear-ai-unity.zip",
         "packages/dist/fear-ai-godot.zip",
         "packages/dist/fear-ai-unreal.zip",
+        "packages/dist/fear-ai-csharp.zip",
         "packages/dist/fear-ai-python.zip",
-        "package.json (server, benchmark, pack:adapters scripts)"
+        "packages/dist/CHECKSUMS.sha256",
+        "tools/packaging/pack-adapters.ps1",
+        "package.json (pack:adapters script)"
       ],
       "test_evidence": [
-        "All zip archives generated cleanly via npm run pack:adapters"
+        "All 5 zip archives and SHA256 checksums generated cleanly via npm run pack:adapters"
       ],
       "runtime_evidence": [
-        "Standalone packages ready to drop into Assets/ or addons/"
+        "Standalone packages ready to drop into Unity (UPM), Godot (addons), Unreal (Plugins), .NET, or Python projects"
       ],
       "benchmark_evidence": [],
       "known_gaps": [],

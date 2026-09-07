@@ -6,3 +6,7 @@ test_output.txt
 null
 *.log
 .DS_Store
+__pycache__/
+*.pyc
+bin/
+obj/

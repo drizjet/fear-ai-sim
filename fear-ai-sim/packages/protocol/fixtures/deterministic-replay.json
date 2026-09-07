@@ -1,0 +1,34 @@
+{
+  "version": "1.0.0",
+  "id": "deterministic-replay",
+  "name": "Deterministic Replay Reproducibility",
+  "seed": 1337,
+  "dt": 0.016,
+  "total_ticks": 100,
+  "agents": [
+    {
+      "id": "alpha",
+      "personality": {
+        "neuroticism": 0.6,
+        "fear": 0.7
+      },
+      "position": { "x": 0.0, "y": 0.0, "z": 0.0 }
+    },
+    {
+      "id": "beta",
+      "personality": {
+        "neuroticism": 0.4,
+        "fear": 0.5
+      },
+      "position": { "x": 20.0, "y": 0.0, "z": 0.0 }
+    }
+  ],
+  "trauma_zones": [],
+  "periodic_stimuli": {
+    "alpha_threat_mod": 25,
+    "beta_sound_mod": 20
+  },
+  "assertions": {
+    "identical_across_replays": true
+  }
+}

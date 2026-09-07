@@ -135,6 +135,18 @@ export class HabituationSystem {
         return record ? record.habituationLevel : 0;
     }
 
+    /**
+     * Get number of times exposed to this stimulus
+     * @param {string} stimulusType
+     * @param {string|null} [stimulusId=null]
+     * @returns {number}
+     */
+    getExposureCount(stimulusType, stimulusId = null) {
+        const key = this._getKey(stimulusType, stimulusId);
+        const record = this.exposureMap.get(key);
+        return record ? record.count : 0;
+    }
+
     getState() {
         const entries = [];
         for (const [key, val] of this.exposureMap.entries()) {

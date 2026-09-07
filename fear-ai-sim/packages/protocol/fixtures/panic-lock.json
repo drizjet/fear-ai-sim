@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "id": "panic-lock",
+  "name": "Hysteresis Panic Lock Duration",
+  "seed": 42,
+  "dt": 0.016,
+  "total_ticks": 45,
+  "agents": [
+    {
+      "id": "agent_hysteresis",
+      "personality": {
+        "neuroticism": 0.5,
+        "fear": 0.8
+      },
+      "options": {
+        "fearCoreConfig": {
+          "panicLockTicks": 15
+        }
+      },
+      "position": { "x": 0.0, "y": 0.0, "z": 0.0 }
+    }
+  ],
+  "trauma_zones": [],
+  "stimuli_timeline": [
+    {
+      "from_tick": 0,
+      "to_tick": 9,
+      "observations": {
+        "agent_hysteresis": {
+          "threats": [
+            { "id": "monster", "type": "PREDATOR", "distance": 1, "intensity": 1.0 }
+          ],
+          "sounds": []
+        }
+      }
+    },
+    {
+      "from_tick": 10,
+      "to_tick": 44,
+      "observations": {
+        "agent_hysteresis": {
+          "threats": [],
+          "sounds": []
+        }
+      }
+    }
+  ],
+  "checkpoints": [
+    {
+      "tick": 16,
+      "assertions": {
+        "agent_hysteresis": {
+          "fear_band": "PANIC",
+          "panic_locked": true
+        }
+      }
+    }
+  ],
+  "assertions": {
+    "agent_hysteresis": {
+      "fear_band_not": "PANIC"
+    }
+  }
+}

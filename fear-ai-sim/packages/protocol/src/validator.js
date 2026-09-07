@@ -34,34 +34,51 @@ export class ProtocolValidator {
             };
         }
 
+        let result;
         switch (raw.type) {
             case MESSAGE_TYPES.HANDSHAKE_REQUEST:
-                return ProtocolValidator.validateHandshake(raw);
+                result = ProtocolValidator.validateHandshake(raw);
+                break;
             case MESSAGE_TYPES.REGISTER_AGENT:
-                return ProtocolValidator.validateRegisterAgent(raw);
+                result = ProtocolValidator.validateRegisterAgent(raw);
+                break;
             case MESSAGE_TYPES.UNREGISTER_AGENT:
-                return ProtocolValidator.validateUnregisterAgent(raw);
+                result = ProtocolValidator.validateUnregisterAgent(raw);
+                break;
             case MESSAGE_TYPES.OBSERVATION_DISPATCH:
-                return ProtocolValidator.validateObservation(raw);
+                result = ProtocolValidator.validateObservation(raw);
+                break;
             case MESSAGE_TYPES.BATCH_TICK_REQUEST:
-                return ProtocolValidator.validateBatchTick(raw);
+                result = ProtocolValidator.validateBatchTick(raw);
+                break;
             case MESSAGE_TYPES.STEP_REQUEST:
-                return { valid: true, value: raw };
+                result = { valid: true, value: raw };
+                break;
             case MESSAGE_TYPES.RESET_REQUEST:
-                return { valid: true, value: raw };
+                result = { valid: true, value: raw };
+                break;
             case MESSAGE_TYPES.SAVE_SNAPSHOT_REQUEST:
-                return { valid: true, value: raw };
+                result = { valid: true, value: raw };
+                break;
             case MESSAGE_TYPES.LOAD_SNAPSHOT_REQUEST:
                 if (!raw.snapshot || typeof raw.snapshot !== 'object') {
-                    return { valid: false, errors: ['Missing "snapshot" object'], code: ERROR_CODES.VALIDATION_FAILED };
+                    result = { valid: false, errors: ['Missing "snapshot" object'], code: ERROR_CODES.VALIDATION_FAILED };
+                } else {
+                    result = { valid: true, value: raw };
                 }
-                return { valid: true, value: raw };
+                break;
             case MESSAGE_TYPES.SET_PACING_OVERRIDE:
-                return { valid: true, value: raw };
+                result = { valid: true, value: raw };
+                break;
             default:
                 // Accept unknown messages defensively
-                return { valid: true, value: raw };
+                result = { valid: true, value: raw };
+                break;
         }
+        if (result && result.valid && result.value && (raw.message_id || raw.id)) {
+            result.value.message_id = raw.message_id || raw.id;
+        }
+        return result;
     }
 
     static validateHandshake(raw) {

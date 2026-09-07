@@ -24,7 +24,7 @@
     "desktop:build": "npm run tauri:build",
     "server": "node packages/runtime/bin/fear-ai-server.js",
     "benchmark": "node benchmarks/headless-benchmark.mjs",
-    "pack:adapters": "pwsh -Command \"New-Item -ItemType Directory -Force -Path packages/dist; Compress-Archive -Path packages/adapters/unity/* -DestinationPath packages/dist/fear-ai-unity.zip -Force; Compress-Archive -Path packages/adapters/godot/* -DestinationPath packages/dist/fear-ai-godot.zip -Force; Compress-Archive -Path packages/adapters/unreal/* -DestinationPath packages/dist/fear-ai-unreal.zip -Force; Compress-Archive -Path packages/adapters/python/* -DestinationPath packages/dist/fear-ai-python.zip -Force\""
+    "pack:adapters": "pwsh -File tools/packaging/pack-adapters.ps1"
   },
   "main": "electron-main.cjs",
   "dependencies": {

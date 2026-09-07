@@ -22,6 +22,7 @@ export class FearServer {
         this.host = options.host || '127.0.0.1';
         this.port = options.port || 8765;
         this.simulation = new RuntimeSimulation(options);
+        this.maxPayloadBytes = options.maxPayloadBytes || (50 * 1024 * 1024);
 
         this.httpServer = null;
         this.wss = null;
@@ -41,11 +42,21 @@ export class FearServer {
         return new Promise((resolve, reject) => {
             this.httpServer = http.createServer((req, res) => this._handleHttpRequest(req, res));
 
-            this.wss = new WebSocketServer({ server: this.httpServer });
+            this.wss = new WebSocketServer({ server: this.httpServer, maxPayload: this.maxPayloadBytes });
             this.wss.on('connection', (ws, req) => this._handleWsConnection(ws, req));
 
             this.httpServer.on('error', (err) => {
-                reject(err);
+                if (!this.isRunning) {
+                    reject(err);
+                } else {
+                    console.error('[FearServer] Server error:', err.message);
+                }
+            });
+
+            this.httpServer.on('clientError', (err, socket) => {
+                if (socket && socket.writable) {
+                    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+                }
             });
 
             this.httpServer.listen(this.port, this.host, () => {
@@ -132,7 +143,7 @@ export class FearServer {
         }
 
         if (req.method === 'POST') {
-            this._readJsonBody(req, (err, body) => {
+            this._readJsonBody(req, res, (err, body) => {
                 if (err) {
                     this._sendJson(res, 400, {
                         error: 'Malformed JSON payload',
@@ -250,8 +261,9 @@ export class FearServer {
             }
 
             case '/api/v1/reset': {
-                this.simulation.reset();
-                return this._sendJson(res, 200, { status: 'RESET', tick: 0 });
+                const clearAgents = Boolean(body?.clear_agents);
+                this.simulation.reset({ clearAgents });
+                return this._sendJson(res, 200, { status: 'RESET', tick: 0, agentCount: this.simulation.agents.size });
             }
 
             case '/api/v1/save': {
@@ -275,15 +287,26 @@ export class FearServer {
         }
     }
 
-    _readJsonBody(req, callback) {
+    _readJsonBody(req, res, callback) {
         let raw = '';
+        let destroyed = false;
         req.on('data', (chunk) => {
+            if (destroyed) return;
             raw += chunk;
-            if (raw.length > 50 * 1024 * 1024) { // 50MB limit
-                req.destroy();
+            if (raw.length > this.maxPayloadBytes) {
+                destroyed = true;
+                this._sendJson(res, 413, {
+                    error: 'Payload Too Large',
+                    code: 'PAYLOAD_TOO_LARGE',
+                    maxPayloadBytes: this.maxPayloadBytes
+                });
+                res.on('finish', () => {
+                    try { req.destroy(); } catch {}
+                });
             }
         });
         req.on('end', () => {
+            if (destroyed) return;
             if (!raw || raw.trim() === '') {
                 callback(null, {});
                 return;
@@ -292,6 +315,11 @@ export class FearServer {
                 const parsed = JSON.parse(raw);
                 callback(null, parsed);
             } catch (err) {
+                callback(err);
+            }
+        });
+        req.on('error', (err) => {
+            if (!destroyed) {
                 callback(err);
             }
         });
@@ -334,6 +362,7 @@ export class FearServer {
         }
 
         const payload = validated.value;
+        const correlationId = payload.message_id || msg.message_id || msg.id || null;
 
         switch (payload.type) {
             case MESSAGE_TYPES.HANDSHAKE_REQUEST: {
@@ -342,7 +371,7 @@ export class FearServer {
                     protocol_version: PROTOCOL_VERSION,
                     status: 'ACCEPTED',
                     client_id: payload.client_id
-                });
+                }, correlationId);
                 break;
             }
 
@@ -355,7 +384,7 @@ export class FearServer {
                     type: 'REGISTER_AGENT_ACK',
                     status: 'REGISTERED',
                     agent_id: agent.id
-                });
+                }, correlationId);
                 break;
             }
 
@@ -365,7 +394,7 @@ export class FearServer {
                     type: 'UNREGISTER_AGENT_ACK',
                     status: removed ? 'UNREGISTERED' : 'NOT_FOUND',
                     agent_id: payload.agent_id
-                });
+                }, correlationId);
                 break;
             }
 
@@ -381,7 +410,7 @@ export class FearServer {
                     type: MESSAGE_TYPES.BATCH_TICK_RESPONSE,
                     tick: this.simulation.tickCount,
                     results
-                });
+                }, correlationId);
                 break;
             }
 
@@ -391,7 +420,7 @@ export class FearServer {
                     type: MESSAGE_TYPES.BATCH_TICK_RESPONSE,
                     tick: this.simulation.tickCount,
                     results
-                });
+                }, correlationId);
                 break;
             }
 
@@ -400,7 +429,7 @@ export class FearServer {
                 this._sendWs(ws, {
                     type: MESSAGE_TYPES.SNAPSHOT_RESPONSE,
                     snapshot
-                });
+                }, correlationId);
                 break;
             }
 
@@ -411,7 +440,7 @@ export class FearServer {
                     status: 'LOADED',
                     tick: this.simulation.tickCount,
                     agentCount: this.simulation.agents.size
-                });
+                }, correlationId);
                 break;
             }
 
@@ -421,7 +450,7 @@ export class FearServer {
                     type: 'RESET_ACK',
                     status: 'RESET',
                     tick: 0
-                });
+                }, correlationId);
                 break;
             }
 
@@ -430,27 +459,30 @@ export class FearServer {
                 this._sendWs(ws, {
                     type: 'SET_PACING_OVERRIDE_ACK',
                     pacing: this.simulation.pacing.getState()
-                });
+                }, correlationId);
                 break;
             }
 
             default:
-                this._sendWsError(ws, `Unhandled message type: ${payload.type}`, ERROR_CODES.MALFORMED_MESSAGE);
+                this._sendWsError(ws, `Unhandled message type: ${payload.type}`, ERROR_CODES.MALFORMED_MESSAGE, correlationId);
         }
     }
 
-    _sendWs(ws, data) {
+    _sendWs(ws, data, correlationId = null) {
         if (ws.readyState === WebSocket.OPEN) {
+            if (correlationId) {
+                data.message_id = correlationId;
+            }
             ws.send(JSON.stringify(data));
         }
     }
 
-    _sendWsError(ws, message, code = ERROR_CODES.SIMULATION_ERROR) {
+    _sendWsError(ws, message, code = ERROR_CODES.SIMULATION_ERROR, correlationId = null) {
         this._sendWs(ws, {
             type: MESSAGE_TYPES.ERROR_RESPONSE,
             error: message,
             code
-        });
+        }, correlationId);
     }
 }
 

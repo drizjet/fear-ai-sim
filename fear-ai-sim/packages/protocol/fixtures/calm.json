@@ -1,0 +1,40 @@
+{
+  "version": "1.0.0",
+  "id": "calm",
+  "name": "Calm Baseline Stability",
+  "seed": 42,
+  "dt": 0.016,
+  "total_ticks": 30,
+  "agents": [
+    {
+      "id": "agent_calm",
+      "personality": {
+        "neuroticism": 0.3,
+        "fear": 0.4
+      },
+      "position": { "x": 0.0, "y": 0.0, "z": 0.0 }
+    }
+  ],
+  "trauma_zones": [],
+  "stimuli_timeline": [
+    {
+      "from_tick": 0,
+      "to_tick": 29,
+      "observations": {
+        "agent_calm": {
+          "threats": [],
+          "sounds": []
+        }
+      }
+    }
+  ],
+  "assertions": {
+    "agent_calm": {
+      "fear_band": "CALM",
+      "arousal_max": 0.35,
+      "valence_min": 0.0,
+      "heartbeat_bpm_max": 95,
+      "intent_type": "CAUTIOUS_EXPLORE"
+    }
+  }
+}

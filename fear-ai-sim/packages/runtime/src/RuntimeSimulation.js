@@ -188,13 +188,17 @@ export class RuntimeSimulation {
     /**
      * Reset simulation to initial baseline
      */
-    reset() {
+    reset(options = {}) {
         this.rng = new DeterministicRng(this.seed);
         this.tickCount = 0;
         this.pendingObservations.clear();
         this.trauma.clear();
         this.contagion.clearEdges();
         this.pacing.reset();
+        if (options.clearAgents) {
+            this.agents.clear();
+            return;
+        }
         for (const agent of this.agents.values()) {
             agent.fearCore.reset('CALM');
             agent.currentFear = 0;
@@ -217,32 +221,49 @@ export class RuntimeSimulation {
         }
 
         return {
+            version: 1,
             seed: this.seed,
             tickCount: this.tickCount,
             rng: this.rng.getState(),
             pacing: this.pacing.getState(),
             trauma: this.trauma.getState(),
-            agents: agentsSnapshot
+            agents: agentsSnapshot,
+            customMetadata: this.customMetadata ? { ...this.customMetadata } : {}
         };
     }
 
     /**
-     * Restore simulation from snapshot
+     * Restore simulation from snapshot with automatic migration and schema safety
      * @param {object} snapshot
+     * @returns {{ success: boolean, version?: number, agentCount?: number, error?: string }}
      */
     loadSnapshot(snapshot) {
-        if (!snapshot) return;
-        this.seed = snapshot.seed ?? this.seed;
-        this.tickCount = snapshot.tickCount ?? 0;
-        if (snapshot.rng) this.rng.setState(snapshot.rng);
-        if (snapshot.pacing) this.pacing.setState(snapshot.pacing);
-        if (snapshot.trauma) this.trauma.setState(snapshot.trauma);
+        if (!snapshot || typeof snapshot !== 'object') {
+            return { success: false, error: 'Snapshot must be a non-null object' };
+        }
+
+        // Schema versioning & migration
+        const version = typeof snapshot.version === 'number' ? snapshot.version : 1;
+        let migrated = snapshot;
+        if (version < 1) {
+            migrated = { ...snapshot, version: 1 };
+        }
+
+        this.seed = migrated.seed ?? this.seed;
+        this.tickCount = migrated.tickCount ?? 0;
+        if (migrated.rng) this.rng.setState(migrated.rng);
+        if (migrated.pacing) this.pacing.setState(migrated.pacing);
+        if (migrated.trauma) this.trauma.setState(migrated.trauma);
+        if (migrated.customMetadata && typeof migrated.customMetadata === 'object') {
+            this.customMetadata = { ...migrated.customMetadata };
+        }
 
         this.agents.clear();
         this.pendingObservations.clear();
 
-        if (Array.isArray(snapshot.agents)) {
-            for (const aData of snapshot.agents) {
+        if (Array.isArray(migrated.agents)) {
+            for (const aData of migrated.agents) {
+                if (!aData || typeof aData !== 'object' || !aData.id) continue;
                 const agent = new AffectiveAgent(aData.id, aData.traits, {
                     name: aData.name,
                     rng: () => this.rng.random()
@@ -251,6 +272,8 @@ export class RuntimeSimulation {
                 this.agents.set(agent.id, agent);
             }
         }
+
+        return { success: true, version, agentCount: this.agents.size };
     }
 
     getStatus() {

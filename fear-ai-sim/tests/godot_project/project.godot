@@ -1,0 +1,12 @@
+; Engine configuration file for Fear AI Real-Engine Godot Verification
+config_version=5
+
+[application]
+
+config/name="FearAIGodotVerification"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.6", "Forward Plus")
+
+[autoload]
+
+FearAIClient="*res://addons/fear_ai/fear_ai_client.gd"
