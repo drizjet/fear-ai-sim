@@ -1,0 +1,20 @@
+{
+  "name": "@fear-ai/core",
+  "version": "1.0.0",
+  "description": "Headless, zero-dependency, deterministic Fear AI simulation engine",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "keywords": [
+    "fear-ai",
+    "affective-computing",
+    "game-ai",
+    "horror",
+    "headless",
+    "deterministic"
+  ],
+  "author": "Google DeepMind / Fear AI Systems",
+  "license": "MIT"
+}

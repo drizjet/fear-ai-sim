@@ -1,0 +1,18 @@
+{
+  "name": "@fear-ai/protocol",
+  "version": "1.0.0",
+  "description": "Wire protocol, schemas, and validators for Fear AI middleware",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "keywords": [
+    "fear-ai",
+    "protocol",
+    "schema",
+    "game-middleware"
+  ],
+  "author": "Google DeepMind / Fear AI Systems",
+  "license": "MIT"
+}

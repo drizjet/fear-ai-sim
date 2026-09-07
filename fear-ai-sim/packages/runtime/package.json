@@ -1,0 +1,20 @@
+{
+  "name": "@fear-ai/runtime",
+  "version": "1.0.0",
+  "description": "Universal Transport & Orchestration Server for Fear AI middleware",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "fear-ai-server": "./bin/fear-ai-server.js"
+  },
+  "exports": {
+    ".": "./index.js"
+  },
+  "dependencies": {
+    "@fear-ai/core": "^1.0.0",
+    "@fear-ai/protocol": "^1.0.0",
+    "ws": "^8.16.0"
+  },
+  "author": "Google DeepMind / Fear AI Systems",
+  "license": "MIT"
+}

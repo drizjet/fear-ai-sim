@@ -62,6 +62,7 @@ export default {
     // Mock static assets and 3D library
     moduleNameMapper: {
         '\\.(css|less|scss|sass)$': 'identity-obj-proxy',
-        '^three$': '<rootDir>/tests/mocks/three.js'
+        '^three$': '<rootDir>/tests/mocks/three.js',
+        '^ws$': '<rootDir>/node_modules/ws/wrapper.mjs'
     }
     };
