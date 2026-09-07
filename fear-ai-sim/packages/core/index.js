@@ -61,5 +61,16 @@ export {
     COMMODITY_TYPES,
     DEFAULT_CIV_CONFIG
 } from './src/CivilizationSimulationSystem.js';
+export {
+    WorldSimulationSystem,
+    ROAMING_PARTY_TYPES,
+    ROAMING_STATES,
+    ENCOUNTER_TYPES,
+    ENCOUNTER_RESOLUTIONS,
+    RUMOR_TOPICS,
+    WORLD_EVENT_TYPES,
+    DEFAULT_WORLD_CONFIG
+} from './src/WorldSimulationSystem.js';
+
 
 

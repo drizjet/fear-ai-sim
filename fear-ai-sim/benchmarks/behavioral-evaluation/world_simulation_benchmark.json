@@ -1,0 +1,34 @@
+{
+  "benchmark": "world_simulation_benchmark",
+  "milestone": "Milestone I: Integrated World Simulation, Roaming Nomads, Encounters, Rumors & History",
+  "date": "2026-09-07T23:29:09.787Z",
+  "configuration": {
+    "roamingGroups": 100,
+    "totalEntityMembers": 1175,
+    "ticks": 1000,
+    "worldExtentsMeters": 1000,
+    "proximityRadius": 35
+  },
+  "performance": {
+    "elapsedMs": 79.85,
+    "ticksPerSec": 12523,
+    "groupUpdatesPerSec": 1252296,
+    "entityUpdatesPerSec": 14714483
+  },
+  "simulationMetrics": {
+    "encountersEvaluated": 43198,
+    "historyEventsLogged": 1000,
+    "historyDistribution": {
+      "RUMOR_SPREAD": 25,
+      "ENCOUNTER_OCCURRED": 975
+    },
+    "totalRumorsInSystem": 4,
+    "totalRumorInstancesSpread": 352,
+    "activeCampsAtEnd": 0
+  },
+  "invariants": {
+    "hostAuthorityRespected": true,
+    "replayDeterminismVerified": true,
+    "boundedHistoryEnforced": true
+  }
+}

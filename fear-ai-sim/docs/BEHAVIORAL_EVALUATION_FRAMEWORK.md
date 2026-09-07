@@ -917,6 +917,81 @@ Executed via the official headless binary (`C:\tools\02-Dev\godot\Godot_v4.6-sta
 - **Result**: 3 / 3 Engine Conformance Checks Passed (100% parity).
 - **Execution Time**: Under 200 ms in headless console mode.
 
+---
+
+## 14. Milestone I: Integrated World Simulation, Roaming Nomads, Systemic Encounters & History Ledger
+
+Milestone I integrates world-scale simulation dynamics into `packages/core/src/WorldSimulationSystem.js`, establishing an engine-agnostic middleware layer for roaming and nomadic groups, Fallout-style emergent systemic encounters, rumor and belief propagation across physical encounters, and a causally linked world history ledger.
+
+### 14.1 Roaming & Nomadic Groups Architecture
+
+The world simulation supports 7 distinct roaming party topologies:
+- `PATROL`: Military scouting, border enforcement, territory protection.
+- `CARAVAN`: Commercial traders transporting goods between nodes.
+- `REFUGEES`: Displaced civilians fleeing famine, war, or disaster.
+- `BANDITS`: Predatory raiders stalking contested transit corridors.
+- `NOMAD_TRIBE`: Seasonal migration between forage and water grounds.
+- `MERCENARIES`: Armed mercenary company seeking contracts or territory.
+- `WILDLIFE_PACK`: Predators or territorial beasts driven by hunger.
+
+#### Motivational Driver Vectors:
+Each group maintains internal motivational drivers:
+$$\mathbf{M}_{\text{group}} = \langle \text{fatigue},\, \text{hunger},\, \text{threatPressure},\, \text{morale} \rangle$$
+
+- **Camp Lifecycle**:
+  - Fatigue accumulates during travel ($\Delta f = +0.005/\text{tick}$).
+  - When $\text{fatigue} \ge 0.80$, the group establishes a camp site (`INTENT_ESTABLISH_CAMP`) and rests.
+  - While camped, fatigue recovers ($\Delta f = -0.020/\text{tick}$).
+  - When $\text{fatigue} \le 0.10$, the group breaks camp (`INTENT_BREAK_CAMP`) and resumes route traversal.
+- **Foraging & Subsistence**:
+  - When hunger breaches starvation threshold ($\text{hunger} \ge 0.75$), groups transition to `FORAGING` (`INTENT_FORAGE`).
+  - Upon satiety ($\text{hunger} \le 0.15$), they resume their primary travel intent (`INTENT_MARCH`).
+
+### 14.2 Systemic Emergent Encounters (Fallout-style Organic Intersections)
+
+Rather than static authored encounter tables, encounters emerge organically when roaming groups cross within proximity ($r \le 35\text{m}$):
+- **Contextual Synthesis**:
+  - Evaluates Faction bilateral escalation stage from `FactionSystem` (`getBilateralStance`).
+  - Evaluates Relationship tensor $\mathbf{R}_{ij}$ (trust, grievance, dominance) between party leaders.
+  - Evaluates military power ratio $\frac{\text{Power}_A}{\text{Power}_B}$ and wealth levels.
+- **Emergent Encounter Matrix**:
+  - Bandits intercepting a wealthy caravan with a power ratio $> 1.4\times$ emit `AMBUSH_INTERCEPTION` with advisory resolution `EXTORTION_PAID` ($\text{urgency} = 0.85$).
+  - Rival patrols belonging to factions in `MOBILIZE`, `SKIRMISH`, or `ATTACK` emit `BORDER_SKIRMISH` with advisory resolution `COMBAT_ENGAGEMENT` ($\text{urgency} = 0.90$).
+  - Refugees encountering a benevolent patrol emit `REFUGEE_ENCOUNTER` with advisory resolution `AID_PROVIDED`.
+  - Predator packs encountering travelers emit `WILDLIFE_AMBUSH` with advisory resolution `COMBAT_ENGAGEMENT`.
+  - Peacetime trade caravans crossing paths emit `PEACEFUL_CONVERGENCE` with advisory resolution `PEACEFUL_TRADE`.
+
+### 14.3 Information, Rumor & Belief Dynamics
+
+Distinguishes ground truth from observation, belief, and rumor:
+- **Rumor Model**:
+  $$\mathbf{R} = \langle \text{id},\, \text{topic},\, \text{truthEventId},\, \text{originLocation},\, \text{severity} \in [0, 1],\, \text{fidelity} \in [0, 1],\, \text{credibility} \in [0, 1],\, \text{hops} \rangle$$
+- **Transmission Mechanics**:
+  - Rumors are exchanged during encounters and camp meetings.
+  - Per-hop fidelity degradation: $\text{fidelity}' = \text{fidelity} \cdot (1.0 - \lambda_{\text{hop}})$, with $\lambda_{\text{hop}} = 0.12$.
+  - Distortion jitter: Severity undergoes stochastic noise proportional to transmission distortion rate ($\pm 10\%$).
+  - Trust & Neuroticism gating:
+    $$\text{Credibility} = \text{clamp}_{[0, 1]}\left((0.35 + 0.65 \cdot \mathbf{R}_{\text{receiver} \to \text{sender}}.\text{trust}) \cdot \text{fidelity} + (\text{Neuroticism} \cdot \mathbf{1}_{\text{severity} > 0.6} \cdot 0.25)\right)$$
+    High neuroticism specifically amplifies credulity toward alarming or catastrophic rumors, creating systemic misinformation cascades that can escalate faction border tensions.
+
+### 14.4 Causally Linked World History Ledger
+
+Maintains an immutable chronological record of world-shaping events:
+- Event types: `ENCOUNTER_OCCURRED`, `BATTLE_FOUGHT`, `CAMP_ESTABLISHED`, `CAMP_ABANDONED`, `MIGRATION_COMPLETED`, `RUMOR_SPREAD`.
+- Bounded ring buffer policy: strictly enforces `maxHistoryEvents = 1,000` to prevent memory explosion during million-tick simulations.
+- Queryable by entity, faction, topic, or timestamp.
+
+### 14.5 Empirical Benchmark Validation (100 Roaming Groups, 1,175 Entities, 1,000 Ticks)
+
+Evaluated via `benchmarks/behavioral-evaluation/world_simulation_benchmark.mjs`:
+- **Simulation Horizon**: 1,000 continuous ticks with authoritative host game movement.
+- **Encounter Throughput**: 43,198 proximity encounter evaluations executed cleanly.
+- **Rumor Spread**: 352 rumor instances propagated organically across roaming networks.
+- **History Ledger**: 1,000 events recorded and ring-buffer bounded.
+- **Replay Determinism**: 100% bit-for-bit trajectory equivalence across mid-point snapshot restore at tick 500.
+- **Performance**: Executed in **79.85 ms** (**12,523 ticks/sec** | **14,714,483 entity updates/sec**).
+
+
 
 
 
