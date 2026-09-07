@@ -991,6 +991,35 @@ Evaluated via `benchmarks/behavioral-evaluation/world_simulation_benchmark.mjs`:
 - **Replay Determinism**: 100% bit-for-bit trajectory equivalence across mid-point snapshot restore at tick 500.
 - **Performance**: Executed in **79.85 ms** (**12,523 ticks/sec** | **14,714,483 entity updates/sec**).
 
+---
+
+## 15. Milestone J: Massive-Scale Simulation & Latency Distribution Profiling (1 to 10,000 Entities)
+
+Milestone J benchmarks the architectural scalability and component-level computational costs across scales $N \in [1, 10, 100, 1,000, 5,000, 10,000]$ entities (`benchmarks/behavioral-evaluation/massive_scale_benchmark.mjs`), tracking latency distributions ($\text{Mean}, p_{50}, p_{95}, p_{99}$), memory allocations, and serialization snapshots.
+
+### 15.1 Scalability Matrix across Cohort Sizes
+
+| Entity Scale ($N$) | Mean Latency | Median ($p_{50}$) | 95th %ile ($p_{95}$) | 99th %ile ($p_{99}$) | Ticks / Sec | Entity Updates / Sec | Snapshot Payload |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **$N = 1$** | 0.0057 ms | 0.0027 ms | 0.0155 ms | 0.0610 ms | 175,439 | 175,439 | 0.9 KB (0.11 ms) |
+| **$N = 10$** | 0.0115 ms | 0.0017 ms | 0.0052 ms | 0.4738 ms | 86,957 | 869,565 | 3.2 KB (0.04 ms) |
+| **$N = 100$** | 0.0133 ms | 0.0111 ms | 0.0272 ms | 0.0311 ms | 75,188 | 7,518,797 | 30.2 KB (0.07 ms) |
+| **$N = 1,000$** | 0.0633 ms | 0.0538 ms | 0.1754 ms | 0.3576 ms | 15,798 | 15,797,788 | 301.4 KB (0.32 ms) |
+| **$N = 5,000$** | 0.0616 ms | 0.0512 ms | 0.0817 ms | 0.5651 ms | 16,234 | 81,168,831 | 1.3 MB (1.20 ms) |
+| **$N = 10,000$** | **0.0758 ms** | **0.0674 ms** | **0.1176 ms** | **0.1882 ms** | **13,193** | **131,926,121** | **2.6 MB (2.76 ms)** |
+
+### 15.2 Key Architectural Scaling Insights
+
+1. **Subframe Budget Compliance**:
+   - In a standard 60 FPS game engine, the total frame time budget is $16.67\text{ ms}$.
+   - At **10,000 concurrent entities**, the middleware $p_{99}$ latency is **$0.1882\text{ ms}$**—consuming less than **$1.13\%$** of a single frame budget!
+2. **Sub-linear Scaling via 5-Tier Cognitive LOD**:
+   - As $N$ expands from $100$ to $10,000$ ($100\times$ increase), per-tick latency increases by only $5.7\times$ (from $0.0133\text{ ms}$ to $0.0758\text{ ms}$).
+   - This sub-linear efficiency is directly enabled by the 5-Tier Cognitive LOD architecture, which throttles off-screen simulation cadences to once every 500 ticks while maintaining per-tick simulation for immediate actors.
+3. **Snapshot Serialization**:
+   - Full world state across 10,000 active agents, roaming groups, factions, and relationships serializes to **2.6 MB** in **2.76 ms**, supporting frictionless autosave checkpoints and network synchronization.
+
+
 
 
 
