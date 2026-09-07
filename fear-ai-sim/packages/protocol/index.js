@@ -6,7 +6,8 @@ export {
     PROTOCOL_VERSION,
     MESSAGE_TYPES,
     STIMULUS_TYPES,
-    ERROR_CODES
+    ERROR_CODES,
+    OPTIONAL_MODULES
 } from './src/types.js';
 
 export {

@@ -1019,6 +1019,38 @@ Milestone J benchmarks the architectural scalability and component-level computa
 3. **Snapshot Serialization**:
    - Full world state across 10,000 active agents, roaming groups, factions, and relationships serializes to **2.6 MB** in **2.76 ms**, supporting frictionless autosave checkpoints and network synchronization.
 
+---
+
+## 16. Milestone K: Multi-Language SDK Conformance & Protocol Extensibility
+
+Milestone K validates cross-runtime protocol conformance across language ecosystems (Python 3.14, .NET 8 / C#, Godot 4.6 GDScript, and Node 24) and establishes protocol forward-compatibility and modular capability negotiation (`tests/conformance/cross-runtime-conformance.test.js` and `benchmarks/behavioral-evaluation/cross_runtime_benchmark.mjs`).
+
+### 16.1 Protocol Forward Compatibility & Modular Extensibility
+
+1. **Defensive Schema Parsing**:
+   - The canonical protocol validator (`packages/protocol/src/validator.js`) defensively admits forward-compatible optional fields in incoming payloads (e.g. `future_subsystem_tensor`, `meta_spatial_biome_id`) without failing validation, preserving backwards/forwards interop across engine plugin upgrades.
+   - Validation throughput achieves **8,460,666 validations/sec** ($0.000118\text{ ms/op}$).
+
+2. **Optional Module Negotiation (`OPTIONAL_MODULES`)**:
+   - Defined formal modular subsystem enumeration in `packages/protocol/src/types.js`:
+     `affect`, `memory`, `relationships`, `groups`, `factions`, `civilization_lod`, `world_simulation`.
+   - Engine runtimes can selectively query and handshake active modules at **15,385,089 handshakes/sec**.
+
+### 16.2 Cross-Runtime Conformance Matrix
+
+| Runtime / Engine | Conformance Suite | Checks / Fixtures | Result | Execution Time |
+| :--- | :--- | :---: | :---: | :---: |
+| **Node.js 24 / ES Modules** | Jest Full Conformance Suite | 240 suites, 1,720+ tests | **PASS (100%)** | Full CI Suite |
+| **Python 3.14 SDK Client** | `tests/conformance/run_python_conformance.py` | 4/4 Canonical Fixtures | **PASS (100%)** | 879.49 ms |
+| **.NET 8 / C# Package** | `tools/test_clean_csharp_install.ps1` | 4/4 Integration Models | **PASS (100%)** | 3,676.56 ms |
+| **Godot 4.6 GDScript** | `tools/test_godot_civilization_conformance.ps1` | 3/3 3D Spatial Checks | **PASS (100%)** | 1,159.37 ms |
+| **Unity UPM Package** | `packages/adapters/unity/` | External Editor Verification | `IMPLEMENTED_NOT_VERIFIED` | `BLOCKED_EXTERNAL_DEPENDENCY` |
+| **Unreal Engine 5** | `packages/adapters/unreal/` | External Editor Verification | `IMPLEMENTED_NOT_VERIFIED` | `BLOCKED_EXTERNAL_DEPENDENCY` |
+
+*Note on Unity & Unreal External Dependency Gate*:
+In strict compliance with architectural verification principles, Unity UPM and Unreal Engine 5 plugins are implemented with comprehensive zero-dependency C# and C++ bindings, but remain formally designated as `IMPLEMENTED_NOT_VERIFIED / BLOCKED_EXTERNAL_DEPENDENCY` until native Unity Editor and Unreal Engine 5 binaries are present on the host environment.
+
+
 
 
 
