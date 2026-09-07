@@ -44,6 +44,25 @@ import { AffectiveAgent, DeterministicRng } from '../../packages/core/index.js';
 import { CANONICAL_ARCHETYPES, buildExtendedCohort } from './fabe_v2_benchmark.mjs';
 import { FROZEN_SEEDS } from './construct_validity_sweeps.mjs';
 
+export const FROZEN_BENCHMARK_SPEC_V2_1 = Object.freeze({
+    version: '2.1.0-frozen',
+    frozenDate: '2026-09-07',
+    status: 'FROZEN',
+    scenariosCount: 12,
+    threatDomainsCount: 3,
+    canonicalK: 12,
+    extendedK: 60,
+    seedsCount: 10,
+    frozenSeeds: FROZEN_SEEDS,
+    featureCount: 8,
+    inferenceProtocols: {
+        modeA: 'Source-Only Inductive Linear Ridge / Mean Residualization',
+        modeB: 'Transductive Domain Adaptation (Strictly Leave-Query-Persona-Out)',
+        modeC: 'Population Diagnostic Oracle',
+        nearNeighborClustering: 'Multiway Crossed-Cluster Bootstrap (B=1000) & Cluster Permutation Test (N=10000)'
+    }
+});
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
