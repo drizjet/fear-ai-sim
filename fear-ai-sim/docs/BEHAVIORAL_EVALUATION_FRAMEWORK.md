@@ -679,6 +679,87 @@ $$\mathbf{R}_{ij} = \langle \text{trust} \in [-1, 1],\, \text{fear} \in [0, 1],\
    - Entity despawn completely purged all inbound and outbound edges (`purgeAgent`).
    - Checkpoint restoration at tick 700 produced **100% bit-for-bit trajectory equivalence** to tick 2,000.
 
+---
+
+## 10. Milestone E: Group Contagion Cascades & Emergent Rally Dynamics
+
+Milestone E establishes structured group intelligence, non-linear panic cascades, and heroic rally dynamics (`packages/core/src/GroupContagionSystem.js`). It models collective emergent states for squads, patrols, caravans, crowds, and settlement defenders while strictly adhering to the **Host Game Authority Invariant** (recommending formation directives, cohesion indices, and contagion multipliers without usurping host engine movement or physics).
+
+### 10.1 Structured Group Architecture & Doctrinal Policies
+
+Groups are modeled as collective social units characterized by type, behavioral doctrine, leadership hierarchy, and dynamic morale:
+
+$$\mathbf{G} = \langle \text{id},\, \text{type},\, \text{doctrine},\, \text{leaderId},\, \mathbf{M},\, S_G,\, D_G,\, C_G,\, M_G \rangle$$
+
+1. **Group Types**:
+   - `SQUAD`: Cohesive tactical military unit with assigned command structure.
+   - `PATROL`: Roaming reconnaissance squad evaluating perimeter danger.
+   - `CARAVAN`: High-value escorted transport sensitive to escort integrity.
+   - `CIVILIAN_CROWD`: Unstructured civilian gathering highly susceptible to stampedes.
+   - `SETTLEMENT_DEFENSE`: Defensive militia anchoring fortified locations.
+
+2. **Group Doctrines & Bifurcation Modifiers**:
+   - `DISCIPLINED_STAND`: High panic threshold ($\theta_{\text{base}} + 0.15$), coordinated fighting stand under stress.
+   - `TACTICAL_RETREAT`: Coordinated retrograde movement when pressured.
+   - `SELF_PRESERVATION`: Low panic threshold ($\theta_{\text{base}} - 0.15$), quick to scatter.
+   - `ESCORT`: Prioritizes designated VIP/cargo preservation over individual survival.
+
+3. **Emergent Collective States ($S_G$)**:
+   - `COHESIVE_CALM`: Disciplined formation, normal vigilance.
+   - `VIGILANT_ALERT`: Elevated tension, defensive posture.
+   - `CONTESTED_STAND`: Squad absorbing acute isolated stress without breaking.
+   - `RALLYING`: Calm leader actively projecting authority to restore wavering peers.
+   - `CASCADE_TRIGGERED`: Tipping point breached; viral spread of panic throughout unit.
+   - `SCATTERED_STAMPEDE`: Total loss of cohesion; chaotic flight and crowd crushing risk.
+   - `FRAGMENTED`: Squad integrity dissolved due to heavy desertion ($\ge 50\%$).
+
+### 10.2 Critical Mass Bifurcation Point (Non-Linear Tipping Points)
+
+Panic contagion is governed by a dynamic bifurcation threshold:
+
+$$\theta_{\text{bifurcation}} = \theta_{\text{base}} + \Delta_{\text{doctrine}} + \begin{cases} 0.10 \cdot L_{\text{leader}} & \text{if leader is calm} \\ 0.0 & \text{otherwise} \end{cases}$$
+
+When the panicking ratio $\rho_{\text{panic}} = \frac{N_{\text{panicking}}}{N_{\text{active}}} \ge \theta_{\text{bifurcation}}$, the collective experiences a phase transition into `CASCADE_TRIGGERED` or `SCATTERED_STAMPEDE`.
+
+- **Isolated Stress Absorption**: A single panicking recruit in a 6-man disciplined squad ($\rho = 16.7\%$) is absorbed within `CONTESTED_STAND` ($\theta = 64.0\%$), maintaining squad cohesion at $0.90$.
+- **Civilian Crowd Bifurcation**: In an unstructured crowd with `SELF_PRESERVATION` doctrine ($\theta = 25.0\%$), panic spreading to 2 of 4 civilians ($50.0\%$) instantly triggers an irreversible stampede cascade.
+
+### 10.3 Heroic Leader Rally Dynamic & Reassurance Gating
+
+When multiple squad members waver ($N_{\text{panicking}} \ge 2$) but the overall threshold is not yet breached, a calm leader ($F_{\text{leader}} < 0.35, L_{\text{leader}} \ge 0.50$) initiates a **Heroic Rally**:
+1. Unit transitions to `RALLYING` state with `RALLY_TO_LEADER` directive.
+2. Contagion susceptibility is cut in half across the squad ($0.5\times$ contagion multiplier).
+3. Leaders calm wavering members within spatial radius $r \le 35\text{m}$.
+4. **Relationship Gating**: Rally is strictly gated by the directed relationship tensor $\mathbf{R}_{i \to \text{leader}}$. Members who harbor grievance ($\text{grievance} > 0.40$) or lack respect ($\text{respect} < 0.30$) reject the leader's calming influence.
+
+### 10.4 Leader Break Catastrophe
+
+If the squad leader's fear breaches critical panic ($F_{\text{leader}} > 0.75$ with active panic lock):
+1. Squad cohesion collapses immediately by $\ge 50\%$.
+2. Follower panic contagion is magnified by `leaderPanicMultiplier` ($2.0\times$), scaling up to $3.6\times$ total contagion in a stampede.
+3. This reliably reproduces the historical military phenomenon where the flight of a commander produces an instantaneous, uncoordinated rout.
+
+### 10.5 Cowardly Desertion & Social Abandonment Grievance
+
+Under cascade conditions, individual agents evaluate desertion based on personal disposition:
+
+$$\text{score}_{\text{desert}} = 0.7 \cdot F_i - 0.4 \cdot C_i - 0.3 \cdot R_i$$
+
+- If $\text{score}_{\text{desert}} > 0.45$ and $F_i \ge 0.70$, the cowardly agent abandons the unit.
+- **Social Grievance Propagation**: Upon desertion, an `ABANDONMENT` interaction is automatically registered across all remaining loyal members toward the deserter, permanently spiking grievance ($\ge 0.20$) and destroying trust ($\le 0.50$).
+- If $\ge 50\%$ of members desert, the unit collapses into `FRAGMENTED`.
+
+### 10.6 Empirical Benchmark Validation (1,000 Ticks)
+
+Evaluated via `benchmarks/behavioral-evaluation/group_contagion_rally_benchmark.mjs`:
+- **Phase 1 (Isolated Stress)**: Squad maintained `CONTESTED_STAND` (cohesion $0.90$, panicking ratio $16.7\% < 64.0\%$).
+- **Phase 2 (Heroic Rally)**: Leader rallied all 5 eligible squad members within 35m, dampening fear by $>0.20$.
+- **Phase 3 (Bifurcation Point)**: Civilian crowd triggered cascade when panicking ratio hit $50.0\% \ge 25.0\%$.
+- **Phase 4 (Leader Break Catastrophe)**: Leader panic at $0.95$ induced cohesion collapse and $3.6\times$ stampede contagion multiplier.
+- **Phase 5 (Desertion & Grievance)**: Deserter defected; remaining loyalists recorded abandonment grievances.
+- **Determinism**: 100% bit-for-bit replay equivalence from snapshot restoration.
+
+
 
 
 

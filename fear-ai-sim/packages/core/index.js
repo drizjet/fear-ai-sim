@@ -38,4 +38,13 @@ export {
     INTERACTION_TYPES,
     DEFAULT_RELATIONSHIP_CONFIG
 } from './src/RelationshipTensorSystem.js';
+export {
+    GroupContagionSystem,
+    GROUP_TYPES,
+    GROUP_DOCTRINES,
+    GROUP_STATES,
+    GROUP_DIRECTIVES,
+    DEFAULT_GROUP_CONFIG
+} from './src/GroupContagionSystem.js';
+
 

@@ -1,0 +1,60 @@
+{
+  "benchmark": "Fear AI Group Contagion & Rally Dynamics Benchmark",
+  "version": "1.0.0",
+  "timestamp": "2026-09-07T23:10:50.528Z",
+  "totalTicks": 1000,
+  "phases": {
+    "phase1_isolated_stress": {
+      "squadState": "CONTESTED_STAND",
+      "directive": "STAND_GROUND",
+      "panickingRatio": 0.16666666666666666,
+      "bifurcationThreshold": 0.64,
+      "squadHeld": true,
+      "cohesion": 0.9
+    },
+    "phase2_leader_rally": {
+      "squadState": "RALLYING",
+      "directive": "RALLY_TO_LEADER",
+      "ralliedCount": 5,
+      "rallyActive": true,
+      "ralliedAgents": [
+        "vet_medic",
+        "point_scout",
+        "loyal_follower",
+        "heavy_defender",
+        "rookie_civilian"
+      ]
+    },
+    "phase3_cascade_bifurcation": {
+      "crowdState": "CASCADE_TRIGGERED",
+      "crowdDirective": "SCATTER_AND_FLEE",
+      "cascadeTriggered": true,
+      "panickingRatio": 0.5,
+      "threshold": 0.25
+    },
+    "phase4_leader_collapse": {
+      "squadState": "SCATTERED_STAMPEDE",
+      "squadDirective": "SCATTER_AND_FLEE",
+      "cohesionCollapsed": true,
+      "leaderPanicMultiplier": 3.6,
+      "stampedeTriggered": true
+    },
+    "phase5_desertion": {
+      "desertersCount": 1,
+      "squadFragmentedOrStampeding": true,
+      "abandonmentGrievanceRecorded": true
+    }
+  },
+  "invariants": {
+    "checkpointDeterminism": {
+      "deterministic": true
+    }
+  },
+  "metrics": {},
+  "summary": {
+    "allInvariantsPass": true,
+    "bifurcationVerified": true,
+    "rallyDynamicsVerified": true,
+    "leaderCollapseCatastropheVerified": true
+  }
+}

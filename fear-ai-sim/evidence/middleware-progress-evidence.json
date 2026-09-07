@@ -460,7 +460,45 @@
         "Altruism Refusal on Betrayal: 100.0% (0.000 helping rate)"
       ],
       "known_gaps": [],
-      "next_action": "TRANSITION_TO_GROUP_CONTAGION_AND_RALLY_DYNAMICS (MILESTONE E)"
+      "next_action": "COMPLETE_AND_MAINTAIN"
+    },
+    {
+      "milestone": "GROUP_CONTAGION_AND_RALLY_DYNAMICS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/GroupContagionSystem.js",
+        "packages/core/index.js",
+        "benchmarks/behavioral-evaluation/group_contagion_rally_benchmark.mjs",
+        "benchmarks/behavioral-evaluation/group_contagion_rally.json",
+        "tests/group-contagion-rally.test.js",
+        "docs/BEHAVIORAL_EVALUATION_FRAMEWORK.md"
+      ],
+      "test_evidence": [
+        "tests/group-contagion-rally.test.js (9/9 tests green):",
+        "1. Group registration, membership management, and leadership assignment",
+        "2. Isolated stress absorption: single panicking agent in disciplined squad absorbed in CONTESTED_STAND without cascade",
+        "3. Heroic Leader active rally: calm leader dampens fear across wavering peers within spatial rally radius",
+        "4. Leader Reassurance Gating: members with grievance >0.4 or respect <0.3 reject leader rally",
+        "5. Critical mass bifurcation point: panic cascade triggered in civilian crowd at panicking ratio >= 25% threshold",
+        "6. Leader break catastrophe: leader panic shatters cohesion by 50% and amplifies follower contagion by 2.0x (3.6x in stampede)",
+        "7. Cowardly desertion: cowardly agent defects under terror, triggering automatic ABANDONMENT grievance across all remaining loyalists",
+        "8. Group fragmentation: unit collapses into FRAGMENTED state when >=50% members defect",
+        "9. State serialization and 100% bit-for-bit replay determinism via getState() and setState()"
+      ],
+      "runtime_evidence": [
+        "Support for 5 distinct group types (SQUAD, PATROL, CARAVAN, CIVILIAN_CROWD, SETTLEMENT_DEFENSE) across 4 doctrines",
+        "Host game authority invariant strictly preserved: system outputs directives (STAND_GROUND, TACTICAL_FALLBACK, SCATTER_AND_FLEE, RALLY_TO_LEADER) without mutating physics or movement",
+        "100% bit-for-bit checkpoint restore reproducibility from tick 600 to 1,000"
+      ],
+      "benchmark_evidence": [
+        "Group Contagion Benchmark: 1,000 ticks completed across 5 stress phases",
+        "Checkpoint Determinism: 100.0%",
+        "Bifurcation Point Verified: true",
+        "Rally Dynamics Verified: true",
+        "Leader Collapse Catastrophe Verified: true (3.6x panic multiplier)"
+      ],
+      "known_gaps": [],
+      "next_action": "TRANSITION_TO_FACTION_ESCALATION_MATRIX (MILESTONE F)"
     }
   ]
 }
