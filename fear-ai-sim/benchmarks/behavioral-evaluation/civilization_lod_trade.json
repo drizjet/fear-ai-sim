@@ -1,0 +1,62 @@
+{
+  "benchmark": "Fear AI Civilization Simulation & Cognitive LOD Benchmark",
+  "version": "1.0.0",
+  "timestamp": "2026-09-07T23:20:51.680Z",
+  "totalEntities": 1000,
+  "totalTicks": 1000,
+  "phases": {
+    "phase1_lod_partitioning": {
+      "lodCounts": {
+        "0": 20,
+        "1": 40,
+        "2": 140,
+        "3": 400,
+        "4": 400
+      },
+      "allTiersPopulated": true,
+      "immediateCount": 20,
+      "offscreenCount": 400
+    },
+    "phase2_continuity_invariant": {
+      "totalTransitions": 363,
+      "continuityPreserved": true,
+      "newLodCounts": {
+        "0": 0,
+        "1": 0,
+        "2": 53,
+        "3": 437,
+        "4": 510
+      }
+    },
+    "phase3_danger_rerouting": {
+      "initialBestRoute": "highland_pass",
+      "initialPassedPass": true,
+      "postIncidentBestRoute": "river_detour",
+      "detourSelected": true,
+      "highlandStatus": "BLOCKED",
+      "highlandBlocked": true
+    },
+    "phase4_danger_decay": {
+      "dangerBefore": 1,
+      "dangerAfter": 0.3002601910021403,
+      "decayedSignificantly": true
+    }
+  },
+  "invariants": {
+    "checkpointDeterminism": {
+      "deterministic": true,
+      "tickCount": 400
+    }
+  },
+  "metrics": {
+    "executionTimeMs": 14.693399999999997,
+    "entityUpdatesPerSec": 27223107
+  },
+  "summary": {
+    "allInvariantsPass": true,
+    "allTiersPopulated": true,
+    "continuityPreserved": true,
+    "dangerReroutingVerified": true,
+    "dangerDecayVerified": true
+  }
+}

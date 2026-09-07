@@ -53,5 +53,13 @@ export {
     INCIDENT_TYPES,
     DEFAULT_FACTION_CONFIG
 } from './src/FactionSystem.js';
+export {
+    CivilizationSimulationSystem,
+    COGNITIVE_LOD_TIERS,
+    LOD_CADENCES,
+    ROUTE_STATUS,
+    COMMODITY_TYPES,
+    DEFAULT_CIV_CONFIG
+} from './src/CivilizationSimulationSystem.js';
 
 

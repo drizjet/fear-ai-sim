@@ -538,7 +538,45 @@
         "Surrender Dynamics Verified: true"
       ],
       "known_gaps": [],
-      "next_action": "TRANSITION_TO_ROAMING_AND_CIVILIZATION_SIMULATION (MILESTONE G)"
+      "next_action": "COMPLETE_AND_MAINTAIN"
+    },
+    {
+      "milestone": "CIVILIZATION_SIMULATION_AND_COGNITIVE_LOD",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/CivilizationSimulationSystem.js",
+        "packages/core/index.js",
+        "benchmarks/behavioral-evaluation/civilization_lod_trade_benchmark.mjs",
+        "benchmarks/behavioral-evaluation/civilization_lod_trade.json",
+        "tests/civilization-lod-trade.test.js",
+        "docs/BEHAVIORAL_EVALUATION_FRAMEWORK.md"
+      ],
+      "test_evidence": [
+        "tests/civilization-lod-trade.test.js (7/7 tests green):",
+        "1. 5-Tier Cognitive LOD spatial partitioning allocates correct detail levels (LOD0 to LOD4)",
+        "2. Cognitive LOD cadences throttle update frequency proportionally (1x, 5x, 20x, 100x, 500x)",
+        "3. State Continuity Invariant preserves internal attributes across camera focus movements (zero discontinuous jumps)",
+        "4. Trade route evaluation selects highest utility based on profit, tolls, and distance",
+        "5. Dynamic danger rerouting diverts trade caravans around raided corridors to safe detours",
+        "6. Temporal decay restores security on peaceful corridors",
+        "7. State serialization and 100% bit-for-bit replay determinism via getState() and setState()"
+      ],
+      "runtime_evidence": [
+        "Support for 1,000+ entities across 5 cognitive LOD tiers",
+        "Dynamic economic network connecting settlements, commodities, markets, and routes",
+        "Host game authority invariant strictly preserved: system calculates route utilities and perceived hazards without controlling pathfinding physics or inventory",
+        "100% bit-for-bit checkpoint restore reproducibility across 200 ticks"
+      ],
+      "benchmark_evidence": [
+        "Civilization LOD Benchmark: 1,000 entities across 1,000 ticks completed in 14.69 ms (27,223,107 entity updates/sec)",
+        "Checkpoint Determinism: 100.0%",
+        "All Tiers Populated: true",
+        "Continuity Preserved: true (363 seamless focus-shift transitions)",
+        "Danger Rerouting Verified: true",
+        "Danger Decay Verified: true"
+      ],
+      "known_gaps": [],
+      "next_action": "TRANSITION_TO_INTERACTIVE_GODOT_SHOWCASE (MILESTONE H)"
     }
   ]
 }
