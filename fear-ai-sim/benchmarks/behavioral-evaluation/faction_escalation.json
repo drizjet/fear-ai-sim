@@ -1,0 +1,55 @@
+{
+  "benchmark": "Fear AI Faction Escalation Matrix Benchmark",
+  "version": "1.0.0",
+  "timestamp": "2026-09-07T23:17:10.187Z",
+  "totalTicks": 1000,
+  "phases": {
+    "phase1_contact_and_encroachment": {
+      "fromStage": "UNAWARE",
+      "currentStage": "THREATEN",
+      "compositePressure": 0.3419156684956953,
+      "casusBelli": "Territorial sovereign encroachment",
+      "warnOrThreatenReached": true
+    },
+    "phase2_diplomacy_and_trade": {
+      "settlersStage": "TRADE",
+      "ironStage": "TRADE",
+      "tradeEstablished": true,
+      "settlersTrust": 0.6
+    },
+    "phase3_war_escalation": {
+      "settlersStage": "SKIRMISH",
+      "compositePressure": 0.6513594872561358,
+      "warEscalated": true,
+      "casusBelli": "Hostile skirmish engagement"
+    },
+    "phase4_capability_gating": {
+      "settlersStage": "SKIRMISH",
+      "blockedByCapability": true,
+      "isMilitarilyCapable": false,
+      "offensiveWarPrevented": true
+    },
+    "phase5_surrender_and_alliance": {
+      "settlersStage": "SURRENDER",
+      "surrendered": true,
+      "allianceStage": "ALLY",
+      "allied": true
+    }
+  },
+  "invariants": {
+    "checkpointDeterminism": {
+      "deterministic": true,
+      "tickCount": 850
+    }
+  },
+  "metrics": {
+    "executionTimeMs": 2.4259999999999984,
+    "ticksPerSec": 412201
+  },
+  "summary": {
+    "allInvariantsPass": true,
+    "capabilityGateVerified": true,
+    "tradeAndAllianceVerified": true,
+    "surrenderDynamicsVerified": true
+  }
+}

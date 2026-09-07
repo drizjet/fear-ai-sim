@@ -46,5 +46,12 @@ export {
     GROUP_DIRECTIVES,
     DEFAULT_GROUP_CONFIG
 } from './src/GroupContagionSystem.js';
+export {
+    FactionSystem,
+    ESCALATION_STAGES,
+    FACTION_CULTURES,
+    INCIDENT_TYPES,
+    DEFAULT_FACTION_CONFIG
+} from './src/FactionSystem.js';
 
 

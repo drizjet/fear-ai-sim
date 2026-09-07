@@ -498,7 +498,47 @@
         "Leader Collapse Catastrophe Verified: true (3.6x panic multiplier)"
       ],
       "known_gaps": [],
-      "next_action": "TRANSITION_TO_FACTION_ESCALATION_MATRIX (MILESTONE F)"
+      "next_action": "COMPLETE_AND_MAINTAIN"
+    },
+    {
+      "milestone": "FACTION_ESCALATION_MATRIX",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/FactionSystem.js",
+        "packages/core/index.js",
+        "benchmarks/behavioral-evaluation/faction_escalation_benchmark.mjs",
+        "benchmarks/behavioral-evaluation/faction_escalation.json",
+        "tests/faction-escalation-matrix.test.js",
+        "docs/BEHAVIORAL_EVALUATION_FRAMEWORK.md"
+      ],
+      "test_evidence": [
+        "tests/faction-escalation-matrix.test.js (10/10 tests green):",
+        "1. Faction registration, profile initialization, and initial UNAWARE stance before contact",
+        "2. Directed Asymmetry Invariant: E(A->B) !== E(B->A) verified across multi-faction profiles",
+        "3. Passive territorial encroachment advances stance through progressive matrix stages",
+        "4. Active incidents generate casus belli and accelerate escalation to war (BORDER_TRESPASS, RAID_CONFIRMED)",
+        "5. Capability Gate: military/resource exhaustion prevents ATTACK, forcing RETREAT or SHADOW",
+        "6. Uncertainty Gate: low information confidence (<0.30) blocks escalation beyond OBSERVE/AVOID",
+        "7. Diplomatic channel: peaceful trade and high trust advance to TRADE and ALLY",
+        "8. Involuntary Capitulation: critical fear (>0.85) and military collapse trigger SURRENDER",
+        "9. Peaceful de-escalation hysteresis prevents 1-tick ping-pong oscillation across borders",
+        "10. Snapshot serialization and 100% bit-for-bit replay determinism via getState() and setState()"
+      ],
+      "runtime_evidence": [
+        "Full 14-stage escalation ladder (UNAWARE, OBSERVE, AVOID, WARN, NEGOTIATE, TRADE, SHADOW, THREATEN, MOBILIZE, SKIRMISH, ATTACK, RETREAT, SURRENDER, ALLY)",
+        "Cultural profiles (MILITARISTIC, MERCANTILE, ISOLATIONIST, EXPANSIONIST, HONORABLE, DEVOUT) modulate aggression and trade affinity",
+        "Host game authority invariant strictly preserved: system recommends diplomatic postures, casus belli, and strategic directives without controlling physics or unit spawning",
+        "100% bit-for-bit checkpoint restore reproducibility from tick 900 to 1,000"
+      ],
+      "benchmark_evidence": [
+        "Faction Escalation Benchmark: 1,000 ticks completed in 2.43 ms (412,201 ticks/sec)",
+        "Checkpoint Determinism: 100.0%",
+        "Capability Gate Verified: true",
+        "Trade and Alliance Verified: true",
+        "Surrender Dynamics Verified: true"
+      ],
+      "known_gaps": [],
+      "next_action": "TRANSITION_TO_ROAMING_AND_CIVILIZATION_SIMULATION (MILESTONE G)"
     }
   ]
 }

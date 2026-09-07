@@ -759,6 +759,70 @@ Evaluated via `benchmarks/behavioral-evaluation/group_contagion_rally_benchmark.
 - **Phase 5 (Desertion & Grievance)**: Deserter defected; remaining loyalists recorded abandonment grievances.
 - **Determinism**: 100% bit-for-bit replay equivalence from snapshot restoration.
 
+---
+
+## 11. Milestone F: Multi-Faction Diplomacy & The 14-Stage Bilateral Escalation Matrix
+
+Milestone F establishes macro-level strategic faction intelligence, inter-faction diplomacy, and the **14-Stage Bilateral Escalation Matrix** (`packages/core/src/FactionSystem.js`). It models emergent geopolitical friction, commercial trade pacts, mobilization, armed conflict, capability-gated warfare, and capitulation while maintaining the **Host Game Authority Invariant** (evaluating diplomatic stances, casus belli, and strategic directives without controlling host unit spawning, physics, or damage).
+
+### 11.1 The 14-Stage Bilateral Escalation Architecture
+
+$$\mathbf{E}(A \to B) = \langle \text{stage},\, \text{compositePressure},\, \text{lastTransitionTick},\, \text{casusBelli},\, \text{incidents} \rangle$$
+
+The system establishes a 14-stage discrete progression matrix:
+1. `UNAWARE`: Faction has had zero contact or perceptual awareness of target faction.
+2. `OBSERVE`: Remote monitoring without approaching or posturing.
+3. `AVOID`: Cautious evasion under elevated threat or low certainty.
+4. `WARN`: Formal border posturing, alert horns, and verbal ultimatums.
+5. `NEGOTIATE`: Diplomatic mediation, dialogue channels, and truce talks.
+6. `TRADE`: Peaceful commercial exchange, open borders, and tariff agreements.
+7. `SHADOW`: Covert tracking from perimeter to discern enemy movements.
+8. `THREATEN`: Explicit coercive show of force, demands for tribute or concessions.
+9. `MOBILIZE`: Garrison alerts, force muster, and staging offensive formations.
+10. `SKIRMISH`: Probing armed clashes, border skirmishing, and warning shots.
+11. `ATTACK`: Lethal coordinated offensive warfare.
+12. `RETREAT`: Tactical disengagement under overwhelming military threat.
+13. `SURRENDER`: Laying down arms, suing for terms, accepting vassalage.
+14. `ALLY`: Mutual defense pact, joint defense, and open intelligence sharing.
+
+### 11.2 Cultural Bias Modulation
+
+Factions possess distinct cultural profiles that mathematically skew escalation tendencies:
+- `MILITARISTIC`: Elevated aggression ($\Delta_{\text{aggression}} = +0.15$), lower threshold for mobilization and attack.
+- `EXPANSIONIST`: High territorial sensitivity ($\Delta_{\text{aggression}} = +0.20$), aggressively threatens neighbors.
+- `MERCANTILE`: High trade affinity ($\Delta_{\text{trade}} = +0.25$, $\Delta_{\text{aggression}} = -0.10$), favors economic negotiation.
+- `ISOLATIONIST`: Avoids external contact ($\Delta_{\text{aggression}} = -0.05$), quick to shadow and avoid.
+- `HONORABLE`: Suppresses aggression when trust is maintained ($\Delta_{\text{aggression}} = -0.15$), strictly honors peace treaties.
+- `DEVOUT`: Highly sensitive to border sacrilege and unprovoked strikes ($\Delta_{\text{aggression}} = +0.10$ under grievance).
+
+### 11.3 Composite Hostility Pressure & Decision Dynamics
+
+$$P_{\text{composite}} = \text{clamp}_{[0, 1]}\left(0.40 \cdot \text{grievance} + 0.30 \cdot P_{\text{territorial}} + 0.20 \cdot P_{\text{economic}} - 0.35 \cdot \text{trust} + \Delta_{\text{culture}}\right)$$
+
+### 11.4 Key Invariants & Gates
+
+1. **Directed Asymmetry Invariant**:
+   $\mathbf{E}(A \to B) \neq \mathbf{E}(B \to A)$. Cult aggressively threatens Kingdom ($P = 0.54 \to \text{MOBILIZE}$), while Kingdom remains calm and watchful ($P = 0.05 \to \text{OBSERVE}$).
+2. **Capability Gate**:
+   A faction cannot initiate offensive war (`ATTACK`, `SKIRMISH`, `MOBILIZE`) if `militaryReadiness < 0.35` or `economicStockpile < 0.10`. Exhausted factions attempting to wage war are blocked and redirected to `RETREAT` or `SHADOW`.
+3. **Uncertainty Gate**:
+   A faction cannot escalate beyond `OBSERVE` or `AVOID` if `informationConfidence < 0.30`. Low certainty restricts premature mobilization on unverified rumors.
+4. **Involuntary Capitulation vs Hysteresis**:
+   Severe terror ($F > 0.85$) combined with military depletion ($< 0.15$) triggers involuntary `SURRENDER`, which cleanly bypasses hostility hysteresis.
+5. **Peaceful De-Escalation Hysteresis**:
+   Downward transitions require pressure to fall below the stage threshold minus $\Delta_{\text{hysteresis}} = 0.12$, preventing rapid 1-tick border oscillation.
+
+### 11.5 Empirical Benchmark Validation (1,000 Ticks)
+
+Evaluated via `benchmarks/behavioral-evaluation/faction_escalation_benchmark.mjs` (runtime 2.43 ms, 412,201 ticks/sec):
+- **Phase 1 (Contact & Encroachment)**: Escalated from `UNAWARE` $\to$ `SHADOW` $\to$ `THREATEN` on territorial trespass.
+- **Phase 2 (Diplomacy & Trade)**: Settlers established commercial exchange (`TRADE`) with Iron Clans upon signing treaty.
+- **Phase 3 (Treachery & War)**: Border raid and treaty breach triggered casus belli and rapid escalation to `SKIRMISH` ($P = 0.65$).
+- **Phase 4 (Capability Gating)**: Starved Settlers blocked from `ATTACK`, preventing offensive suicide.
+- **Phase 5 (Surrender & Alliance)**: Exhausted Settlers sued for `SURRENDER`; Forest Wardens and Iron Clans forged mutual defense `ALLY`.
+- **Determinism**: 100% bit-for-bit trajectory equivalence from snapshot restore.
+
+
 
 
 
