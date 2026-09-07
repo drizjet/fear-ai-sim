@@ -1,5 +1,9 @@
 # Fear AI - Unity Engine Integration Guide
 
+> [!WARNING]
+> **Verification Gate Status**: `IMPLEMENTED_NOT_VERIFIED (UNITY_EDITOR_NOT_INSTALLED)`
+> *Host Environment Notice: Unity Editor is not installed on this host development machine. The underlying C# types and client logic compile cleanly under the .NET 8 SDK / Roslyn compiler, but end-to-end Unity Editor playmode and scene verification must be executed in an environment with the Unity Editor installed.*
+
 This package provides direct drop-in integration between **Unity (2021.3 LTS / 2022.3 LTS / 6+)** and the **Fear AI Universal Middleware Server**.
 
 ## Quick Start (3 Steps)

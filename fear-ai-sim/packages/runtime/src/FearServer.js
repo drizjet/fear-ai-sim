@@ -21,6 +21,11 @@ export class FearServer {
     constructor(options = {}) {
         this.host = options.host || '127.0.0.1';
         this.port = options.port || 8765;
+        this.allowRemoteAccess = Boolean(options.allowRemoteAccess);
+        if ((this.host === '0.0.0.0' || this.host === '::') && !this.allowRemoteAccess) {
+            console.warn('[FearServer] Public bind requested without allowRemoteAccess=true; defaulting safely to 127.0.0.1.');
+            this.host = '127.0.0.1';
+        }
         this.simulation = new RuntimeSimulation(options);
         this.maxPayloadBytes = options.maxPayloadBytes || (50 * 1024 * 1024);
 

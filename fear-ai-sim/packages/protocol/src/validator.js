@@ -118,6 +118,7 @@ export class ProtocolValidator {
         const sanitizedTraits = {};
         if (raw.traits && typeof raw.traits === 'object') {
             for (const [k, v] of Object.entries(raw.traits)) {
+                if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
                 if (typeof v === 'number' && Number.isFinite(v)) {
                     sanitizedTraits[k] = Math.max(0, Math.min(1.0, v));
                 }
@@ -128,8 +129,8 @@ export class ProtocolValidator {
             valid: true,
             value: {
                 type: MESSAGE_TYPES.REGISTER_AGENT,
-                agent_id: String(raw.agent_id),
-                name: raw.name ? String(raw.name) : String(raw.agent_id),
+                agent_id: String(raw.agent_id).slice(0, 256),
+                name: raw.name ? String(raw.name).slice(0, 256) : String(raw.agent_id).slice(0, 256),
                 traits: sanitizedTraits,
                 initial_position: raw.initial_position || { x: 0, y: 0, z: 0 }
             }
@@ -144,7 +145,7 @@ export class ProtocolValidator {
             valid: true,
             value: {
                 type: MESSAGE_TYPES.UNREGISTER_AGENT,
-                agent_id: String(raw.agent_id)
+                agent_id: String(raw.agent_id).slice(0, 256)
             }
         };
     }
@@ -156,7 +157,7 @@ export class ProtocolValidator {
         return {
             valid: true,
             value: {
-                agent_id: String(raw.agent_id),
+                agent_id: String(raw.agent_id).slice(0, 256),
                 x: Number(raw.x) || 0,
                 y: Number(raw.y) || 0,
                 z: Number(raw.z) || 0,

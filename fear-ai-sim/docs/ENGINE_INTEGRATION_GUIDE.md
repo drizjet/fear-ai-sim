@@ -35,6 +35,10 @@ Once running:
 
 ## 2. Unity Integration (C#)
 
+> [!WARNING]
+> **Verification Gate Status**: `IMPLEMENTED_NOT_VERIFIED (UNITY_EDITOR_NOT_INSTALLED)`
+> *Host Environment Notice: Unity Editor is not installed on this host development machine. The underlying C# types and client logic compile cleanly under the .NET 8 SDK / Roslyn compiler, but end-to-end Unity Editor playmode and scene verification must be executed in an environment with the Unity Editor installed.*
+
 ### Setup
 1. Copy `packages/adapters/unity/` to your project's `Assets/FearAI/`.
 2. Add an empty GameObject in your scene with the `FearAIClient` component.
@@ -62,6 +66,10 @@ public class MonsterEncounter : MonoBehaviour
 
 ## 3. Godot 4 Integration (GDScript)
 
+> [!NOTE]
+> **Verification Gate Status**: `VERIFIED (GODOT_4_6_STABLE_OFFICIAL_HEADLESS)`
+> *Host Environment Notice: Tested and verified against official Godot v4.6-stable Windows 64-bit console binary (`Godot_v4.6-stable_win64_console.exe`) on this host with zero errors.*
+
 ### Setup
 1. Copy `packages/adapters/godot/` to `addons/fear_ai/`.
 2. Register `addons/fear_ai/fear_ai_client.gd` as an **Autoload** named `FearAIClient`.
@@ -84,15 +92,23 @@ func _ready():
 
 ## 4. Unreal Engine 5 Integration (C++ / Blueprints)
 
+> [!WARNING]
+> **Verification Gate Status**: `IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)`
+> *Host Environment Notice: Unreal Engine 5 Editor is not installed on this host development machine. The plugin structure (`FearAI.uplugin`, `Source/FearAI/FearAI.Build.cs`, `UFearAgentComponent`), C++ module lifecycle, and ActorComponent adhere strictly to UE5 C++ plugin specifications, but end-to-end binary compilation and editor verification must be executed in an environment with UE5 installed.*
+
 ### Setup
-1. Copy `packages/adapters/unreal/FearAgentComponent.h` and `.cpp` into your project's `Source/[ProjectName]/`.
-2. Add `"WebSockets"`, `"Json"`, and `"JsonUtilities"` to your `[ProjectName].Build.cs`.
+1. Copy `packages/adapters/unreal/` into your Unreal project's `Plugins/FearAI/` directory.
+2. In your project's `.uproject` file or in the Unreal Editor under **Edit -> Plugins**, ensure `FearAI` is enabled.
 3. In Blueprint or C++, attach `UFearAgentComponent` to your character pawn.
 4. Bind to `OnFearBandChanged` and `OnActionIntentReceived`.
 
 ---
 
-## 5. Custom Engines & Scripting (Python Zero-Dependency)
+## 5. Custom Engines & Scripting (Python Zero-Dependency & C# / .NET 8)
+
+> [!NOTE]
+> **Verification Gate Status**: `VERIFIED (PYTHON_3_14_CONFORMANCE & DOTNET_8_SDK)`
+> *Host Environment Notice: Verified with bit-for-bit conformance against canonical fixtures v2 via Python standard library urllib (zero external dependencies) and official .NET 8 MSBuild.*
 
 If you are building in Python (Pygame, Panda3D, Ursina) or custom C++/Rust engines:
 Use `packages/adapters/python/fear_ai_client.py` as a reference:
