@@ -1,25 +1,28 @@
 ---
 title: Fear AI Failure, Transport, and Lifecycle Conformance Matrix
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 type: specification
 status: active
 ---
 
-# Fear AI Failure, Transport, and Lifecycle Conformance Matrix
+# Fear AI Failure, Transport, and Lifecycle Conformance Matrix (42-Case Matrix)
 
 ## 1. Overview & Architectural Scope
 
-The reliability, stability, and fault-tolerance of the Fear AI Universal Middleware is not verified by a single test file. It is enforced across **five dedicated conformance test suites comprising 38 automated tests**, spanning network transport, process lifecycle, input boundary validation, protocol versioning, and defensive subsystem fallbacks.
+The reliability, stability, and fault-tolerance of the Fear AI Universal Middleware is enforced across **five dedicated conformance test suites comprising 42 automated tests**, spanning network transport, process lifecycle, input boundary validation, protocol versioning, and defensive subsystem fallbacks.
+
+> [!IMPORTANT]
+> **Subsystem Qualification Boundary**: Software Mulberry32 fallback upon PRNG native-loader failure certifies that specific subsystem only. It does not certify uninstalled C++/Rust engine extensions or full-system native extension coverage.
 
 ```mermaid
 graph TD
     subgraph Multi-Tier Failure & Resilience Architecture
-        T1[1. Transport Layer Stress Matrix - 16 Tests]
-        T2[2. Failure Injection & Degraded Modes - 7 Tests]
-        T3[3. Lifecycle & Optional Subsystems - 5 Tests]
-        T4[4. Security Hardening & Isolation - 5 Tests]
-        T5[5. Persistence Migration & Schema Evolution - 5 Tests]
+        T1["1. Transport Layer Stress Matrix - 16 Tests"]
+        T2["2. Failure Injection & Degraded Modes - 7 Tests"]
+        T3["3. Lifecycle & Optional Subsystems - 9 Tests"]
+        T4["4. Security Hardening & Isolation - 5 Tests"]
+        T5["5. Persistence Migration & Schema Evolution - 5 Tests"]
     end
 
     T1 --> STABILITY[Host Game Production Stability]
@@ -76,7 +79,7 @@ graph TD
 | **39** | **Server Unavailable Pre-Startup** | `lifecycle-and-optional-modules.test.js` #6 | Connection refusal on offline port caught cleanly; zero unhandled crash. | **PASS** |
 | **40** | **Future Snapshot Version Rejection**| `lifecycle-and-optional-modules.test.js` #7 | Snapshot version > 1 rejected with HTTP 400 `UNSUPPORTED_SNAPSHOT_VERSION`. | **PASS** |
 | **41** | **Invalid Agent ID Validation** | `lifecycle-and-optional-modules.test.js` #8 | Empty, whitespace, or non-string agent IDs rejected with HTTP 400. | **PASS** |
-| **42** | **Native Acceleration Failure Path**| `lifecycle-and-optional-modules.test.js` #9 | Loader exception triggers audited pure-software Mulberry32 fallback. | **PASS** |
+| **42** | **Native Acceleration Failure Path**| `lifecycle-and-optional-modules.test.js` #9 | Loader exception triggers audited pure-software Mulberry32 fallback (certifies PRNG subsystem only; not uninstalled engine extensions). | **PASS** |
 
 ---
 

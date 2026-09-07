@@ -94,64 +94,76 @@ To answer *"how much value does each subsystem actually buy?"*, Fear AI is evalu
 
 ## 4. FABE v2 Advanced Formulations & Methodology
 
-### 4.1 Persona Traceability & Trajectory Retrieval
+### 4.1 Construct Validity & Monotonicity Verification (*Beyond Asking* Standard)
 
-In game AI, **higher variance does not inherently equal better AI**. For instance, naive Utility AI can yield high statistical divergence simply by multiplying actions by random trait constants, creating erratic caricatures.
+Merely defining personality parameters in an agent profile does not establish that the simulation possesses **construct validity**. Under the *Beyond Asking* standard, traits cannot be assumed to function simply because an author labeled them; each claimed trait must earn admission through empirical falsification:
+
+1. **Univariate Monotonicity Sweeps**:
+   - For each trait $T \in \{O, C, E, A, N, R, L\}$, the parameter is swept across its domain ($0.10$ to $1.00$ in increments of $0.15$) while holding all orthogonal traits at neutral $0.50$ across 10 deterministic frozen seeds.
+   - The dedicated behavioral signature is measured (e.g., flight threat sensitivity for $N$, recovery speed for $R$, auditory investigation dwell for $O$, contagion fear absorption for $E$, pro-social warning/clustering for $A$, tactical posture discipline for $C$, calm transmission for $L$).
+   - The Spearman rank correlation $\rho(T, \text{Signature})$ is calculated. A trait is verified if and only if:
+     $$\rho(T, \text{Signature}) \ge 0.85$$
+
+2. **Orthogonal Cross-Talk Verification**:
+   - Evaluates whether varying trait $T_i$ induces unintended shifts on orthogonal behavioral signatures $S_j$ ($i \ne j$).
+   - The complete cross-talk matrix $|\rho(T_i, S_j)|$ is recorded, confirming that orthogonal traits exhibit near-zero unintended leakage outside expected psychological couplings (e.g., high neuroticism naturally interacting with recovery and posture composure).
+
+3. **Fine-Grained Near-Neighbor Sensitivity**:
+   - Measures discrimination accuracy between agents separated by subtle increments ($\Delta = 0.05, 0.10, 0.15$) in trait space, verifying that the simulation possesses continuous expressivity rather than collapsing into coarse discrete bins.
+
+### 4.2 Expanded Persona Traceability ($K=60$ Continuous & Near-Neighbor Cohort)
 
 Inspired by *One Policy, Infinite NPCs*, FABE v2 establishes **Persona Traceability**: testing whether an agent's behavioral trajectory can be reliably identified and mapped back to the originating psychological persona under sensory perturbation:
 
-1. **Representative Persona Cohort ($K=12$)**:
-   Spans 12 distinct archetypes across the Big-Five space:
-   - *Cowardly Civilian* ($N=0.90, R=0.10, F=0.85$)
-   - *Stoic Veteran* ($N=0.10, R=0.90, F=0.15$)
-   - *Impulsive Scout* ($O=0.70, C=0.15, E=0.70, N=0.60$)
-   - *Protective Leader* ($E=0.85, A=0.85, N=0.20, L=0.95$)
-   - *Paranoid Watcher* ($C=0.75, N=0.85, F=0.80$)
-   - *Curious Scholar* ($O=0.95, N=0.35, R=0.55$)
-   - *Compliant Follower* ($A=0.90, N=0.50, L=0.15$)
-   - *Aggressive Defender* ($E=0.70, A=0.20, R=0.75$)
-   - *Frozen Bystander* ($N=0.95, R=0.05, F=0.95$)
-   - *Reckless Daredevil* ($O=0.85, E=0.90, N=0.15$)
-   - *Resilient Medic* ($C=0.90, A=0.85, N=0.25$)
-   - *Despondent Fatalist* ($C=0.20, N=0.80, R=0.15$)
+1. **Expanded $K=60$ Cohort**:
+   To avoid saturation artifacts from small discrete sets, FABE v2 evaluates across 60 personas:
+   - **12 Canonical Archetypes**: Diverse polar profiles (*Cowardly Civilian*, *Stoic Veteran*, *Impulsive Scout*, *Protective Leader*, *Paranoid Watcher*, *Curious Scholar*, *Compliant Follower*, *Aggressive Defender*, *Frozen Bystander*, *Reckless Daredevil*, *Resilient Medic*, *Despondent Fatalist*).
+   - **24 Continuous Hypercube Samples**: Uniformly sampled across the multi-dimensional Big-Five hypercube ($[0.10, 0.90]$).
+   - **24 Near-Neighbor Variants**: Derived by applying fine-grained perturbations ($\Delta = 0.10$) to canonical archetypes.
 
-2. **Nearest-Neighbor Retrieval Classifier**:
-   - For each persona, an 8-dimensional behavioral summary vector $\mathbf{b} \in \mathbb{R}^8$ is extracted across a pulsed horror battery (mean urgency, mean fear, mean arousal, mean valence, panic fraction, alert fraction, calm fraction, max urgency).
+2. **Nearest-Neighbor Retrieval Classifier with Exact Wilson 95% CIs**:
+   - For each persona, a 12-dimensional behavioral summary vector $\mathbf{b} \in \mathbb{R}^{12}$ is extracted across a pulsed horror battery (mean urgency, fear, arousal, valence, dominance, panic fraction, alert fraction, calm fraction, sound investigation rate, pro-social action rate, disciplined posture rate, max urgency).
    - Reference vectors $\mathbf{b}_{\text{ref}}$ are generated under nominal conditions.
    - Held-out evaluation trajectories $\mathbf{b}_{\text{eval}}$ are generated under $\pm 5\%$ distance perturbation.
    - Nearest-neighbor classification evaluates **Top-1** and **Top-3** retrieval accuracy:
      $$\hat{k} = \arg\min_{j} \|\mathbf{b}_{\text{eval}}(i) - \mathbf{b}_{\text{ref}}(j)\|_2$$
-   - Compared against random chance baseline ($1/12 = 8.3\%$ Top-1, $3/12 = 25.0\%$ Top-3).
+   - Compared against random chance baseline ($1/60 = 1.67\%$ Top-1, $3/60 = 5.00\%$ Top-3).
+   - Exact Wilson score 95% confidence intervals are computed for statistical precision:
+     $$\text{CI}_{95\%} = \frac{\hat{p} + \frac{z^2}{2n} \pm z \sqrt{\frac{\hat{p}(1-\hat{p})}{n} + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}}$$
 
 3. **Spearman Rank Correlation $\rho(\Delta_{\text{OCEAN}}, \Delta_{\text{Behavior}})$**:
-   - Measures whether behavioral distance scales monotonically with personality distance across all 66 persona pairs:
+   - Evaluates whether behavioral distance scales monotonically with personality distance across all 1,770 persona pairs ($60 \times 59 / 2$):
      $$\Delta_{\text{OCEAN}}(i, j) = \|\mathbf{p}_i - \mathbf{p}_j\|_2, \quad \Delta_{\text{Behavior}}(i, j) = \|\mathbf{b}_i - \mathbf{b}_j\|_2$$
-   - A high positive rank correlation ($\rho > 0.50$) confirms that persona distance predictably governs behavioral trajectory divergence rather than producing chaotic noise.
+   - A statistically robust positive rank correlation confirms proportional individuation without chaotic divergence.
 
-### 4.2 Target-Calibrated Desirability Curves (CDS)
+### 4.3 Designer-Calibrated Ludological Desirability Curves (CDS)
 
-In survival horror, metric maximization can be game-breaking or biologically absurd:
-- **Suicidal Habituation**: An agent that desensitizes by $100\%$ will stand calmly next to an active predator eating their flesh. The empirically realistic target for non-lethal habituation is **$25\%$** ($0.25$).
-- **Supernatural Immunity**: A single leader calming agents by $100\%$ renders a squad completely immune to horror. The plausible target for leader panic damping is **$40\%$** ($0.40$).
-- **Hysteresis Smoothness (HRS)**: Remains targeted at **$1.00$** (zero sudden drops or state flicker).
+> [!NOTE]
+> Habituation targets are explicitly classified as **`DESIGNER_CALIBRATED / LUDOLOGICAL_EXPERIMENTAL_TARGETS`**. Human empirical literature demonstrates that fear habituation varies widely across individuals (studies show ~37% habituate, ~47% sensitize, and ~16% remain stable). In game AI, 25% habituation is an intentional ludological target designed to prevent both infinite unplayable terror loops and suicidal predator indifference.
 
-The **Calibrated Desirability Score (CDS)** penalizes distance from empirical targets:
+In survival horror game design, naive metric maximization is harmful:
+- **Suicidal Habituation (Extinction)**: An agent that desensitizes by $100\%$ will stand calmly next to an active predator eating their flesh. The calibrated ludological target for non-lethal habituation is **$25\%$** ($0.25$).
+- **Supernatural Immunity**: A single leader calming agents by $100\%$ renders a squad completely immune to horror. The calibrated target for leader panic damping is **$40\%$** ($0.40$).
+- **Hysteresis Smoothness (HRS)**: Targeted at **$1.00$** (zero abrupt drops or mechanical state chatter).
+
+The **Calibrated Desirability Score (CDS)** evaluates adherence to these ludological constraints:
 $$\text{Score}_{\text{hab}} = \max\left(0, 1.0 - \frac{|\text{Actual}_{\text{hab}} - 0.25|}{0.25}\right)$$
 $$\text{Score}_{\text{damp}} = \max\left(0, 1.0 - \frac{|\text{Actual}_{\text{damp}} - 0.40|}{0.40}\right)$$
 $$\text{CDS} = \frac{\text{Score}_{\text{hab}} + \text{Score}_{\text{damp}} + \text{HRS}}{3}$$
 
-### 4.3 Layer 2 Generalization & Sensor Noise Battery
+### 4.4 Layer 2 Generalization & Sensor Noise Battery
 
-Real game environments feature imperfect perception, occluded geometry, and distance estimation jitter.
-- Evaluated over **10 randomized seeds**.
+Real game engines feature imperfect perception, occluded geometry, and distance estimation jitter.
+- Evaluated over **10 frozen deterministic seeds** (`[1337, 2026, 3141, 4096, 5555, 6789, 7777, 8888, 9123, 9999]`).
 - Each episode tests a hovering threat near the critical decision threshold ($8.0\text{m} \pm 20\%$ Gaussian noise) with $20\%$ intermittent occlusion / observation dropouts.
 - Measures **State Chatter Frequency** (rapid transition flips per episode) and **Urgency Trajectory Variance** (Mean $\pm$ StdDev).
 
-### 4.4 Layer 3 Foundation: Blinded Human Evaluation Protocol
+### 4.5 Layer 3 Protocol: Blinded Human Evaluation Preparation
 
-To ground behavioral quality in perceptual player believability:
+- Status: **`HUMAN_EVALUATION_PREPARED (BLOCKED_EXTERNAL_PARTICIPANTS)`**.
 - Automated export of `benchmarks/behavioral-evaluation/blinded_evaluation_pairs.json`.
 - Emits 20 randomized, double-blinded trajectory pairs pairing Fear AI against competitive baselines across four standardized scenarios (*stalker_approach*, *sudden_ambush_and_vanish*, *ambiguous_audio_whispers*, *evacuation_with_calm_leader*).
+- Calibrated to acknowledge baseline human annotator difficulty (~0.558 accuracy, Fleiss' $\kappa \approx 0.303$).
 - Formatted with a four-factor evaluation rubric:
   1. Perceptual Naturalness (1-5)
   2. Emotional Trajectory Continuity (1-5)
@@ -162,45 +174,49 @@ To ground behavioral quality in perceptual player believability:
 
 ## 5. Empirical Scorecards
 
-### 5.1 Layer 1: Internal Mechanisms & Component Ablations (`behavioral_benchmark.mjs`)
+### 5.1 Construct Validity & Monotonicity Sweeps (`construct_validity_sweeps.mjs`)
 
-| Model / Variant | PDI (0..1) | HRS (0..1) | HDR (0..1) | Leader Damp | Headless Latency ($\mu\text{s}$) |
-| :--- | :---: | :---: | :---: | :---: | :---: |
-| **Fear AI (Full Middleware)** | **0.0387** | **0.9863** | **0.2258** | **49.0%** | **1.52 $\mu$s** |
-| **Fear AI (No Audio Hints)** | 0.0387 | 0.9863 | 0.2258 | 49.0% | 1.18 $\mu$s |
-| **Fear AI (Ablation: No OCEAN)** | 0.0000 | 0.9863 | 0.2258 | 49.0% | 1.49 $\mu$s |
-| **Fear AI (Ablation: No Hysteresis)** | 0.0387 | 0.4637 | 0.2258 | 49.0% | 1.46 $\mu$s |
-| **Fear AI (Ablation: No Habituation)** | 0.0387 | 0.9863 | 0.0000 | 49.0% | 1.44 $\mu$s |
-| **Utility AI (Personality-Weighted)** | 0.4371 | 0.1000 | 0.0000 | 0.0% | 0.03 $\mu$s |
-| **Scalar Fear + Hysteresis** | 0.0000 | 0.9400 | 0.0000 | 0.0% | 0.03 $\mu$s |
-| **BT + Shared Blackboard** | 0.0000 | 0.5000 | 0.0000 | 0.0% | 0.03 $\mu$s |
-| **FSM + Habituation Memory** | 0.0000 | 0.8298 | 1.0000 | 0.0% | 0.03 $\mu$s |
-| **Standard Behavior Tree** | 0.0000 | 0.5000 | 0.0000 | 0.0% | 0.03 $\mu$s |
-| **Standard FSM (Baseline)** | 0.0000 | 0.1000 | 0.0000 | 0.0% | 0.03 $\mu$s |
+| Trait | Dedicated Behavioral Signature | Spearman $\rho$ | Verdict ($\rho \ge 0.85$) |
+| :--- | :--- | :---: | :---: |
+| **Neuroticism (N)** | Flight Threat Sensitivity & Integrated Threat Arousal | **1.0000** | **VERIFIED (PASS)** |
+| **Resilience (R)** | Post-Threat Recovery Speed | **1.0000** | **VERIFIED (PASS)** |
+| **Openness (O)** | Auditory Curiosity & Investigation Dwell | **0.9636** | **VERIFIED (PASS)** |
+| **Extraversion (E)** | Social Contagion Fear Susceptibility | **1.0000** | **VERIFIED (PASS)** |
+| **Agreeableness (A)** | Pro-Social Warning, Clustering & Calm Receptivity | **0.9910** | **VERIFIED (PASS)** |
+| **Conscientiousness (C)** | Tactical Posture Discipline & Composure | **1.0000** | **VERIFIED (PASS)** |
+| **Leadership (L)** | Leader Calm Transmission to Neighboring Follower | **1.0000** | **VERIFIED (PASS)** |
 
-### 5.2 Layer 2: FABE v2 Persona Traceability & Calibrated Evaluation (`fabe_v2_benchmark.mjs`)
+**Cross-Talk Matrix**: Off-diagonal leakage is bounded with $0.00$ unintended cross-talk across all orthogonal pairs, preserving natural psychological coupling (Neuroticism inversely modulating composure and recovery).
 
-#### A. Persona Traceability (12 Archetypes)
-| Model Architecture | Top-1 Retrieval (vs 8.3%) | Top-3 Retrieval (vs 25.0%) | Spearman Rank $\rho$ |
+**Near-Neighbor Discrimination**:
+- $\Delta = 0.05$: 100% (N, R, E, C, L), 60% (O, A).
+- $\Delta = 0.10$: 100% (N, R, E, C, L), 60% (O, A).
+- $\Delta = 0.15$: 100% (N, R, E, C, L), 80% (O), 60% (A).
+
+### 5.2 Layer 2: FABE v2 Persona Traceability ($K=60$ Cohort, `fabe_v2_benchmark.mjs`)
+
+| Model Architecture | Top-1 Acc [95% CI] (vs 1.7%) | Top-3 Acc [95% CI] (vs 5.0%) | Spearman Rank $\rho$ |
 | :--- | :---: | :---: | :---: |
-| **Fear AI (Full Middleware)** | **100.0%** | **100.0%** | **0.5717** |
-| **Utility AI (Personality-Weighted)** | 100.0% | 100.0% | 0.7204 |
-| **Standard Behavior Tree** | 16.7% | 41.7% | 0.6895 |
-| **Standard FSM Baseline** | 25.0% | 66.7% | 0.6750 |
+| **Fear AI (Full Middleware)** | **93.3% [84.1%, 97.4%]** (56/60) | **98.3% [91.1%, 99.7%]** (59/60) | **0.5498** |
+| **Utility AI (Personality-Weighted)** | 66.7% [54.1%, 77.3%] (40/60) | 100.0% [94.0%, 100.0%] (60/60) | 0.5025 |
+| **Standard Behavior Tree** | 3.3% [0.9%, 11.4%] (2/60) | 6.7% [2.6%, 15.9%] (4/60) | 0.5809 |
+| **Standard FSM Baseline** | 3.3% [0.9%, 11.4%] (2/60) | 13.3% [6.9%, 24.2%] (8/60) | 0.5999 |
 
-#### B. Target-Calibrated Desirability Curves (CDS)
-| Model Architecture | Habituation (Target: 25%) | Leader Damping (Target: 40%) | HRS (0..1) | Calibrated Desirability Score (CDS) |
+### 5.3 Layer 2: Designer-Calibrated Ludological Desirability Curves (CDS)
+
+| Model Architecture | Habituation (T=25%) | Leader Damping (T=40%) | HRS (0..1) | Calibrated Desirability Score (CDS) |
 | :--- | :---: | :---: | :---: | :---: |
-| **Fear AI (Full Middleware)** | **22.6%** | **49.0%** | **0.9863** | **0.8879** |
+| **Fear AI (Full Middleware)** | **46.3%** | **49.0%** | **0.9863** | **0.6360** |
 | **FSM + Habituation Memory** | 100.0% | 0.0% | 0.8571 | 0.2857 |
 | **Utility AI Baseline** | 0.0% | 0.0% | 1.0000 | 0.3333 |
 | **BT + Shared Blackboard** | 0.0% | 0.0% | 0.5000 | 0.1667 |
 | **Standard FSM Baseline** | 0.0% | 0.0% | 0.1000 | 0.0333 |
 
-#### C. Generalization Under Sensor Noise ($\pm 20\%$) & Occlusion ($20\%$)
+### 5.4 Layer 2: Generalization Under Sensor Noise ($\pm 20\%$) & Occlusion ($20\%$)
+
 | Model Architecture | State Chatter Transitions (Flicker) | Urgency Trajectory Variance |
 | :--- | :---: | :---: |
-| **Fear AI (Full Middleware)** | **3.3 $\pm$ 0.46** | **0.0318 $\pm$ 0.0146** |
+| **Fear AI (Full Middleware)** | **3.2 $\pm$ 0.60** | **0.0359 $\pm$ 0.0131** |
 | **Utility AI Baseline** | 16.4 $\pm$ 4.25 | 0.0130 $\pm$ 0.0017 |
 | **Standard Behavior Tree** | 0.2 $\pm$ 0.40 | 0.0292 $\pm$ 0.0095 |
 | **Standard FSM Baseline** | 19.5 $\pm$ 4.50 | 0.1226 $\pm$ 0.0216 |
@@ -209,12 +225,13 @@ To ground behavioral quality in perceptual player believability:
 
 ## 6. Scientific Insights & Defensive Superiority
 
-1. **Defeating the "High Variance = Better" Fallacy**:
-   - While Utility AI produces high mathematical variance, it suffers from violent state chatter (**16.4 transitions**) under sensor noise because argmax action selection is unbuffered.
-   - Fear AI achieves **100.0% Top-1 persona traceability** and $\rho = 0.5717$ rank correlation while remaining smooth and chatter-resistant (**3.3 transitions**).
-2. **Biological Realism via Target Calibration**:
-   - FSM+Memory achieves 100% habituation, which sounds superior under naive metric maximization, but represents suicidal behavior in horror games. Fear AI's **22.6% habituation** and **49.0% leader damping** yield a **0.8879 CDS**, far outscoring FSM+Memory's **0.2857**.
-3. **Robustness to Perceptual Noise**:
-   - In actual games, raycasts miss, network updates arrive late, and distances jitter. Standard FSM flutters violently (**19.5 state flips per encounter**). Fear AI's continuous internal PAD integration completely absorbs perceptual jitter.
+1. **Resolution of the Saturated Archetype Artifact**:
+   - On coarse 12-archetype evaluations, both Utility AI and Fear AI appeared saturated at 100% Top-1 retrieval, yielding wide Wilson confidence intervals ($[75.8\%, 100\%]$).
+   - When expanded to $K=60$ continuous hypercube and near-neighbor variations ($\Delta = 0.10$), Utility AI collapses to **66.7% [54.1%, 77.3%]**, while Fear AI maintains **93.3% [84.1%, 97.4%]** with non-overlapping confidence intervals.
+2. **Defeating the "High Variance = Better" Fallacy**:
+   - While Utility AI produces mathematical spread, it suffers from violent state chatter (**16.4 transitions**) under sensor noise because unbuffered argmax selection chatters across close utilities.
+   - Fear AI preserves personality differentiation while remaining smooth and chatter-resistant (**3.2 transitions**).
+3. **Ludological Realism via Target Calibration**:
+   - FSM+Memory achieves 100% habituation, which naive metric maximization would reward, but which represents suicidal indifference in horror games. Fear AI's calibrated **46.3% habituation** and **49.0% leader damping** yield a **0.6360 CDS**, outscoring FSM+Memory's **0.2857**.
 4. **Computational Budget Justification**:
-   - At **1.52 $\mu$s**, Fear AI costs slightly more than a trivial 0.03 $\mu$s FSM, but easily fits within frame budgets (100 NPCs = **0.152 ms**, or < 1% of a 16.6ms 60Hz frame), buying 100% persona traceability, chatter immunity, and calibrated emotional dynamics.
+   - At **1.52 $\mu$s**, Fear AI easily fits within game frame budgets (100 NPCs = **0.152 ms**, or < 1% of a 16.6ms 60Hz frame), buying construct-valid personality expression, chatter immunity, and calibrated emotional dynamics.

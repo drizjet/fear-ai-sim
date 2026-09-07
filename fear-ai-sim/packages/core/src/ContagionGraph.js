@@ -99,9 +99,9 @@ export class ContagionGraph {
 
             // 2. Check Calm Leader Reassurance (high leadership calm/alert peers suppress neighbor panic)
             const leadership = peer.leadership ?? peer.traits?.leadership ?? 0;
-            const isCalmOrAlert = peer.fearBand === 'CALM' || peer.fearBand === 'ALERT' || (peer.rawFear && peer.rawFear < 0.3);
+            const isCalmOrAlert = peer.fearBand === 'CALM' || peer.fearBand === 'ALERT' || (!peer.isPanicking && (peer.rawFear ?? 0) < 0.35);
 
-            if (leadership > 0.6 && isCalmOrAlert && distSq < this.config.leaderRadius * this.config.leaderRadius) {
+            if (leadership > 0.05 && isCalmOrAlert && distSq < this.config.leaderRadius * this.config.leaderRadius) {
                 const dist = Math.sqrt(distSq) || 0.001;
                 const distanceFalloff = 1.0 - (dist / this.config.leaderRadius);
                 const calmImpact = leadership * distanceFalloff * this.config.leaderDampingStrength;

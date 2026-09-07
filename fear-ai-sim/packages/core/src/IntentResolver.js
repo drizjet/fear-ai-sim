@@ -147,27 +147,53 @@ export class IntentResolver {
             }
 
             // Check if trapped: if threat is extremely close (< 2 units) and health is critical, flail
+            const conscientiousness = agent.traits?.conscientiousness ?? 0.5;
             if (threats[0]?.distance !== undefined && threats[0].distance < 1.5) {
+                // Highly conscientious agents maintain tactical discipline instead of blind desperate flailing
+                if (conscientiousness > 0.65) {
+                    return {
+                        type: 'CONFRONT_THREAT',
+                        target_id: threats[0].id,
+                        urgency: 0.95,
+                        vector_hint: vector,
+                        suggested_posture: 'DEFENSIVE_STANCE'
+                    };
+                }
                 return {
                     type: 'DESPERATE_FLAIL',
                     target_id: threats[0].id,
                     urgency: 1.0,
                     vector_hint: vector,
-                    suggested_posture: 'STUMBLING'
+                    suggested_posture: conscientiousness < 0.35 ? 'PRONE' : 'STUMBLING'
                 };
             }
+
+            const flightPosture = conscientiousness < 0.3 ? 'STUMBLING' : 'SPRINTING';
 
             return {
                 type: 'FLEE_FROM',
                 target_id: targetId,
                 urgency: Math.min(1.0, 0.75 + fear * 0.25),
                 vector_hint: vector,
-                suggested_posture: 'SPRINTING'
+                suggested_posture: flightPosture
             };
         }
 
-        // 6. High Anxiety - Cautious Backing or Ally Clustering
+        // 6. High Anxiety - Cautious Backing or Ally Clustering / Group Warning
         if (band === 'ANXIOUS') {
+            const agreeableness = agent.traits?.agreeableness ?? 0.5;
+
+            // Highly agreeable agents prioritize warning nearby peers under threat
+            if (peers.length > 0 && threats.length > 0 && agreeableness > 0.65) {
+                return {
+                    type: 'WARN_GROUP',
+                    target_id: peers[0].id,
+                    urgency: Math.min(1.0, 0.65 + agreeableness * 0.15),
+                    vector_hint: { x: 0, y: 0, z: 0 },
+                    suggested_posture: 'DEFENSIVE_STANCE'
+                };
+            }
+
             // If threat is visible, back away cautiously
             if (threats.length > 0) {
                 const t = threats[0];
@@ -198,7 +224,7 @@ export class IntentResolver {
                 return {
                     type: 'APPROACH_ALLY',
                     target_id: ally.id,
-                    urgency: 0.55,
+                    urgency: Math.min(1.0, 0.45 + agreeableness * 0.2),
                     vector_hint: towardsAlly,
                     suggested_posture: 'UPRIGHT'
                 };
@@ -215,7 +241,11 @@ export class IntentResolver {
 
         // 7. Alert - Sound Investigation or Vigilance
         if (band === 'ALERT') {
-            if (sounds.length > 0 && agent.traits.curiosity > 0.4) {
+            const openness = agent.traits?.openness ?? (agent.traits?.curiosity ?? 0.5);
+            // Openness modulates auditory curiosity vs defensive vigilance
+            // At neutral 0.5: threshold is 0.4 * 1.0 = 0.4 (identical to baseline)
+            const investigateThreshold = 0.4 * (1.5 - openness);
+            if (sounds.length > 0 && openness > investigateThreshold) {
                 const s = sounds[0];
                 const towardsSound = IntentResolver._normalizeVector({
                     x: (s.x ?? 0) - (agent.x ?? 0),
@@ -226,7 +256,7 @@ export class IntentResolver {
                 return {
                     type: 'INVESTIGATE_SOUND',
                     target_id: s.id || 'sound',
-                    urgency: 0.40,
+                    urgency: Math.min(1.0, 0.25 + openness * 0.3),
                     vector_hint: towardsSound,
                     suggested_posture: 'UPRIGHT'
                 };
@@ -252,7 +282,28 @@ export class IntentResolver {
             };
         }
 
-        // 9. Default Calm - Idle / Explore
+        // 9. Default Calm - Idle / Explore / Sound Curiosity
+        if (sounds.length > 0) {
+            const openness = agent.traits?.openness ?? (agent.traits?.curiosity ?? 0.5);
+            const investigateThreshold = 0.45 * (1.5 - openness);
+            if (openness > investigateThreshold) {
+                const s = sounds[0];
+                const towardsSound = IntentResolver._normalizeVector({
+                    x: (s.x ?? 0) - (agent.x ?? 0),
+                    y: (s.y ?? 0) - (agent.y ?? 0),
+                    z: (s.z ?? 0) - (agent.z ?? 0)
+                });
+
+                return {
+                    type: 'INVESTIGATE_SOUND',
+                    target_id: s.id || 'sound',
+                    urgency: Math.min(1.0, 0.20 + openness * 0.25),
+                    vector_hint: towardsSound,
+                    suggested_posture: 'UPRIGHT'
+                };
+            }
+        }
+
         return {
             type: 'CAUTIOUS_EXPLORE',
             target_id: null,

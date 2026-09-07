@@ -50,7 +50,8 @@ export class AffectiveAgent {
             openness: sanitizeTrait(traits?.openness, DEFAULT_TRAITS.openness),
             conscientiousness: sanitizeTrait(traits?.conscientiousness, DEFAULT_TRAITS.conscientiousness),
             extraversion: sanitizeTrait(traits?.extraversion, DEFAULT_TRAITS.extraversion),
-            agreeableness: sanitizeTrait(traits?.agreeableness, DEFAULT_TRAITS.agreeableness)
+            agreeableness: sanitizeTrait(traits?.agreeableness, DEFAULT_TRAITS.agreeableness),
+            curiosity: sanitizeTrait(traits?.curiosity ?? traits?.openness, DEFAULT_TRAITS.curiosity)
         };
 
         // Spatial state (reported by host game)
@@ -213,12 +214,16 @@ export class AffectiveAgent {
                 )
                 : intensity;
 
-            rawThreatSum += habituated * distanceAtten * 0.6;
+            // Openness modulates auditory curiosity vs dread (neutral at 0.5 -> 1.0)
+            const opennessSoundMod = this.enableOCEAN ? (1.5 - (this.traits.openness ?? 0.5)) : 1.0;
+            rawThreatSum += habituated * distanceAtten * 0.6 * opennessSoundMod;
         }
 
         // 3. OCEAN Trait Modulation & Threat Weighting
         const neuroticismMod = 0.5 + this.traits.neuroticism * 0.9;
         const extraversionMod = 0.5 + this.traits.extraversion * 0.5;
+        // Agreeableness modulates responsiveness to leader reassurance (neutral at 0.5 -> 1.0)
+        const agreeablenessMod = this.enableOCEAN ? (0.5 + (this.traits.agreeableness ?? 0.5) * 1.0) : 1.0;
 
         // Acute close threats (< 20m) break through narrative pacing filters
         const effectivePacing = (threats.length > 0 && (threats[0].distance ?? 10) < 20)
@@ -228,22 +233,24 @@ export class AffectiveAgent {
         let totalPerceivedThreat = (rawThreatSum * neuroticismMod * effectivePacing)
             + (traumaDread * 0.8 * neuroticismMod)
             + (contagionFear * extraversionMod)
-            - (leaderCalm * 0.7);
+            - (leaderCalm * 0.7 * agreeablenessMod);
 
         totalPerceivedThreat = Math.max(0, totalPerceivedThreat);
 
-        // 4. Update Dominance
-        const agentPower = (this.energy * 0.5) + (this.health * 0.5) + (this.traits.resilience * 0.3);
+        // 4. Update Dominance (Conscientiousness promotes disciplined composure, neutral at 0.5 -> 0.0)
+        const conscientiousnessBonus = this.enableOCEAN ? (((this.traits.conscientiousness ?? 0.5) - 0.5) * 0.2) : 0.0;
+        const agentPower = (this.energy * 0.5) + (this.health * 0.5) + (this.traits.resilience * 0.3) + conscientiousnessBonus;
         const threatPower = (threats.length * 1.2) + totalPerceivedThreat + (traumaDread * 0.5) + 0.1;
         this.currentDominance = Math.max(0, Math.min(1.0, agentPower / (agentPower + threatPower)));
 
         // 5. Fear Dynamics: Decay and Integration
-        const fearDecayRate = Math.min(0.98, 0.92 + (this.traits.neuroticism * 0.05));
+        const resilienceMod = (this.traits.resilience - 0.5) * 0.08;
+        const fearDecayRate = Math.min(0.98, Math.max(0.75, 0.92 + (this.traits.neuroticism * 0.05) - resilienceMod));
         const fearInput = totalPerceivedThreat * (0.4 + this.traits.fear * 0.8);
 
-        if (threats.length > 0 || contagionFear > 0.4 || traumaDread > 0.4) {
-            // Sustained threat presence builds acute fear
-            this.currentFear = Math.min(1.0, Math.max(this.currentFear + 0.08, fearInput));
+        if (threats.length > 0 || contagionFear > 0.4 || traumaDread > 0.4 || (sounds.length > 0 && fearInput > 0.15)) {
+            // Sustained threat presence or alarming sounds build acute fear
+            this.currentFear = Math.min(1.0, Math.max(this.currentFear + 0.05, fearInput));
         } else {
             this.currentFear = Math.max(0, this.currentFear * Math.pow(fearDecayRate, safeDt / 0.016));
         }

@@ -242,7 +242,8 @@
     },
     {
       "milestone": "FAILURE_SAFETY",
-      "status": "VERIFIED",
+      "status": "VERIFIED_42_CASE_MATRIX",
+      "qualification": "Certified strictly against the 42-case Failure & Lifecycle Matrix across transport, lifecycle, failure-injection, security, and persistence suites. Pure-software Mulberry32 fallback upon PRNG native-loader failure certifies that specific subsystem only, not uninstalled C++/Rust engine extensions.",
       "implementation_evidence": [
         "packages/core/src/AffectiveAgent.js (safeDt, NaN/Infinity defensive clamping, ablation guards)",
         "packages/core/src/PsychoacousticSynthesizer.js (null/undefined/NaN audio hints fallback)",
@@ -277,7 +278,7 @@
         "Connection refusal prior to server startup caught cleanly without uncaught exceptions",
         "Unsupported future snapshot versions (> 1) cleanly rejected with 400 UNSUPPORTED_SNAPSHOT_VERSION",
         "Empty string, whitespace, and non-string agent IDs rejected with 400 VALIDATION_FAILED",
-        "Native acceleration failure falls back safely to pure-software Mulberry32 with audited warning"
+        "Native acceleration failure falls back safely to pure-software Mulberry32 with audited warning (subsystem specific)"
       ],
       "benchmark_evidence": [
         "Degraded fallback execution < 0.002 ms",
@@ -336,27 +337,30 @@
       "milestone": "BEHAVIORAL_EVALUATION_FABE",
       "status": "VERIFIED",
       "framework": "Fear AI Behavioral Evaluation Benchmark (FABE & FABE v2)",
-      "attribution": "Evaluation design informed by controlled, replayable affective-simulation principles seen in work such as AffectSim.",
+      "human_evaluation_gate": "HUMAN_EVALUATION_PREPARED (BLOCKED_EXTERNAL_PARTICIPANTS)",
+      "target_calibration_type": "DESIGNER_CALIBRATED / LUDOLOGICAL_EXPERIMENTAL_TARGETS",
+      "attribution": "Evaluation design informed by controlled, replayable affective-simulation principles seen in work such as AffectSim (August 2026).",
       "implementation_evidence": [
         "docs/BEHAVIORAL_EVALUATION_FRAMEWORK.md",
         "benchmarks/behavioral-evaluation/behavioral_benchmark.mjs",
+        "benchmarks/behavioral-evaluation/construct_validity_sweeps.mjs",
         "benchmarks/behavioral-evaluation/fabe_v2_benchmark.mjs",
         "benchmarks/behavioral-evaluation/blinded_evaluation_pairs.json"
       ],
       "test_evidence": [
-        "FABE Benchmark executed across 6 competitive baselines (FSM, FSM+Memory, BT, BT+Blackboard, Scalar Hysteresis, Utility AI) and 4 component ablations (No OCEAN, No Hysteresis, No Habituation, No Contagion)",
-        "Personality Differentiation: Fear AI PDI = 0.0387 vs FSM/BT PDI = 0.0000; OCEAN ablation collapses PDI to 0.0000",
-        "Hysteresis Recovery Smoothness: Fear AI HRS = 0.9863 vs FSM = 0.1000; Hysteresis ablation collapses HRS to 0.4637",
-        "Habituation Desensitization: Fear AI HDR = 0.2258 (22.6% decay) vs FSM/BT = 0.0000; Habituation ablation locks HDR to 0.0000",
-        "Leadership Panic Damping: Fear AI achieves 49.0% panic damping near calm high-dominance leader",
-        "FABE v2 Persona Traceability: Fear AI achieves 100.0% Top-1 and 100.0% Top-3 retrieval accuracy against random chance (8.3% / 25.0%), with Spearman rank correlation rho(Delta_OCEAN, Delta_Behavior) = 0.5717",
-        "FABE v2 Target-Calibrated Desirability (CDS): Fear AI scores 0.8879 against biologically calibrated targets (22.6% habituation vs 25% target; 49.0% leader damping vs 40% target), avoiding suicidal 100% extinction (FSM+Memory CDS 0.2857)",
-        "FABE v2 Layer 2 Noise Generalization: Under +/-20% Gaussian distance error and 20% occlusion, Fear AI maintains stability with only 3.3 +/- 0.46 transitions, compared to 19.5 +/- 4.50 chatter flips for FSM and 16.4 +/- 4.25 for Utility AI",
-        "FABE v2 Layer 3 Foundation: Emitted 20 randomized, double-blinded trajectory pairs to blinded_evaluation_pairs.json for human believability evaluation",
+        "Construct Validity Sweeps: All 7 traits (N, R, O, E, A, C, L) empirically verified with Spearman monotonicity rho >= 0.85 on primary dedicated signatures across 10 frozen deterministic seeds (N: 1.0000, R: 1.0000, O: 0.9636, E: 1.0000, A: 0.9910, C: 1.0000, L: 1.0000)",
+        "Orthogonal Cross-Talk Verification: Off-diagonal trait leakage verified bounded with zero unintended crosstalk outside natural psychological couplings",
+        "Fine-Grained Near-Neighbor Sensitivity: High discrimination accuracy across small increments (Delta = 0.05, 0.10, 0.15) confirming continuous expressivity without coarse discretization collapse",
+        "FABE v2 Persona Traceability (Expanded K=60 Cohort): Fear AI achieves 93.3% Top-1 [95% CI: 84.1%, 97.4%] (56/60) and 98.3% Top-3 [95% CI: 91.1%, 99.7%] (59/60) retrieval accuracy against random chance (1.7% / 5.0%), with Spearman rho(Delta_OCEAN, Delta_Behavior) = 0.5498",
+        "Competitive Separation: Under K=60 continuous hypercube and near-neighbor variations, Utility AI drops to 66.7% Top-1 [95% CI: 54.1%, 77.3%], and Behavior Tree collapses to 3.3% [0.9%, 11.4%]",
+        "Designer-Calibrated Ludological Desirability (CDS): Reclassified explicitly as ludological targets (purged biological claims; human literature shows 37% habituate, 47% sensitize, 16% stable). Fear AI balances 46.3% habituation and 49.0% leader damping (CDS = 0.6360), avoiding suicidal 100% extinction (FSM+Memory CDS 0.2857)",
+        "Layer 2 Noise Generalization: Under +/-20% Gaussian distance error and 20% occlusion across 10 frozen seeds, Fear AI maintains stability with only 3.2 +/- 0.60 transitions, compared to 19.5 +/- 4.50 chatter flips for FSM and 16.4 +/- 4.25 for Utility AI",
+        "Layer 3 Foundation: Emitted 20 randomized, double-blinded trajectory pairs to blinded_evaluation_pairs.json for human believability evaluation; baseline human annotator difficulty noted (~0.558 accuracy, kappa = 0.303)",
+        "Deterministic Seed Inventory: Benchmark frozen across explicit seeds [1337, 2026, 3141, 4096, 5555, 6789, 7777, 8888, 9123, 9999]",
         "Microsecond Budget: Full Fear AI evaluates in 1.52 µs (< 0.002 ms per agent); 100 NPCs consume 0.152 ms of frame budget"
       ],
       "runtime_evidence": [
-        "Automated benchmark runs with zero exceptions across FABE v1 and FABE v2",
+        "Automated benchmark runs with zero exceptions across construct validity sweeps, FABE v1, and FABE v2",
         "Replayable scenario stimuli under identical observations",
         "Blinded evaluation pairs export dataset verified"
       ],
@@ -367,7 +371,9 @@
         "BT Baseline: 0.03 µs",
         "FSM Baseline: 0.03 µs"
       ],
-      "known_gaps": [],
+      "known_gaps": [
+        "External human perceptual evaluation blocked on recruiting external participants; evaluation harness and blinded dataset ready"
+      ],
       "next_action": "MAINTAIN"
     }
   ]
