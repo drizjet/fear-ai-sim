@@ -475,6 +475,14 @@ export class FearServer {
 
     _sendWs(ws, data, correlationId = null) {
         if (ws.readyState === WebSocket.OPEN) {
+            // Check backpressure on slow consumers (e.g. > 5MB buffered)
+            if (ws.bufferedAmount > 5 * 1024 * 1024) {
+                console.warn('[FearServer] Slow consumer detected: terminating saturated WebSocket connection.');
+                try {
+                    ws.close(1008, 'Buffer overflow: consumer too slow');
+                } catch {}
+                return;
+            }
             if (correlationId) {
                 data.message_id = correlationId;
             }

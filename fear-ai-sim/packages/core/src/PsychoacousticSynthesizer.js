@@ -15,10 +15,21 @@ export class PsychoacousticSynthesizer {
      * @returns {object} AudioHints
      */
     static computeAudioHints(affectiveState) {
-        const fear = Math.max(0, Math.min(1.0, affectiveState.rawFear ?? 0));
-        const arousal = Math.max(0, Math.min(1.0, affectiveState.arousal ?? 0));
-        const energy = Math.max(0, Math.min(1.0, affectiveState.energy ?? 1.0));
-        const adrenaline = Math.max(0, Math.min(1.0, affectiveState.adrenaline ?? 0));
+        if (!affectiveState || typeof affectiveState !== 'object') {
+            affectiveState = {};
+        }
+        const rawFear = Number(affectiveState.rawFear);
+        const fear = Number.isFinite(rawFear) ? Math.max(0, Math.min(1.0, rawFear)) : 0;
+
+        const rawArousal = Number(affectiveState.arousal);
+        const arousal = Number.isFinite(rawArousal) ? Math.max(0, Math.min(1.0, rawArousal)) : 0;
+
+        const rawEnergy = Number(affectiveState.energy);
+        const energy = Number.isFinite(rawEnergy) ? Math.max(0, Math.min(1.0, rawEnergy)) : 1.0;
+
+        const rawAdrenaline = Number(affectiveState.adrenaline);
+        const adrenaline = Number.isFinite(rawAdrenaline) ? Math.max(0, Math.min(1.0, rawAdrenaline)) : 0;
+
         const band = affectiveState.state || affectiveState.fearBand || 'CALM';
 
         // 1. Heartbeat Tempo: 60 BPM (resting) to 180 BPM (maximum panic)

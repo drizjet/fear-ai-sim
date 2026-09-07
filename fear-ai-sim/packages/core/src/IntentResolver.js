@@ -27,11 +27,20 @@ export class IntentResolver {
      * @returns {object} ActionIntent
      */
     static resolveIntent(agent, observations = {}) {
-        const band = agent.fearCore.state;
-        const fear = agent.currentFear;
-        const dominance = agent.currentDominance;
-        const anger = agent.currentAnger;
-        const energy = agent.energy;
+        if (!agent || typeof agent !== 'object') {
+            return {
+                type: 'CAUTIOUS_EXPLORE',
+                target_id: null,
+                urgency: 0.10,
+                vector_hint: { x: 0, y: 0, z: 0 },
+                suggested_posture: 'UPRIGHT'
+            };
+        }
+        const band = agent.fearCore?.state || 'CALM';
+        const fear = Number.isFinite(agent.currentFear) ? agent.currentFear : 0;
+        const dominance = Number.isFinite(agent.currentDominance) ? agent.currentDominance : 0.5;
+        const anger = Number.isFinite(agent.currentAnger) ? agent.currentAnger : 0;
+        const energy = Number.isFinite(agent.energy) ? agent.energy : 1.0;
         const threats = observations.threats || [];
         const sounds = observations.sounds || [];
         const peers = observations.peers || [];

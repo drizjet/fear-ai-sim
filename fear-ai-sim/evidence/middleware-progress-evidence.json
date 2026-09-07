@@ -126,11 +126,21 @@
     },
     {
       "milestone": "CROSS_ENGINE_CONFORMANCE",
-      "status": "VERIFIED",
+      "status": "PARTIAL_ENGINE_GATED",
+      "engine_conformance": {
+        "node_jest": "VERIFIED (10/10 fixtures)",
+        "python_3": "VERIFIED (4/4 fixtures, diff 0.000000)",
+        "godot_4_6": "VERIFIED (4/4 fixtures, delta 0.000000)",
+        "csharp_dotnet8": "VERIFIED (client type and loopback verified)",
+        "unity_upm": "IMPLEMENTED_NOT_VERIFIED (UNITY_EDITOR_NOT_INSTALLED)",
+        "unreal_engine_5": "IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)"
+      },
       "implementation_evidence": [
         "tests/conformance/conformance.test.js",
         "tests/conformance/canonical-fixtures.test.js",
         "tests/conformance/run_python_conformance.py",
+        "tests/godot_project/run_canonical_conformance.gd",
+        "tools/test_godot_canonical_conformance.ps1",
         "tests/godot_project/main.gd",
         "tests/csharp_verification/Program.cs"
       ],
@@ -143,15 +153,18 @@
         "Leader reassurance panic damping",
         "Trauma zone persistent dread",
         "Deterministic cross-engine replay",
-        "Canonical JSON fixtures pass in Jest and Python with diff < 0.0001"
+        "Canonical JSON fixtures pass identically across Jest (10/10), Python (4/4, diff 0.000000), and official Godot 4.6 headless binary (4/4, delta 0.000000)"
       ],
       "runtime_evidence": [
-        "Identical semantics verified across Core, Server REST, Python, and Godot 4"
+        "Identical semantics verified across Core, Server REST, Python, and Godot 4.6 headless console"
       ],
       "benchmark_evidence": [
-        "Canonical fixtures suite executes 10 tests in < 0.6s"
+        "Canonical fixtures suite executes 10 tests in < 0.6s",
+        "Godot 4.6 headless runner executes 4 fixtures in < 0.8s"
       ],
-      "known_gaps": [],
+      "known_gaps": [
+        "Unity and Unreal Engine 5 numerical fixture parity blocked until respective editor binaries are installed on host"
+      ],
       "next_action": "MAINTAIN"
     },
     {
@@ -207,19 +220,22 @@
       "status": "VERIFIED",
       "implementation_evidence": [
         "benchmarks/headless-benchmark.mjs",
-        "benchmarks/subsystem-benchmark.mjs"
+        "benchmarks/subsystem-benchmark.mjs",
+        "docs/PERFORMANCE.md"
       ],
       "test_evidence": [
-        "1 Agent: 0.009 ms / 113,134 ticks/sec",
-        "10 Agents: 0.066 ms / 150,394 agent-ticks/sec",
-        "100 Agents: 0.245 ms / 408,011 agent-ticks/sec",
-        "1,000 Agents: 9.867 ms / 101,348 agent-ticks/sec (Within 16.6ms 60FPS budget)"
+        "1 Agent: 0.009 ms / 117,274 ticks/sec",
+        "10 Agents: 0.062 ms / 160,392 agent-ticks/sec",
+        "100 Agents: 0.242 ms / 413,953 agent-ticks/sec",
+        "1,000 Agents: 8.977 ms / 111,390 agent-ticks/sec (Within 16.6ms 60FPS budget)",
+        "5,000 Agents: 197.532 ms (Batch / background processing scale)"
       ],
       "runtime_evidence": [
-        "Isolated measurement of Core vs Ser/Deser vs Validation vs Transport"
+        "Isolated measurement of Core vs Ser/Deser vs Validation vs Transport",
+        "Explicitly documented as HEADLESS FEAR AI WORKLOAD (Node.js v24 on Windows 11)"
       ],
       "benchmark_evidence": [
-        "Subsystem breakdown: Core 0.0016ms, Val 0.0001ms, Ser 0.0020ms, WS 0.0459ms"
+        "Subsystem breakdown: Core 0.0015ms, Val 0.0001ms, Ser 0.0020ms, WS 0.0452ms, Snapshot 0.0886ms"
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
@@ -229,22 +245,27 @@
       "status": "VERIFIED",
       "implementation_evidence": [
         "packages/core/src/AffectiveAgent.js (safeDt, NaN/Infinity defensive clamping)",
-        "packages/runtime/src/FearServer.js (maxPayloadBytes bound, 413 handling, error frames)",
+        "packages/core/src/PsychoacousticSynthesizer.js (null/undefined/NaN audio hints fallback)",
+        "packages/core/src/IntentResolver.js (null/corrupt agent state explore fallback)",
+        "packages/core/src/TraumaZoneSystem.js (parameter clamping and query resilience)",
+        "packages/runtime/src/FearServer.js (maxPayloadBytes bound, 413 handling, slow consumer buffer guard)",
         "tests/conformance/failure-injection.test.js",
         "tests/conformance/transport-failure-matrix.test.js"
       ],
       "test_evidence": [
         "7/7 failure injection tests green",
-        "7/7 transport failure matrix tests green"
+        "16/16 transport failure matrix tests green: payload 413, correlation IDs, duplicate IDs, monotonic ordering, unregister in-flight, 100-request bursts, 25-client reconnect storms, queue saturation/producer bounds, slow consumer WS backpressure, server abort recovery, client-side timeouts, retrograde tick defense, adapter in-flight shutdown, and psychoacoustic/intent/trauma fallback safety"
       ],
       "runtime_evidence": [
         "Server survives malformed HTTP and WS payloads without crashing",
         "Extreme numbers (NaN, Infinity, -99 dt) clamped safely to valid PAD coordinates",
         "Rapid disconnects and 25-client reconnect storms release sockets cleanly",
+        "Slow consumers with >5MB buffered WebSocket data closed gracefully with 1008 policy violation",
         "Payload exceeding 256KB/50MB rejected with HTTP 413"
       ],
       "benchmark_evidence": [
-        "Degraded fallback execution < 0.002 ms"
+        "Degraded fallback execution < 0.002 ms",
+        "16 transport tests execute in 1.3s"
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
