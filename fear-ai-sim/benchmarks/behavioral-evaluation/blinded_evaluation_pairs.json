@@ -1,6 +1,6 @@
 {
   "title": "FABE v2 Layer 3 Blinded Human Believability Trial Pairs",
-  "generated_at": "2026-09-07T18:04:52.129Z",
+  "generated_at": "2026-09-07T19:18:12.313Z",
   "total_trials": 20,
   "rubric": [
     "1. Perceptual Naturalness (1-5): Does the agent feel like a plausible, living human under stress?",
@@ -510,9 +510,9 @@
         },
         {
           "tick": 30,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
@@ -1078,79 +1078,79 @@
         },
         {
           "tick": 29,
+          "state": "HIDE",
+          "urgency": 0.9,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 30,
           "state": "PANIC",
           "urgency": 1,
           "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
-          "tick": 30,
-          "state": "FREEZE",
-          "urgency": 1,
-          "posture": "TREMBLING",
-          "heartbeat_bpm": 180
-        },
-        {
           "tick": 31,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 32,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 33,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 34,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 35,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 36,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 37,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 38,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 39,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         }
       ],
@@ -1371,16 +1371,16 @@
         },
         {
           "tick": 29,
-          "state": "PANIC",
+          "state": "FREEZE",
           "urgency": 1,
-          "posture": "STUMBLING",
+          "posture": "TREMBLING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 30,
-          "state": "PANIC",
+          "state": "FREEZE",
           "urgency": 1,
-          "posture": "STUMBLING",
+          "posture": "TREMBLING",
           "heartbeat_bpm": 180
         },
         {
@@ -1995,30 +1995,30 @@
         },
         {
           "tick": 36,
+          "state": "HIDE",
+          "urgency": 0.9,
+          "posture": "CROUCHING",
+          "heartbeat_bpm": 180
+        },
+        {
+          "tick": 37,
           "state": "PANIC",
           "urgency": 1,
           "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
-          "tick": 37,
-          "state": "FREEZE",
-          "urgency": 1,
-          "posture": "TREMBLING",
-          "heartbeat_bpm": 180
-        },
-        {
           "tick": 38,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 39,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         }
       ],
@@ -2817,30 +2817,30 @@
         },
         {
           "tick": 31,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 32,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 33,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
           "tick": 34,
-          "state": "FREEZE",
+          "state": "PANIC",
           "urgency": 1,
-          "posture": "TREMBLING",
+          "posture": "SPRINTING",
           "heartbeat_bpm": 180
         },
         {
@@ -2852,30 +2852,30 @@
         },
         {
           "tick": 36,
-          "state": "FREEZE",
-          "urgency": 1,
-          "posture": "TREMBLING",
+          "state": "RECOVER",
+          "urgency": 0.2,
+          "posture": "UPRIGHT",
           "heartbeat_bpm": 180
         },
         {
           "tick": 37,
-          "state": "FREEZE",
-          "urgency": 1,
-          "posture": "TREMBLING",
+          "state": "RECOVER",
+          "urgency": 0.2,
+          "posture": "UPRIGHT",
           "heartbeat_bpm": 180
         },
         {
           "tick": 38,
-          "state": "FREEZE",
-          "urgency": 1,
-          "posture": "TREMBLING",
+          "state": "RECOVER",
+          "urgency": 0.2,
+          "posture": "UPRIGHT",
           "heartbeat_bpm": 180
         },
         {
           "tick": 39,
-          "state": "FREEZE",
-          "urgency": 1,
-          "posture": "TREMBLING",
+          "state": "RECOVER",
+          "urgency": 0.2,
+          "posture": "UPRIGHT",
           "heartbeat_bpm": 180
         }
       ],
