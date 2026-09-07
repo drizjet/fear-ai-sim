@@ -467,3 +467,85 @@ The empirical results of LOSO V2.1 deliver a fundamental scientific conclusion: 
 
 By comparing functional response curves rather than unadjusted raw vectors, personality can be rigorously identified across arbitrary, never-before-seen environments without requiring target diagnostic data.
 
+---
+
+## 7. Milestone B: FABE Functional Persona Signatures (FPS v1)
+
+Following the empirical findings of LOSO V2.1, Milestone B operationalizes **Functional Persona Signatures (FPS v1)**. Rather than evaluating aggregate state vectors $\mathbf{x} = \frac{1}{T}\sum_t \mathbf{s}_t$ whose magnitudes are dominated by scenario threat intensity ($\eta^2 = 42.6\%$), an FPS characterizes the agent's dynamic stimulus-response transfer function $f_{\boldsymbol{\theta}}(\text{stimulus}) \to \text{response}$ across 6 canonical response surfaces.
+
+### 7.1 The 6 Parametric Response Surfaces
+
+1. **Threat-Appraisal Sensitivity Curve**:
+   - Sweeps distance $d \in [1\text{m}, 30\text{m}]$ under controlled predatory threat.
+   - Measures onset distance threshold $D_{50}$ (where acute fear $\ge 0.50$), threat gain $k_{\text{threat}} = \frac{\partial \text{Fear}}{\partial \text{Proximity}}$, and point-blank peak fear $F_{\max}$.
+2. **Recovery Half-Life & Decay Dynamics**:
+   - Pulses agent to peak acute fear ($F = 1.0$) and removes threat to measure decay in complete silence.
+   - Measures empirical recovery half-life $\tau_{1/2}$ (ticks to $50\%$ decay), ticks to calm $\tau_{\text{calm}}$, and exponential decay rate $\hat{\lambda} = \exp\left(-\frac{\ln 2}{\tau_{1/2}}\right)$.
+3. **Social Contagion & Reassurance Susceptibility**:
+   - Evaluates peer panic coupling $\beta_{\text{social}} = \frac{\Delta \text{Fear}}{\Delta \text{Contagion}}$ and leader reassurance mitigation $\beta_{\text{reassure}} = \frac{\Delta \text{Fear}}{\Delta \text{LeaderCalm}}$.
+4. **Altruism & Pro-Social Dilemma Function**:
+   - Measures pro-social action selection rate $P(\text{Help/Warn} \mid \text{danger}, \text{peers})$ under anxiety vs self-preservation flight.
+5. **Tactical Discipline Retention Function**:
+   - Evaluates composure maintenance (`DEFENSIVE_STANCE` / `SPRINTING` vs `STUMBLING` / `DESPERATE_FLAIL`) under mounting acute stress and close-quarters confrontation at $d < 1.5\text{m}$.
+6. **Curiosity Under Ambiguity Curve**:
+   - Sweeps acoustic stimulus intensity ($0.10 \to 0.90$) at $15\text{m}$ to measure sound volume investigation threshold $S_{\text{threshold}}$ and acoustic sensitivity $\gamma_{\text{curiosity}}$.
+
+### 7.2 Canonical Response Surface Parameters ($K=12$ Archetypes)
+
+| Persona | $D_{50}$ (m) | $\tau_{1/2}$ (ticks) | $\hat{\lambda}$ | $\beta_{\text{social}}$ | $\beta_{\text{reassure}}$ | CQB Disc | Faint Cur |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Cowardly Civilian** | 30 | 35 | 0.9800 | 0.848 | 0.273 | 0.00 | 0.00 |
+| **Stoic Veteran** | 1 | 7 | 0.8932 | 0.564 | 0.195 | 0.00 | 0.90 |
+| **Impulsive Scout** | 27 | 17 | 0.9580 | 0.880 | 0.404 | 0.00 | 0.90 |
+| **Protective Leader** | 3 | 8 | 0.9061 | 0.755 | 0.276 | 0.00 | 0.90 |
+| **Paranoid Watcher** | 30 | 32 | 0.9785 | 0.824 | 0.155 | 0.80 | 0.00 |
+| **Curious Scholar** | 11 | 11 | 0.9334 | 0.744 | 0.393 | 0.00 | 0.90 |
+| **Compliant Follower** | 25 | 14 | 0.9491 | 0.746 | 0.588 | 0.00 | 0.00 |
+| **Aggressive Defender** | 13 | 9 | 0.9201 | 0.778 | 0.267 | 0.00 | 0.90 |
+| **Frozen Bystander** | 30 | 35 | 0.9800 | 0.867 | 0.127 | 0.00 | 0.00 |
+| **Reckless Daredevil** | 1 | 7 | 0.8994 | 0.694 | 0.214 | 0.00 | 0.90 |
+| **Resilient Medic** | 6 | 8 | 0.9085 | 0.648 | 0.321 | 0.00 | 0.90 |
+| **Despondent Fatalist** | 30 | 35 | 0.9800 | 0.775 | 0.272 | 0.00 | 0.00 |
+
+### 7.3 Reference Probe Battery Noise Robustness ($K=60$ Extended Cohort)
+
+Evaluated across all 60 continuous hypercube personas and near-neighbors ($\Delta = 0.10$) under varying sensor perturbation:
+
+| Test Condition | Perturbation Level | Top-1 Retrieval | Top-3 Retrieval | Chance Floor |
+| :--- | :---: | :---: | :---: | :---: |
+| **Nominal Repeatability** | $0\%$ noise | **83.3%** | **100.0%** | 1.67% |
+| **Mild Sensor Noise** | $\pm 5\%$ distance noise | **78.3%** | **100.0%** | 1.67% |
+| **Stress Sensor Noise** | $\pm 20\%$ distance noise | **61.7%** | **93.3%** | 1.67% |
+
+*Conclusion*: Across the entire $K=60$ continuous hypercube, the 10-parameter Functional Persona Signature maintains 100% Top-3 retrieval under mild noise and 93.3% under severe $\pm 20\%$ distance distortion, demonstrating that multi-surface parametric characterization uniquely identifies personas under sensor noise.
+
+### 7.4 Cross-Scenario Invariance & Domain Stratification (79,200 Decision Pairs, 10 Seeds)
+
+Evaluated across the 12 LOSO scenario families, comparing unadjusted raw vectors vs Observational FPS estimated directly from uncontrolled scenario traces:
+
+| Cohort | Metric | Raw Baseline | Observational FPS | Delta ($\Delta$) |
+| :--- | :--- | :---: | :---: | :---: |
+| **Canonical ($K=12$)** | **Overall Top-1** | 37.67% [36.92%, 38.43%] | **38.32% [37.57%, 39.08%]** | **+0.65%** |
+| | *Within-Domain* | 38.63% | **39.91%** | **+1.27%** |
+| | *Cross-Domain* | 37.31% | **37.73%** | **+0.42%** |
+| **Extended ($K=60$)** | **Overall Top-1** | 11.73% [11.51%, 11.96%] | 11.50% [11.28%, 11.72%] | -0.23% |
+| | *Within-Domain* | 12.84% | 12.52% | -0.32% |
+| | *Cross-Domain* | 11.31% | 11.11% | -0.20% |
+
+### 7.5 Essential Negative Finding: The Single-Scenario Observational Transfer Gap
+
+When attempting to directly match an observational signature $\hat{\boldsymbol{\theta}}_{\text{obs}}$ estimated from a single uncontrolled scenario against the complete Reference Probe gallery $\boldsymbol{\theta}^*$, accuracy drops to **17.36%** ($K=12$) and **4.86%** ($K=60$).
+
+*Mechanistic Root Cause*:
+A single uncontrolled scenario (e.g. 20 ticks of `stalk_cornered_deadend`) only excites a narrow slice of the stimulus space (no peers, no sounds, single threat trajectory). Consequently:
+1. Social susceptibility, reassurance gain, and acoustic curiosity remain completely unexcited during that episode, falling back to uninformative priors ($0.5$).
+2. The Reference Probe gallery, in contrast, excites the complete multi-modal spectrum.
+3. Matching a sparse, single-modality observation against a dense multi-modal gallery induces systematic domain distance.
+
+*Methodological Principle*:
+Parametric response surface matching across scenarios requires either:
+- **Stimulus-rich episodes** that excite all relevant modalities, or
+- **Multi-scenario trajectory aggregation** before gallery comparison, or
+- **Subspace projection / masking** that restricts distance metrics strictly to the stimulus modalities excited in that scenario.
+
+

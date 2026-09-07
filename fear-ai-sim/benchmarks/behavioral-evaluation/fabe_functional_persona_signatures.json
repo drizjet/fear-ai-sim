@@ -1,0 +1,473 @@
+{
+  "benchmark": "FABE Functional Persona Signatures (FPS v1)",
+  "timestamp": "2026-09-07T22:53:31.108Z",
+  "fastMode": false,
+  "seedsCount": 10,
+  "cohorts": {
+    "k12": {
+      "cohortName": "Canonical Archetypes K=12",
+      "K": 12,
+      "pairsEvaluated": 15840,
+      "chanceFloor": 8.33,
+      "rawBaseline": {
+        "correct": 5967,
+        "total": 15840,
+        "top1Percent": 37.67,
+        "ci95": [
+          36.92,
+          38.43
+        ]
+      },
+      "observationalFPS": {
+        "correct": 6070,
+        "total": 15840,
+        "top1Percent": 38.32,
+        "ci95": [
+          37.57,
+          39.08
+        ],
+        "deltaOverRaw": 0.65
+      },
+      "domainStratification": {
+        "withinDomain": {
+          "pairs": 4320,
+          "rawTop1Percent": 38.63,
+          "fpsTop1Percent": 39.91,
+          "delta": 1.27
+        },
+        "crossDomain": {
+          "pairs": 11520,
+          "rawTop1Percent": 37.31,
+          "fpsTop1Percent": 37.73,
+          "delta": 0.42
+        }
+      },
+      "referenceProbeFPS": {
+        "correct": 2750,
+        "total": 15840,
+        "top1Percent": 17.36,
+        "ci95": [
+          16.78,
+          17.96
+        ],
+        "deltaOverRaw": -20.31
+      }
+    },
+    "k60": {
+      "cohortName": "Extended Cohort K=60",
+      "K": 60,
+      "pairsEvaluated": 79200,
+      "chanceFloor": 1.67,
+      "rawBaseline": {
+        "correct": 9290,
+        "total": 79200,
+        "top1Percent": 11.73,
+        "ci95": [
+          11.51,
+          11.96
+        ]
+      },
+      "observationalFPS": {
+        "correct": 9107,
+        "total": 79200,
+        "top1Percent": 11.5,
+        "ci95": [
+          11.28,
+          11.72
+        ],
+        "deltaOverRaw": -0.23
+      },
+      "domainStratification": {
+        "withinDomain": {
+          "pairs": 21600,
+          "rawTop1Percent": 12.84,
+          "fpsTop1Percent": 12.52,
+          "delta": -0.32
+        },
+        "crossDomain": {
+          "pairs": 57600,
+          "rawTop1Percent": 11.31,
+          "fpsTop1Percent": 11.11,
+          "delta": -0.2
+        }
+      },
+      "referenceProbeFPS": {
+        "correct": 3850,
+        "total": 79200,
+        "top1Percent": 4.86,
+        "ci95": [
+          4.71,
+          5.01
+        ],
+        "deltaOverRaw": -6.87
+      }
+    }
+  },
+  "probeBatteryRobustness": {
+    "Nominal Repeatability (0% noise)": {
+      "noise": 0,
+      "top1Percent": 83.3,
+      "top3Percent": 100
+    },
+    "Mild Sensor Noise (5% distance noise)": {
+      "noise": 0.05,
+      "top1Percent": 78.3,
+      "top3Percent": 100
+    },
+    "Stress Sensor Noise (20% distance noise)": {
+      "noise": 0.2,
+      "top1Percent": 61.7,
+      "top3Percent": 93.3
+    }
+  },
+  "canonicalParametricSurfaces": [
+    {
+      "id": "cowardly_civilian",
+      "name": "Cowardly Civilian",
+      "threat": {
+        "d50": 30,
+        "threatGain": 1.4049,
+        "peakFear": 1
+      },
+      "recovery": {
+        "tauHalfTicks": 35,
+        "tauCalmTicks": 40,
+        "empiricalLambda": 0.98
+      },
+      "social": {
+        "betaSocial": 0.848,
+        "betaReassure": 0.273
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0,
+        "volumeThreshold": 1
+      }
+    },
+    {
+      "id": "stoic_veteran",
+      "name": "Stoic Veteran",
+      "threat": {
+        "d50": 1,
+        "threatGain": 0.5735,
+        "peakFear": 0.448
+      },
+      "recovery": {
+        "tauHalfTicks": 7,
+        "tauCalmTicks": 15,
+        "empiricalLambda": 0.8932
+      },
+      "social": {
+        "betaSocial": 0.564,
+        "betaReassure": 0.195
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0.9,
+        "volumeThreshold": 0.1
+      }
+    },
+    {
+      "id": "impulsive_scout",
+      "name": "Impulsive Scout",
+      "threat": {
+        "d50": 27,
+        "threatGain": 1.0199,
+        "peakFear": 0.874
+      },
+      "recovery": {
+        "tauHalfTicks": 17,
+        "tauCalmTicks": 40,
+        "empiricalLambda": 0.958
+      },
+      "social": {
+        "betaSocial": 0.88,
+        "betaReassure": 0.404
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0.9,
+        "volumeThreshold": 0.1
+      }
+    },
+    {
+      "id": "protective_leader",
+      "name": "Protective Leader",
+      "threat": {
+        "d50": 3,
+        "threatGain": 0.6594,
+        "peakFear": 0.53
+      },
+      "recovery": {
+        "tauHalfTicks": 8,
+        "tauCalmTicks": 18,
+        "empiricalLambda": 0.9061
+      },
+      "social": {
+        "betaSocial": 0.755,
+        "betaReassure": 0.276
+      },
+      "altruism": {
+        "altruismRate": 0.2
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0.9,
+        "volumeThreshold": 0.1
+      }
+    },
+    {
+      "id": "paranoid_watcher",
+      "name": "Paranoid Watcher",
+      "threat": {
+        "d50": 30,
+        "threatGain": 1.3614,
+        "peakFear": 1
+      },
+      "recovery": {
+        "tauHalfTicks": 32,
+        "tauCalmTicks": 40,
+        "empiricalLambda": 0.9785
+      },
+      "social": {
+        "betaSocial": 0.824,
+        "betaReassure": 0.155
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0.8,
+        "cqbConfrontRate": 0.8
+      },
+      "curiosity": {
+        "acousticSensitivity": 0,
+        "volumeThreshold": 1
+      }
+    },
+    {
+      "id": "curious_scholar",
+      "name": "Curious Scholar",
+      "threat": {
+        "d50": 11,
+        "threatGain": 0.7837,
+        "peakFear": 0.649
+      },
+      "recovery": {
+        "tauHalfTicks": 11,
+        "tauCalmTicks": 28,
+        "empiricalLambda": 0.9334
+      },
+      "social": {
+        "betaSocial": 0.744,
+        "betaReassure": 0.393
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0.9,
+        "volumeThreshold": 0.1
+      }
+    },
+    {
+      "id": "compliant_follower",
+      "name": "Compliant Follower",
+      "threat": {
+        "d50": 25,
+        "threatGain": 0.991,
+        "peakFear": 0.846
+      },
+      "recovery": {
+        "tauHalfTicks": 14,
+        "tauCalmTicks": 39,
+        "empiricalLambda": 0.9491
+      },
+      "social": {
+        "betaSocial": 0.746,
+        "betaReassure": 0.588
+      },
+      "altruism": {
+        "altruismRate": 0.8
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0,
+        "volumeThreshold": 1
+      }
+    },
+    {
+      "id": "aggressive_defender",
+      "name": "Aggressive Defender",
+      "threat": {
+        "d50": 13,
+        "threatGain": 0.8097,
+        "peakFear": 0.673
+      },
+      "recovery": {
+        "tauHalfTicks": 9,
+        "tauCalmTicks": 24,
+        "empiricalLambda": 0.9201
+      },
+      "social": {
+        "betaSocial": 0.778,
+        "betaReassure": 0.267
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0.9,
+        "volumeThreshold": 0.1
+      }
+    },
+    {
+      "id": "frozen_bystander",
+      "name": "Frozen Bystander",
+      "threat": {
+        "d50": 30,
+        "threatGain": 1.4598,
+        "peakFear": 1
+      },
+      "recovery": {
+        "tauHalfTicks": 35,
+        "tauCalmTicks": 40,
+        "empiricalLambda": 0.98
+      },
+      "social": {
+        "betaSocial": 0.867,
+        "betaReassure": 0.127
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0,
+        "volumeThreshold": 1
+      }
+    },
+    {
+      "id": "reckless_daredevil",
+      "name": "Reckless Daredevil",
+      "threat": {
+        "d50": 1,
+        "threatGain": 0.5933,
+        "peakFear": 0.467
+      },
+      "recovery": {
+        "tauHalfTicks": 7,
+        "tauCalmTicks": 16,
+        "empiricalLambda": 0.8994
+      },
+      "social": {
+        "betaSocial": 0.694,
+        "betaReassure": 0.214
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0.9,
+        "volumeThreshold": 0.1
+      }
+    },
+    {
+      "id": "resilient_medic",
+      "name": "Resilient Medic",
+      "threat": {
+        "d50": 6,
+        "threatGain": 0.707,
+        "peakFear": 0.576
+      },
+      "recovery": {
+        "tauHalfTicks": 8,
+        "tauCalmTicks": 19,
+        "empiricalLambda": 0.9085
+      },
+      "social": {
+        "betaSocial": 0.648,
+        "betaReassure": 0.321
+      },
+      "altruism": {
+        "altruismRate": 0.4
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0.9,
+        "volumeThreshold": 0.1
+      }
+    },
+    {
+      "id": "despondent_fatalist",
+      "name": "Despondent Fatalist",
+      "threat": {
+        "d50": 30,
+        "threatGain": 1.3119,
+        "peakFear": 1
+      },
+      "recovery": {
+        "tauHalfTicks": 35,
+        "tauCalmTicks": 40,
+        "empiricalLambda": 0.98
+      },
+      "social": {
+        "betaSocial": 0.775,
+        "betaReassure": 0.272
+      },
+      "altruism": {
+        "altruismRate": 0
+      },
+      "discipline": {
+        "disciplinedStanceRate": 0,
+        "cqbConfrontRate": 0
+      },
+      "curiosity": {
+        "acousticSensitivity": 0,
+        "volumeThreshold": 1
+      }
+    }
+  ]
+}
