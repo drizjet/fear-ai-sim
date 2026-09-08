@@ -26,7 +26,13 @@ import {
     INCIDENT_TYPES,
     DiagnosticExplainabilityInspector,
     DeterministicRng,
-    CivilizationSimulationSystem
+    CivilizationSimulationSystem,
+    PresetLibrary,
+    PRESET_CARDS,
+    DesignerTuningSafetyValidator,
+    ReplayWorkbench,
+    FrontierValleySimulation,
+    WorldDegeneracyDetector
 } from '../packages/core/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
 import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
@@ -61,6 +67,14 @@ function printHelp() {
     console.log(`  counterfactual     Run 8 causal counterfactual experiments (Section XL)`);
     console.log(`  dashboard          Launch the Web-Based Designer Replay & Diagnostic Viewer (Sections XXXI & XXXII)`);
     console.log(`                     Options: --port <8766> --host <127.0.0.1>`);
+    console.log(`  presets            List curated archetype presets or inspect a specific preset card (Front B)`);
+    console.log(`                     Options: --id <preset_id> --json`);
+    console.log(`  validate-safety    Validate agent tuning against designer safety invariants (Section 78)`);
+    console.log(`                     Options: --preset <preset_id>`);
+    console.log(`  frontier-valley    Run the Frontier Valley multi-seed simulation + degeneracy check (Front C)`);
+    console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
+    console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
+    console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -367,6 +381,148 @@ function handleGodot(options) {
     process.exit(proc.status || 0);
 }
 
+function handlePresets(options) {
+    if (options.id) {
+        const card = PresetLibrary.getPreset(options.id);
+        if (!card) {
+            console.error(`Preset "${options.id}" not found. Available presets: ${PresetLibrary.listPresetIds().join(', ')}`);
+            process.exit(1);
+        }
+        if (options.json) {
+            console.log(JSON.stringify(card, null, 2));
+            return;
+        }
+        console.log(BANNER);
+        console.log(`=== PRESET BEHAVIOR CARD: ${card.id} (${card.name}) ===`);
+        console.log(`Description:   ${card.description}`);
+        console.log(`Traits:        ${JSON.stringify(card.traits)}`);
+        console.log(`Behavior Card:`);
+        console.log(`  • Panic Threshold: ${card.behaviorCard.panicOnsetThreshold}`);
+        console.log(`  • Half-Life Ticks: ${card.behaviorCard.recoveryHalfLifeTicks}`);
+        console.log(`  • Contagion Gain:  ${card.behaviorCard.contagionGain}`);
+        console.log(`  • Helping Danger:  ${card.behaviorCard.helpingUnderDanger}`);
+        console.log(`  • Strengths:       ${card.behaviorCard.strengths.join('; ')}`);
+        console.log(`  • Weaknesses:      ${card.behaviorCard.weaknesses.join('; ')}`);
+        console.log(`  • Contexts:        ${card.behaviorCard.validOpportunityContexts.join(', ')}`);
+        return;
+    }
+
+    const presets = PresetLibrary.getAllPresets();
+    if (options.json) {
+        console.log(JSON.stringify(presets, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== CURATED PRESET LIBRARY (${presets.length} Canonical Archetypes) ===\n`);
+    for (const p of presets) {
+        console.log(`• ${p.id.padEnd(24)}: ${p.name.padEnd(22)} — ${p.description}`);
+    }
+    console.log(`\nUse 'fear-ai presets --id <PRESET_ID>' to inspect full card details.`);
+}
+
+function handleValidateSafety(options) {
+    console.log(BANNER);
+    console.log(`=== DESIGNER TUNING SAFETY VALIDATION ===\n`);
+    if (options.preset) {
+        const card = PresetLibrary.getPreset(options.preset);
+        if (!card) {
+            console.error(`Preset "${options.preset}" not found.`);
+            process.exit(1);
+        }
+        const report = DesignerTuningSafetyValidator.validate(card);
+        console.log(`Preset: ${options.preset}`);
+        console.log(`Status: ${report.valid ? '✓ PASS (Zero Violations)' : '✗ FAIL (' + report.errors.length + ' Errors, ' + report.warnings.length + ' Warnings)'}`);
+        for (const e of report.errors) {
+            console.log(`  [ERROR] ${e.code}: ${e.message}`);
+        }
+        for (const w of report.warnings) {
+            console.log(`  [WARN] ${w.code}: ${w.message}`);
+        }
+        return;
+    }
+
+    let allValid = true;
+    for (const card of PresetLibrary.getAllPresets()) {
+        const report = DesignerTuningSafetyValidator.validate(card);
+        const icon = report.valid ? '✓' : '✗';
+        console.log(`${icon} Preset [${card.id}]: ${report.valid ? 'Safe' : report.errors.map(e => e.code).concat(report.warnings.map(w => w.code)).join(', ')}`);
+        if (!report.valid) allValid = false;
+    }
+    console.log(`\nSummary: ${allValid ? 'All presets certified compliant with Section 78 safety invariants.' : 'Violations detected.'}`);
+}
+
+function handleFrontierValley(options) {
+    const ticks = parseInt(options.ticks || '100', 10);
+    const seeds = options.seeds ? options.seeds.split(',').map(s => parseInt(s.trim(), 10)) : [101, 202, 303];
+
+    console.log(BANNER);
+    console.log(`=== FRONTIER VALLEY CANONICAL WORLD SIMULATION ===`);
+    console.log(`Ticks: ${ticks} | Seeds: ${seeds.join(', ')}\n`);
+
+    const summaries = seeds.map(seed => {
+        const sim = new FrontierValleySimulation({ seed });
+        return { seed, ...sim.advance(ticks) };
+    });
+
+    const analysis = WorldDegeneracyDetector.analyzeRuns(summaries);
+
+    if (options.json) {
+        console.log(JSON.stringify({ summaries, analysis }, null, 2));
+        return;
+    }
+
+    const certified = !analysis.degenerate;
+    console.log(`Degeneracy Check: ${certified ? '✓ CERTIFIED HEALTHY (Zero Degeneracies)' : '✗ DEGENERACIES DETECTED'}`);
+    if (analysis.healthyMetrics) {
+        console.log(`  • Stability Score: ${analysis.healthyMetrics.stabilityScore.toFixed(3)}`);
+    }
+    if (analysis.flags && analysis.flags.length > 0) {
+        for (const f of analysis.flags) {
+            console.log(`  • [${f.severity}] ${f.type}: ${f.message}`);
+        }
+    }
+
+    const meanFear = (summaries.reduce((sum, s) => sum + s.meanPopulationFear, 0) / summaries.length).toFixed(3);
+    const totalEncounters = summaries.reduce((sum, s) => sum + s.totalEncounters, 0);
+    const totalPanics = summaries.reduce((sum, s) => sum + s.panicIncidents, 0);
+    const avgSettlements = {};
+    for (const key of Object.keys(summaries[0].settlements || {})) {
+        avgSettlements[key] = Math.round(summaries.reduce((sum, s) => sum + (s.settlements[key] || 0), 0) / summaries.length);
+    }
+
+    console.log(`\nMacro Metrics (Averaged across ${seeds.length} seeds):`);
+    console.log(`  • Mean Population Fear: ${meanFear}`);
+    console.log(`  • Total Encounters:     ${totalEncounters} (${(totalEncounters / seeds.length).toFixed(1)} / seed)`);
+    console.log(`  • Panic Incidents:      ${totalPanics} (${(totalPanics / seeds.length).toFixed(1)} / seed)`);
+    console.log(`  • Avg Populations:      ${JSON.stringify(avgSettlements)}`);
+}
+
+function handleDiffReplay(options) {
+    if (!options.fileA || !options.fileB) {
+        console.error('Usage: fear-ai diff-replay --fileA <path> --fileB <path>');
+        process.exit(1);
+    }
+    const replayA = JSON.parse(fs.readFileSync(options.fileA, 'utf8'));
+    const replayB = JSON.parse(fs.readFileSync(options.fileB, 'utf8'));
+
+    const diff = ReplayWorkbench.findFirstDivergence(replayA, replayB);
+    console.log(BANNER);
+    console.log(`=== REPLAY FIRST-DIVERGENCE DEBUGGER ===\n`);
+    console.log(`File A: ${options.fileA}`);
+    console.log(`File B: ${options.fileB}`);
+    if (!diff) {
+        console.log(`\n✓ IDENTICAL: Zero divergence detected across all recorded ticks and entities.`);
+    } else {
+        console.log(`\n✗ DIVERGENCE DETECTED at Tick ${diff.tick}:`);
+        console.log(`  • Entity:    ${diff.entityId}`);
+        console.log(`  • Subsystem: ${diff.subsystem}`);
+        console.log(`  • Property:  ${diff.property}`);
+        console.log(`  • Replay A:  ${JSON.stringify(diff.valA)}`);
+        console.log(`  • Replay B:  ${JSON.stringify(diff.valB)}`);
+        console.log(`  • Reason:    ${diff.reason}`);
+    }
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -378,6 +534,18 @@ async function main() {
     const options = parseArgs(rawArgs.slice(1));
 
     switch (command) {
+        case 'presets':
+            handlePresets(options);
+            break;
+        case 'validate-safety':
+            handleValidateSafety(options);
+            break;
+        case 'frontier-valley':
+            handleFrontierValley(options);
+            break;
+        case 'diff-replay':
+            handleDiffReplay(options);
+            break;
         case 'server':
             await handleServer(options);
             break;

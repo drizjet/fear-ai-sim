@@ -82,8 +82,25 @@ export {
 export {
     DiagnosticExplainabilityInspector
 } from './src/DiagnosticExplainabilityInspector.js';
-
-
-
-
-
+export {
+    HostCapabilityNegotiator,
+    HOST_CAPABILITIES,
+    INTENT_CAPABILITY_REQUIREMENTS,
+    DEFAULT_FALLBACK_CHAIN
+} from './src/HostCapabilityNegotiator.js';
+export {
+    CANONICAL_PRESETS,
+    CANONICAL_PRESETS as PRESET_CARDS,
+    PresetLibrary,
+    DesignerTuningSafetyValidator
+} from './src/PresetLibrary.js';
+export {
+    ReplayWorkbench
+} from './src/ReplayWorkbench.js';
+export {
+    FrontierValleySimulation,
+    WorldDegeneracyDetector,
+    FRONTIER_VALLEY_FACTIONS,
+    FRONTIER_VALLEY_SETTLEMENTS,
+    FRONTIER_VALLEY_ROUTES
+} from './src/FrontierValleySimulation.js';
