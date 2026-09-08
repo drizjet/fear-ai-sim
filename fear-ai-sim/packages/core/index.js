@@ -194,4 +194,14 @@ export {
     TRAUMA_STAGES,
     PHOBIC_CATEGORIES
 } from './src/TraumaCrystallizationEngine.js';
+export {
+    TradeCaravanSupplyChainSystem,
+    CARAVAN_STATUS,
+    ESCORT_TIERS
+} from './src/TradeCaravanSupplyChainSystem.js';
+export {
+    MultiObserverEpistemicHarness,
+    INFORMATION_CHANNELS
+} from './src/MultiObserverEpistemicHarness.js';
+
 

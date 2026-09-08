@@ -277,6 +277,29 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Repulsive Avoidance:');
         expect(res.stdout).toContain('Rehabilitation Extinction:');
     });
+
+    it('executes "trade-chains" and outputs commodity mass conservation', async () => {
+        const res = await runCli(['trade-chains', '--ticks', '40']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Regional Dynamic Trade Caravans & Procedural Supply Chains');
+        expect(res.stdout).toContain('Arbitrage Routes Scanned:');
+        expect(res.stdout).toContain('Caravan Dispatched:');
+        expect(res.stdout).toContain('Commodity Mass Conservation:');
+        expect(res.stdout).toContain('PERFECT CONSERVATION');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "epistemic-fog" and evaluates multi-observer discrepancy', async () => {
+        const res = await runCli(['epistemic-fog', '--ticks', '15']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Multi-Observer Epistemic Discrepancy & Fog-of-War');
+        expect(res.stdout).toContain('World Ground Truth Check:');
+        expect(res.stdout).toContain('IMMUTABLE');
+        expect(res.stdout).toContain('Belief Divergence Score:');
+        expect(res.stdout).toContain('Network Complacency Index:');
+        expect(res.stdout).toContain('Average Threat Latency:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
 });
 
 

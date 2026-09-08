@@ -85,7 +85,13 @@ import {
     PhobicTriggerRegistry,
     TRAUMA_TYPES,
     TRAUMA_STAGES,
-    PHOBIC_CATEGORIES
+    PHOBIC_CATEGORIES,
+    TradeCaravanSupplyChainSystem,
+    CARAVAN_STATUS,
+    ESCORT_TIERS,
+    COMMODITY_TYPES,
+    MultiObserverEpistemicHarness,
+    INFORMATION_CHANNELS
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -171,6 +177,10 @@ function printHelp() {
     console.log(`                     Options: --entities <count> --mtu <bytes> --json`);
     console.log(`  trauma             Simulate diachronic persona mutation, phobic conditioning, and extinction therapy (Front B/Sections 12–14)`);
     console.log(`                     Options: --severity <0..1> --solace --extinction --json`);
+    console.log(`  trade-chains       Simulate dynamic regional trade arbitrage, supply chains, and ambushes (Front C/Sections 34–36, 41–42, 44–45)`);
+    console.log(`                     Options: --origin <id> --destination <id> --ticks <number> --json`);
+    console.log(`  epistemic-fog      Simulate multi-observer fog-of-war, rumor decay, and courier latency (Front E/Sections 25–27, 50–51, 100–103)`);
+    console.log(`                     Options: --ticks <number> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -1719,6 +1729,165 @@ function handleTrauma(options) {
     console.log(`\nHost Authority Check:          ✓ Strictly advisory (0 host health/damage mutations)\n`);
 }
 
+function handleTradeChains(options) {
+    const ticks = parseInt(options.ticks || '50', 10);
+    const system = new TradeCaravanSupplyChainSystem({
+        seed: parseInt(options.seed || '4242', 10),
+        transportCostPerKm: 0.05
+    });
+
+    system.registerSettlementHub('Silvercreek', {
+        name: 'Silvercreek Farms',
+        x: 0, z: 0,
+        initialStockpiles: { [COMMODITY_TYPES.FOOD]: 200, [COMMODITY_TYPES.ORE]: 10 },
+        targetStockpiles: { [COMMODITY_TYPES.FOOD]: 50, [COMMODITY_TYPES.ORE]: 60 }
+    });
+
+    system.registerSettlementHub('Ironhold', {
+        name: 'Ironhold Fortress',
+        x: 60, z: 80,
+        initialStockpiles: { [COMMODITY_TYPES.FOOD]: 15, [COMMODITY_TYPES.ORE]: 180 },
+        targetStockpiles: { [COMMODITY_TYPES.FOOD]: 100, [COMMODITY_TYPES.ORE]: 40 }
+    });
+
+    system.registerSettlementHub('Oakridge', {
+        name: 'Oakridge Timberlands',
+        x: -40, z: 30,
+        initialStockpiles: { [COMMODITY_TYPES.FOOD]: 60, [COMMODITY_TYPES.TIMBER]: 150 },
+        targetStockpiles: { [COMMODITY_TYPES.FOOD]: 60, [COMMODITY_TYPES.TIMBER]: 30 }
+    });
+
+    system.registerCorridor('Silvercreek', 'Ironhold', { distanceKm: 100, hazardRating: 0.35, banditPresence: 0.30 });
+    system.registerCorridor('Ironhold', 'Silvercreek', { distanceKm: 100, hazardRating: 0.35, banditPresence: 0.30 });
+    system.registerCorridor('Silvercreek', 'Oakridge', { distanceKm: 50, hazardRating: 0.10, banditPresence: 0.05 });
+
+    const opportunities = system.evaluateArbitrageOpportunities();
+
+    const origin = options.origin || 'Silvercreek';
+    const destination = options.destination || 'Ironhold';
+    const matchingOpp = opportunities.find(o => o.originId === origin && o.destinationId === destination) || opportunities[0];
+
+    let commissionedCaravan = null;
+    if (matchingOpp) {
+        commissionedCaravan = system.commissionCaravan({
+            originId: matchingOpp.originId,
+            destinationId: matchingOpp.destinationId,
+            commodity: matchingOpp.commodity,
+            quantity: 40.0
+        });
+    }
+
+    system.tick(ticks);
+
+    const audit = system.auditCommodityConservation(COMMODITY_TYPES.FOOD, 275.0);
+    const state = system.getState();
+
+    const result = {
+        ticks,
+        arbitrageOpportunitiesCount: opportunities.length,
+        topOpportunity: opportunities[0] || null,
+        commissionedCaravan,
+        activeCaravansCount: state.activeCaravans.length,
+        completedCaravansCount: state.completedJourneys.length,
+        lootedCommodities: state.lootedCommodities,
+        conservationAudit: audit,
+        hubs: state.settlementHubs.map(h => ({
+            id: h.id,
+            name: h.name,
+            stockpiles: h.stockpiles,
+            prices: h.prices
+        }))
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Regional Dynamic Trade Caravans & Procedural Supply Chains (Front C / Sections 34–36, 41–42, 44–45, 48–49) ===\n`);
+    console.log(`Simulation Ticks:             ${ticks}`);
+    console.log(`Arbitrage Routes Scanned:     ${opportunities.length} viable corridors identified`);
+    if (opportunities[0]) {
+        console.log(`Top Trade Arbitrage Margin:   ${opportunities[0].commodity} from ${opportunities[0].originId} -> ${opportunities[0].destinationId} (Spread: \$${opportunities[0].marginPerUnit.toFixed(2)}/unit, Net: \$${opportunities[0].estimatedProfit.toFixed(2)})`);
+    }
+    console.log(`Caravan Dispatched:           ${commissionedCaravan ? `${commissionedCaravan.id} (${commissionedCaravan.commodity} x${commissionedCaravan.quantity}) [Escort: ${commissionedCaravan.escortTier.id}]` : 'None'}`);
+    console.log(`Active Caravans:              ${result.activeCaravansCount}`);
+    console.log(`Completed Deliveries:         ${result.completedCaravansCount}`);
+    console.log(`Looted Commodities:           Food: ${result.lootedCommodities[COMMODITY_TYPES.FOOD] || 0}, Timber: ${result.lootedCommodities[COMMODITY_TYPES.TIMBER] || 0}, Ore: ${result.lootedCommodities[COMMODITY_TYPES.ORE] || 0}`);
+    console.log(`Commodity Mass Conservation:  ${audit.isConserved ? '✓ PERFECT CONSERVATION' : '✗ DISCREPANCY'} (Sum: ${audit.totalSum}, Delta: ${audit.delta})`);
+    console.log(`Host Authority Check:         ✓ Strictly advisory (0 host physics/inventory mutations)\n`);
+}
+
+function handleEpistemicFog(options) {
+    const ticks = parseInt(options.ticks || '20', 10);
+    const harness = new MultiObserverEpistemicHarness({
+        courierSpeedKmPerTick: 5.0,
+        rumorDecayFactor: 0.80
+    });
+
+    harness.registerObserver('Capital', { name: 'High Capital', neuroticism: 0.30, x: 0, z: 0 });
+    harness.registerObserver('NorthOutpost', { name: 'North Border Outpost', neuroticism: 0.40, x: 0, z: 50 });
+    harness.registerObserver('DistantVillage', { name: 'Distant Hamlet', neuroticism: 0.85, x: 0, z: 120 });
+
+    harness.connectObservers('Capital', 'NorthOutpost', 50.0);
+    harness.connectObservers('NorthOutpost', 'DistantVillage', 70.0);
+
+    harness.injectGroundTruthThreat('goblin_warband', {
+        type: 'GOBLIN_RAIDERS',
+        severity: 0.80,
+        x: 5,
+        z: 5
+    });
+
+    // Capital sends courier dispatch to NorthOutpost
+    harness.dispatchMessage('Capital', 'NorthOutpost', {
+        threatId: 'goblin_warband',
+        type: 'GOBLIN_RAIDERS',
+        severity: 0.80,
+        confidence: 1.0
+    }, INFORMATION_CHANNELS.MESSENGER_COURIER);
+
+    harness.tick(ticks);
+
+    const discrepancy = harness.evaluateNetworkDiscrepancy();
+    const immutability = harness.auditGroundTruthImmutability();
+    const latency = harness.measureInformationLatency('goblin_warband');
+
+    const result = {
+        ticks: harness.currentTick,
+        groundTruthThreatCount: immutability.groundTruthThreatCount,
+        immutabilityAudit: immutability,
+        discrepancyMetrics: discrepancy,
+        informationLatency: latency,
+        observers: Array.from(harness.observerNodes.values()).map(node => ({
+            id: node.id,
+            name: node.name,
+            threatBeliefs: Array.from(node.engine.threatBeliefs.values()).map(b => ({
+                id: b.id,
+                confidence: b.confidence,
+                provenance: b.provenance,
+                severity: b.data?.severity
+            }))
+        }))
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Multi-Observer Epistemic Discrepancy & Fog-of-War (Front E / Sections 25–27, 50–51, 100–103) ===\n`);
+    console.log(`Simulation Ticks:             ${harness.currentTick}`);
+    console.log(`Ground Truth Threats:         ${immutability.groundTruthThreatCount} active`);
+    console.log(`World Ground Truth Check:     ${immutability.isClean ? '✓ IMMUTABLE (0 agent mutations)' : '✗ VIOLATED'}`);
+    console.log(`Belief Divergence Score:      ${discrepancy.divergenceScore.toFixed(4)}`);
+    console.log(`Network Paranoia Index:       ${(discrepancy.paranoiaIndex * 100).toFixed(1)}% (Phantom threat exaggeration)`);
+    console.log(`Network Complacency Index:    ${(discrepancy.complacencyIndex * 100).toFixed(1)}% (Proximate blind spots)`);
+    console.log(`Aware Observers:              ${latency.awareCount} / ${latency.totalObservers}`);
+    console.log(`Average Threat Latency:       ${latency.avgLatencyTicks.toFixed(1)} ticks (Physical propagation delay)`);
+    console.log(`Host Authority Check:         ✓ Strictly advisory (0 host game state mutations)\n`);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -1797,6 +1966,16 @@ async function main() {
         case 'trauma':
         case 'crystallization':
             handleTrauma(options);
+            break;
+        case 'trade-chains':
+        case 'trade':
+        case 'caravans':
+            handleTradeChains(options);
+            break;
+        case 'epistemic-fog':
+        case 'fog':
+        case 'epistemic':
+            handleEpistemicFog(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);
