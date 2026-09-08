@@ -333,6 +333,43 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.degeneracyCheck.isDegenerate).toBe(false);
         expect(parsed.metrics.populationConservationDeltaMax).toBe(0);
     });
+
+    it('executes "scenario" and returns formatted procedural scenario engine output', async () => {
+        const res = await runCli(['scenario', '--fuzz', '999', '--ticks', '10']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Declarative Scenario Procedural Engine');
+        expect(res.stdout).toContain('Validation:         ✓ VALID');
+        expect(res.stdout).toContain('Property Invariants: ✓ ALL PASS');
+    });
+
+    it('executes "scenario --json" and returns structured JSON with verified properties', async () => {
+        const res = await runCli(['scenario', '--fuzz', '888', '--ticks', '15', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.validation.valid).toBe(true);
+        expect(parsed.properties.passed).toBe(true);
+        expect(parsed.ticks).toBe(15);
+        expect(parsed.factionsCount).toBeGreaterThan(0);
+    });
+
+    it('executes "metamorphic" and prints 5/5 relations passed', async () => {
+        const res = await runCli(['metamorphic']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Metamorphic Testing & Semantic Invariant Verification');
+        expect(res.stdout).toContain('Certified Status:     ✓ FULLY CERTIFIED');
+        expect(res.stdout).toContain('5 / 5 passed');
+    });
+
+    it('executes "metamorphic --json" and returns 100% certified scorecard', async () => {
+        const res = await runCli(['metamorphic', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.certified).toBe(true);
+        expect(parsed.passedRelations).toBe(5);
+        expect(parsed.relationsEvaluated).toBe(5);
+        expect(parsed.relations.MR1_DISTANT_SPATIAL_INVARIANCE.passed).toBe(true);
+        expect(parsed.relations.MR5_MONOTONIC_RESILIENCE_RECOVERY.passed).toBe(true);
+    });
 });
 
 

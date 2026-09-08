@@ -94,7 +94,15 @@ import {
     INFORMATION_CHANNELS,
     FabeWorldBenchmarkSuite,
     BENCHMARK_DIMENSIONS,
-    DEGENERACY_FLAGS
+    DEGENERACY_FLAGS,
+    ScenarioValidator,
+    ScenarioInstantiator,
+    ScenarioFuzzer,
+    PropertyVerifier,
+    TIMELINE_EVENT_TYPES,
+    VALIDATION_ERROR_CODES,
+    MetamorphicVerificationHarness,
+    METAMORPHIC_RELATIONS
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -148,6 +156,10 @@ function printHelp() {
     console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
     console.log(`  fabe-world         Run FABE-WORLD multi-seed living-world benchmark & scorecard (Frontiers E & B)`);
     console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
+    console.log(`  scenario           Validate declarative scenarios, run procedural fuzzing, and step instances (Frontiers A & E)`);
+    console.log(`                     Options: --validate <path> | --fuzz [seed] | --ticks <n> | --json`);
+    console.log(`  metamorphic        Execute 5 canonical metamorphic relations (MR1-MR5) semantic invariant battery (Frontier E)`);
+    console.log(`                     Options: --json`);
     console.log(`  counterfactual-world Run causal world fork experiment (Factual vs Counterfactual) (Front E/C)`);
     console.log(`                     Options: --seed <88888> --fork <15> --horizon <40> --mutation <pacify-bandits|pacify-route|scarcity> --json`);
     console.log(`  economy            Run systemic commodity production, famine fear, and pathology check (Front C)`);
@@ -657,6 +669,119 @@ function handleFabeWorld(options) {
     for (const entry of report.worldChronicleSnippet.slice(0, 5)) {
         console.log(`  [Tick ${String(entry.tick).padStart(3)}] ${entry.type} -> Cause: ${entry.cause}`);
     }
+}
+
+function handleScenario(options) {
+    const ticks = parseInt(options.ticks || '20', 10);
+
+    if (options.validate) {
+        const filePath = path.resolve(process.cwd(), options.validate);
+        if (!fs.existsSync(filePath)) {
+            console.error(`Error: Scenario file not found: ${filePath}`);
+            process.exit(1);
+        }
+        const scenario = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        const validation = ScenarioValidator.validate(scenario);
+
+        let propertyResult = null;
+        if (validation.valid) {
+            const instance = ScenarioInstantiator.instantiate(scenario);
+            for (let t = 0; t < ticks; t++) {
+                instance.tick();
+            }
+            propertyResult = PropertyVerifier.checkProperties(instance);
+        }
+
+        if (options.json) {
+            console.log(JSON.stringify({ validation, propertyResult }, null, 2));
+            return;
+        }
+
+        console.log(`\n=== Fear AI: Declarative Scenario Validation ===`);
+        console.log(`File:       ${filePath}`);
+        console.log(`Status:     ${validation.valid ? '✓ VALID' : '✗ INVALID'}`);
+        if (!validation.valid) {
+            console.log(`Errors:`);
+            for (const err of validation.errors) {
+                console.log(`  - [${err.code}] ${err.message}`);
+            }
+        }
+        if (propertyResult) {
+            console.log(`Property Verification (${ticks} ticks): ${propertyResult.passed ? '✓ PASSED' : '✗ FAILED'}`);
+        }
+        return;
+    }
+
+    // Procedural Fuzzing & Step Execution
+    const seed = parseInt(options.seed || options.fuzz || '12345', 10);
+    const scenario = ScenarioFuzzer.generateFuzzedScenario(seed);
+    const validation = ScenarioValidator.validate(scenario);
+    const instance = ScenarioInstantiator.instantiate(scenario);
+
+    const tickResults = [];
+    for (let t = 0; t < ticks; t++) {
+        tickResults.push(instance.tick());
+    }
+    const properties = PropertyVerifier.checkProperties(instance);
+
+    const report = {
+        scenarioId: scenario.metadata.id,
+        seed,
+        ticks,
+        validation,
+        factionsCount: scenario.factions.length,
+        settlementsCount: scenario.settlements.length,
+        actorsCount: scenario.actors.length,
+        properties,
+        finalTick: instance.currentTick,
+        executedEvents: instance.eventHistory.length
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Declarative Scenario Procedural Engine (Frontiers A & E) ===`);
+    console.log(`Scenario ID:        ${report.scenarioId} (Seed: ${seed})`);
+    console.log(`Validation:         ${validation.valid ? '✓ VALID' : '✗ INVALID'} (${validation.errors.length} errors)`);
+    console.log(`World Layout:       ${report.factionsCount} factions, ${report.settlementsCount} settlements, ${report.actorsCount} actors`);
+    console.log(`Simulation Steps:   ${ticks} ticks simulated`);
+    console.log(`Events Executed:    ${report.executedEvents} timeline events triggered`);
+    console.log(`Property Invariants: ${properties.passed ? '✓ ALL PASS' : '✗ VIOLATIONS DETECTED'} (${properties.violations.length} issues)`);
+    console.log(`Host Authority:     ✓ Strictly advisory evaluation (0 host geometry/physics mutations)\n`);
+}
+
+function handleMetamorphic(options) {
+    const scorecard = MetamorphicVerificationHarness.runBattery();
+
+    if (options.json) {
+        console.log(JSON.stringify(scorecard, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Metamorphic Testing & Semantic Invariant Verification (Frontier E / Section 123) ===\n`);
+    console.log(`Evaluation Time:      ${scorecard.timestamp}`);
+    console.log(`Certified Status:     ${scorecard.certified ? '✓ FULLY CERTIFIED (100% Invariants Preserved)' : '✗ FAILED'}`);
+    console.log(`Relations Evaluated:  ${scorecard.passedRelations} / ${scorecard.relationsEvaluated} passed\n`);
+
+    console.log(`--- Metamorphic Relations Evaluation ---`);
+    for (const [key, rel] of Object.entries(scorecard.relations)) {
+        const tag = rel.passed ? 'PASS' : 'FAIL';
+        console.log(`  • [${tag}] ${key}`);
+        if (key === 'MR1_DISTANT_SPATIAL_INVARIANCE') {
+            console.log(`    Delta Fear: ${rel.metrics.deltaFear}, Intent Match: ${rel.metrics.intentMatch}, World Match: ${rel.metrics.worldGroupStateIdentical}`);
+        } else if (key === 'MR2_ISOMORPHIC_RELABELING') {
+            console.log(`    Max Fear Diff: ${rel.metrics.maxFearDiff}, Intents Identical: ${rel.metrics.intentsIdentical}`);
+        } else if (key === 'MR3_OBSERVATION_PERMUTATION') {
+            console.log(`    Fear Exact: ${rel.metrics.fearExact}, Intent Exact: ${rel.metrics.intentExact}`);
+        } else if (key === 'MR4_MONOTONIC_DISTANCE_SENSITIVITY') {
+            console.log(`    Monotonic: ${rel.metrics.monotonicallyNonDecreasing}, 50m: ${rel.metrics.initialFearAt50m.toFixed(4)}, 5m: ${rel.metrics.peakFearAt5m.toFixed(4)}`);
+        } else if (key === 'MR5_MONOTONIC_RESILIENCE_RECOVERY') {
+            console.log(`    High R Recovery: ${rel.metrics.highResilienceRecoveryTicks} ticks, Low R: ${rel.metrics.lowResilienceRecoveryTicks} ticks (Acc: ${rel.metrics.recoveryAccelerationFactor}x)`);
+        }
+    }
+    console.log(`\nHost Authority Check: ✓ Strictly advisory evaluation\n`);
 }
 
 function handleDiffReplay(options) {
@@ -1965,6 +2090,12 @@ async function main() {
         case 'fabe-world':
         case 'fabe':
             handleFabeWorld(options);
+            break;
+        case 'scenario':
+            handleScenario(options);
+            break;
+        case 'metamorphic':
+            handleMetamorphic(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

@@ -208,5 +208,17 @@ export {
     BENCHMARK_DIMENSIONS,
     DEGENERACY_FLAGS
 } from './src/FabeWorldBenchmarkSuite.js';
+export {
+    ScenarioValidator,
+    ScenarioInstantiator,
+    ScenarioFuzzer,
+    PropertyVerifier,
+    TIMELINE_EVENT_TYPES,
+    VALIDATION_ERROR_CODES
+} from './src/DeclarativeScenarioEngine.js';
+export {
+    MetamorphicVerificationHarness,
+    METAMORPHIC_RELATIONS
+} from './src/MetamorphicVerificationHarness.js';
 
 
