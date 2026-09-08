@@ -220,5 +220,13 @@ export {
     MetamorphicVerificationHarness,
     METAMORPHIC_RELATIONS
 } from './src/MetamorphicVerificationHarness.js';
+export {
+    CoalitionDiplomacyEngine,
+    TREATY_TYPES,
+    ESPIONAGE_OPERATIONS,
+    COALITION_STATUS,
+    CALL_TO_ARMS_RESPONSES
+} from './src/CoalitionDiplomacyEngine.js';
+
 
 

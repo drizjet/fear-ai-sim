@@ -370,6 +370,25 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.relations.MR1_DISTANT_SPATIAL_INVARIANCE.passed).toBe(true);
         expect(parsed.relations.MR5_MONOTONIC_RESILIENCE_RECOVERY.passed).toBe(true);
     });
+
+    it('executes "coalition" and outputs multilateral alliance and call-to-arms deliberation', async () => {
+        const res = await runCli(['coalition']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Multilateral Coalition Diplomacy, Treaties & Espionage');
+        expect(res.stdout).toContain('Cohesion Index (Phi):');
+        expect(res.stdout).toContain('Mutual Defense Call-to-Arms Deliberation');
+    });
+
+    it('executes "coalition --json" and returns structured JSON with cohesion and call-to-arms', async () => {
+        const res = await runCli(['coalition', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.coalition).toBeDefined();
+        expect(parsed.coalition.cohesion).toBeGreaterThan(0.5);
+        expect(parsed.callToArms).toBeDefined();
+        expect(parsed.callToArms.outcomes.length).toBeGreaterThan(0);
+        expect(parsed.hostAuthorityPreserved).toBe(true);
+    });
 });
 
 

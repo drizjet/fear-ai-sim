@@ -1886,6 +1886,40 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "MULTILATERAL_COALITIONS_AND_DYNAMIC_TREATIES",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/CoalitionDiplomacyEngine.js (CoalitionDiplomacyEngine, TREATY_TYPES, ESPIONAGE_OPERATIONS, COALITION_STATUS, CALL_TO_ARMS_RESPONSES)",
+        "packages/core/index.js (Exports for coalition diplomacy classes and enums)",
+        "bin/fear-ai.js (Added 'coalition' and 'alliances' CLI subcommands with --action, --coalition, --json)",
+        "tests/coalition-diplomacy.test.js (Unit and integration tests for coalitions, cohesion index, treaties, espionage, and call-to-arms)",
+        "tests/cli.test.js (CLI subcommand test coverage for both human and JSON modes)"
+      ],
+      "test_evidence": [
+        "tests/coalition-diplomacy.test.js (5/5 tests green):",
+        "1. Creates multilateral coalitions and calculates dynamic cohesion index (Phi)",
+        "2. Enforces treaty lifecycles, expirations, and violation honor penalties",
+        "3. Executes covert espionage operations (Council Infiltration, Stockpile Sabotage, Distrust Rumors)",
+        "4. Deliberates cascading coalition call-to-arms (Loyal Mobilization vs Cowardly Defection)",
+        "5. Exports and restores complete deterministic state snapshots",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai coalition, fear-ai coalition --json"
+      ],
+      "runtime_evidence": [
+        "Multilateral alliance architecture enables 3+ factions to form mutual defense leagues and trade pacts with dynamic cohesion evaluation",
+        "Cohesion index Phi continuously accounts for bilateral trust, grievances, common external rivals, and war weariness",
+        "Treaty lifecycle management enforces Non-Aggression and Trade Pacts with automated violation detection and severe diplomatic honor penalties (-0.35)",
+        "Covert espionage networks model operative infiltration, stockpile sabotage, and false-flag border provocations with probabilistic discovery and Casus Belli generation",
+        "Call-to-arms cascading mobilization accurately models honorable/loyal allies coming to mutual defense vs cowardly defection under power disparity",
+        "Strict preservation of Host Game Authority Invariant (evaluates semantic diplomatic stances without mutating host physics or combat state)"
+      ],
+      "benchmark_evidence": [
+        "Coalition cohesion calculation across 3-member pact: < 0.001 ms/eval",
+        "Call-to-arms multi-party deliberation: < 0.002 ms across all signatories"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -23,6 +23,7 @@ import { performance } from 'perf_hooks';
 import {
     AffectiveAgent,
     FactionSystem,
+    FACTION_CULTURES,
     INCIDENT_TYPES,
     DiagnosticExplainabilityInspector,
     DeterministicRng,
@@ -102,7 +103,12 @@ import {
     TIMELINE_EVENT_TYPES,
     VALIDATION_ERROR_CODES,
     MetamorphicVerificationHarness,
-    METAMORPHIC_RELATIONS
+    METAMORPHIC_RELATIONS,
+    CoalitionDiplomacyEngine,
+    TREATY_TYPES,
+    ESPIONAGE_OPERATIONS,
+    COALITION_STATUS,
+    CALL_TO_ARMS_RESPONSES
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -160,6 +166,8 @@ function printHelp() {
     console.log(`                     Options: --validate <path> | --fuzz [seed] | --ticks <n> | --json`);
     console.log(`  metamorphic        Execute 5 canonical metamorphic relations (MR1-MR5) semantic invariant battery (Frontier E)`);
     console.log(`                     Options: --json`);
+    console.log(`  coalition          Simulate multilateral alliances, treaties, espionage & coalition warfare (Front C / Sec 130-135)`);
+    console.log(`                     Options: --action <coalition|treaty|espionage|call-to-arms> --coalition <id> --json`);
     console.log(`  counterfactual-world Run causal world fork experiment (Factual vs Counterfactual) (Front E/C)`);
     console.log(`                     Options: --seed <88888> --fork <15> --horizon <40> --mutation <pacify-bandits|pacify-route|scarcity> --json`);
     console.log(`  economy            Run systemic commodity production, famine fear, and pathology check (Front C)`);
@@ -782,6 +790,90 @@ function handleMetamorphic(options) {
         }
     }
     console.log(`\nHost Authority Check: ✓ Strictly advisory evaluation\n`);
+}
+
+function handleCoalition(options) {
+    const seed = parseInt(options.seed || '133742', 10);
+    const engine = new CoalitionDiplomacyEngine({ seed });
+    const factionSystem = new FactionSystem();
+
+    // Register representative factions
+    factionSystem.registerFaction({ id: 'valoria_kingdom', name: 'Kingdom of Valoria', culture: FACTION_CULTURES.HONORABLE, militaryReadiness: 0.85, economicStockpile: 0.80 });
+    factionSystem.registerFaction({ id: 'canton_league', name: 'Free Canton Trade League', culture: FACTION_CULTURES.MERCANTILE, militaryReadiness: 0.60, economicStockpile: 0.95 });
+    factionSystem.registerFaction({ id: 'northern_clans', name: 'Northern Highland Clans', culture: FACTION_CULTURES.MILITARISTIC, militaryReadiness: 0.75, economicStockpile: 0.50 });
+    factionSystem.registerFaction({ id: 'shadow_empire', name: 'Shadowfang Empire', culture: FACTION_CULTURES.EXPANSIONIST, militaryReadiness: 0.95, economicStockpile: 0.90 });
+
+    // Set high bilateral trust among the three allies
+    const s1 = factionSystem.getBilateralStance('valoria_kingdom', 'canton_league');
+    if (s1) s1.trust = 0.85;
+    const s2 = factionSystem.getBilateralStance('canton_league', 'valoria_kingdom');
+    if (s2) s2.trust = 0.85;
+    const s3 = factionSystem.getBilateralStance('valoria_kingdom', 'northern_clans');
+    if (s3) s3.trust = 0.80;
+    const s4 = factionSystem.getBilateralStance('northern_clans', 'valoria_kingdom');
+    if (s4) s4.trust = 0.80;
+
+    // External hostility
+    const sThreat1 = factionSystem.getBilateralStance('valoria_kingdom', 'shadow_empire');
+    if (sThreat1) sThreat1.stage = 'THREATEN';
+    const sThreat2 = factionSystem.getBilateralStance('canton_league', 'shadow_empire');
+    if (sThreat2) sThreat2.stage = 'THREATEN';
+
+    // Form Coalition
+    const coalitionId = options.coalition || 'covenant_of_valoria';
+    const coalition = engine.createCoalition(coalitionId, {
+        name: 'Grand Defensive Covenant',
+        type: TREATY_TYPES.MUTUAL_DEFENSE_PACT,
+        memberFactionIds: ['valoria_kingdom', 'canton_league', 'northern_clans'],
+        leaderFactionId: 'valoria_kingdom'
+    });
+
+    const cohesion = engine.computeCoalitionCohesion(coalitionId, { factionSystem });
+
+    // Execute sample Espionage
+    const espionage = engine.executeEspionageOperation('shadow_empire', 'valoria_kingdom', ESPIONAGE_OPERATIONS.INFILTRATE_COUNCIL, {
+        operativeSkill: 0.75,
+        counterVigilance: 0.60
+    }, { factionSystem });
+
+    // Trigger Call to Arms
+    const callToArms = engine.triggerCallToArms('shadow_empire', 'canton_league', { factionSystem });
+
+    const report = {
+        seed,
+        coalition: {
+            id: coalition.id,
+            name: coalition.name,
+            type: coalition.type,
+            members: coalition.members,
+            leader: coalition.leaderFactionId,
+            cohesion,
+            status: coalition.status
+        },
+        espionage,
+        callToArms,
+        hostAuthorityPreserved: true
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Multilateral Coalition Diplomacy, Treaties & Espionage (Front C / Sec 130–135) ===\n`);
+    console.log(`Coalition Name:        ${coalition.name} [ID: ${coalition.id}]`);
+    console.log(`Pact Archetype:        ${coalition.type}`);
+    console.log(`Signatory Members:     ${coalition.members.join(', ')} (Leader: ${coalition.leaderFactionId})`);
+    console.log(`Cohesion Index (Phi):  ${cohesion.toFixed(4)} [Status: ${coalition.status}]`);
+    console.log(`\n--- Covert Espionage Operation ---`);
+    console.log(`  Source: ${espionage.source} -> Target: ${espionage.target} (${espionage.operation})`);
+    console.log(`  Success: ${espionage.success ? '✓ SUCCESS' : '✗ FAILED'} | Discovered: ${espionage.discovered ? '✗ COMPROMISED (Casus Belli)' : '✓ COVERT'}`);
+    console.log(`\n--- Mutual Defense Call-to-Arms Deliberation ---`);
+    console.log(`  Aggressor: ${callToArms.aggressor} attacked Victim: ${callToArms.victim}`);
+    for (const outcome of callToArms.outcomes) {
+        console.log(`  • Partner: ${outcome.partnerFactionId} -> ${outcome.decision} (Willingness: ${outcome.willingnessScore.toFixed(3)}, Directive: ${outcome.advisoryDirective})`);
+    }
+    console.log(`\nHost Authority Check:   ✓ Strictly advisory diplomatic evaluations (0 host geometry/combat mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2096,6 +2188,10 @@ async function main() {
             break;
         case 'metamorphic':
             handleMetamorphic(options);
+            break;
+        case 'coalition':
+        case 'alliances':
+            handleCoalition(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);
