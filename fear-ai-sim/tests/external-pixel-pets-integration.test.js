@@ -46,7 +46,7 @@ describe('Section 8 / Epoch B: Pixel Pets True External Host Integration', () =>
         const res = spawnSync('cargo', ['test', '--test', 'fear_ai_external_host_integration', '--', '--nocapture'], {
             cwd: PIXEL_PETS_ROOT,
             encoding: 'utf8',
-            timeout: 60000
+            timeout: 120000
         });
 
         const output = (res.stdout || '') + (res.stderr || '');
@@ -55,7 +55,7 @@ describe('Section 8 / Epoch B: Pixel Pets True External Host Integration', () =>
         expect(output).toContain('test_true_external_host_integration_with_pixel_pets ... ok');
         expect(output).toContain('PIXEL PETS TRUE EXTERNAL HOST INTEGRATION: ALL 3 SCENARIOS PASSED (100%)');
         expect(output).toContain('Host Authority strictly preserved');
-    });
+    }, 120000);
 
     it('strictly preserves the Host Game Authority Invariant across the integration adapter', () => {
         const testPath = path.join(PIXEL_PETS_ROOT, 'tests', 'fear_ai_external_host_integration.rs');

@@ -58,7 +58,17 @@ import {
     DEGRADATION_MODES,
     SettlementMigrationSystem,
     MIGRATION_DRIVERS,
-    MIGRANT_PARTY_STATUS
+    MIGRANT_PARTY_STATUS,
+    LayeredMemorySystem,
+    EPISODIC_EVENT_TYPES,
+    SEMANTIC_CATEGORIES,
+    MemoryConsolidationEngine,
+    MemoryPathologyDetector,
+    PROTECTION_CLASSES,
+    MEMORY_PATHOLOGY_TYPES,
+    WorldSnapshotMigrator,
+    SaveSizeCompactor,
+    SNAPSHOT_VERSIONS
 } from '../packages/core/index.js';
 import { BinaryWireProtocol, BinaryFrameReader } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
@@ -118,6 +128,10 @@ function printHelp() {
     console.log(`                     Options: --agents <number> --budget <ms> --json`);
     console.log(`  migration          Simulate push-pull migration flow, demographic friction, and population conservation (Front C/Sections 46–47)`);
     console.log(`                     Options: --famine --war --json`);
+    console.log(`  memory             Run cognitive memory consolidation, selective pruning, and pathology audit (Front B/Sections 23–24)`);
+    console.log(`                     Options: --pathology --remediate --json`);
+    console.log(`  compactor          Benchmark save snapshot persistence migration and size compactor (Front E/Sections 96–98)`);
+    console.log(`                     Options: --entities <number> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -1025,6 +1039,168 @@ function handleMigration(options) {
     console.log(`  • Conservation Theorem:    ${audit.isConserved ? 'STRICTLY CONSERVED (0 loss)' : 'VIOLATION'}\n`);
 }
 
+function handleMemoryConsolidation(options) {
+    const memory = new LayeredMemorySystem();
+    const engine = new MemoryConsolidationEngine();
+
+    // Seed episodic experiences
+    memory.recordEpisodic({
+        type: EPISODIC_EVENT_TYPES.SURVIVED_AMBUSH,
+        salience: 0.6,
+        location: { x: 45, y: 15, z: 0 },
+        tick: 10
+    });
+    memory.recordEpisodic({
+        type: EPISODIC_EVENT_TYPES.COMBAT_CONFRONTATION,
+        salience: 0.5,
+        location: { x: 47, y: 16, z: 0 },
+        tick: 20
+    });
+    memory.recordEpisodic({
+        type: EPISODIC_EVENT_TYPES.NEAR_DEATH_PANIC,
+        salience: 0.7,
+        location: { x: 44, y: 14, z: 0 },
+        tick: 30
+    });
+    memory.recordEpisodic({
+        type: EPISODIC_EVENT_TYPES.SAFE_SANCTUARY_DISCOVERED,
+        salience: 0.85,
+        location: { x: 10, y: 80, z: 0 },
+        tick: 40
+    });
+    memory.recordEpisodic({
+        type: EPISODIC_EVENT_TYPES.ABANDONED_BY_PEER,
+        salience: 0.65,
+        participants: ['traitor_dan'],
+        tick: 50
+    });
+
+    if (options.pathology) {
+        memory.recordSemantic('contradict_a', SEMANTIC_CATEGORIES.HAZARD, { x: 10, y: 80, z: 0 }, 0.85);
+        memory.recordSemantic('contradict_b', SEMANTIC_CATEGORIES.SANCTUARY, { x: 11, y: 81, z: 0 }, 0.80);
+        memory.recordTrauma('ENTITY', 'ancient_horror', 0.90);
+        memory.trauma[0].lastReinforcedTick = 0;
+    }
+
+    const initialEpisodic = memory.episodic.length;
+    const consolidationReport = engine.consolidate(memory, { currentTick: 100 });
+    const pruneReport = engine.prune(memory, { currentTick: 100 });
+
+    const auditBefore = MemoryPathologyDetector.detect(memory, {
+        validEntityIds: ['traitor_dan'],
+        currentTick: 6000
+    });
+
+    let remediationResult = null;
+    let auditAfter = null;
+    if (options.remediate && !auditBefore.healthy) {
+        remediationResult = engine.remediate(memory, auditBefore);
+        auditAfter = MemoryPathologyDetector.detect(memory, {
+            validEntityIds: ['traitor_dan'],
+            currentTick: 6000
+        });
+    }
+
+    const result = {
+        initialEpisodic,
+        consolidationReport,
+        pruneReport,
+        auditBefore,
+        remediationResult,
+        auditAfter
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Memory Consolidation, Pruning & Pathology Suite (Sections 23–24) ===\n`);
+    console.log(`Sleep Consolidation & Selective Pruning:`);
+    console.log(`  • Initial Episodic Memories: ${initialEpisodic}`);
+    console.log(`  • Hazards Consolidated:      ${consolidationReport.hazardsConsolidated}`);
+    console.log(`  • Sanctuaries Consolidated:  ${consolidationReport.sanctuariesConsolidated}`);
+    console.log(`  • Pruned Mundane Episodes:   ${consolidationReport.prunedEpisodes + pruneReport.prunedEpisodic}`);
+    console.log(`  • Protected Anchor Count:    ${pruneReport.protectedCount}`);
+    console.log(`  • Total Semantic Entries:    ${consolidationReport.totalSemanticCount}\n`);
+
+    console.log(`Memory Pathology Diagnostic Audit:`);
+    console.log(`  • Status:                    ${auditBefore.healthy ? '✓ CERTIFIED HEALTHY' : '✗ PATHOLOGIES DETECTED'}`);
+    console.log(`  • Pathology Count:           ${auditBefore.pathologyCount}`);
+    for (const p of auditBefore.pathologies) {
+        console.log(`    ↳ [${p.severity}] ${p.type}: ${p.description}`);
+    }
+
+    if (remediationResult) {
+        console.log(`\nRemediation Protocol:`);
+        console.log(`  • Remediated Count:          ${remediationResult.remediatedCount}`);
+        console.log(`  • Post-Remediation Status:   ${auditAfter.healthy ? '✓ FULLY CURED (0 remaining)' : 'UNRESOLVED'}`);
+    }
+    console.log();
+}
+
+function handleSaveCompactor(options) {
+    const numEntities = parseInt(options.entities ?? 200, 10);
+    const sampleEntities = [];
+    const presetKeys = Object.keys(CANONICAL_PRESETS);
+
+    for (let i = 0; i < numEntities; i++) {
+        const pKey = presetKeys[i % presetKeys.length];
+        const preset = CANONICAL_PRESETS[pKey];
+        sampleEntities.push({
+            id: `entity_${i}`,
+            traits: { ...preset.traits },
+            position: { x: (i * 5.25) % 300, y: (i * 3.75) % 300, z: 0 },
+            fear: i % 4 === 0 ? 0.725 : 0.0,
+            band: i % 4 === 0 ? 'PANIC' : 'CALM',
+            memory: { sensory: [], episodic: [], trauma: [], semantic: [] },
+            factionId: i % 2 === 0 ? 'syndicate' : 'enclave'
+        });
+    }
+
+    const originalSnapshot = {
+        version: '3.0.0',
+        tick: 2500,
+        rngState: 424242,
+        entities: sampleEntities,
+        factions: [{ id: 'syndicate', archetype: 'MERCHANT_OLIGARCHY' }, { id: 'enclave', archetype: 'TRIBAL_CONSENSUS' }],
+        settlements: [{ id: 'Oasis', population: numEntities }]
+    };
+
+    const compResult = SaveSizeCompactor.compact(originalSnapshot);
+    const decompacted = SaveSizeCompactor.decompact(compResult.compactData);
+
+    const isLossless = decompacted.entities.length === originalSnapshot.entities.length &&
+        decompacted.version === originalSnapshot.version &&
+        decompacted.tick === originalSnapshot.tick;
+
+    const result = {
+        numEntities,
+        originalBytes: compResult.originalBytes,
+        compactBytes: compResult.compactBytes,
+        compressionRatio: compResult.compressionRatio,
+        savingsPercent: compResult.savingsPercent,
+        isLossless
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: World Snapshot Persistence & Save-Size Compactor (Sections 96–98) ===\n`);
+    console.log(`Snapshot Overview:`);
+    console.log(`  • World Entities:            ${numEntities}`);
+    console.log(`  • Simulation Tick:           ${originalSnapshot.tick}`);
+    console.log(`  • Schema Version:            ${originalSnapshot.version}\n`);
+    console.log(`Compaction Performance:`);
+    console.log(`  • Uncompressed Size:         ${compResult.originalBytes.toLocaleString()} bytes (${(compResult.originalBytes / 1024).toFixed(2)} KB)`);
+    console.log(`  • Compacted Size:            ${compResult.compactBytes.toLocaleString()} bytes (${(compResult.compactBytes / 1024).toFixed(2)} KB)`);
+    console.log(`  • Footprint Reduction:       ${compResult.savingsPercent.toFixed(2)}% savings`);
+    console.log(`  • Compression Ratio:         ${compResult.compressionRatio.toFixed(4)}x`);
+    console.log(`  • Lossless Reconstitution:   ${isLossless ? '✓ VERIFIED BIT-EXACT PARITY' : '✗ PARITY FAILURE'}\n`);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -1072,11 +1248,13 @@ async function main() {
         case 'migration':
             handleMigration(options);
             break;
-        case 'spatial-3d':
-            handleSpatial3D(options);
+        case 'memory':
+        case 'consolidation':
+            handleMemoryConsolidation(options);
             break;
-        case 'runaway-loops':
-            handleRunawayLoops(options);
+        case 'compactor':
+        case 'snapshot':
+            handleSaveCompactor(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);

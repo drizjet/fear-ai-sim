@@ -185,4 +185,24 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Northwatch Labor Bonus:');
         expect(res.stdout).toContain('STRICTLY CONSERVED');
     });
+
+    it('executes "memory" and outputs memory consolidation, pruning, and pathology remediation', async () => {
+        const res = await runCli(['memory', '--pathology', '--remediate']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Memory Consolidation, Pruning & Pathology Suite');
+        expect(res.stdout).toContain('Sleep Consolidation & Selective Pruning:');
+        expect(res.stdout).toContain('Memory Pathology Diagnostic Audit:');
+        expect(res.stdout).toContain('Remediation Protocol:');
+        expect(res.stdout).toContain('FULLY CURED');
+    });
+
+    it('executes "compactor" and outputs save-size compression ratio and lossless parity', async () => {
+        const res = await runCli(['compactor', '--entities', '150']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('World Snapshot Persistence & Save-Size Compactor');
+        expect(res.stdout).toContain('Snapshot Overview:');
+        expect(res.stdout).toContain('Compaction Performance:');
+        expect(res.stdout).toContain('Footprint Reduction:');
+        expect(res.stdout).toContain('VERIFIED BIT-EXACT PARITY');
+    });
 });

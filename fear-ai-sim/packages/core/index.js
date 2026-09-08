@@ -151,6 +151,18 @@ export {
     MIGRATION_DRIVERS,
     MIGRANT_PARTY_STATUS
 } from './src/SettlementMigrationSystem.js';
+export {
+    MemoryConsolidationEngine,
+    MemoryPathologyDetector,
+    PROTECTION_CLASSES,
+    MEMORY_PATHOLOGY_TYPES
+} from './src/MemoryConsolidationEngine.js';
+export {
+    WorldSnapshotMigrator,
+    SaveSizeCompactor,
+    SNAPSHOT_VERSIONS
+} from './src/WorldSnapshotMigrationCompactor.js';
+
 
 
 
