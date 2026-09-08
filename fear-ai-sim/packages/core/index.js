@@ -227,6 +227,13 @@ export {
     COALITION_STATUS,
     CALL_TO_ARMS_RESPONSES
 } from './src/CoalitionDiplomacyEngine.js';
+export {
+    ParallelBatchEvaluator,
+    SharedMemoryEntityBuffer,
+    ENTITY_FIELD_OFFSETS,
+    INTENT_CODES,
+    INTENT_NAMES
+} from './src/ParallelBatchEvaluator.js';
 
 
 

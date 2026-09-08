@@ -1,0 +1,115 @@
+{
+  "timestamp": "2026-09-08T23:51:17.889Z",
+  "system": {
+    "platform": "win32",
+    "arch": "x64",
+    "cpus": 24,
+    "workers": 8
+  },
+  "scales": [
+    {
+      "entityCount": 1000,
+      "workers": 8,
+      "sync": {
+        "mean": 0.0582,
+        "p50": 0.062,
+        "p95": 0.0807,
+        "p99": 0.0807,
+        "min": 0.0392,
+        "max": 0.0807
+      },
+      "parallel": {
+        "mean": 0.0605,
+        "p50": 0.0718,
+        "p95": 0.1148,
+        "p99": 0.1148,
+        "min": 0.0109,
+        "max": 0.1148
+      },
+      "speedup": 0.96,
+      "syncThroughput": 17182131,
+      "parallelThroughput": 16528926,
+      "maxFearDeviation": 0,
+      "intentMismatchCount": 0,
+      "parityPass": true
+    },
+    {
+      "entityCount": 10000,
+      "workers": 8,
+      "sync": {
+        "mean": 0.0665,
+        "p50": 0.0637,
+        "p95": 0.0841,
+        "p99": 0.0841,
+        "min": 0.0632,
+        "max": 0.0841
+      },
+      "parallel": {
+        "mean": 0.2784,
+        "p50": 0.229,
+        "p95": 0.7247,
+        "p99": 0.7247,
+        "min": 0.118,
+        "max": 0.7247
+      },
+      "speedup": 0.24,
+      "syncThroughput": 150375940,
+      "parallelThroughput": 35919540,
+      "maxFearDeviation": 0,
+      "intentMismatchCount": 0,
+      "parityPass": true
+    },
+    {
+      "entityCount": 50000,
+      "workers": 8,
+      "sync": {
+        "mean": 0.3581,
+        "p50": 0.3464,
+        "p95": 0.4982,
+        "p99": 0.4982,
+        "min": 0.3166,
+        "max": 0.4982
+      },
+      "parallel": {
+        "mean": 0.2213,
+        "p50": 0.24,
+        "p95": 0.3765,
+        "p99": 0.3765,
+        "min": 0.1092,
+        "max": 0.3765
+      },
+      "speedup": 1.62,
+      "syncThroughput": 139625803,
+      "parallelThroughput": 225937641,
+      "maxFearDeviation": 0,
+      "intentMismatchCount": 0,
+      "parityPass": true
+    },
+    {
+      "entityCount": 100000,
+      "workers": 8,
+      "sync": {
+        "mean": 0.7231,
+        "p50": 0.6695,
+        "p95": 0.9367,
+        "p99": 0.9367,
+        "min": 0.6397,
+        "max": 0.9367
+      },
+      "parallel": {
+        "mean": 0.2647,
+        "p50": 0.2062,
+        "p95": 0.6344,
+        "p99": 0.6344,
+        "min": 0.1688,
+        "max": 0.6344
+      },
+      "speedup": 2.73,
+      "syncThroughput": 138293459,
+      "parallelThroughput": 377786173,
+      "maxFearDeviation": 0,
+      "intentMismatchCount": 0,
+      "parityPass": true
+    }
+  ]
+}

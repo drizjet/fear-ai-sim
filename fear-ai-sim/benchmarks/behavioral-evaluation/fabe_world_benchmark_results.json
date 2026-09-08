@@ -1,7 +1,7 @@
 {
   "benchmark": "FABE-WORLD-v1",
-  "timestamp": "2026-09-08T23:47:31.381Z",
-  "elapsedMs": 4,
+  "timestamp": "2026-09-08T23:53:06.269Z",
+  "elapsedMs": 2,
   "config": {
     "seedsEvaluated": 2,
     "ticksPerSeed": 40,

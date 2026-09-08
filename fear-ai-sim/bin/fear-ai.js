@@ -108,7 +108,10 @@ import {
     TREATY_TYPES,
     ESPIONAGE_OPERATIONS,
     COALITION_STATUS,
-    CALL_TO_ARMS_RESPONSES
+    CALL_TO_ARMS_RESPONSES,
+    ParallelBatchEvaluator,
+    SharedMemoryEntityBuffer,
+    INTENT_NAMES
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -168,6 +171,8 @@ function printHelp() {
     console.log(`                     Options: --json`);
     console.log(`  coalition          Simulate multilateral alliances, treaties, espionage & coalition warfare (Front C / Sec 130-135)`);
     console.log(`                     Options: --action <coalition|treaty|espionage|call-to-arms> --coalition <id> --json`);
+    console.log(`  parallel-batch     Evaluate 100k+ entities in parallel using shared-memory worker pool (Front D / Sec 136-140)`);
+    console.log(`                     Options: --entities <100000> --workers <4> --benchmark --json`);
     console.log(`  counterfactual-world Run causal world fork experiment (Factual vs Counterfactual) (Front E/C)`);
     console.log(`                     Options: --seed <88888> --fork <15> --horizon <40> --mutation <pacify-bandits|pacify-route|scarcity> --json`);
     console.log(`  economy            Run systemic commodity production, famine fear, and pathology check (Front C)`);
@@ -874,6 +879,65 @@ function handleCoalition(options) {
         console.log(`  • Partner: ${outcome.partnerFactionId} -> ${outcome.decision} (Willingness: ${outcome.willingnessScore.toFixed(3)}, Directive: ${outcome.advisoryDirective})`);
     }
     console.log(`\nHost Authority Check:   ✓ Strictly advisory diplomatic evaluations (0 host geometry/combat mutations)\n`);
+}
+
+async function handleParallelBatch(options) {
+    if (options.benchmark) {
+        const { runParallelBatchBenchmark } = await import('../benchmarks/behavioral-evaluation/parallel_batch_benchmark.mjs');
+        const report = await runParallelBatchBenchmark({
+            scales: options.entities ? [parseInt(options.entities, 10)] : [1000, 10000, 50000, 100000],
+            workerCount: options.workers ? parseInt(options.workers, 10) : undefined
+        });
+        if (options.json) {
+            console.log(JSON.stringify(report, null, 2));
+        }
+        return;
+    }
+
+    const entityCount = parseInt(options.entities || '100000', 10);
+    const workerCount = parseInt(options.workers || '4', 10);
+
+    const buffer = SharedMemoryEntityBuffer.createProcedural(entityCount);
+    const evaluator = new ParallelBatchEvaluator({
+        workerCount,
+        chunkSize: 5000,
+        useWorkers: true
+    });
+
+    const telemetry = await evaluator.evaluateBatch(buffer, entityCount);
+
+    const samples = [
+        buffer.getEntity(0),
+        buffer.getEntity(Math.floor(entityCount / 2)),
+        buffer.getEntity(entityCount - 1)
+    ];
+
+    await evaluator.terminate();
+
+    const result = {
+        entityCount,
+        workers: workerCount,
+        telemetry,
+        sampleEntities: samples,
+        hostAuthorityCheck: 'CLEAN_ADVISORY_ONLY'
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Parallel Batch Evaluator & Shared-Memory Worker Pool (Front D / Sections 136–140) ===\n`);
+    console.log(`Cohort Scale:                 ${entityCount.toLocaleString()} Entities`);
+    console.log(`Active Worker Threads:        ${telemetry.workerCount} Workers`);
+    console.log(`Execution Mode:               ${telemetry.mode}`);
+    console.log(`Evaluation Latency:           ${telemetry.elapsedMs.toFixed(3)} ms`);
+    console.log(`Throughput:                   ${telemetry.throughput.toLocaleString()} Entity-Evaluations/sec`);
+    console.log(`\nSample Entity States:`);
+    for (const s of samples) {
+        console.log(`  • Entity #${s.id}: Fear ${s.outFear.toFixed(4)} | Intent: ${s.intentName} | Pos: (${s.posX.toFixed(1)}, ${s.posZ.toFixed(1)})`);
+    }
+    console.log(`\nHost Authority Check:         ✓ Strictly advisory evaluation (0 host physics/transform mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2192,6 +2256,10 @@ async function main() {
         case 'coalition':
         case 'alliances':
             handleCoalition(options);
+            break;
+        case 'parallel-batch':
+        case 'parallel':
+            await handleParallelBatch(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

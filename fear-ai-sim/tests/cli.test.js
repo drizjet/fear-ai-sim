@@ -389,6 +389,28 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.callToArms.outcomes.length).toBeGreaterThan(0);
         expect(parsed.hostAuthorityPreserved).toBe(true);
     });
+
+    it('executes "parallel-batch" and outputs multi-worker cohort evaluation', async () => {
+        const res = await runCli(['parallel-batch', '--entities', '2000', '--workers', '2']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Parallel Batch Evaluator & Shared-Memory Worker Pool');
+        expect(res.stdout).toContain('Cohort Scale:');
+        expect(res.stdout).toContain('2,000 Entities');
+        expect(res.stdout).toContain('Throughput:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "parallel-batch --json" and returns structured telemetry and sample entities', async () => {
+        const res = await runCli(['parallel-batch', '--entities', '2000', '--workers', '2', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.entityCount).toBe(2000);
+        expect(parsed.telemetry).toBeDefined();
+        expect(parsed.telemetry.throughput).toBeGreaterThan(0);
+        expect(parsed.sampleEntities.length).toBe(3);
+        expect(parsed.hostAuthorityCheck).toBe('CLEAN_ADVISORY_ONLY');
+    });
 });
+
 
 
