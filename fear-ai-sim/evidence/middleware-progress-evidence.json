@@ -65,8 +65,7 @@
         "packages/runtime/src/FearServer.js",
         "packages/runtime/src/RuntimeSimulation.js",
         "packages/runtime/bin/fear-ai-server.js",
-        "Launch-FearAI-Server.bat",
-        "Launch-FearAI-Server.ps1"
+        "package.json script: npm run server"
       ],
       "test_evidence": [
         "tests/conformance/runtime-server.test.js (4/4 tests green)",
@@ -82,7 +81,9 @@
       "benchmark_evidence": [
         "WebSocket loopback tick: 0.0459 ms avg (21,773 ticks/sec)"
       ],
-      "known_gaps": [],
+      "known_gaps": [
+        "Launch-FearAI-Server.bat / .ps1 were listed as evidence but do not exist. Real launch is npm run server / node packages/runtime/bin/fear-ai-server.js. Launch-FearAI.ps1 starts the research desktop sim, not this server."
+      ],
       "next_action": "MAINTAIN"
     },
     {
@@ -94,7 +95,7 @@
         "python_3": "VERIFIED",
         "node_js": "VERIFIED",
         "unity_upm": "IMPLEMENTED_NOT_VERIFIED (UNITY_EDITOR_NOT_INSTALLED)",
-        "unreal_engine_5": "IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)"
+        "unreal_engine_5": "DEFERRED_KEEP_ADAPTER / IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)"
       },
       "implementation_evidence": [
         "packages/adapters/godot/ (fear_agent.gd, fear_ai_client.gd, plugin.cfg)",
@@ -114,13 +115,14 @@
       "runtime_evidence": [
         "Godot 4 autoload client, node signals, and live WebSocket tick loopback verified",
         "C# / .NET 8 synchronous and async API with fallback safety verified",
-        "Unity UPM and Unreal Engine 5 source modules architected to spec but gate marked IMPLEMENTED_NOT_VERIFIED due to missing host editors"
+        "Unity UPM source kept (IMPLEMENTED_NOT_VERIFIED). Unreal plugin kept as DEFERRED_KEEP_ADAPTER so Unreal games can connect later; not current work."
       ],
       "benchmark_evidence": [
         "Sub-millisecond client adapter deserialization across all native runtimes"
       ],
       "known_gaps": [
-        "Host machine lacks Unity Editor and Unreal Engine 5 binaries for in-editor playmode verification"
+        "Unity Editor not installed — Unity stays IMPLEMENTED_NOT_VERIFIED until a Unity host is wanted and an Editor run exists.",
+        "Unreal Engine 5 is DEFERRED_KEEP_ADAPTER: plugin kept so Unreal games can connect later; not current work; not required for Unity; missing UE does not block the product."
       ],
       "next_action": "MAINTAIN"
     },
@@ -133,7 +135,7 @@
         "godot_4_6": "VERIFIED (4/4 fixtures, delta 0.000000)",
         "csharp_dotnet8": "VERIFIED (client type and loopback verified)",
         "unity_upm": "IMPLEMENTED_NOT_VERIFIED (UNITY_EDITOR_NOT_INSTALLED)",
-        "unreal_engine_5": "IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)"
+        "unreal_engine_5": "DEFERRED_KEEP_ADAPTER / IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)"
       },
       "implementation_evidence": [
         "tests/conformance/conformance.test.js",
@@ -306,32 +308,49 @@
         "All 5 zip archives and SHA256 checksums generated cleanly via npm run pack:adapters"
       ],
       "runtime_evidence": [
-        "Standalone packages ready to drop into Unity (UPM), Godot (addons), Unreal (Plugins), .NET, or Python projects"
+        "Zip archives exist for Unity, Godot, Unreal, C#, Python. Existence of a zip is not Editor verification."
       ],
       "benchmark_evidence": [],
-      "known_gaps": [],
+      "known_gaps": [
+        "Unity zip is IMPLEMENTED_NOT_VERIFIED (no Editor).",
+        "Unreal zip is DEFERRED_KEEP_ADAPTER: kept so Unreal games can connect later; not current work; not Editor-verified."
+      ],
       "next_action": "MAINTAIN"
     },
     {
       "milestone": "EXTERNAL_INTEGRATION_PROOF",
-      "status": "VERIFIED",
+      "status": "PARTIAL (IN_REPO_DEMOS_ONLY)",
       "implementation_evidence": [
         "examples/external-game-proof/outpost_omega_game.py",
-        "examples/external-game-proof/EXTERNAL_INTEGRATION_RECORD.md"
+        "examples/external-game-proof/EXTERNAL_INTEGRATION_RECORD.md",
+        "examples/reference-game/DungeonEngine.js",
+        "examples/reference-game/FearAIAdapter.js",
+        "examples/reference-game/simulation_runner.js",
+        "examples/reference-game/INTEGRATION_AUDIT_REPORT.md",
+        "tests/external-reference-game.test.js"
       ],
       "test_evidence": [
-        "Outpost Omega 25-frame authoritative game simulation executed live with exit code 0"
+        "Outpost Omega 25-frame authoritative game simulation executed live with exit code 0",
+        "tests/external-reference-game.test.js (4/4 tests green):",
+        "1. Pre-existing game engine maintains exclusive authority over movement and combat",
+        "2. Fear AI Adapter registers NPCs and generates advisory intents without mutating host state",
+        "3. Complete 50-turn reference game simulation executes cleanly with sub-millisecond latency (0.1021 ms avg)",
+        "4. Civilians escape to Sanctuary via legal pathfinding under threat pressure"
       ],
       "runtime_evidence": [
         "External survival horror game owns transforms, HP, ammo, and grid movement",
-        "Uses only public Fear AI HTTP REST endpoints",
-        "Authority invariant 100% verified"
+        "2D Grid Dungeon Crawler Reference Game: 192 LOC core engine, 182 LOC integration glue, 3 setup steps",
+        "Uses only public Fear AI APIs (AffectiveAgent, IntentResolver, REST endpoints)",
+        "Host game authority invariant 100% verified across both reference game implementations"
       ],
       "benchmark_evidence": [
-        "Frame queries over HTTP loopback average 1.2 - 2.4 ms"
+        "Outpost Omega: Frame queries over HTTP loopback average 1.2 - 2.4 ms",
+        "Dungeon Crawler 2D: Average frame / turn latency 0.1021 ms, max 0.5513 ms"
       ],
-      "known_gaps": [],
-      "next_action": "MAINTAIN"
+      "known_gaps": [
+        "Both hosts were written next to Fear AI. This is not an unrelated pre-existing commercial/indie title. Do not claim universal adoption from these demos."
+      ],
+      "next_action": "KEEP_PARTIAL_UNTIL_UNRELATED_HOST"
     },
     {
       "milestone": "BEHAVIORAL_EVALUATION_FABE",
@@ -712,7 +731,7 @@
         "C# / .NET 8 SDK Package Conformance: 3,676.56 ms clean build, packaging & execution"
       ],
       "known_gaps": [
-        "Unity UPM and Unreal Engine 5 native editor verification remain marked IMPLEMENTED_NOT_VERIFIED due to BLOCKED_EXTERNAL_DEPENDENCY (editors not installed on host)"
+        "Unity UPM remains IMPLEMENTED_NOT_VERIFIED (Editor not installed). Unreal is DEFERRED_KEEP_ADAPTER: plugin kept for later Unreal hosts, not current work, not required for Unity."
       ],
       "next_action": "MAINTAIN"
     },

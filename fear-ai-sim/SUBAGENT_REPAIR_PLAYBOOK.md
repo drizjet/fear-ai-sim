@@ -1,12 +1,14 @@
 ---
 title: "SUBAGENT REPAIR PLAYBOOK"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
-status: active
+status: historical
 ---
 
-# SUBAGENT REPAIR PLAYBOOK
+> **Closed-world wiring playbook.** Test totals and HEAD at authoring are frozen history. Product map: `docs/SYSTEM_MAP.md`.
+
+# SUBAGENT REPAIR PLAYBOOK (HISTORICAL)
 
 **Project:** `/c/tools/03-Projects/lains Tools/lainself/fear-ai-sim/fear-ai-sim`
 **Head at authoring:** `99e439a` (Slice C: justice → faction legitimacy)

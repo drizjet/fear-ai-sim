@@ -94,22 +94,21 @@ func _on_state_received(id: String, state: Dictionary) -> void:
 		fear_band_changed.emit(current_fear_band)
 	intent_changed.emit(intent)
 	audio_hints_received.emit(audio)
-	
-	# Apply semantic intent to host character movement
-	_apply_movement()
 
 func apply_state(state: Dictionary) -> void:
 	_on_state_received(agent_id, state)
 
-func _apply_movement() -> void:
-	if _parent_body is CharacterBody3D:
-		var body = _parent_body as CharacterBody3D
-		var speed = base_speed
-		if current_fear_band == "PANIC":
-			speed *= panic_speed_mult
-			
-		if current_intent == "FREEZE":
-			body.velocity = Vector3.ZERO
-		elif current_intent == "FLEE_FROM" or current_intent == "SEEK_COVER":
-			body.velocity = recommended_vector.normalized() * speed
-		body.move_and_slide()
+## Host-owned motor should read this and apply velocity / move_and_slide itself.
+func get_movement_hint() -> Dictionary:
+	var speed_mult := 1.0
+	if current_fear_band == "PANIC":
+		speed_mult = panic_speed_mult
+	return {
+		"advisory_only": true,
+		"intent": current_intent,
+		"urgency": current_urgency,
+		"fear_band": current_fear_band,
+		"vector": recommended_vector,
+		"base_speed": base_speed,
+		"speed_mult": speed_mult
+	}

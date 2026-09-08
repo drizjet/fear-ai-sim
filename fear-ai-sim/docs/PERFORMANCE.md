@@ -6,6 +6,8 @@ type: benchmark-report
 status: active
 ---
 
+> Headless Node benchmarks only. Not in-engine Unity/Unreal/Godot frame time. Product map: `SYSTEM_MAP.md`.
+
 # Fear AI Universal Middleware - Performance & Scale Benchmark (V2)
 
 ## 1. Executive Summary & Workload Scope

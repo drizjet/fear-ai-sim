@@ -1,10 +1,13 @@
 ---
 title: "Fear AI Tester - Desktop App"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
 status: active
 ---
+
+> **Research desktop sim (Electron/Tauri).** Not the middleware server. `Launch-FearAI.ps1` starts this app.
+> Plug-in server: `npm run server`. Map: `docs/SYSTEM_MAP.md`.
 
 # Fear AI Tester - Desktop App
 

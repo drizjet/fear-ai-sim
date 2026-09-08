@@ -1,14 +1,17 @@
 ---
 title: "Fear AI / BadAI — Comprehensive Product Specification and Build Plan"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: specification
-status: active
+status: historical-plan
 ---
+
+> **Planning document (2026-08-26).** Describes sim → BadAI world-sim, not the plug-in SDK.
+> Product goal: fear AI that plugs into any game. Read `SYSTEM_MAP.md` first.
 
 # Fear AI / BadAI — Comprehensive Product Specification and Build Plan
 
-**Document status:** Planning baseline  
+**Document status:** Historical planning baseline  
 **Version:** 1.0  
 **Date:** 2026-08-26  
 **Scope:** Fear AI Evolution Simulator, its research workflow, and the proposed BadAI evolution  

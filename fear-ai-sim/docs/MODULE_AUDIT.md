@@ -1,10 +1,12 @@
 ---
 title: "Suspicious Module Audit"
 created: 2026-08-27
-updated: 2026-09-06
+updated: 2026-09-07
 type: module-audit
-status: active
+status: historical
 ---
+
+> **Sim-module audit (2026-08-27).** Does not cover `packages/core` middleware. See `SYSTEM_MAP.md`.
 
 # Suspicious Module Audit
 

@@ -1,3 +1,5 @@
+> Loopback middleware threat model. Not a claim about host-game security. See `SYSTEM_MAP.md`.
+
 # Fear AI Middleware - Security Policy & Local Threat Model
 
 ## 1. Threat Model for Local AI Middleware

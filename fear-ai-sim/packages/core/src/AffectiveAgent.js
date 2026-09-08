@@ -340,7 +340,15 @@ export class AffectiveAgent {
                 previous_band: coreResult.previousState,
                 transition_reason: coreResult.reason,
                 panic_locked: coreResult.panicLocked,
-                panic_locked_until: coreResult.panicLockedUntil
+                panic_locked_until: coreResult.panicLockedUntil,
+                perception_breakdown: {
+                    sensory_raw: rawThreatSum,
+                    sensory_weighted: rawThreatSum * neuroticismMod * effectivePacing,
+                    trauma_weighted: traumaDread * 0.8 * neuroticismMod,
+                    contagion_weighted: contagionFear * extraversionMod,
+                    leader_calm_weighted: leaderCalm * 0.7 * agreeablenessMod,
+                    total_perceived_threat: totalPerceivedThreat
+                }
             }
         };
 

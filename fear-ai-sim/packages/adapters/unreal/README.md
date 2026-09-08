@@ -1,9 +1,15 @@
 # Fear AI - Unreal Engine 5 Plugin
 
-This adapter provides native C++ and Blueprint integration between **Unreal Engine 5 (5.1 - 5.5+)** and the **Fear AI Universal Middleware Server**.
+**Deferred, not abandoned.** This plugin is how an Unreal game would connect to Fear AI (same loopback protocol as Unity/Godot/Python). Keep it.
+
+Do **not** install Unreal Engine unless you have an Unreal host to wire. You do not need Unreal to use Unity or any other engine.
+
+This adapter is **source-only** until a real UE5 Editor run exists. Host pawn owns movement; the component should broadcast intents, not move the actor.
+
+This adapter is intended to connect **Unreal Engine 5** to the **Fear AI middleware server**.
 
 > **Verification Gate Status**: `IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)`
-> *Note: Unreal Engine 5 Editor is not installed on this host development machine. The plugin structure, C# Build.cs, module interfaces, and ActorComponent adhere strictly to UE5 C++ plugin specifications, but end-to-end binary verification must be executed in an environment with UE5 installed.*
+> *Note: Unreal Editor is not installed here. `FearAI.Build.cs` is Unreal C++ (not C# game code). End-to-end Editor/PIE verification waits until an Unreal host exists. Status: `DEFERRED_KEEP_ADAPTER`.*
 
 ## Installation
 

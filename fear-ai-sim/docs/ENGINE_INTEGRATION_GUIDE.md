@@ -1,14 +1,20 @@
 ---
 title: Fear AI Engine Integration Guide - Unity, Unreal, Godot, and Custom Engines
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-07
 type: guide
 status: active
 ---
 
 # Fear AI Universal Engine Integration Guide
 
-Connect the Fear AI behavioral & affective simulation system into **any game engine**: Unity, Unreal Engine 5, Godot 4, or custom C++/Python/Rust game engines.
+Connect Fear AI **middleware** to a **host game**. Fear AI is not a Godot/Unity/Unreal game.
+
+Host game remains authoritative for movement, pathfinding, physics, combat, inventory, animation, and spawning. Adapters must send observations and receive intents. If an adapter calls `move_and_slide`, `NavMeshAgent.SetDestination`, or applies damage, that is an architectural violation.
+
+Canonical map: `SYSTEM_MAP.md`. Agent rules: `../AGENTS.md`.
+
+**Gates (2026-09-07):** Godot 4.6 headless ran on this host. Unity Editor is not installed. **Unreal is deferred, not dropped** — keep the plugin so Unreal games can connect later. You do not need Unreal installed to plug into Unity. The protocol is the “any game” layer.
 
 ---
 
@@ -16,16 +22,17 @@ Connect the Fear AI behavioral & affective simulation system into **any game eng
 
 The Fear AI middleware runs as a lightweight local server on loopback (`127.0.0.1:8765`).
 
-### Option A: Using Pre-Built Launchers
-From the project root:
-- **Windows Batch**: Double-click `Launch-FearAI-Server.bat`
-- **PowerShell**: Run `./Launch-FearAI-Server.ps1`
+### Option A: Node.js CLI (the real server)
 
-### Option B: Using Node.js CLI
-From `fear-ai-sim/fear-ai-sim`:
+From this repo root (`fear-ai-sim/fear-ai-sim`):
+
 ```bash
+npm run server
+# or
 node packages/runtime/bin/fear-ai-server.js --port 8765 --seed 1337
 ```
+
+`Launch-FearAI.ps1` / `Launch-FearAI.bat` start the **research desktop sim**, not this server. Files named `Launch-FearAI-Server.ps1` / `.bat` are **not** in this tree.
 
 Once running:
 - **HTTP Endpoint**: `http://127.0.0.1:8765/health`
@@ -42,25 +49,7 @@ Once running:
 ### Setup
 1. Copy `packages/adapters/unity/` to your project's `Assets/FearAI/`.
 2. Add an empty GameObject in your scene with the `FearAIClient` component.
-3. Attach `FearAgent` to any NPC character GameObject with a `NavMeshAgent`.
-
-### Code Example
-```csharp
-using UnityEngine;
-using FearAI;
-
-public class MonsterEncounter : MonoBehaviour
-{
-    public FearAgent victimAgent;
-
-    void OnMonsterSpotted(Transform monsterTransform)
-    {
-        // The FearAgent component automatically scans for colliders on the Threat Layer,
-        // evaluates distance and line of sight, streams observations to the server,
-        // and steers the NavMeshAgent according to Fear AI intents (FLEE_FROM, SEEK_COVER, etc.).
-    }
-}
-```
+3. Attach `FearAgent` to an NPC. Host code (your `NavMeshAgent` / character controller) reads `CurrentIntent` and `RecommendedVector` and moves the actor. FearAgent does not steer navigation.
 
 ---
 
@@ -83,18 +72,29 @@ extends CharacterBody3D
 @onready var fear_agent: FearAgent = $FearAgent
 
 func _ready():
-    # Configure personality
-    fear_agent.neuroticism = 0.85 # Highly nervous
-    fear_agent.leadership = 0.10  # Low leadership
+    fear_agent.neuroticism = 0.85
+    fear_agent.leadership = 0.10
+
+func _physics_process(_delta: float) -> void:
+    # Host owns movement. Adapter is advisory only.
+    var hint = fear_agent.get_movement_hint()
+    if hint.get("intent") == "FREEZE":
+        velocity = Vector3.ZERO
+    elif hint.get("vector") is Vector3:
+        var v: Vector3 = hint["vector"]
+        if v.length() > 0.01:
+            velocity = v.normalized() * 4.0 * float(hint.get("speed_mult", 1.0))
+    move_and_slide()
 ```
 
 ---
 
 ## 4. Unreal Engine 5 Integration (C++ / Blueprints)
 
-> [!WARNING]
-> **Verification Gate Status**: `IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)`
-> *Host Environment Notice: Unreal Engine 5 Editor is not installed on this host development machine. The plugin structure (`FearAI.uplugin`, `Source/FearAI/FearAI.Build.cs`, `UFearAgentComponent`), C++ module lifecycle, and ActorComponent adhere strictly to UE5 C++ plugin specifications, but end-to-end binary compilation and editor verification must be executed in an environment with UE5 installed.*
+> **Deferred, adapter kept.** Unreal games should be able to connect the same way as anyone else: local server + this plugin. That is the point of keeping `packages/adapters/unreal/`.
+>
+> Not current work. Do not install UE5 now. Not required for Unity/Godot/Python/C#.
+> Status: `DEFERRED_KEEP_ADAPTER` / `IMPLEMENTED_NOT_VERIFIED (UNREAL_ENGINE_NOT_INSTALLED)`.
 
 ### Setup
 1. Copy `packages/adapters/unreal/` into your Unreal project's `Plugins/FearAI/` directory.
@@ -108,7 +108,7 @@ func _ready():
 
 > [!NOTE]
 > **Verification Gate Status**: `VERIFIED (PYTHON_3_14_CONFORMANCE & DOTNET_8_SDK)`
-> *Host Environment Notice: Verified with bit-for-bit conformance against canonical fixtures v2 via Python standard library urllib (zero external dependencies) and official .NET 8 MSBuild.*
+> *Host Environment Notice: Python 3.14 fixtures and .NET 8 library compile/round-trip were exercised against the local server. That is not a claim that every runtime is bit-identical, and it is not Unity/Unreal Editor verification.*
 
 If you are building in Python (Pygame, Panda3D, Ursina) or custom C++/Rust engines:
 Use `packages/adapters/python/fear_ai_client.py` as a reference:

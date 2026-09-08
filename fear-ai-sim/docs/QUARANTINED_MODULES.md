@@ -6,6 +6,8 @@ type: quarantine-manifest
 status: active
 ---
 
+> Sim-module quarantine list. Not middleware `packages/`. See `SYSTEM_MAP.md`.
+
 # Quarantined Modules Manifest
 
 This is the **quarantine manifest** for Fear AI. The audit

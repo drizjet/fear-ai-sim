@@ -1,16 +1,21 @@
 ---
 title: "FEAR AI SIMULATOR - PROJECT STATUS REPORT"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
-status: active
+status: stale
 ---
 
-# FEAR AI SIMULATOR - PROJECT STATUS REPORT
+> **STALE — do not use as current status.**
+> This file is a MASAC / browser-sim scorecard (circa early 2026).
+> Product goal is **plug-in fear middleware**, not this sim checklist.
+> Read `AGENTS.md` and `docs/SYSTEM_MAP.md`. Historical body kept below.
+
+# FEAR AI SIMULATOR - PROJECT STATUS REPORT (HISTORICAL)
 
 **Date:** March 2026  
 **Project:** Fear AI Evolution Simulator with MASAC Deep RL  
-**Status:** Functional with MASAC Integration  
+**Status:** Historical snapshot only  
 
 ---
 

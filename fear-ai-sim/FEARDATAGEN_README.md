@@ -6,6 +6,8 @@ type: documentation
 status: active
 ---
 
+> Dataset collector for the research sim. Not the plug-in SDK. See `docs/SYSTEM_MAP.md`.
+
 # FearDataGen - Deterministic Fear Trajectory Generator
 
 A high-performance data collection system for generating ML-ready fear behavior datasets.

@@ -6,6 +6,8 @@ type: specification
 status: active
 ---
 
+> Middleware failure matrix. Passing it is not Unity/Unreal verification. See `SYSTEM_MAP.md`.
+
 # Fear AI Failure, Transport, and Lifecycle Conformance Matrix (42-Case Matrix)
 
 ## 1. Overview & Architectural Scope

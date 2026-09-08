@@ -1,12 +1,16 @@
 ---
 title: "AUTONOMOUS HANDOFF"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
-status: active
+status: historical
 ---
 
-# AUTONOMOUS HANDOFF
+> **Historical closed-world / civilization slice log.** Not product status.
+> Product goal: plug-in fear middleware for any game. Navigation: `AGENTS.md`, `docs/SYSTEM_MAP.md`.
+> Do not continue nomadic-empire slices unless the user explicitly asks for the research sim.
+
+# AUTONOMOUS HANDOFF (HISTORICAL)
 
 EVID-2026-09-06-E28-STEPPE-EMPORIUMS (Lane B, unaccepted)
 

@@ -8,9 +8,10 @@ status: active
 
 # BADAI — MASTER LONG-TERM SPEC, ROADMAP & EXECUTION PROMPT (v3.0 — 2026-08-26)
 
-> **The mission:** Fear AI is not the end product — it's the inheritance. This plan transforms it, feature by feature, into **BadAI**: a new, better, original system that is yours. Long-term horizon: no deadline, six epochs, each shippable, each with hard exit criteria.
+> **Historical spec.** The live product goal is **plug-in fear middleware** (`SYSTEM_MAP.md`), not “replace Fear AI with BadAI.”
+> Code facts tagged VERIFIED at `63d76f9` are dated. Do not treat this file as HEAD or as the plug-in contract.
 >
-> Provenance discipline applies throughout: code facts VERIFIED at `63d76f9`, equations PROPOSED, assumptions labeled. Nothing presented below is a claim about the codebase unless it carries a status tag.
+> Provenance discipline still applies: equations PROPOSED, assumptions labeled. Nothing below is a claim about current code unless re-measured.
 
 ---
 

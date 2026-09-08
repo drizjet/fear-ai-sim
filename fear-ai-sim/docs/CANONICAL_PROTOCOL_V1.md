@@ -6,11 +6,13 @@ type: specification
 status: active
 ---
 
+> Live plug-in wire contract. Product map: `SYSTEM_MAP.md`. Host remains authoritative.
+
 # Fear AI Canonical Wire Protocol Specification (v1.0.0)
 
 ## 1. Overview & Architectural Invariants
 
-The Fear AI Wire Protocol defines the contract between game engines (Unity, Unreal Engine 5, Godot 4, custom engines) and the headless Fear AI simulation runtime.
+The Fear AI Wire Protocol is the “any game” layer: Unity, Unreal, Godot, or a custom engine speak the same JSON over loopback. Unreal is a deferred host (adapter kept, not current work). Missing Unreal does not change this contract.
 
 ### The Host Game Authority Invariant
 1. **The host game engine is authoritative** over:

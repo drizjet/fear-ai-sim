@@ -8,32 +8,47 @@ status: partially_verified
 
 # FearCore / Rust Parity Matrix
 
-**Status:** `PARTIALLY_VERIFIED` — no authoritative Rust fear model exists in the current repository  
-**Part 1 implementation:** `fearcore.js` isolated adapter integrated into the reactive `brain.js` path; special states remain legacy-owned  
-**Date:** 2026-08-27 (updated: see EVID-2026-08-27-RUST-PARITY-AUDIT)  
+**Status:** `PARTIALLY_VERIFIED` — canonical Rust fear model exists **outside this JS repository**  
+**Part 1 implementation:** `fearcore.js` / `packages/core` in *this* tree; Pixel Pets `fear.rs` is the reference model  
+**Date:** 2026-08-27 (corrected 2026-09-07)  
 **Phase:** Part 1  
-**Canonical rule:** This document distinguishes repository facts, historical claims, and unverified reference behavior.
+**Canonical rule:** This document distinguishes repository facts, historical claims, and unverified reference behavior.  
+**See also:** `docs/SYSTEM_MAP.md`
 
 ## 1. Reference availability
 
-A repository search found Rust files at:
+### Canonical Rust fear model (sibling tree, live)
 
-- `src-tauri/src/main.rs`
-- `src-tauri/src/engine.rs` (path listed for reference; not present in the current checkout)
-- `.tmp_test/main.rs` (path listed for reference; not present in the current checkout)
-- `fear-ai-tester/src/main.rs` (path listed for reference; not present in the current checkout)
+`C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets\src\engine\ai\fear.rs`  
+Public API: `...\engine\ai\mod.rs` (`pub mod fear`).
 
-The current checkout contains **only** `src-tauri/src/main.rs` (543 lines). A direct grep for `fear|panic|threshold|trauma|hysteresis|habituation` against that file returns **zero matches**. The Rust side implements: `RngState` (random number generation), `sync_agents_to_rust` / `tick_rust_engine` (agent sync and tick), logging (`start_logging_session`, `log_frame_data`, `stop_logging_session`), export (`export_trajectories_jsonl`, `export_summary_csv`, `export_features_binary`, `compress_exports`, `list_exports`, `open_export_directory`), dataset validation, and system info.
+Observed in that file (re-measure before treating as frozen):
 
-**No Rust fear model exists in the current repository.** The historical "0–5" threshold values listed below are not verified by any Rust source; they are `DOCUMENTED_CLAIM` only, and the canonical JS-side owner is `FearCore` in `fearcore.js`. The Part 1 implementation is therefore not "Rust parity" — it is the documented BadAI target, with Rust parity parked until an authoritative Rust fear model is introduced.
+- `MAX_FEAR_SCORE = 5.0`
+- `FearBand`: Calm → Alert → Afraid → Panicked → Routed + `BerserkOverride`
+- dual-threshold enter/exit helpers
+- `DEFAULT_PANIC_RECOVERY_LOCK_TICKS = 10`
+
+Related: `advisory_validation.rs` (LLM intent is advisory; engine remains truth).
+
+### Rust inside *this* JS repository (not the fear model)
+
+A search of **this checkout** finds:
+
+- `src-tauri/src/main.rs` — RNG, agent sync/tick, logging, export. Grep for `fear|panic|threshold|trauma|hysteresis|habituation` in that file is not a substitute for `fear.rs`.
+- `fear-ai-tester/` — separate helper crate; do not assume it contains `FearBand`.
+- Elixir NIF at `...\fear-ai-elixir\native\fear_ai_nif` — spatial/forces/diffusion/neural, **not** the Pixel Pets band machine.
+
+**Correct claim:** no `FearBand` implementation lives in this JS repo’s Tauri crate.  
+**Incorrect claim (pre-2026-09-07):** “no Rust fear model exists.” It exists in Pixel Pets.
 
 ```text
-FearBand enter: 0.8 / 1.4 / 3.8 / 4.6
-FearBand exit: 0.55 / 0.8 / 1.2 / 3.0
+FearBand enter (Rust defaults, Pixel Pets): 0.8 / 1.4 / 3.8 / 4.6
+FearBand exit (Rust defaults, Pixel Pets): 0.55 / 0.8 / 1.2 / 3.0
 Panic lock: 10 ticks
 ```
 
-These values must not be treated as JavaScript implementation requirements until the authoritative source and units are identified.
+JS `FearCore` / `packages/core` may use the same *numbers* without being bit-identical. Do not write “Rust parity” unless a cross-language fixture was actually run.
 
 ## 2. Current JavaScript evidence
 

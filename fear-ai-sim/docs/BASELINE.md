@@ -1,14 +1,17 @@
 ---
 title: "Fear AI / BadAI — Part 0 Baseline"
 created: 2026-08-26
-updated: 2026-09-06
+updated: 2026-09-07
 type: baseline-report
-status: runtime_verified
+status: historical
 ---
 
-# Fear AI / BadAI — Part 0 Baseline
+> **Dated snapshot (2026-08-26, `63d76f9`).** Not current HEAD. Not the plug-in product.
+> Navigation: `../AGENTS.md`, `SYSTEM_MAP.md`. Rerun tests before quoting any count in this file.
 
-**Status:** `RUNTIME_VERIFIED` for the checks listed below  
+# Fear AI / BadAI — Part 0 Baseline (HISTORICAL)
+
+**Status:** historical snapshot of checks listed below  
 **Date:** 2026-08-26  
 **Repository:** `C:/tools/03-Projects/lains Tools/lainself/fear-ai-sim`  
 **Application:** `fear-ai-sim/`  

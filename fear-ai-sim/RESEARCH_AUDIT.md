@@ -1,10 +1,12 @@
 ---
 title: "RESEARCH AUDIT: MASAC & Multi-Agent RL for Predator-Prey Systems"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: audit
-status: active
+status: historical
 ---
+
+> **MASAC / predator-prey literature notes.** Not the plug-in product. Not a claim that MASAC is shipping as the game SDK. See `docs/SYSTEM_MAP.md`.
 
 # RESEARCH AUDIT: MASAC & Multi-Agent RL for Predator-Prey Systems
 

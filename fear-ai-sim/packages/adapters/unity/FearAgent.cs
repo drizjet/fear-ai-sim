@@ -1,10 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
 namespace FearAI
 {
-    [RequireComponent(typeof(NavMeshAgent))]
     public class FearAgent : MonoBehaviour
     {
         [Header("Agent Identity & Personality")]
@@ -25,13 +23,16 @@ namespace FearAI
         [SerializeField] private string currentIntent = "IDLE_VIGILANT";
         [SerializeField] private float intentUrgency = 0.0f;
 
-        [Header("Host Execution Tuning")]
+        [Header("Advisory Speed Hints (host applies)")]
         [SerializeField] private float panicSpeedMultiplier = 1.6f;
         [SerializeField] private float anxiousSpeedMultiplier = 1.1f;
         [SerializeField] private float calmSpeed = 3.5f;
 
-        private NavMeshAgent navAgent;
         private AudioSource heartbeatAudio;
+        public Vector3 RecommendedVector { get; private set; } = Vector3.zero;
+        public string CurrentIntent => currentIntent;
+        public string CurrentFearBand => currentFearBand;
+        public float IntentUrgency => intentUrgency;
 
         private void Awake()
         {
@@ -39,7 +40,6 @@ namespace FearAI
             {
                 agentId = $"agent_{GetInstanceID()}";
             }
-            navAgent = GetComponent<NavMeshAgent>();
             heartbeatAudio = GetComponent<AudioSource>();
         }
 
@@ -113,64 +113,20 @@ namespace FearAI
             var intent = state.action_intent;
             currentIntent = intent.type;
             intentUrgency = intent.urgency;
+            RecommendedVector = intent.vector_hint.ToUnityVector();
 
-            // Host game steers NavMesh execution based on recommended intent
-            ExecuteIntentOnNavMesh(intent, state.fear_band);
-
-            // Audio synthesis hints
+            // Host game applies NavMesh / character movement from CurrentIntent + RecommendedVector.
             if (heartbeatAudio != null && state.audio_hints != null)
             {
                 heartbeatAudio.pitch = Mathf.Clamp(state.audio_hints.heartbeat_bpm / 60.0f, 0.8f, 2.2f);
             }
         }
 
-        private void ExecuteIntentOnNavMesh(ActionIntent intent, string band)
+        public float SuggestedSpeed()
         {
-            if (navAgent == null || !navAgent.isOnNavMesh) return;
-
-            // Scale speed by emotional urgency
-            if (band == "PANIC")
-            {
-                navAgent.speed = calmSpeed * panicSpeedMultiplier;
-            }
-            else if (band == "ANXIOUS")
-            {
-                navAgent.speed = calmSpeed * anxiousSpeedMultiplier;
-            }
-            else
-            {
-                navAgent.speed = calmSpeed;
-            }
-
-            Vector3 vectorHint = intent.vector_hint.ToUnityVector();
-
-            switch (intent.type)
-            {
-                case "FREEZE":
-                    navAgent.isStopped = true;
-                    navAgent.velocity = Vector3.zero;
-                    break;
-
-                case "FLEE_FROM":
-                    navAgent.isStopped = false;
-                    Vector3 fleeDest = transform.position + vectorHint.normalized * (10.0f * intent.urgency);
-                    navAgent.SetDestination(fleeDest);
-                    break;
-
-                case "SEEK_COVER":
-                    navAgent.isStopped = false;
-                    Vector3 coverDest = transform.position + vectorHint.normalized * 8.0f;
-                    navAgent.SetDestination(coverDest);
-                    break;
-
-                case "IDLE_VIGILANT":
-                    navAgent.isStopped = true;
-                    break;
-
-                default:
-                    navAgent.isStopped = false;
-                    break;
-            }
+            if (currentFearBand == "PANIC") return calmSpeed * panicSpeedMultiplier;
+            if (currentFearBand == "ANXIOUS") return calmSpeed * anxiousSpeedMultiplier;
+            return calmSpeed;
         }
     }
 }

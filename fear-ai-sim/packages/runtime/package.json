@@ -15,6 +15,6 @@
     "@fear-ai/protocol": "^1.0.0",
     "ws": "^8.16.0"
   },
-  "author": "Google DeepMind / Fear AI Systems",
+  "author": "Fear AI",
   "license": "MIT"
 }

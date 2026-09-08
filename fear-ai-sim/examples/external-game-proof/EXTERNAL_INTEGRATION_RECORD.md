@@ -3,12 +3,15 @@ title: "External Game Integration Proof Record"
 created: 2026-09-06
 updated: 2026-09-06
 type: specification
-status: verified
+status: partial
 ---
 
-# External Game Integration Proof: Outpost Omega
+# In-repo demo: Outpost Omega
 
-This document records the empirical verification of integrating the Fear AI Universal Middleware into an external, un-architected game simulation (*Outpost Omega: Hostile Contact*) using exclusively the documented public surface.
+> Honest label: Python loop written **for** this proof. Public API only, host authority preserved.
+> **Not** an unrelated pre-existing game. Do not treat as universal-adoption VERIFIED.
+
+This document records integrating Fear AI middleware into the in-repo simulation *Outpost Omega: Hostile Contact* using the documented public surface.
 
 ---
 

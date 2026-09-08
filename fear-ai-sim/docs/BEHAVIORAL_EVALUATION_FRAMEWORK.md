@@ -6,6 +6,8 @@ type: specification
 status: active
 ---
 
+> Evaluation spec, not a world-class certificate. Negative findings stay on the record (cross-scenario Utility AI win; K=60 raw Fear-vs-Utility not established). Product map: `SYSTEM_MAP.md`.
+
 # Fear AI Behavioral Evaluation Benchmark (FABE & FABE v2) Specification
 
 > **Attribution Note**:
@@ -1045,10 +1047,9 @@ Milestone K validates cross-runtime protocol conformance across language ecosyst
 | **.NET 8 / C# Package** | `tools/test_clean_csharp_install.ps1` | 4/4 Integration Models | **PASS (100%)** | 3,676.56 ms |
 | **Godot 4.6 GDScript** | `tools/test_godot_civilization_conformance.ps1` | 3/3 3D Spatial Checks | **PASS (100%)** | 1,159.37 ms |
 | **Unity UPM Package** | `packages/adapters/unity/` | External Editor Verification | `IMPLEMENTED_NOT_VERIFIED` | `BLOCKED_EXTERNAL_DEPENDENCY` |
-| **Unreal Engine 5** | `packages/adapters/unreal/` | External Editor Verification | `IMPLEMENTED_NOT_VERIFIED` | `BLOCKED_EXTERNAL_DEPENDENCY` |
+| **Unreal Engine 5** | `packages/adapters/unreal/` | Adapter kept for later Unreal hosts | `DEFERRED_KEEP_ADAPTER` | not current work |
 
-*Note on Unity & Unreal External Dependency Gate*:
-In strict compliance with architectural verification principles, Unity UPM and Unreal Engine 5 plugins are implemented with comprehensive zero-dependency C# and C++ bindings, but remain formally designated as `IMPLEMENTED_NOT_VERIFIED / BLOCKED_EXTERNAL_DEPENDENCY` until native Unity Editor and Unreal Engine 5 binaries are present on the host environment.
+*Engine policy:* Unreal is **deferred, adapter kept** so Unreal games can connect later. Do not install UE5 now. Unity stays `IMPLEMENTED_NOT_VERIFIED` until a Unity host and Editor exist. Missing Unreal does not block today’s work. “Any game” is the wire protocol.
 
 ---
 

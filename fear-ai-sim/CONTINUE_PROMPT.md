@@ -1,12 +1,21 @@
 ---
-title: "STALE as of 2026-08-31; ignore; read AUTONOMOUS_HANDOFF.md"
+title: "STALE as of 2026-08-31; ignore"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
-status: active
+status: stale
 ---
 
-# STALE as of 2026-08-31; ignore; read AUTONOMOUS_HANDOFF.md
+# STALE — ignore this prompt
+
+Do not paste this into a new chat. It describes a 462-test sim world.
+
+Read instead:
+
+- `AGENTS.md`
+- `docs/SYSTEM_MAP.md`
+
+(`AUTONOMOUS_HANDOFF.md` is a closed-world slice log, not the plug-in product status.)
 
 # Continue Fear-AI Development - Ready-to-Use Prompt (STALE)
 

@@ -79,6 +79,10 @@ export {
     BehaviorTreeAgent,
     SubsystemAblationHarness
 } from './src/ComparativeBaselines.js';
+export {
+    DiagnosticExplainabilityInspector
+} from './src/DiagnosticExplainabilityInspector.js';
+
 
 
 

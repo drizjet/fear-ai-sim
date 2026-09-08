@@ -1,12 +1,14 @@
 ---
 title: "Part 0 — Grounding and Inheritance Lock"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
-status: active
+status: historical
 ---
 
-# Part 0 — Grounding and Inheritance Lock
+> **Dated 2026-08-26 / `63d76f9`.** Not current navigation. See `SYSTEM_MAP.md`.
+
+# Part 0 — Grounding and Inheritance Lock (HISTORICAL)
 
 **Status:** `PARTIALLY_COMPLETE`  
 **Verified:** 2026-08-26  

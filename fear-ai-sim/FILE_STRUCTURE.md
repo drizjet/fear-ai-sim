@@ -1,10 +1,12 @@
 ---
 title: "FearDataGen v2.0 - File Structure"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
 status: active
 ---
+
+> **Scope:** this file lists **FearDataGen** modules only. It is not a map of Fear AI, the middleware, or the three-language trees. See `docs/SYSTEM_MAP.md`.
 
 # FearDataGen v2.0 - File Structure
 

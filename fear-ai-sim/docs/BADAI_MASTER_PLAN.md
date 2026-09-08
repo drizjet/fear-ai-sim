@@ -1,14 +1,17 @@
 ---
 title: "BadAI / Fear AI — Canonical Master Plan"
 created: 2026-08-26
-updated: 2026-09-06
+updated: 2026-09-07
 type: master-plan
-status: canonical_planning_index
+status: historical-plan
 ---
 
-# BadAI / Fear AI — Canonical Master Plan
+> **Planning index (2026-08-26).** Not current product status. Not canonical for the plug-in SDK.
+> Current navigation: `../AGENTS.md`, `SYSTEM_MAP.md`.
 
-**Status:** `CANONICAL PLANNING INDEX`  
+# BadAI / Fear AI — Canonical Master Plan (HISTORICAL PLAN)
+
+**Status:** historical planning index  
 **Version:** 1.0  
 **Date:** 2026-08-26  
 **Scope:** Fear AI simulator → BadAI perceived-reality simulation platform  

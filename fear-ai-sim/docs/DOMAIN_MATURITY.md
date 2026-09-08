@@ -1,10 +1,13 @@
 ---
 title: "Domain Maturity Map — Fear AI World-Completion View"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
 status: active
 ---
+
+> **Scope:** closed-world / living-systems domains in this JS sim. Not the plug-in SDK maturity.
+> Product map: `SYSTEM_MAP.md`. Labels are derived from `docs/evidence/EVIDENCE_LEDGER.jsonl`.
 
 # Domain Maturity Map — Fear AI World-Completion View
 

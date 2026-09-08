@@ -5,7 +5,7 @@
   "description": "Universal engine-agnostic Fear AI affective state and behavioral intent middleware for Unity.",
   "unity": "2022.3",
   "author": {
-    "name": "Google DeepMind Fear AI Team"
+    "name": "Fear AI"
   },
   "keywords": [
     "ai",

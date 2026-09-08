@@ -1,8 +1,10 @@
+> .NET client library (not Unity Editor verification). Start server: `npm run server`. Map: `docs/SYSTEM_MAP.md`.
+
 # Fear AI - C# / .NET 8 Adapter
 
 > [!NOTE]
 > **Verification Gate Status**: `VERIFIED (DOTNET_8_SDK / MSBUILD_17_11)`
-> *Host Environment Notice: Compiled and verified against official .NET 8 SDK (MSBuild 17.11) with zero errors and zero warnings.*
+> *Host Environment Notice: Compiled against the .NET 8 SDK as a library. This is not Unity Editor Play Mode and not Unreal PIE.*
 
 This client library provides high-performance C# integration with the **Fear AI Universal Middleware Server** for .NET standalone applications, custom game engines (Monogame, Stride, Godot C#), and server architectures.
 

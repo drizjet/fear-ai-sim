@@ -1,32 +1,38 @@
 ---
 title: "Part 1 — FearCore Execution Prompt"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-07
 type: documentation
-status: active
+status: historical
 ---
 
-# Part 1 — FearCore Execution Prompt
+> **Historical Part 1 prompt (sim-era FearCore).** Do not paste this as a fresh mission.
+> Current product: plug-in fear middleware. Read `AGENTS.md` and `docs/SYSTEM_MAP.md` first.
+> Canonical Rust fear model: Pixel Pets `src/engine/ai/fear.rs` (sibling tree). Tauri `src-tauri` in this repo is not that model.
 
-Copy this prompt into a future coding session when beginning or continuing Part 1.
+# Part 1 — FearCore Execution Prompt (HISTORICAL)
+
+Copy this prompt only if the user explicitly asked to continue **sim-era Part 1 FearCore ownership**, not the plug-in SDK.
 
 ```text
 You are the senior engineer implementing Part 1 of the BadAI/Fear AI plan.
 
 READ FIRST:
-1. docs/BADAI_MASTER_PLAN.md
+0. docs/SYSTEM_MAP.md and AGENTS.md (current product shape; outranks this prompt)
+1. docs/BADAI_MASTER_PLAN.md (planning index, not implementation fact)
 2. docs/BADAI_MASTER_SPEC.md
-3. docs/PART_0_GROUNDING.md
-4. docs/BASELINE.md
-5. docs/ARCHITECTURE.md
+3. docs/PART_0_GROUNDING.md (dated 2026-08-26, commit 63d76f9)
+4. docs/BASELINE.md (same date; rerun tests before trusting counts)
+5. docs/ARCHITECTURE.md (sim surface, not packages/core)
 6. docs/DECISIONS.md
 7. docs/PROVENANCE.md
+8. docs/RUST_PARITY.md (corrected 2026-09-07: Rust fear.rs lives in Pixel Pets)
 
 REPOSITORY:
 - Git root: C:/tools/03-Projects/lains Tools/lainself/fear-ai-sim
 - Application: fear-ai-sim/
-- Current baseline reference: commit 63d76f9
-- Current documented baseline: npm test 514/514 and npm run build passing, but rerun before relying on it.
+- Historical baseline reference: commit 63d76f9 (not HEAD)
+- Historical documented baseline: npm test 514/514 — rerun; do not copy this number forward.
 
 MISSION:
 Build one authoritative FearCore contract without silently changing unrelated behavior.
@@ -35,9 +41,9 @@ habituation ownership, and safe interfaces to existing agent behavior.
 
 TRUTH RULES:
 - Current repository code/tests/runtime outrank historical claims.
-- Rust thresholds or panic-lock behavior must not be invented. If the authoritative Rust
-  source is unavailable, record UNKNOWN and keep the implementation behind an explicit
-  adapter/decision rather than claiming parity.
+- Do not invent Rust thresholds. The authoritative Rust source is
+  C:/tools/03-Projects/lains Tools/New Master Game/pixel-pets/src/engine/ai/fear.rs
+  This JS repo's src-tauri crate is RNG/export, not FearBand. Claim parity only after a cross-language fixture.
 - Do not infer a Rust 0–5 to JavaScript 0–1 mapping from prose alone.
 - Research-only claims remain RESEARCH_ONLY; designs remain PROPOSED until tested.
 - Preserve existing behavior with regression tests before changing it.

@@ -1,10 +1,12 @@
 ---
 title: "Fear AI / BadAI — Decision Register"
 created: 2026-08-26
-updated: 2026-09-06
+updated: 2026-09-07
 type: decision-register
 status: active
 ---
+
+> Sim-era decision log. Product navigation: `SYSTEM_MAP.md`. A decision here does not override host-authority or the three-tree map.
 
 # Fear AI / BadAI — Decision Register
 

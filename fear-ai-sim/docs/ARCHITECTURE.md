@@ -8,11 +8,16 @@ status: partially_verified
 
 # Fear AI / BadAI — Current Architecture Map
 
-**Status:** `PARTIALLY_VERIFIED`  
+**Status:** `PARTIALLY_VERIFIED` (sim-era grounding; not the plug-in product map)  
 **Part 0 detailed record:** `PART_0_GROUNDING.md`  
-**Date:** 2026-08-26  
-**Repository version:** `63d76f9`  
-**Related documents:** `BASELINE.md`, `PROVENANCE.md`, `mvp-plan.md`
+**Date:** 2026-08-26 (banner updated 2026-09-07)  
+**Repository version:** `63d76f9` at time of writing — do not treat as HEAD  
+**Related documents:** `BASELINE.md`, `PROVENANCE.md`, `mvp-plan.md`  
+**Current navigation:** `../AGENTS.md`, `SYSTEM_MAP.md`
+
+> This document maps the **browser/Electron/Tauri research sim** as of 2026-08-26.
+> It does not describe `@fear-ai/core`, the protocol server, or engine adapters.
+> It does not replace Pixel Pets `fear.rs` or the Elixir backend.
 
 ## 1. How to read this document
 

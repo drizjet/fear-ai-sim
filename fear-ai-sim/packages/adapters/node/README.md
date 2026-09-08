@@ -1,3 +1,5 @@
+> Middleware client. Start the server with `npm run server` in the JS repo. Map: `docs/SYSTEM_MAP.md`.
+
 # Fear AI - Node.js ES Module Client Adapter
 
 > [!NOTE]

@@ -41,7 +41,7 @@ def main():
     })
     if not hs or hs.get("status") != "ACCEPTED":
         print("[!] Handshake failed or server not running at", SERVER_URL)
-        print("[!] Ensure server is launched via `Launch-FearAI-Server.bat` or `npm run server`.")
+        print("[!] Ensure server is launched via `npm run server` in the JS repo.")
         sys.exit(1)
 
     print(f"[+] Connected to Fear AI Server (Protocol {hs.get('protocol_version')})")

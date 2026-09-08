@@ -1,8 +1,10 @@
+> Python client. Start server with `npm run server` in the JS repo. Map: `docs/SYSTEM_MAP.md`.
+
 # Fear AI - Python Client Adapter
 
 > [!NOTE]
 > **Verification Gate Status**: `VERIFIED (PYTHON_3_14_CONFORMANCE)`
-> *Host Environment Notice: Verified with bit-for-bit mathematical conformance against canonical fixtures v2 using Python standard library `urllib` (zero external dependencies).*
+> *Host Environment Notice: Python 3.14 client ran canonical fixtures against the local server (reported fixture delta 0.000000 on that suite). That is not a claim that every runtime is bit-identical.*
 
 This client library provides zero-dependency Python integration with the **Fear AI Universal Middleware Server** for Pygame, Panda3D, Ursina, Raylib, simulation harnesses, and headless test runners.
 

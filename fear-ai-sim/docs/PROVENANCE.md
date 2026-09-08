@@ -814,7 +814,13 @@ If any answer is no, the part is incomplete or must be marked with the appropria
 - Runtime path: the `RUST_PARITY.md` is read by future P1 workers per the Part 1 prompt. The updated record prevents them from re-litigating the same source-availability question.
 - Observable evidence: `grep "fear|panic|threshold|trauma|hysteresis|habituation" src-tauri/src/main.rs` returns zero matches. The only `*.rs` file in the repo is `src-tauri/src/main.rs` itself.
 - Limitation: the historical "0–5" thresholds in `RUST_PARITY.md` remain `DOCUMENTED_CLAIM`. They are now the `FearCore` defaults, but they are not "Rust parity" — they are the documented BadAI target values. Future work that wants real Rust parity must first introduce an authoritative Rust fear model.
-- Status: `CODE_VERIFIED`. The Rust source is verified to not contain a fear model. The `DOCUMENTED_CLAIM` status is honest and traceable.
+- Status: `CODE_VERIFIED`. The Rust source **in this JS repository's Tauri crate** is verified to not contain a fear model. The `DOCUMENTED_CLAIM` status is honest and traceable.
+
+### CORRECTION-2026-09-07-RUST-FEAR-SIBLING
+
+- The 2026-08-27 row above is still true **for this JS checkout**: `src-tauri` has no FearBand.
+- It is **false** as a global claim. Canonical Rust fear model: `C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets\src\engine\ai\fear.rs`.
+- Do not delete the original row. Use `docs/RUST_PARITY.md` (updated 2026-09-07) and `docs/SYSTEM_MAP.md`.
 
 ### EVID-2026-08-27-FEAR-INVENTORY
 
