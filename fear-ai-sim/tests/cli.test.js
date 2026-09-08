@@ -165,4 +165,24 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('PERPETUAL_RETALIATION_WAR_VORTEX');
         expect(res.stdout).toContain('INJECT_STRATEGIC_GRAIN_RESERVE');
     });
+
+    it('executes "budget" and outputs adaptive computational backpressure metrics', async () => {
+        const res = await runCli(['budget', '--agents', '100', '--budget', '2.0']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Adaptive Computational Budget & Backpressure Benchmark');
+        expect(res.stdout).toContain('Enqueued Agents:');
+        expect(res.stdout).toContain('Allocated Budget:');
+        expect(res.stdout).toContain('Processed Agents:');
+        expect(res.stdout).toContain('Execution Performance:');
+    });
+
+    it('executes "migration" and outputs dynamic settlement migration impacts and conservation', async () => {
+        const res = await runCli(['migration', '--famine', '--war']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Dynamic Settlement Migration & Demographics');
+        expect(res.stdout).toContain('Migration Wave Triggered:');
+        expect(res.stdout).toContain('Post-Arrival Settlement Impacts:');
+        expect(res.stdout).toContain('Northwatch Labor Bonus:');
+        expect(res.stdout).toContain('STRICTLY CONSERVED');
+    });
 });

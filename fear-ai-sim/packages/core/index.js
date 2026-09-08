@@ -142,5 +142,15 @@ export {
     CASCADE_PATHOLOGIES,
     CIRCUIT_BREAKER_INTERVENTIONS
 } from './src/MultiFeedbackCascadeSystem.js';
+export {
+    AdaptiveBudgetBackpressureController,
+    DEGRADATION_MODES
+} from './src/AdaptiveBudgetBackpressureController.js';
+export {
+    SettlementMigrationSystem,
+    MIGRATION_DRIVERS,
+    MIGRANT_PARTY_STATUS
+} from './src/SettlementMigrationSystem.js';
+
 
 

@@ -53,7 +53,12 @@ import {
     OCCLUSION_STATUS,
     MultiFeedbackCascadeSystem,
     CASCADE_PATHOLOGIES,
-    CIRCUIT_BREAKER_INTERVENTIONS
+    CIRCUIT_BREAKER_INTERVENTIONS,
+    AdaptiveBudgetBackpressureController,
+    DEGRADATION_MODES,
+    SettlementMigrationSystem,
+    MIGRATION_DRIVERS,
+    MIGRANT_PARTY_STATUS
 } from '../packages/core/index.js';
 import { BinaryWireProtocol, BinaryFrameReader } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
@@ -109,6 +114,10 @@ function printHelp() {
     console.log(`                     Options: --elevation <meters> --occlusion <0..1> --obstacles --json`);
     console.log(`  runaway-loops      Diagnose system-of-systems feedback loops and circuit breakers (Front E/Sections 61–65)`);
     console.log(`                     Options: --threshold <1.0> --json`);
+    console.log(`  budget             Benchmark adaptive computational budget scheduling and backpressure (Front D/Sections 59–60)`);
+    console.log(`                     Options: --agents <number> --budget <ms> --json`);
+    console.log(`  migration          Simulate push-pull migration flow, demographic friction, and population conservation (Front C/Sections 46–47)`);
+    console.log(`                     Options: --famine --war --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -904,6 +913,118 @@ function handleRunawayLoops(options) {
     }
 }
 
+function handleBudget(options) {
+    const numAgents = parseInt(options.agents ?? 300, 10);
+    const budgetMs = parseFloat(options.budget ?? 1.5);
+    const controller = new AdaptiveBudgetBackpressureController({
+        maxFrameTimeMs: budgetMs,
+        maxAgentsPerBatch: 500,
+        queueCapacity: 1000
+    });
+
+    for (let i = 0; i < numAgents; i++) {
+        const fear = (i % 10) / 10.0;
+        const urgency = ((i * 3) % 10) / 10.0;
+        const dist = 5.0 + ((i * 7) % 50);
+        controller.enqueueAgentUpdate(`agent_${i}`, { fear, urgency, distance: dist }, 1);
+    }
+
+    const report = controller.processBatch((id, tele) => {
+        // Simulated intent evaluation work
+        const x = Math.sqrt(tele.fear * tele.urgency + 0.01);
+    }, 1, budgetMs);
+
+    const tele = controller.getTelemetry();
+    const result = {
+        config: { numAgents, budgetMs },
+        report,
+        telemetry: tele
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Adaptive Computational Budget & Backpressure Benchmark (Sections 59–60) ===\n`);
+    console.log(`Workload Overview:`);
+    console.log(`  • Enqueued Agents:         ${numAgents}`);
+    console.log(`  • Allocated Budget:        ${budgetMs.toFixed(2)} ms`);
+    console.log(`  • Current Mode:            ${report.mode}\n`);
+    console.log(`Execution Performance:`);
+    console.log(`  • Processed Agents:        ${report.processedCount} / ${numAgents}`);
+    console.log(`  • Remaining Backlog:       ${report.remainingQueueDepth}`);
+    console.log(`  • Elapsed CPU Time:        ${report.elapsedMs.toFixed(3)} ms`);
+    console.log(`  • Budget Exceeded:         ${report.budgetExceeded ? 'YES (Backpressure engaged)' : 'NO (Fully completed)'}`);
+    console.log(`  • Cumulative Coalesced:    ${tele.totalCoalesced} updates\n`);
+}
+
+function handleMigration(options) {
+    const system = new SettlementMigrationSystem();
+    const famine = Boolean(options.famine);
+    const war = Boolean(options.war);
+
+    system.registerSettlement('Northwatch', {
+        population: 120,
+        housingCapacity: 150,
+        foodStock: 95.0,
+        threatLevel: 0.1,
+        garrisonStrength: 0.8
+    });
+    system.registerSettlement('Riverbend', {
+        population: 90,
+        housingCapacity: 110,
+        foodStock: famine ? 8.0 : 60.0,
+        threatLevel: war ? 0.85 : 0.2,
+        garrisonStrength: 0.3
+    });
+
+    const initialPop = 120 + 90;
+    const wave = system.evaluateMigrationWave('Riverbend', 'Northwatch', 0.2, 1);
+    
+    // Simulate transit ticks
+    system.tick(6);
+    const audit = system.auditPopulationConservation(initialPop);
+
+    const riverbend = system.settlements.get('Riverbend');
+    const northwatch = system.settlements.get('Northwatch');
+
+    const result = {
+        wave,
+        audit,
+        settlements: {
+            Northwatch: northwatch,
+            Riverbend: riverbend
+        }
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Dynamic Settlement Migration & Demographics (Sections 46–47) ===\n`);
+    console.log(`Initial Conditions: Riverbend (Pop 90, Food ${riverbend.foodStock}, Threat ${riverbend.threatLevel}) -> Northwatch (Pop 120)`);
+    if (wave) {
+        console.log(`\nMigration Wave Triggered:`);
+        console.log(`  • Emigrants:               ${wave.headcount} citizens`);
+        console.log(`  • Primary Driver:          ${wave.primaryDriver}`);
+        console.log(`  • Estimated Transit:       ${wave.departureTick} -> ${wave.estimatedArrivalTick} ticks`);
+    } else {
+        console.log(`\nNo migration wave triggered under current conditions.`);
+    }
+
+    console.log(`\nPost-Arrival Settlement Impacts:`);
+    console.log(`  • Northwatch Population:   ${northwatch.population} (was 120)`);
+    console.log(`  • Northwatch Labor Bonus:  x${northwatch.laborBonus.toFixed(4)}`);
+    console.log(`  • Northwatch Social Friction: ${(northwatch.socialFriction * 100).toFixed(1)}%`);
+    console.log(`  • Riverbend Population:    ${riverbend.population} (floor preserved: >= 5)`);
+    console.log(`\nPopulation Conservation Audit:`);
+    console.log(`  • Initial Total:           ${audit.initialTotal}`);
+    console.log(`  • Current Total:           ${audit.accountedTotal}`);
+    console.log(`  • Conservation Theorem:    ${audit.isConserved ? 'STRICTLY CONSERVED (0 loss)' : 'VIOLATION'}\n`);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -938,6 +1059,18 @@ async function main() {
             break;
         case 'governance':
             handleGovernance(options);
+            break;
+        case 'spatial-3d':
+            handleSpatial3D(options);
+            break;
+        case 'runaway-loops':
+            handleRunawayLoops(options);
+            break;
+        case 'budget':
+            handleBudget(options);
+            break;
+        case 'migration':
+            handleMigration(options);
             break;
         case 'spatial-3d':
             handleSpatial3D(options);
