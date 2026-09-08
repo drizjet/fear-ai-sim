@@ -26,6 +26,8 @@ import {
 } from '../packages/core/index.js';
 import { FearServer } from '../packages/runtime/index.js';
 import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
+import { runAllAdversarialStressTests } from '../benchmarks/behavioral-evaluation/adversarial_world_stress.mjs';
+import { runAllCounterfactualExperiments } from '../benchmarks/behavioral-evaluation/counterfactual_world_validation.mjs';
 
 const BANNER = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -48,6 +50,8 @@ function printHelp() {
     console.log(`  sim                Run the 50-turn authoritative Dungeon Crawler reference game`);
     console.log(`  benchmark          Measure deterministic update latency and throughput`);
     console.log(`                     Options: --entities <10000> --ticks <100>`);
+    console.log(`  adversarial        Run 11 adversarial stress tests (Section XXV)`);
+    console.log(`  counterfactual     Run 8 causal counterfactual experiments (Section XL)`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
     console.log(`  help               Show this help message\n`);
     console.log(`Documentation & System Map: docs/SYSTEM_MAP.md`);
@@ -273,6 +277,44 @@ function handleVerify() {
     console.log(`\nAll pre-flight verification checks PASS. Use 'npm test' for full 240+ suite execution.\n`);
 }
 
+function handleAdversarial(options) {
+    console.log(BANNER);
+    console.log(`[FearAI-CLI] Running 11 Adversarial Stress Regimes (Section XXV)...\n`);
+    const results = runAllAdversarialStressTests();
+    let allPassed = true;
+
+    for (const [key, res] of Object.entries(results)) {
+        const pass = res.status === 'PASS';
+        if (!pass) allPassed = false;
+        console.log(`  ${pass ? '✓' : '✗'} ${res.regime}: ${pass ? 'PASS' : 'FAIL'}`);
+    }
+
+    if (options.json) {
+        console.log('\n' + JSON.stringify(results, null, 2));
+    } else {
+        console.log(`\nOverall Adversarial Battery Status: ${allPassed ? 'ALL 11 STRESS REGIMES PASSED (100%)' : 'FAILURES DETECTED'}\n`);
+    }
+}
+
+function handleCounterfactual(options) {
+    console.log(BANNER);
+    console.log(`[FearAI-CLI] Running 8 Causal Counterfactual Experiments (Section XL)...\n`);
+    const results = runAllCounterfactualExperiments();
+    let allPassed = true;
+
+    for (const [key, res] of Object.entries(results)) {
+        const pass = res.status === 'PASS';
+        if (!pass) allPassed = false;
+        console.log(`  ${pass ? '✓' : '✗'} ${res.experiment}: ${pass ? 'PASS' : 'FAIL'}`);
+    }
+
+    if (options.json) {
+        console.log('\n' + JSON.stringify(results, null, 2));
+    } else {
+        console.log(`\nOverall Counterfactual Suite Status: ${allPassed ? 'ALL 8 COUNTERFACTUAL EXPERIMENTS PASSED (100%)' : 'FAILURES DETECTED'}\n`);
+    }
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -298,6 +340,12 @@ async function main() {
             break;
         case 'benchmark':
             handleBenchmark(options);
+            break;
+        case 'adversarial':
+            handleAdversarial(options);
+            break;
+        case 'counterfactual':
+            handleCounterfactual(options);
             break;
         case 'verify':
             handleVerify();

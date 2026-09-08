@@ -94,4 +94,18 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Throughput:');
         expect(res.stdout).toContain('Status:                 PASS');
     });
+
+    it('executes "adversarial" running all 11 stress regimes from Section XXV', async () => {
+        const res = await runCli(['adversarial']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Running 11 Adversarial Stress Regimes (Section XXV)');
+        expect(res.stdout).toContain('ALL 11 STRESS REGIMES PASSED (100%)');
+    });
+
+    it('executes "counterfactual" running all 8 causal experiments from Section XL', async () => {
+        const res = await runCli(['counterfactual']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Running 8 Causal Counterfactual Experiments (Section XL)');
+        expect(res.stdout).toContain('ALL 8 COUNTERFACTUAL EXPERIMENTS PASSED (100%)');
+    });
 });

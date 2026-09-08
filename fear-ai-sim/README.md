@@ -29,6 +29,8 @@ npm run cli -- explain --neuroticism 0.8 --distance 12
 npm run cli -- explain-faction --factionA HumanKingdom --factionB OrcDominion
 npm run cli -- sim --turns 50
 npm run cli -- benchmark --entities 1000 --ticks 20
+npm run cli -- adversarial
+npm run cli -- counterfactual
 npm run cli -- verify
 ```
 
