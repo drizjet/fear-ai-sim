@@ -203,5 +203,10 @@ export {
     MultiObserverEpistemicHarness,
     INFORMATION_CHANNELS
 } from './src/MultiObserverEpistemicHarness.js';
+export {
+    FabeWorldBenchmarkSuite,
+    BENCHMARK_DIMENSIONS,
+    DEGENERACY_FLAGS
+} from './src/FabeWorldBenchmarkSuite.js';
 
 

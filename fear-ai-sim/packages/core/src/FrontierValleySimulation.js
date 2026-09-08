@@ -324,6 +324,78 @@ export class FrontierValleySimulation {
     }
 
     /**
+     * Advances the simulation by a single tick and returns event telemetry.
+     * @returns {{ tick: number, meanFear: number, events: Array<Object>, summary: Object }}
+     */
+    tick() {
+        const prevEncounters = this.macroMetrics.totalEncounters;
+        const prevFailures = this.macroMetrics.routeFailures;
+        const prevWars = this.macroMetrics.warsDeclared;
+        const prevAlliances = this.macroMetrics.alliancesFormed;
+
+        this.advance(1);
+
+        const events = [];
+        if (this.macroMetrics.totalEncounters > prevEncounters) {
+            const activeEncounters = this.worldSystem.activeEncounters || [];
+            for (const enc of activeEncounters) {
+                events.push({
+                    type: enc.advisoryResolution === 'COMBAT_ENGAGEMENT' ? 'PATROL_SKIRMISH' : 'HIGHWAY_AMBUSH',
+                    encounterId: enc.id,
+                    partyA: enc.partyAId,
+                    partyB: enc.partyBId,
+                    resolution: enc.advisoryResolution
+                });
+            }
+            if (events.length === 0) {
+                events.push({
+                    type: 'HIGHWAY_AMBUSH',
+                    tick: this.currentTick
+                });
+            }
+        }
+
+        if (this.macroMetrics.routeFailures > prevFailures) {
+            events.push({
+                type: 'CARAVAN_REROUTE',
+                tick: this.currentTick,
+                reason: 'HIGH_CORRIDOR_DANGER'
+            });
+        }
+
+        if (this.macroMetrics.warsDeclared > prevWars) {
+            events.push({
+                type: 'WAR_DECLARED',
+                tick: this.currentTick,
+                factions: [FRONTIER_VALLEY_FACTIONS.SETTLERS, FRONTIER_VALLEY_FACTIONS.BANDITS]
+            });
+        }
+
+        if (this.macroMetrics.alliancesFormed > prevAlliances) {
+            events.push({
+                type: 'ALLIANCE_FORMED',
+                tick: this.currentTick,
+                factions: [FRONTIER_VALLEY_FACTIONS.SETTLERS, FRONTIER_VALLEY_FACTIONS.NOMADS]
+            });
+        }
+
+        let fearTotal = 0;
+        let groupCount = 0;
+        for (const g of this.worldSystem.groups.values()) {
+            fearTotal += g.drivers?.threatPressure ?? 0.0;
+            groupCount++;
+        }
+        const meanFear = groupCount > 0 ? fearTotal / groupCount : 0.0;
+
+        return {
+            tick: this.currentTick,
+            meanFear,
+            events,
+            summary: this.getMacroSummary()
+        };
+    }
+
+    /**
      * Returns structured macro metrics of the simulation.
      */
     getMacroSummary() {

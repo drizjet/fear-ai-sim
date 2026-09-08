@@ -91,7 +91,10 @@ import {
     ESCORT_TIERS,
     COMMODITY_TYPES,
     MultiObserverEpistemicHarness,
-    INFORMATION_CHANNELS
+    INFORMATION_CHANNELS,
+    FabeWorldBenchmarkSuite,
+    BENCHMARK_DIMENSIONS,
+    DEGENERACY_FLAGS
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -142,6 +145,8 @@ function printHelp() {
     console.log(`  validate-safety    Validate agent tuning against designer safety invariants (Section 78)`);
     console.log(`                     Options: --preset <preset_id>`);
     console.log(`  frontier-valley    Run the Frontier Valley multi-seed simulation + degeneracy check (Front C)`);
+    console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
+    console.log(`  fabe-world         Run FABE-WORLD multi-seed living-world benchmark & scorecard (Frontiers E & B)`);
     console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
     console.log(`  counterfactual-world Run causal world fork experiment (Factual vs Counterfactual) (Front E/C)`);
     console.log(`                     Options: --seed <88888> --fork <15> --horizon <40> --mutation <pacify-bandits|pacify-route|scarcity> --json`);
@@ -603,6 +608,55 @@ function handleFrontierValley(options) {
     console.log(`  • Total Encounters:     ${totalEncounters} (${(totalEncounters / seeds.length).toFixed(1)} / seed)`);
     console.log(`  • Panic Incidents:      ${totalPanics} (${(totalPanics / seeds.length).toFixed(1)} / seed)`);
     console.log(`  • Avg Populations:      ${JSON.stringify(avgSettlements)}`);
+}
+
+function handleFabeWorld(options) {
+    const ticks = parseInt(options.ticks || '100', 10);
+    const seeds = options.seeds
+        ? options.seeds.split(',').map(s => parseInt(s.trim(), 10))
+        : [101, 202, 303, 404, 505];
+
+    if (!options.json) {
+        console.log(BANNER);
+        console.log(`=== FABE-WORLD LIVING-WORLD SIMULATION BENCHMARK ===`);
+        console.log(`Ticks: ${ticks} | Seeds: ${seeds.join(', ')}\n`);
+    }
+
+    const suite = new FabeWorldBenchmarkSuite({ seeds, ticks });
+    const report = suite.runBenchmark();
+
+    if (options.json) {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+    }
+
+    console.log('--- 7 Canonical Living-World Benchmark Dimensions (Section 107) ---');
+    for (const [dim, score] of Object.entries(report.dimensionScores)) {
+        const pass = score >= 0.80 ? 'PASS' : 'FAIL';
+        console.log(`  • ${dim.padEnd(22)}: ${score.toFixed(4)} [${pass}]`);
+    }
+
+    console.log('\n--- Emergence Quality Scorecard (Section 114) ---');
+    const scorecard = report.emergenceQualityScorecard;
+    console.log(`  • Causal Traceability (C_trace)    : ${scorecard.causalTraceability.toFixed(4)}`);
+    console.log(`  • State Grounding (S_ground)        : ${scorecard.stateGrounding.toFixed(4)}`);
+    console.log(`  • Replay Parity (R_parity)          : ${scorecard.replayParity.toFixed(4)}`);
+    console.log(`  • Gameplay Sensitivity (G_sens)     : ${scorecard.gameplaySensitivity.toFixed(4)}`);
+    console.log(`  • Emergence Quality Index (EQI)     : ${scorecard.emergenceQualityIndex.toFixed(4)}`);
+    console.log(`  • Scorecard Emergence Rating        : ${scorecard.rating}`);
+
+    console.log('\n--- World Degeneracy Audit (Section 113) ---');
+    console.log(`  • World Degenerate Detected         : ${report.degeneracyCheck.isDegenerate ? 'YES (FAIL)' : 'NO (HEALTHY)'}`);
+    if (report.degeneracyCheck.flags.length > 0) {
+        console.log(`  • Degeneracy Flags                  : ${report.degeneracyCheck.flags.map(f => f.type).join(', ')}`);
+    } else {
+        console.log(`  • Degeneracy Flags                  : None (0 pathological collapse modes triggered)`);
+    }
+
+    console.log('\n--- Causal World Chronicle Snippet (Section 118) ---');
+    for (const entry of report.worldChronicleSnippet.slice(0, 5)) {
+        console.log(`  [Tick ${String(entry.tick).padStart(3)}] ${entry.type} -> Cause: ${entry.cause}`);
+    }
 }
 
 function handleDiffReplay(options) {
@@ -1907,6 +1961,10 @@ async function main() {
             break;
         case 'frontier-valley':
             handleFrontierValley(options);
+            break;
+        case 'fabe-world':
+        case 'fabe':
+            handleFabeWorld(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

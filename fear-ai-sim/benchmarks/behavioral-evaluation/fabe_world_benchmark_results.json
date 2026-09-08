@@ -1,0 +1,255 @@
+{
+  "benchmark": "FABE-WORLD-v1",
+  "timestamp": "2026-09-08T23:33:04.797Z",
+  "elapsedMs": 7,
+  "config": {
+    "seedsEvaluated": 2,
+    "ticksPerSeed": 40,
+    "totalSimulationTicks": 80
+  },
+  "dimensionScores": {
+    "causal_coherence": 1,
+    "stability": 1,
+    "diversity": 1,
+    "replay": 1,
+    "population_behavior": 1,
+    "faction_decisions": 1,
+    "resource_responses": 1
+  },
+  "metrics": {
+    "totalEventsEvaluated": 250,
+    "totalTraceableEvents": 250,
+    "diversityShannonEntropyBits": 2.07,
+    "distinctEventTypes": 2,
+    "distinctDiplomaticStages": 3,
+    "meanPopulationFear": 0.5923,
+    "meanEncountersPerRun": 85,
+    "meanWarsPerRun": 0,
+    "populationConservationDeltaMax": 0
+  },
+  "degeneracyCheck": {
+    "isDegenerate": false,
+    "flags": [],
+    "detectedDegeneracies": []
+  },
+  "emergenceQualityScorecard": {
+    "causalTraceability": 1,
+    "stateGrounding": 1,
+    "replayParity": 1,
+    "gameplaySensitivity": 1,
+    "emergenceQualityIndex": 1,
+    "rating": "EXEMPLARY_SYSTEMIC_EMERGENCE"
+  },
+  "worldChronicleSnippet": [
+    {
+      "tick": 1,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_2",
+        "partyA": "caravan_merchant_1",
+        "partyB": "bandit_warband_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_4",
+        "partyA": "caravan_merchant_1",
+        "partyB": "wolf_pack_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_6",
+        "partyA": "bandit_warband_1",
+        "partyB": "wolf_pack_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 1,
+      "type": "CARAVAN_REROUTE",
+      "cause": "CORRIDOR_DANGER_ELEVATION (score: 1.00)",
+      "detail": {
+        "type": "CARAVAN_REROUTE",
+        "tick": 1,
+        "reason": "HIGH_CORRIDOR_DANGER"
+      }
+    },
+    {
+      "tick": 2,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_8",
+        "partyA": "caravan_merchant_1",
+        "partyB": "bandit_warband_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 2,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_10",
+        "partyA": "caravan_merchant_1",
+        "partyB": "wolf_pack_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 2,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_12",
+        "partyA": "bandit_warband_1",
+        "partyB": "wolf_pack_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 2,
+      "type": "CARAVAN_REROUTE",
+      "cause": "CORRIDOR_DANGER_ELEVATION (score: 1.00)",
+      "detail": {
+        "type": "CARAVAN_REROUTE",
+        "tick": 2,
+        "reason": "HIGH_CORRIDOR_DANGER"
+      }
+    },
+    {
+      "tick": 3,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_14",
+        "partyA": "caravan_merchant_1",
+        "partyB": "bandit_warband_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 3,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_16",
+        "partyA": "caravan_merchant_1",
+        "partyB": "wolf_pack_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 3,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_18",
+        "partyA": "bandit_warband_1",
+        "partyB": "wolf_pack_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 3,
+      "type": "CARAVAN_REROUTE",
+      "cause": "CORRIDOR_DANGER_ELEVATION (score: 1.00)",
+      "detail": {
+        "type": "CARAVAN_REROUTE",
+        "tick": 3,
+        "reason": "HIGH_CORRIDOR_DANGER"
+      }
+    },
+    {
+      "tick": 4,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_20",
+        "partyA": "caravan_merchant_1",
+        "partyB": "bandit_warband_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 4,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_22",
+        "partyA": "caravan_merchant_1",
+        "partyB": "wolf_pack_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    },
+    {
+      "tick": 4,
+      "type": "PATROL_SKIRMISH",
+      "cause": "PROXIMITY_INTERCEPT_HAZARD",
+      "detail": {
+        "type": "PATROL_SKIRMISH",
+        "encounterId": "enc_24",
+        "partyA": "bandit_warband_1",
+        "partyB": "wolf_pack_1",
+        "resolution": "COMBAT_ENGAGEMENT"
+      }
+    }
+  ],
+  "perSeedSummaries": [
+    {
+      "seed": 777,
+      "warsDeclared": 0,
+      "alliancesFormed": 0,
+      "totalEncounters": 91,
+      "routeFailures": 40,
+      "migrations": 0,
+      "meanPopulationFear": 0.5955000000000004,
+      "settlements": {
+        "northwatch": 45,
+        "riverbend": 65,
+        "oakhaven": 90
+      },
+      "populationConservationDelta": 0,
+      "traceableEvents": 131,
+      "untraceableEvents": 0
+    },
+    {
+      "seed": 888,
+      "warsDeclared": 0,
+      "alliancesFormed": 0,
+      "totalEncounters": 79,
+      "routeFailures": 40,
+      "migrations": 0,
+      "meanPopulationFear": 0.5890000000000003,
+      "settlements": {
+        "northwatch": 45,
+        "riverbend": 65,
+        "oakhaven": 90
+      },
+      "populationConservationDelta": 0,
+      "traceableEvents": 119,
+      "untraceableEvents": 0
+    }
+  ]
+}

@@ -300,6 +300,39 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Average Threat Latency:');
         expect(res.stdout).toContain('Host Authority Check:');
     });
+
+    it('executes "fabe-world" and prints 7 dimensions, emergence quality scorecard, and degeneracy audit', async () => {
+        const res = await runCli(['fabe-world', '--seeds', '101,202', '--ticks', '40']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('FABE-WORLD LIVING-WORLD SIMULATION BENCHMARK');
+        expect(res.stdout).toContain('7 Canonical Living-World Benchmark Dimensions (Section 107)');
+        expect(res.stdout).toContain('causal_coherence');
+        expect(res.stdout).toContain('stability');
+        expect(res.stdout).toContain('diversity');
+        expect(res.stdout).toContain('replay');
+        expect(res.stdout).toContain('population_behavior');
+        expect(res.stdout).toContain('faction_decisions');
+        expect(res.stdout).toContain('resource_responses');
+        expect(res.stdout).toContain('Emergence Quality Scorecard (Section 114)');
+        expect(res.stdout).toContain('Emergence Quality Index (EQI)');
+        expect(res.stdout).toContain('EXEMPLARY_SYSTEMIC_EMERGENCE');
+        expect(res.stdout).toContain('World Degeneracy Audit (Section 113)');
+        expect(res.stdout).toContain('World Degenerate Detected         : NO (HEALTHY)');
+    });
+
+    it('executes "fabe-world --json" and returns structured JSON with all dimensions >= 0.80', async () => {
+        const res = await runCli(['fabe-world', '--seeds', '303', '--ticks', '25', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.benchmark).toBe('FABE-WORLD-v1');
+        expect(parsed.dimensionScores).toBeDefined();
+        for (const [dim, score] of Object.entries(parsed.dimensionScores)) {
+            expect(score).toBeGreaterThanOrEqual(0.80);
+        }
+        expect(parsed.emergenceQualityScorecard.emergenceQualityIndex).toBeGreaterThanOrEqual(0.85);
+        expect(parsed.degeneracyCheck.isDegenerate).toBe(false);
+        expect(parsed.metrics.populationConservationDeltaMax).toBe(0);
+    });
 });
 
 
