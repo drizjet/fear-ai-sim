@@ -113,3 +113,9 @@ export {
     WorldCounterfactualEngine,
     COUNTERFACTUAL_MUTATIONS
 } from './src/WorldCounterfactualEngine.js';
+export {
+    SituationStrengthProfiler,
+    SITUATION_STRENGTH_LEVELS,
+    AFFORDANCE_DIMENSIONS,
+    SITUATION_PATHOLOGIES
+} from './src/SituationStrengthProfiler.js';

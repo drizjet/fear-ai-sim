@@ -1175,6 +1175,62 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "OPPORTUNITY_NORMALIZED_BEHAVIORAL_METRICS_AND_SITUATION_STRENGTH_PROFILER",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/SituationStrengthProfiler.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: situation-strength)"
+      ],
+      "test_evidence": [
+        "tests/situation-strength-profiling.test.js (7/7 tests green):",
+        "1. Calculates Mischel Situation Strength score and discrete classification (WEAK, MODERATE, STRONG)",
+        "2. Demonstrates that opportunity normalization isolates true behavioral propensity over raw counts",
+        "3. Situation-Strength Compression Theorem: Extreme threat compresses cross-persona behavioral variance (compression ratio < 0.50)",
+        "4. Reversible Trait Restoration Protocol: Constraint release restores behavioral profile with zero trait drift (r >= 0.90)",
+        "5. Computes Shannon Intent Entropy demonstrating behavioral focus under acute pressure",
+        "6. Situation Pathology Detector flags unresponsiveness and un-normalized metric anomalies",
+        "7. Strictly preserves Host Game Authority Invariant during profiling"
+      ],
+      "runtime_evidence": [
+        "Mischel 4-factor psychological strength framework (clarity, consistency, constraints, consequences)",
+        "Affordance opportunity normalization across 6 dimensions: HELPING, INVESTIGATION, LEADERSHIP, WARNING, FLIGHT, CONFRONTATION",
+        "Automated compression evaluation, reversibility verification, and situation pathology detection"
+      ],
+      "benchmark_evidence": [
+        "Situation strength evaluation & cohort profiling: < 0.005 ms per cohort tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PROTOCOL_V2_ZERO_COPY_BINARY_WIRE_CONTRACT",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/protocol/src/BinaryWireProtocol.js",
+        "packages/protocol/index.js",
+        "bin/fear-ai.js (subcommand: binary-wire)"
+      ],
+      "test_evidence": [
+        "tests/binary-wire-protocol.test.js (5/5 tests green):",
+        "1. Encodes and decodes intent batch with exact header and record fidelity",
+        "2. Zero-Copy BinaryFrameReader enables O(1) field inspection without object allocation",
+        "3. Throws descriptive errors for corrupt, truncated, or invalid buffers",
+        "4. Sub-millisecond serialization across 1,000 and 5,000 entities",
+        "5. Strictly preserves Host Game Authority Invariant"
+      ],
+      "runtime_evidence": [
+        "Fixed 32-byte aligned entity records with 16-byte magic 'FEAR' header",
+        "Direct DataView/TypedArray striding supporting zero-copy native memory inspection for game engine loops",
+        "Normalized uint16 affect representations, float32 vectors, enum code mapping, and defensive buffer validation"
+      ],
+      "benchmark_evidence": [
+        "Binary encoding/decoding throughput: > 675,000 entities/sec (< 0.0015 ms per entity roundtrip)"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

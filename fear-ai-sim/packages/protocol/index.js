@@ -20,3 +20,14 @@ export {
 } from './src/schemas.js';
 
 export { ProtocolValidator } from './src/validator.js';
+
+export {
+    BinaryWireProtocol,
+    BinaryFrameReader,
+    BINARY_MAGIC,
+    BINARY_PROTOCOL_VERSION,
+    FRAME_TYPES,
+    INTENT_CODES,
+    POSTURE_CODES,
+    BAND_CODES
+} from './src/BinaryWireProtocol.js';

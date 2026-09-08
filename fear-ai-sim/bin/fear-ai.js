@@ -36,8 +36,13 @@ import {
     EconomicFeedbackSystem,
     EconomicPathologyDetector,
     WorldCounterfactualEngine,
-    COUNTERFACTUAL_MUTATIONS
+    COUNTERFACTUAL_MUTATIONS,
+    SituationStrengthProfiler,
+    SITUATION_STRENGTH_LEVELS,
+    AFFORDANCE_DIMENSIONS,
+    CANONICAL_PRESETS
 } from '../packages/core/index.js';
+import { BinaryWireProtocol, BinaryFrameReader } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
 import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
 import { runAllAdversarialStressTests } from '../benchmarks/behavioral-evaluation/adversarial_world_stress.mjs';
@@ -81,6 +86,10 @@ function printHelp() {
     console.log(`                     Options: --seed <88888> --fork <15> --horizon <40> --mutation <pacify-bandits|pacify-route|scarcity> --json`);
     console.log(`  economy            Run systemic commodity production, famine fear, and pathology check (Front C)`);
     console.log(`                     Options: --ticks <50> --json`);
+    console.log(`  situation-strength Profile behavioral variance compression across weak vs strong situations (Front B)`);
+    console.log(`                     Options: --ticks <25> --json`);
+    console.log(`  binary-wire        Benchmark zero-copy binary wire protocol encoding/decoding (Front D/Section 83)`);
+    console.log(`                     Options: --entities <1000> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -615,6 +624,129 @@ function handleEconomy(options) {
     }
 }
 
+function handleSituationStrength(options) {
+    const ticks = parseInt(options.ticks || '25', 10);
+
+    console.log(BANNER);
+    console.log(`=== MISCHEL SITUATION STRENGTH & OPPORTUNITY-NORMALIZED PROFILING ===\n`);
+
+    const profiler = new SituationStrengthProfiler();
+    const presets = [
+        CANONICAL_PRESETS.COWARDLY_CIVILIAN,
+        CANONICAL_PRESETS.STOIC_VETERAN,
+        CANONICAL_PRESETS.RECKLESS_RAIDER,
+        CANONICAL_PRESETS.CHARISMATIC_LEADER,
+        CANONICAL_PRESETS.CAUTIOUS_MERCHANT
+    ];
+
+    const weakAgents = presets.map((p, i) => new AffectiveAgent(`agent_${p.id}`, p.traits, { x: i * 5, y: 0 }));
+    const strongAgents = presets.map((p, i) => new AffectiveAgent(`agent_${p.id}`, p.traits, { x: i * 5, y: 0 }));
+
+    const weakConfig = {
+        clarity: 0.20,
+        consistency: 0.20,
+        constraints: 0.15,
+        consequences: 0.10,
+        threatPressure: 0.05,
+        ambientSoundIntensity: 0.40,
+        anomaliesPresent: true
+    };
+
+    const strongConfig = {
+        clarity: 0.95,
+        consistency: 0.90,
+        constraints: 0.85,
+        consequences: 0.95,
+        threatPressure: 0.90,
+        threatDistance: 3.0,
+        threatIntensity: 0.95
+    };
+
+    const weakResult = profiler.evaluateCohort(weakAgents, weakConfig, ticks, 42);
+    const strongResult = profiler.evaluateCohort(strongAgents, strongConfig, ticks, 42);
+    const compression = profiler.evaluateCompression(weakResult, strongResult);
+
+    const reversibilityAgents = presets.map((p, i) => new AffectiveAgent(`rev_${p.id}`, p.traits, { x: i * 5, y: 0 }));
+    const reversibility = profiler.runReversibilityProtocol(reversibilityAgents, weakConfig, strongConfig, ticks);
+
+    if (options.json) {
+        console.log(JSON.stringify({ weakResult, strongResult, compression, reversibility }, null, 2));
+        return;
+    }
+
+    console.log(`Cohort Behavioral Variance:`);
+    console.log(`  • Weak Situation (Score ${weakResult.situationStrength.score} / ${weakResult.situationStrength.level}): Mean Variance = ${weakResult.meanBehavioralVariance}`);
+    console.log(`  • Strong Situation (Score ${strongResult.situationStrength.score} / ${strongResult.situationStrength.level}): Mean Variance = ${strongResult.meanBehavioralVariance}`);
+    console.log(`  • Compression Ratio: ${compression.compressionRatio} (${compression.isCompressed ? '✓ SIGNIFICANT COMPRESSION' : 'NO COMPRESSION'})`);
+    console.log(`  • Entropy Reduction: ${compression.entropyDrop} bits\n`);
+
+    console.log(`Reversible Trait Restoration Protocol:`);
+    console.log(`  • Trait Drift: ${reversibility.traitDrift} (Invariant: ${reversibility.traitIntegrityPreserved ? '✓ 0.0000 DRIFT' : '✗ DRIFT DETECTED'})`);
+    console.log(`  • Recovery Fidelity Correlation: r = ${reversibility.restorationFidelityCorrelation} (${reversibility.restorationSucceeded ? '✓ HIGH-FIDELITY RESTORATION' : '✗ FAILED'})`);
+    console.log(`  • Behavioral Recovery Ratio: ${reversibility.recoveryRatio}\n`);
+}
+
+function handleBinaryWire(options) {
+    const entityCount = parseInt(options.entities || '1000', 10);
+
+    console.log(BANNER);
+    console.log(`=== PROTOCOL V2 ZERO-COPY BINARY WIRE BENCHMARK ===\n`);
+
+    const sampleIntents = [];
+    for (let i = 0; i < entityCount; i++) {
+        sampleIntents.push({
+            entityId: i,
+            fear: 0.1 + (i % 10) * 0.08,
+            anger: 0.05 + (i % 5) * 0.15,
+            dominance: 0.3 + (i % 7) * 0.1,
+            urgency: 0.2 + (i % 8) * 0.1,
+            intentType: i % 2 === 0 ? 'FLEE_FROM' : 'CONFRONT_THREAT',
+            suggestedPosture: 'DEFENSIVE_STANCE',
+            band: 'ALERT',
+            inCombat: i % 3 === 0,
+            vectorHint: { x: 1.0, y: 0.0, z: 0.0 }
+        });
+    }
+
+    const t0 = performance.now();
+    const buffer = BinaryWireProtocol.encodeIntentBatch(1, sampleIntents);
+    const encodeMs = performance.now() - t0;
+
+    const t1 = performance.now();
+    const decoded = BinaryWireProtocol.decodeIntentBatch(buffer);
+    const decodeMs = performance.now() - t1;
+
+    const reader = BinaryWireProtocol.createReader(buffer);
+    const t2 = performance.now();
+    let sumFear = 0;
+    const dummyVec = { x: 0, y: 0, z: 0 };
+    for (let i = 0; i < reader.count; i++) {
+        sumFear += reader.getFear(i);
+        reader.readVector(i, dummyVec);
+    }
+    const zeroCopyReadMs = performance.now() - t2;
+
+    if (options.json) {
+        console.log(JSON.stringify({
+            entityCount,
+            frameBytes: buffer.byteLength,
+            bytesPerEntity: 32,
+            encodeMs,
+            decodeMs,
+            zeroCopyReadMs,
+            throughputEntitiesPerSec: Math.round(entityCount / ((encodeMs + decodeMs) / 1000))
+        }, null, 2));
+        return;
+    }
+
+    console.log(`Binary Wire Frame Metrics (${entityCount} entities):`);
+    console.log(`  • Frame Size:       ${(buffer.byteLength / 1024).toFixed(2)} KB (32 bytes / entity + 16-byte header)`);
+    console.log(`  • Encoding Latency: ${encodeMs.toFixed(4)} ms`);
+    console.log(`  • Decoding Latency: ${decodeMs.toFixed(4)} ms`);
+    console.log(`  • Zero-Copy Read:   ${zeroCopyReadMs.toFixed(4)} ms (direct DataView striding without allocation)`);
+    console.log(`  • Throughput:       ${Math.round(entityCount / ((encodeMs + decodeMs) / 1000)).toLocaleString()} entities/sec\n`);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -640,6 +772,12 @@ async function main() {
             break;
         case 'economy':
             handleEconomy(options);
+            break;
+        case 'situation-strength':
+            handleSituationStrength(options);
+            break;
+        case 'binary-wire':
+            handleBinaryWire(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);
