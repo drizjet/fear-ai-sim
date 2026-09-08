@@ -40,7 +40,8 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 
 - **Research sim (old surface):** `simulation.js`, `brain.js`, `closed-world.js`, Pixi/Electron/Tauri. Useful, not the shippable SDK.
 - **Middleware (plug-in surface):** `packages/core`, `packages/protocol`, `packages/runtime`, `packages/adapters/*`
-- **Unified CLI:** `bin/fear-ai.js` (`npm run cli -- <cmd>`), providing `server`, `explain`, `explain-faction`, `sim`, `benchmark`, `adversarial`, `counterfactual`, `verify`.
+- **Unified CLI:** `bin/fear-ai.js` (`npm run cli -- <cmd>`), providing `server`, `dashboard`, `explain`, `explain-faction`, `sim`, `benchmark`, `adversarial`, `counterfactual`, `verify`.
+- **Designer Dashboard (Sections XXXI & XXXII):** `fear-ai dashboard` (zero-dependency interactive web dashboard on `127.0.0.1:8766` for threat attribution, persona curves, faction escalation, route safety, and replay).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

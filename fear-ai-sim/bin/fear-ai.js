@@ -24,7 +24,7 @@ import {
     DeterministicRng,
     CivilizationSimulationSystem
 } from '../packages/core/index.js';
-import { FearServer } from '../packages/runtime/index.js';
+import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
 import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
 import { runAllAdversarialStressTests } from '../benchmarks/behavioral-evaluation/adversarial_world_stress.mjs';
 import { runAllCounterfactualExperiments } from '../benchmarks/behavioral-evaluation/counterfactual_world_validation.mjs';
@@ -52,6 +52,8 @@ function printHelp() {
     console.log(`                     Options: --entities <10000> --ticks <100>`);
     console.log(`  adversarial        Run 11 adversarial stress tests (Section XXV)`);
     console.log(`  counterfactual     Run 8 causal counterfactual experiments (Section XL)`);
+    console.log(`  dashboard          Launch the Web-Based Designer Replay & Diagnostic Viewer (Sections XXXI & XXXII)`);
+    console.log(`                     Options: --port <8766> --host <127.0.0.1>`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
     console.log(`  help               Show this help message\n`);
     console.log(`Documentation & System Map: docs/SYSTEM_MAP.md`);
@@ -315,6 +317,24 @@ function handleCounterfactual(options) {
     }
 }
 
+async function handleDashboard(options) {
+    console.log(BANNER);
+    const port = Number(options.port || 8766);
+    const host = options.host || '127.0.0.1';
+    console.log(`[FearAI-CLI] Starting Designer Diagnostic & Replay Dashboard on http://${host}:${port} ...`);
+
+    const server = new DesignerDashboardServer({ port, host });
+    const { url } = await server.start();
+    console.log(`[FearAI-CLI] Designer Dashboard active at: ${url}`);
+    console.log(`[FearAI-CLI] Press Ctrl+C to terminate dashboard server.`);
+
+    process.on('SIGINT', async () => {
+        console.log('\n[FearAI-CLI] Gracefully stopping Designer Dashboard...');
+        await server.stop();
+        process.exit(0);
+    });
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -328,6 +348,10 @@ async function main() {
     switch (command) {
         case 'server':
             await handleServer(options);
+            break;
+        case 'dashboard':
+        case 'ui':
+            await handleDashboard(options);
             break;
         case 'explain':
             handleExplain(options);

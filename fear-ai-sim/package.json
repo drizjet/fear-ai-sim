@@ -23,6 +23,7 @@
     "desktop": "npm run tauri:dev",
     "desktop:build": "npm run tauri:build",
     "server": "node packages/runtime/bin/fear-ai-server.js",
+    "dashboard": "node bin/fear-ai.js dashboard",
     "benchmark": "node benchmarks/headless-benchmark.mjs",
     "pack:adapters": "pwsh -File tools/packaging/pack-adapters.ps1",
     "cli": "node bin/fear-ai.js"

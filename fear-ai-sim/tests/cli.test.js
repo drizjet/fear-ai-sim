@@ -30,6 +30,7 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('explain-faction');
         expect(res.stdout).toContain('sim');
         expect(res.stdout).toContain('benchmark');
+        expect(res.stdout).toContain('dashboard');
         expect(res.stdout).toContain('verify');
     });
 
