@@ -948,6 +948,42 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "GODOT_SHOWCASE_INTEGRATION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/godot_project/main.tscn",
+        "tests/godot_project/main.gd",
+        "tests/godot_project/showcase_agent.gd",
+        "tests/godot_project/station_controller.gd",
+        "tests/godot_project/run_showcase_conformance.gd",
+        "tools/launch-godot-showcase.ps1",
+        "bin/fear-ai.js (subcommand: godot)"
+      ],
+      "test_evidence": [
+        "tests/godot-showcase-verification.test.js (3/3 tests green)",
+        "tests/cli.test.js (9/9 tests green, including fear-ai godot)",
+        "tests/godot_project/run_showcase_conformance.gd (7/7 stations green in Godot 4.6 console binary):",
+        "1. Station 1: Individual Fear & Threat Appraisal (Raw Fear=0.98, Band=PANIC, Intent=FLEE_FROM)",
+        "2. Station 2: Ambiguous Sound & Habituation (Burst 1 Fear=0.31 -> Habituated Burst 4 Fear=0.00, -100% dampening)",
+        "3. Station 3: Crowd Panic Cascade (Agitator Panic=1.00 cascaded across 4 peers, Mean Fear=0.41)",
+        "4. Station 4: Leader Rally Dynamics (Heroic Rally suppressed fear from 0.80 to 0.35, -45.0% phalanx formation)",
+        "5. Station 5: Trauma Zone Re-activation (Dread Zone Dist=20.0px -> Flashback Fear=0.51, BPM=119)",
+        "6. Station 6: Trade Caravan Danger Reroute (Highland Pass Danger=0.85 -> Dynamically Rerouted to RIVER_DETOUR)",
+        "7. Station 7: Faction Stance Interaction (Border Dist=60.0px, Tension=0.80 -> Bilateral Stage=SKIRMISH)"
+      ],
+      "runtime_evidence": [
+        "Interactive windowed Godot 4.6 application (1280x720) with top-down camera, tour mode, and telemetry HUD",
+        "Host Game Authority Invariant strictly preserved: Godot CharacterBody2D owns movement, collisions, and waypoints",
+        "Headless automated conformance verified against official Godot 4.6 console engine binary"
+      ],
+      "benchmark_evidence": [
+        "Full 7-station conformance execution completes in 194 ms in Godot 4.6 engine",
+        "Zero memory leaks or mutation errors"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

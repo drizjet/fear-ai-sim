@@ -1,6 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://fear_ai_godot_test"]
+[gd_scene load_steps=3 format=3 uid="uid://fear_ai_godot_showcase"]
 
-[ext_resource type="Script" path="res://main.gd" id="1_test"]
+[ext_resource type="Script" path="res://main.gd" id="1_main"]
+[ext_resource type="Script" path="res://station_controller.gd" id="2_stations"]
 
-[node name="Main" type="Node"]
-script = ExtResource("1_test")
+[node name="Main" type="Node2D"]
+script = ExtResource("1_main")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(350, 300)
+zoom = Vector2(1.15, 1.15)
+
+[node name="StationController" type="Node2D" parent="."]
+script = ExtResource("2_stations")

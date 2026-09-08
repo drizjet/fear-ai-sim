@@ -26,6 +26,7 @@
     "dashboard": "node bin/fear-ai.js dashboard",
     "benchmark": "node benchmarks/headless-benchmark.mjs",
     "pack:adapters": "pwsh -File tools/packaging/pack-adapters.ps1",
+    "godot:showcase": "pwsh -File tools/launch-godot-showcase.ps1",
     "cli": "node bin/fear-ai.js"
   },
   "bin": {

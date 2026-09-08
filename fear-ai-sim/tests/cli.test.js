@@ -109,4 +109,11 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Running 8 Causal Counterfactual Experiments (Section XL)');
         expect(res.stdout).toContain('ALL 8 COUNTERFACTUAL EXPERIMENTS PASSED (100%)');
     });
+
+    it('executes "godot --headless --test" running the 7-station showcase conformance runner', async () => {
+        const res = await runCli(['godot', '--headless', '--test']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Launching Godot 4.6 showcase (Headless)');
+        expect(res.stdout).toContain('GODOT 4.6 MULTI-STATION SHOWCASE CONFORMANCE: 7 / 7 PASSED (100%)');
+    });
 });

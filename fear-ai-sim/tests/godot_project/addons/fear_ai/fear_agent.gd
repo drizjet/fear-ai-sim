@@ -30,7 +30,8 @@ func _ready() -> void:
 	if agent_id.is_empty():
 		agent_id = "agent_%d" % get_instance_id()
 		
-	_parent_body = get_parent()
+	if _parent_body == null:
+		_parent_body = get_parent()
 	_client = get_node_or_null("/root/FearAIClient")
 	
 	if _client:
@@ -72,6 +73,18 @@ func _scan_threats() -> Array[Dictionary]:
 					"z": node.global_position.z,
 					"intensity": 1.0
 				})
+		elif node is Node2D and _parent_body is Node2D:
+			var d = _parent_body.global_position.distance_to(node.global_position)
+			if d < sight_range:
+				threats.append({
+					"id": node.name,
+					"type": "PREDATOR",
+					"distance": d,
+					"x": node.global_position.x,
+					"y": node.global_position.y,
+					"z": 0.0,
+					"intensity": 1.0
+				})
 	return threats
 
 func _on_state_received(id: String, state: Dictionary) -> void:
@@ -95,7 +108,60 @@ func _on_state_received(id: String, state: Dictionary) -> void:
 	intent_changed.emit(intent)
 	audio_hints_received.emit(audio)
 
+var current_raw_fear: float = 0.0
+
+func evaluate_local(threats: Array = [], social_panic_level: float = 0.0, trauma_presence: float = 0.0, step: float = 1.0) -> void:
+	if _parent_body == null:
+		_parent_body = get_parent()
+	# Deterministic local appraisal fallback
+	var max_perceived := 0.0
+	var flee_vector := Vector3.ZERO
+	for t in threats:
+		var d: float = maxf(0.1, t.get("distance", 10.0))
+		var intensity: float = t.get("intensity", 1.0)
+		var perceived: float = intensity / (1.0 + 0.01 * d)
+		if perceived > max_perceived:
+			max_perceived = perceived
+			if _parent_body is Node2D:
+				var diff = Vector2(_parent_body.global_position.x - t.get("x", 0.0), _parent_body.global_position.y - t.get("y", 0.0)).normalized()
+				flee_vector = Vector3(diff.x, diff.y, 0.0)
+			elif _parent_body is Node3D:
+				var diff3 = (_parent_body.global_position - Vector3(t.get("x", 0.0), t.get("y", 0.0), t.get("z", 0.0))).normalized()
+				flee_vector = diff3
+				
+	var target_fear = clampf(fear_baseline + (max_perceived * neuroticism * 1.5) + (social_panic_level * 0.6) + (trauma_presence * 0.8) - (resilience * 0.4), 0.0, 1.0)
+	if step >= 1.0:
+		current_raw_fear = target_fear
+	elif target_fear > current_raw_fear:
+		current_raw_fear = move_toward(current_raw_fear, target_fear, step)
+	else:
+		current_raw_fear = move_toward(current_raw_fear, target_fear, step * (resilience + 0.5))
+		
+	var band := "CALM"
+	var intent_type := "IDLE_VIGILANT"
+	if current_raw_fear >= 0.75:
+		band = "PANIC"
+		intent_type = "FLEE_FROM"
+	elif current_raw_fear >= 0.50:
+		band = "FEAR"
+		intent_type = "SEEK_COVER"
+	elif current_raw_fear >= 0.25:
+		band = "ALERT"
+		intent_type = "INVESTIGATE"
+		
+	var bpm = int(60.0 + current_raw_fear * 118.0)
+	apply_state({
+		"agent_id": agent_id,
+		"fear_band": band,
+		"affective_state": { "raw_fear": current_raw_fear, "valence": -current_raw_fear, "arousal": current_raw_fear, "dominance": 1.0 - current_raw_fear },
+		"action_intent": { "type": intent_type, "urgency": current_raw_fear, "vector_hint": { "x": flee_vector.x, "y": flee_vector.y, "z": flee_vector.z } },
+		"audio_hints": { "heartbeat_bpm": bpm }
+	})
+
 func apply_state(state: Dictionary) -> void:
+	var aff = state.get("affective_state", {})
+	if aff.has("raw_fear"):
+		current_raw_fear = aff.get("raw_fear")
 	_on_state_received(agent_id, state)
 
 ## Host-owned motor should read this and apply velocity / move_and_slide itself.
@@ -108,7 +174,9 @@ func get_movement_hint() -> Dictionary:
 		"intent": current_intent,
 		"urgency": current_urgency,
 		"fear_band": current_fear_band,
+		"raw_fear": current_raw_fear,
 		"vector": recommended_vector,
 		"base_speed": base_speed,
 		"speed_mult": speed_mult
 	}
+

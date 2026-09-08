@@ -15,6 +15,10 @@
  *   fear-ai help               Display help and usage guidelines
  */
 
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { spawnSync } from 'child_process';
 import { performance } from 'perf_hooks';
 import {
     AffectiveAgent,
@@ -28,6 +32,9 @@ import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.j
 import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
 import { runAllAdversarialStressTests } from '../benchmarks/behavioral-evaluation/adversarial_world_stress.mjs';
 import { runAllCounterfactualExperiments } from '../benchmarks/behavioral-evaluation/counterfactual_world_validation.mjs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const BANNER = `
 ╔══════════════════════════════════════════════════════════════════════════════╗
@@ -54,6 +61,8 @@ function printHelp() {
     console.log(`  counterfactual     Run 8 causal counterfactual experiments (Section XL)`);
     console.log(`  dashboard          Launch the Web-Based Designer Replay & Diagnostic Viewer (Sections XXXI & XXXII)`);
     console.log(`                     Options: --port <8766> --host <127.0.0.1>`);
+    console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
+    console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
     console.log(`  help               Show this help message\n`);
     console.log(`Documentation & System Map: docs/SYSTEM_MAP.md`);
@@ -335,6 +344,29 @@ async function handleDashboard(options) {
     });
 }
 
+function handleGodot(options) {
+    const isHeadless = Boolean(options.headless || options.h);
+    const isTest = Boolean(options.test || options.t);
+    const projectDir = path.resolve(__dirname, '../tests/godot_project');
+    const defaultGodot = 'C:\\tools\\02-Dev\\godot\\Godot_v4.6-stable_win64_console.exe';
+
+    let godotExe = fs.existsSync(defaultGodot) ? defaultGodot : 'godot';
+
+    const args = ['--path', projectDir];
+    if (isHeadless) {
+        args.push('--headless');
+    } else {
+        args.push('-w', '--resolution', '1280x720');
+    }
+    if (isTest) {
+        args.push('--script', 'run_showcase_conformance.gd');
+    }
+
+    console.log(`[FearAI-CLI] Launching Godot 4.6 showcase (${isHeadless ? 'Headless' : 'Windowed'})...`);
+    const proc = spawnSync(godotExe, args, { stdio: 'inherit' });
+    process.exit(proc.status || 0);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -352,6 +384,10 @@ async function main() {
         case 'dashboard':
         case 'ui':
             await handleDashboard(options);
+            break;
+        case 'godot':
+        case 'showcase':
+            handleGodot(options);
             break;
         case 'explain':
             handleExplain(options);
