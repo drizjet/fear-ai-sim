@@ -60,7 +60,7 @@ func _setup_hud() -> void:
 	hbox.position = Vector2(16, 10)
 	bot_bar.add_child(hbox)
 	
-	for i in range(1, 8):
+	for i in range(1, 10):
 		var btn = Button.new()
 		btn.text = "Station %d" % i
 		btn.pressed.connect(func(): jump_to_station(i))
@@ -108,7 +108,7 @@ func _process(delta: float) -> void:
 		tour_timer += delta
 		if tour_timer >= 4.5:
 			tour_timer = 0.0
-			var next_s = (current_station_id % 7) + 1
+			var next_s = (current_station_id % 9) + 1
 			jump_to_station(next_s)
 			trigger_current_event()
 			
@@ -116,7 +116,7 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:
-		if event.keycode >= KEY_1 and event.keycode <= KEY_7:
+		if event.keycode >= KEY_1 and event.keycode <= KEY_9:
 			var sid = event.keycode - KEY_0
 			jump_to_station(sid)
 		elif event.keycode == KEY_SPACE:
@@ -160,6 +160,8 @@ func trigger_current_event() -> void:
 			else:
 				station_controller.trigger_station_6_ambush()
 		7: station_controller.trigger_station_7_escalate()
+		8: station_controller.trigger_station_8_ambush()
+		9: station_controller.trigger_station_9_dispatch()
 
 func reset_current_station() -> void:
 	if not station_controller:
@@ -172,6 +174,8 @@ func reset_current_station() -> void:
 		5: station_controller.reset_station_5()
 		6: station_controller.reset_station_6()
 		7: station_controller.reset_station_7()
+		8: station_controller.reset_station_8()
+		9: station_controller.reset_station_9()
 
 func _update_telemetry() -> void:
 	if not _telemetry_label or not station_controller:
@@ -228,14 +232,34 @@ func _update_telemetry() -> void:
 				station_controller.s7_bilateral_stage,
 				station_controller.s7_tension
 			]
+		8:
+			var merch = station_controller.s8_merchant
+			text = "Regional Trade & Ambush Escorts:\nMass: Hub A 200g + B 40g + Cargo 60g = 300g\nAmbush Active: %s\nMerchant Fear: %.2f (%s)\nEscort Count: %d (Armed Guardians)" % [
+				"YES (Raid Engaged)" if station_controller.s8_ambush_active else "NO (Highway Secure)",
+				merch.fear_component.current_raw_fear if (merch and merch.fear_component) else 0.0,
+				merch.fear_component.current_fear_band if (merch and merch.fear_component) else "CALM",
+				station_controller.s8_escorts.size()
+			]
+		9:
+			var outpost = station_controller.s9_outpost_sentry
+			var capital = station_controller.s9_capital_commander
+			text = "Epistemic Fog-of-War & Rumor:\nOutpost (Truth): Fear %.2f (%s)\nCapital (Fog): Fear %.2f (%s)\nCourier Dispatched: %s | Arrived: %s\nRumor Neurotic Decay: x%.2f" % [
+				outpost.fear_component.current_raw_fear if (outpost and outpost.fear_component) else 0.0,
+				outpost.fear_component.current_fear_band if (outpost and outpost.fear_component) else "CALM",
+				capital.fear_component.current_raw_fear if (capital and capital.fear_component) else 0.0,
+				capital.fear_component.current_fear_band if (capital and capital.fear_component) else "CALM",
+				"YES" if station_controller.s9_courier_dispatched else "NO",
+				"YES" if station_controller.s9_courier_arrived else "NO",
+				station_controller.s9_rumor_decay_factor
+			]
 	_telemetry_label.text = text
 
 func _run_headless_verification() -> void:
 	# Run through each station headlessly
 	await get_tree().create_timer(0.2).timeout
-	for i in range(1, 8):
+	for i in range(1, 10):
 		jump_to_station(i)
 		trigger_current_event()
 		await get_tree().create_timer(0.1).timeout
-	print("[GODOT SHOWCASE HEADLESS] All 7 stations verified successfully.")
+	print("[GODOT SHOWCASE HEADLESS] All 9 stations verified successfully.")
 	get_tree().quit(0)

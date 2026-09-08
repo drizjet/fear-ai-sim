@@ -275,6 +275,130 @@ export class BinaryWireProtocol {
     }
 
     /**
+     * Encode a batch of entity observations into a compact ArrayBuffer.
+     * @param {number} tick Tick index
+     * @param {Array<object>} observationRecords Array of entity observation objects
+     * @param {ArrayBuffer} [optionalTargetBuffer] Pre-allocated buffer for zero-allocation reuse
+     * @returns {ArrayBuffer}
+     */
+    static encodeObservationBatch(tick, observationRecords, optionalTargetBuffer = null) {
+        const count = observationRecords.length;
+        const totalBytes = HEADER_SIZE_BYTES + count * RECORD_SIZE_BYTES;
+
+        const buffer = (optionalTargetBuffer && optionalTargetBuffer.byteLength >= totalBytes)
+            ? optionalTargetBuffer
+            : new ArrayBuffer(totalBytes);
+
+        const view = new DataView(buffer);
+
+        // 1. Write Header (16 bytes)
+        view.setUint32(0, BINARY_MAGIC, true);
+        view.setUint8(4, BINARY_PROTOCOL_VERSION);
+        view.setUint8(5, FRAME_TYPES.OBSERVATION_BATCH);
+        view.setUint16(6, 0, true);
+        view.setUint32(8, tick, true);
+        view.setUint32(12, count, true);
+
+        // 2. Write Records (32 bytes each)
+        let offset = HEADER_SIZE_BYTES;
+        for (let i = 0; i < count; i++) {
+            const obs = observationRecords[i];
+            const entityId = typeof obs.entityId === 'number' ? obs.entityId : (parseInt(obs.entityId || obs.agent_id, 10) || i);
+
+            view.setUint32(offset, entityId, true);
+            view.setFloat32(offset + 4, obs.position?.x ?? obs.x ?? 0.0, true);
+            view.setFloat32(offset + 8, obs.position?.y ?? obs.y ?? 0.0, true);
+            view.setFloat32(offset + 12, obs.position?.z ?? obs.z ?? 0.0, true);
+            view.setFloat32(offset + 16, obs.threatDistance ?? obs.threat_distance ?? 999.0, true);
+            view.setFloat32(offset + 20, obs.threatIntensity ?? obs.threat_intensity ?? 0.0, true);
+            view.setUint16(offset + 24, floatToUint16(obs.health ?? 1.0), true);
+            view.setUint16(offset + 26, floatToUint16(obs.energy ?? 1.0), true);
+
+            const stimType = typeof obs.stimulusType === 'number' ? obs.stimulusType : 0;
+            let flags = 0;
+            if (obs.inCombat) flags |= 0x01;
+            if (obs.provoked) flags |= 0x02;
+
+            view.setUint8(offset + 28, stimType);
+            view.setUint8(offset + 29, flags);
+            view.setUint16(offset + 30, 0, true); // reserved / padding
+
+            offset += RECORD_SIZE_BYTES;
+        }
+
+        return buffer;
+    }
+
+    /**
+     * Decode an ArrayBuffer containing an observation batch into JavaScript objects.
+     * @param {ArrayBuffer} buffer
+     * @returns {object} { tick: number, frameType: number, count: number, records: Array<object> }
+     */
+    static decodeObservationBatch(buffer) {
+        if (!buffer || buffer.byteLength < HEADER_SIZE_BYTES) {
+            throw new Error(`Invalid binary wire frame: buffer smaller than header (${buffer?.byteLength ?? 0} < ${HEADER_SIZE_BYTES})`);
+        }
+
+        const view = new DataView(buffer);
+        const magic = view.getUint32(0, true);
+        if (magic !== BINARY_MAGIC) {
+            throw new Error(`Invalid magic bytes: expected 0x${BINARY_MAGIC.toString(16)}, got 0x${magic.toString(16)}`);
+        }
+
+        const version = view.getUint8(4);
+        if (version !== BINARY_PROTOCOL_VERSION) {
+            throw new Error(`Unsupported protocol version: expected ${BINARY_PROTOCOL_VERSION}, got ${version}`);
+        }
+
+        const frameType = view.getUint8(5);
+        const tick = view.getUint32(8, true);
+        const count = view.getUint32(12, true);
+
+        const expectedLength = HEADER_SIZE_BYTES + count * RECORD_SIZE_BYTES;
+        if (buffer.byteLength < expectedLength) {
+            throw new Error(`Truncated buffer: expected ${expectedLength} bytes for ${count} entities, got ${buffer.byteLength}`);
+        }
+
+        const records = new Array(count);
+        let offset = HEADER_SIZE_BYTES;
+
+        for (let i = 0; i < count; i++) {
+            const entityId = view.getUint32(offset, true);
+            const px = Number(view.getFloat32(offset + 4, true).toFixed(4));
+            const py = Number(view.getFloat32(offset + 8, true).toFixed(4));
+            const pz = Number(view.getFloat32(offset + 12, true).toFixed(4));
+            const threatDistance = Number(view.getFloat32(offset + 16, true).toFixed(4));
+            const threatIntensity = Number(view.getFloat32(offset + 20, true).toFixed(4));
+            const health = uint16ToFloat(view.getUint16(offset + 24, true));
+            const energy = uint16ToFloat(view.getUint16(offset + 26, true));
+            const stimulusType = view.getUint8(offset + 28);
+            const flags = view.getUint8(offset + 29);
+
+            records[i] = {
+                entityId,
+                agent_id: `agent_${entityId}`,
+                position: { x: px, y: py, z: pz },
+                threatDistance,
+                threatIntensity,
+                health,
+                energy,
+                stimulusType,
+                inCombat: (flags & 0x01) !== 0,
+                provoked: (flags & 0x02) !== 0
+            };
+
+            offset += RECORD_SIZE_BYTES;
+        }
+
+        return {
+            tick,
+            frameType,
+            count,
+            records
+        };
+    }
+
+    /**
      * Create a zero-copy direct view reader wrapping an ArrayBuffer.
      * Allocates zero intermediary objects when reading entity records.
      * @param {ArrayBuffer} buffer

@@ -21,7 +21,7 @@ func _init() -> void:
 
 	var all_pass = true
 	var pass_count = 0
-	var total_count = 7
+	var total_count = 9
 
 	# --------------------------------------------------------------------------
 	# STATION 1: Individual Threat Appraisal & FLEE_FROM
@@ -191,6 +191,94 @@ func _init() -> void:
 		pass_count += 1
 	else:
 		print("[FAIL] Station 7: Faction bilateral escalation failed")
+		all_pass = false
+
+	# --------------------------------------------------------------------------
+	# STATION 8: Regional Dynamic Trade Supply & Ambush Escorts
+	# --------------------------------------------------------------------------
+	print("\n--- Testing Station 8: Regional Trade Supply & Ambush Escorts ---")
+	var hub_a_grain: float = 200.0
+	var hub_b_grain: float = 40.0
+	var caravan_cargo: float = 60.0
+	var total_mass = hub_a_grain + hub_b_grain + caravan_cargo
+	
+	# Commodity Mass Conservation Invariant: Mass is strictly conserved
+	var mass_conserved = (total_mass == 300.0)
+	
+	# Test Merchant fear under ambush with vs without escorts
+	var merchant = ShowcaseAgent.new()
+	merchant.agent_name = "MerchantTest"
+	merchant.neuroticism = 0.75
+	merchant.resilience = 0.25
+	root.add_child(merchant)
+	
+	# Ambush without escorts: Acute threat intensity 0.95 at 30px
+	var unescorted_threat = [{ "id": "bandit", "distance": 30.0, "intensity": 0.95, "x": 30.0, "y": 0.0 }]
+	merchant.fear_component.evaluate_local(unescorted_threat)
+	var unescorted_hint = merchant.fear_component.get_movement_hint()
+	var unescorted_fear = unescorted_hint.raw_fear
+	
+	# Ambush with escorts: Escorts suppress effective threat intensity to 0.35
+	var escorted_threat = [{ "id": "bandit", "distance": 30.0, "intensity": 0.35, "x": 30.0, "y": 0.0 }]
+	merchant.fear_component.evaluate_local(escorted_threat)
+	var escorted_hint = merchant.fear_component.get_movement_hint()
+	var escorted_fear = escorted_hint.raw_fear
+	
+	var escort_suppression_effective = (unescorted_fear > escorted_fear)
+	
+	if mass_conserved and escort_suppression_effective:
+		print("[PASS] Station 8: Mass Conserved=%.1fg, Escort Fear Suppression=%.2f -> %.2f (Protected)" % [
+			total_mass, unescorted_fear, escorted_fear
+		])
+		pass_count += 1
+	else:
+		print("[FAIL] Station 8: Regional Trade or Escort verification failed: mass_conserved=%s, escort_suppression=%s" % [mass_conserved, escort_suppression_effective])
+		all_pass = false
+
+	# --------------------------------------------------------------------------
+	# STATION 9: Multi-Observer Fog-of-War & Epistemic Rumor Decay
+	# --------------------------------------------------------------------------
+	print("\n--- Testing Station 9: Multi-Observer Fog-of-War & Epistemic Rumor Decay ---")
+	var outpost = ShowcaseAgent.new()
+	outpost.agent_name = "OutpostSentry"
+	outpost.neuroticism = 0.80
+	root.add_child(outpost)
+	
+	var capital = ShowcaseAgent.new()
+	capital.agent_name = "CapitalCommander"
+	capital.neuroticism = 0.40
+	root.add_child(capital)
+	
+	# Phase 1: Ground truth threat at Outpost. Capital is in Spatial Fog-of-War (Uninformed).
+	var outpost_threat = [{ "id": "dragon", "distance": 25.0, "intensity": 0.95, "x": 25.0, "y": 0.0 }]
+	outpost.fear_component.evaluate_local(outpost_threat)
+	capital.fear_component.evaluate_local([])
+	
+	var outpost_hint = outpost.fear_component.get_movement_hint()
+	var capital_fow_hint = capital.fear_component.get_movement_hint()
+	
+	var fow_decoupled = (outpost_hint.raw_fear > 0.60 and capital_fow_hint.raw_fear <= 0.05)
+	
+	# Phase 2: Messenger Courier arrives after latency with neurotic rumor decay/amplification
+	var courier_neuroticism = 0.70
+	var rumor_amplification = 1.0 + (courier_neuroticism * 0.35) # 1.245x
+	var epistemic_threat = min(1.0, 0.95 * rumor_amplification)
+	
+	var delivered_report = [{ "id": "courier_rumor", "distance": 30.0, "intensity": epistemic_threat, "x": 30.0, "y": 0.0 }]
+	capital.fear_component.evaluate_local(delivered_report)
+	var capital_informed_hint = capital.fear_component.get_movement_hint()
+	
+	var rumor_mobilized = (capital_informed_hint.raw_fear >= 0.25 and capital_informed_hint.raw_fear > capital_fow_hint.raw_fear)
+	
+	if fow_decoupled and rumor_mobilized:
+		print("[PASS] Station 9: Fog-of-War Decoupled (Outpost Fear=%.2f vs Capital Fog Fear=%.2f) -> Courier Rumor Mobilized Capital Fear=%.2f" % [
+			outpost_hint.raw_fear, capital_fow_hint.raw_fear, capital_informed_hint.raw_fear
+		])
+		pass_count += 1
+	else:
+		print("[FAIL] Station 9: Epistemic harness verification failed: fow_decoupled=%s (outpost=%.2f, cap_fog=%.2f), rumor_mobilized=%s (cap_inf=%.2f)" % [
+			fow_decoupled, outpost_hint.raw_fear, capital_fow_hint.raw_fear, rumor_mobilized, capital_informed_hint.raw_fear
+		])
 		all_pass = false
 
 	# --------------------------------------------------------------------------

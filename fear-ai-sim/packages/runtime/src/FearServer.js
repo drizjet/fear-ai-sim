@@ -11,7 +11,11 @@ import {
     PROTOCOL_VERSION,
     MESSAGE_TYPES,
     ERROR_CODES,
-    ProtocolValidator
+    ProtocolValidator,
+    BinaryWireProtocol,
+    BINARY_MAGIC,
+    FRAME_TYPES,
+    INTENT_CODES
 } from '../../protocol/index.js';
 
 export class FearServer {
@@ -47,7 +51,11 @@ export class FearServer {
         return new Promise((resolve, reject) => {
             this.httpServer = http.createServer((req, res) => this._handleHttpRequest(req, res));
 
-            this.wss = new WebSocketServer({ server: this.httpServer, maxPayload: this.maxPayloadBytes });
+            this.wss = new WebSocketServer({
+                server: this.httpServer,
+                maxPayload: this.maxPayloadBytes,
+                perMessageDeflate: false
+            });
             this.wss.on('connection', (ws, req) => this._handleWsConnection(ws, req));
 
             this.httpServer.on('error', (err) => {
@@ -345,7 +353,22 @@ export class FearServer {
     _handleWsConnection(ws, req) {
         this.connectedClients.add(ws);
 
-        ws.on('message', (message) => {
+        ws.on('message', (message, isBinary) => {
+            const isBuffer = Buffer.isBuffer(message);
+            if (isBinary || (isBuffer && message.length >= 16)) {
+                const buf = isBuffer ? message : Buffer.from(message);
+                // Check magic bytes: 'F', 'E', 'A', 'R' (0x46, 0x45, 0x41, 0x52)
+                if (buf.length >= 16 && buf[0] === 0x46 && buf[1] === 0x45 && buf[2] === 0x41 && buf[3] === 0x52) {
+                    try {
+                        this._handleBinaryMessage(ws, buf);
+                        return;
+                    } catch (err) {
+                        console.error('[FearServer] Binary wire message error:', err);
+                        return;
+                    }
+                }
+            }
+
             try {
                 const data = JSON.parse(message.toString());
                 this._handleWsMessage(ws, data);
@@ -361,6 +384,94 @@ export class FearServer {
         ws.on('error', () => {
             this.connectedClients.delete(ws);
         });
+    }
+
+    _handleBinaryMessage(ws, buf) {
+        if (!buf || buf.length < 16) return;
+
+        const arrayBuf = buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+        const view = new DataView(arrayBuf);
+        const magic = view.getUint32(0, true);
+        if (magic !== BINARY_MAGIC) {
+            return;
+        }
+
+        const version = view.getUint8(4);
+        const frameType = view.getUint8(5);
+        const tick = view.getUint32(8, true);
+        const count = view.getUint32(12, true);
+
+        if (frameType === FRAME_TYPES.OBSERVATION_BATCH) {
+            const decoded = BinaryWireProtocol.decodeObservationBatch(arrayBuf);
+            const batchObservations = [];
+
+            for (const rec of decoded.records) {
+                const agentId = rec.agent_id;
+                if (!this.simulation.agents.has(agentId)) {
+                    this.simulation.registerAgent(agentId, {
+                        neuroticism: 0.60,
+                        resilience: 0.40,
+                        bravery: 0.50
+                    }, {
+                        initial_position: rec.position
+                    });
+                }
+                const agent = this.simulation.agents.get(agentId);
+                if (agent) {
+                    agent.x = rec.position.x;
+                    agent.y = rec.position.y;
+                    agent.z = rec.position.z;
+                }
+
+                batchObservations.push({
+                    agent_id: agentId,
+                    threats: rec.threatDistance < 990 ? [{
+                        id: 'threat_binary',
+                        distance: rec.threatDistance,
+                        intensity: rec.threatIntensity
+                    }] : [],
+                    sounds: [],
+                    peers: []
+                });
+            }
+
+            const results = this.simulation.batchTick(batchObservations, 0.0166);
+            const resultMap = new Map(results.map(r => [r.agent_id, r]));
+
+            const intentRecords = decoded.records.map(rec => {
+                const res = resultMap.get(rec.agent_id);
+                const aff = res?.affective_state || {};
+                const act = res?.action_intent || {};
+                const vec = act?.vector_hint || { x: 0.0, y: 0.0, z: 0.0 };
+
+                return {
+                    entityId: rec.entityId,
+                    fear: aff.raw_fear ?? (res?.fear_score ? res.fear_score / 5.0 : 0.0),
+                    anger: aff.anger ?? 0.0,
+                    dominance: aff.dominance ?? 0.5,
+                    urgency: act?.urgency ?? (aff.raw_fear ?? 0.0),
+                    intentType: act?.primary_intent || 'IDLE_VIGILANT',
+                    suggestedPosture: act?.suggested_posture || 'UPRIGHT',
+                    band: res?.fear_band || 'CALM',
+                    inCombat: rec.inCombat || false,
+                    exhausted: false,
+                    vectorHint: vec
+                };
+            });
+
+            const responseBuffer = BinaryWireProtocol.encodeIntentBatch(this.simulation.tickCount, intentRecords);
+            ws.send(Buffer.from(responseBuffer), { binary: true });
+        } else if (frameType === FRAME_TYPES.PING) {
+            const pongBuffer = new ArrayBuffer(16);
+            const pongView = new DataView(pongBuffer);
+            pongView.setUint32(0, BINARY_MAGIC, true);
+            pongView.setUint8(4, 2);
+            pongView.setUint8(5, FRAME_TYPES.PING);
+            pongView.setUint16(6, 0, true);
+            pongView.setUint32(8, this.simulation.tickCount, true);
+            pongView.setUint32(12, 0, true);
+            ws.send(Buffer.from(pongBuffer), { binary: true });
+        }
     }
 
     _handleWsMessage(ws, msg) {

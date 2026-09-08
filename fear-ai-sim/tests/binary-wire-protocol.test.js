@@ -78,6 +78,56 @@ describe('Front D / Section 83: Protocol V2 Zero-Copy Binary Wire Contract', () 
         expect(r2.vectorHint.z).toBeCloseTo(0.866, 3);
     });
 
+    it('1b. Encodes and decodes observation batch with exact coordinate and threat fidelity', () => {
+        const testObservations = [
+            {
+                entityId: 201,
+                position: { x: 12.5, y: 0.0, z: -35.2 },
+                threatDistance: 8.5,
+                threatIntensity: 0.85,
+                health: 0.90,
+                energy: 0.75,
+                stimulusType: 1,
+                inCombat: true,
+                provoked: false
+            },
+            {
+                entityId: 202,
+                position: { x: 0.0, y: 1.5, z: 10.0 },
+                threatDistance: 45.0,
+                threatIntensity: 0.10,
+                health: 1.0,
+                energy: 0.95,
+                stimulusType: 0,
+                inCombat: false,
+                provoked: false
+            }
+        ];
+
+        const buffer = BinaryWireProtocol.encodeObservationBatch(55, testObservations);
+        expect(buffer.byteLength).toBe(16 + 2 * 32);
+
+        const decoded = BinaryWireProtocol.decodeObservationBatch(buffer);
+        expect(decoded.tick).toBe(55);
+        expect(decoded.count).toBe(2);
+        expect(decoded.frameType).toBe(FRAME_TYPES.OBSERVATION_BATCH);
+
+        const o1 = decoded.records[0];
+        expect(o1.entityId).toBe(201);
+        expect(o1.position.x).toBeCloseTo(12.5, 2);
+        expect(o1.position.z).toBeCloseTo(-35.2, 2);
+        expect(o1.threatDistance).toBeCloseTo(8.5, 2);
+        expect(o1.threatIntensity).toBeCloseTo(0.85, 2);
+        expect(o1.health).toBeCloseTo(0.90, 2);
+        expect(o1.inCombat).toBe(true);
+
+        const o2 = decoded.records[1];
+        expect(o2.entityId).toBe(202);
+        expect(o2.position.y).toBeCloseTo(1.5, 2);
+        expect(o2.threatDistance).toBeCloseTo(45.0, 2);
+        expect(o2.inCombat).toBe(false);
+    });
+
     it('2. Zero-Copy BinaryFrameReader enables O(1) field inspection without object allocation', () => {
         const testIntents = [
             {

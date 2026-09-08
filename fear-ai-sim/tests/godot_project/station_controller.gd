@@ -19,7 +19,9 @@ const STATIONS = {
 	4: { "name": "Leader Rally Dynamics", "pos": Vector2(350, 950) },
 	5: { "name": "Trauma Zone Re-activation", "pos": Vector2(1050, 950) },
 	6: { "name": "Trade Caravan Danger Reroute", "pos": Vector2(1750, 950) },
-	7: { "name": "Faction Stance Interaction", "pos": Vector2(1050, 620) }
+	7: { "name": "Faction Stance Interaction", "pos": Vector2(1050, 620) },
+	8: { "name": "Regional Trade Supply & Ambush Escorts", "pos": Vector2(350, 620) },
+	9: { "name": "Multi-Observer Fog-of-War & Epistemic Rumor", "pos": Vector2(1750, 620) }
 }
 
 # --- Station 1 Nodes ---
@@ -59,6 +61,27 @@ var s7_red_patrol: ShowcaseAgent
 var s7_bilateral_stage: String = "UNAWARE"
 var s7_tension: float = 0.15
 
+# --- Station 8 Nodes (Regional Dynamic Trade Caravans & Escorts) ---
+var s8_merchant: ShowcaseAgent
+var s8_escorts: Array[ShowcaseAgent] = []
+var s8_bandit: Node2D
+var s8_hub_a_grain: float = 200.0
+var s8_hub_b_grain: float = 40.0
+var s8_caravan_cargo: float = 60.0
+var s8_ambush_active: bool = false
+var s8_caravan_progress: float = 0.0
+
+# --- Station 9 Nodes (Multi-Observer Fog-of-War & Epistemic Rumor) ---
+var s9_outpost_sentry: ShowcaseAgent
+var s9_capital_commander: ShowcaseAgent
+var s9_courier: ShowcaseAgent
+var s9_threat_dragon: Node2D
+var s9_ground_truth_active: bool = false
+var s9_courier_dispatched: bool = false
+var s9_courier_arrived: bool = false
+var s9_capital_perceived_threat: float = 0.0
+var s9_rumor_decay_factor: float = 1.25
+
 func _ready() -> void:
 	_init_station_1()
 	_init_station_2()
@@ -67,6 +90,8 @@ func _ready() -> void:
 	_init_station_5()
 	_init_station_6()
 	_init_station_7()
+	_init_station_8()
+	_init_station_9()
 
 func _physics_process(delta: float) -> void:
 	_update_station_1(delta)
@@ -76,6 +101,8 @@ func _physics_process(delta: float) -> void:
 	_update_station_5(delta)
 	_update_station_6(delta)
 	_update_station_7(delta)
+	_update_station_8(delta)
+	_update_station_9(delta)
 	queue_redraw()
 
 # ==============================================================================
@@ -372,6 +399,154 @@ func reset_station_7() -> void:
 		s7_red_patrol.global_position = STATIONS[7]["pos"] + Vector2(120, 0)
 
 # ==============================================================================
+# STATION 8: Regional Dynamic Trade Supply & Ambush Escorts
+# ==============================================================================
+func _init_station_8() -> void:
+	var center = STATIONS[8]["pos"]
+	# Merchant carrying grain cargo from Town Alpha (Surplus) to Town Beta (Deficit)
+	s8_merchant = _create_agent("Merchant Gildor", "Trader", Color(1.0, 0.8, 0.2), center + Vector2(-90, 0), 0.75, 0.25, 0.15)
+	
+	# Two armed escorts providing defensive perimeter and fear suppression
+	var escort1 = _create_agent("Escort Aegis", "Guardian", Color(0.3, 0.5, 0.9), center + Vector2(-90, -25), 0.20, 0.80, 0.05, 0.6, true)
+	var escort2 = _create_agent("Escort Vane", "Guardian", Color(0.3, 0.5, 0.9), center + Vector2(-90, 25), 0.25, 0.75, 0.05, 0.5)
+	s8_escorts = [escort1, escort2]
+	
+	# Ambush bandit lurking in brush along the highway
+	s8_bandit = Node2D.new()
+	s8_bandit.name = "Bandit_Ambush"
+	s8_bandit.add_to_group("fear_threats")
+	s8_bandit.global_position = center + Vector2(20, -70)
+	add_child(s8_bandit)
+
+func _update_station_8(delta: float) -> void:
+	if not s8_merchant or not s8_bandit:
+		return
+		
+	var center = STATIONS[8]["pos"]
+	
+	# Caravan advancement along highway
+	if not s8_ambush_active:
+		s8_caravan_progress = fmod(s8_caravan_progress + delta * 25.0, 180.0)
+		var caravan_x = center.x - 90.0 + s8_caravan_progress
+		s8_merchant.global_position.x = caravan_x
+		s8_merchant.global_position.y = center.y
+		if s8_escorts.size() >= 2:
+			s8_escorts[0].global_position = Vector2(caravan_x + 15.0, center.y - 25.0)
+			s8_escorts[1].global_position = Vector2(caravan_x - 15.0, center.y + 25.0)
+		s8_merchant.fear_component.evaluate_local([])
+	else:
+		# Ambush sprung: bandit rushes caravan
+		var bandit_target = s8_merchant.global_position
+		s8_bandit.global_position = s8_bandit.global_position.move_toward(bandit_target, delta * 50.0)
+		var d_bandit = s8_merchant.global_position.distance_to(s8_bandit.global_position)
+		
+		# Escorts intercept bandit
+		if s8_escorts.size() >= 2:
+			var intercept_pt = (s8_merchant.global_position + s8_bandit.global_position) * 0.5
+			s8_escorts[0].global_position = s8_escorts[0].global_position.move_toward(intercept_pt + Vector2(0, -10), delta * 70.0)
+			s8_escorts[1].global_position = s8_escorts[1].global_position.move_toward(intercept_pt + Vector2(0, 10), delta * 70.0)
+			
+		# Fear evaluation: escorts reduce threat intensity by 65% via defensive buffer
+		var threat_val = 0.90 if s8_escorts.is_empty() else 0.35
+		var threat_dist = max(15.0, d_bandit)
+		var mock_threat = [{ "id": "bandit", "distance": threat_dist, "intensity": threat_val, "x": s8_bandit.global_position.x, "y": s8_bandit.global_position.y }]
+		s8_merchant.fear_component.evaluate_local(mock_threat)
+
+func trigger_station_8_ambush() -> void:
+	s8_ambush_active = true
+	var center = STATIONS[8]["pos"]
+	if s8_bandit:
+		s8_bandit.global_position = center + Vector2(10, -20)
+
+func reset_station_8() -> void:
+	s8_ambush_active = false
+	s8_caravan_progress = 0.0
+	var center = STATIONS[8]["pos"]
+	if s8_merchant:
+		s8_merchant.global_position = center + Vector2(-90, 0)
+		s8_merchant.fear_component.evaluate_local([])
+	if s8_escorts.size() >= 2:
+		s8_escorts[0].global_position = center + Vector2(-90, -25)
+		s8_escorts[1].global_position = center + Vector2(-90, 25)
+	if s8_bandit:
+		s8_bandit.global_position = center + Vector2(20, -70)
+
+# ==============================================================================
+# STATION 9: Multi-Observer Fog-of-War & Epistemic Rumor Decay
+# ==============================================================================
+func _init_station_9() -> void:
+	var center = STATIONS[9]["pos"]
+	
+	# Forward Outpost Sentry (Observer A at x=-110)
+	s9_outpost_sentry = _create_agent("Outpost Sentry", "Observer A", Color(0.3, 0.8, 0.4), center + Vector2(-110, 0), 0.65, 0.45, 0.1)
+	
+	# Capital Commander (Observer B at x=110, initially behind fog-of-war)
+	s9_capital_commander = _create_agent("Capital Commander", "Observer B", Color(0.8, 0.4, 0.9), center + Vector2(110, 0), 0.30, 0.85, 0.05, 0.7, true)
+	
+	# Fast Messenger Courier (Neurotic travel courier)
+	s9_courier = _create_agent("Courier Swift", "Messenger", Color(0.9, 0.9, 0.2), center + Vector2(-100, 25), 0.70, 0.30, 0.10)
+	
+	# Acute threat at forward outpost
+	s9_threat_dragon = Node2D.new()
+	s9_threat_dragon.name = "Outpost_Apex_Threat"
+	s9_threat_dragon.add_to_group("fear_threats")
+	s9_threat_dragon.global_position = center + Vector2(-145, 0)
+	add_child(s9_threat_dragon)
+
+func _update_station_9(delta: float) -> void:
+	if not s9_outpost_sentry or not s9_capital_commander or not s9_courier:
+		return
+		
+	var center = STATIONS[9]["pos"]
+	
+	# Outpost Sentry directly perceives the dragon threat
+	if s9_ground_truth_active:
+		var threat_outpost = [{ "id": "apex_threat", "distance": 35.0, "intensity": 0.95, "x": s9_threat_dragon.global_position.x, "y": s9_threat_dragon.global_position.y }]
+		s9_outpost_sentry.fear_component.evaluate_local(threat_outpost)
+	else:
+		s9_outpost_sentry.fear_component.evaluate_local([])
+		
+	# Courier travel dynamics across fog-of-war
+	if s9_courier_dispatched and not s9_courier_arrived:
+		var target_capital = center + Vector2(90, 15)
+		s9_courier.global_position = s9_courier.global_position.move_toward(target_capital, delta * 140.0)
+		var dist_to_capital = s9_courier.global_position.distance_to(target_capital)
+		
+		# Courier experiences acute urgency and fear during flight
+		var courier_threat = [{ "id": "flight_urgency", "distance": 40.0, "intensity": 0.80, "x": center.x - 145, "y": center.y }]
+		s9_courier.fear_component.evaluate_local(courier_threat)
+		
+		if dist_to_capital < 15.0:
+			s9_courier_arrived = true
+			# Rumor arrives with neurotic distortion (1.25x exaggeration clamped to 1.0)
+			s9_capital_perceived_threat = min(1.0, 0.95 * s9_rumor_decay_factor)
+			var rumor_threat = [{ "id": "courier_rumor_report", "distance": 50.0, "intensity": s9_capital_perceived_threat, "x": center.x + 90, "y": center.y }]
+			s9_capital_commander.fear_component.evaluate_local(rumor_threat)
+	elif not s9_courier_arrived:
+		# Before courier arrives: Capital Commander is in total Spatial Fog-of-War (Ground Truth Unperceived)
+		s9_capital_commander.fear_component.evaluate_local([])
+
+func trigger_station_9_dispatch() -> void:
+	s9_ground_truth_active = true
+	s9_courier_dispatched = true
+	s9_courier_arrived = false
+	s9_capital_perceived_threat = 0.0
+
+func reset_station_9() -> void:
+	s9_ground_truth_active = false
+	s9_courier_dispatched = false
+	s9_courier_arrived = false
+	s9_capital_perceived_threat = 0.0
+	var center = STATIONS[9]["pos"]
+	if s9_outpost_sentry:
+		s9_outpost_sentry.fear_component.evaluate_local([])
+	if s9_capital_commander:
+		s9_capital_commander.fear_component.evaluate_local([])
+	if s9_courier:
+		s9_courier.global_position = center + Vector2(-100, 25)
+		s9_courier.fear_component.evaluate_local([])
+
+# ==============================================================================
 # HELPER & DRAWING
 # ==============================================================================
 func _create_agent(aname: String, role: String, color: Color, pos: Vector2, n: float, r: float, b: float, l: float = 0.0, is_lead: bool = false) -> ShowcaseAgent:
@@ -426,3 +601,26 @@ func _draw() -> void:
 	var c7 = STATIONS[7]["pos"]
 	draw_line(c7 + Vector2(0, -80), c7 + Vector2(0, 80), Color(0.8, 0.8, 0.2, 0.6), 2.0)
 	draw_string(ThemeDB.fallback_font, c7 + Vector2(-50, -85), "BORDER LADDER: %s" % s7_bilateral_stage, HORIZONTAL_ALIGNMENT_CENTER, 100, 9, Color.YELLOW)
+
+	# Station 8 Trade Corridor & Conservation Visuals
+	var c8 = STATIONS[8]["pos"]
+	draw_line(c8 + Vector2(-120, 0), c8 + Vector2(120, 0), Color(0.9, 0.7, 0.2, 0.7), 2.5)
+	draw_circle(c8 + Vector2(-120, 0), 10.0, Color(0.2, 0.8, 0.3, 0.8))
+	draw_string(ThemeDB.fallback_font, c8 + Vector2(-160, -16), "Town Alpha (200g)", HORIZONTAL_ALIGNMENT_CENTER, 80, 8, Color(0.3, 1.0, 0.4))
+	draw_circle(c8 + Vector2(120, 0), 10.0, Color(0.8, 0.3, 0.2, 0.8))
+	draw_string(ThemeDB.fallback_font, c8 + Vector2(80, -16), "Town Beta (40g)", HORIZONTAL_ALIGNMENT_CENTER, 80, 8, Color(1.0, 0.4, 0.3))
+	draw_string(ThemeDB.fallback_font, c8 + Vector2(-80, 50), "Mass Conservation: %dg + %dg + %dg = 300g" % [int(s8_hub_a_grain), int(s8_hub_b_grain), int(s8_caravan_cargo)], HORIZONTAL_ALIGNMENT_CENTER, 160, 8, Color(0.9, 0.8, 0.3))
+	if s8_ambush_active:
+		draw_circle(s8_bandit.global_position, 16.0, Color(1.0, 0.1, 0.1, 0.3))
+		draw_string(ThemeDB.fallback_font, s8_bandit.global_position + Vector2(-40, -20), "AMBUSH RAID", HORIZONTAL_ALIGNMENT_CENTER, 80, 8, Color.RED)
+
+	# Station 9 Fog-of-War Perimeter & Epistemic Propagation Visuals
+	var c9 = STATIONS[9]["pos"]
+	draw_dashed_line(c9 + Vector2(0, -90), c9 + Vector2(0, 90), Color(0.5, 0.6, 0.7, 0.6), 2.0, 6.0)
+	draw_string(ThemeDB.fallback_font, c9 + Vector2(-60, -95), "FOG-OF-WAR BOUNDARY", HORIZONTAL_ALIGNMENT_CENTER, 120, 8, Color(0.7, 0.8, 0.9))
+	draw_rect(Rect2(c9.x - 145, c9.y - 40, 50, 80), Color(0.2, 0.5, 0.3, 0.2), true)
+	draw_string(ThemeDB.fallback_font, c9 + Vector2(-160, 52), "Outpost (Ground Truth)", HORIZONTAL_ALIGNMENT_CENTER, 80, 8, Color(0.4, 1.0, 0.5))
+	draw_rect(Rect2(c9.x + 95, c9.y - 40, 50, 80), Color(0.4, 0.2, 0.5, 0.2), true)
+	draw_string(ThemeDB.fallback_font, c9 + Vector2(80, 52), "Capital (Epistemic)", HORIZONTAL_ALIGNMENT_CENTER, 80, 8, Color(0.8, 0.5, 1.0))
+	if s9_courier_dispatched and not s9_courier_arrived:
+		draw_line(c9 + Vector2(-90, 15), s9_courier.global_position, Color(1.0, 0.9, 0.3, 0.5), 1.5)
