@@ -20,6 +20,18 @@ npm run server
 # ws://127.0.0.1:8765
 ```
 
+### Unified CLI
+
+```bash
+# Start server, inspect decisions, simulate, benchmark, or verify
+npm run cli -- help
+npm run cli -- explain --neuroticism 0.8 --distance 12
+npm run cli -- explain-faction --factionA HumanKingdom --factionB OrcDominion
+npm run cli -- sim --turns 50
+npm run cli -- benchmark --entities 1000 --ticks 20
+npm run cli -- verify
+```
+
 Adapters live in `packages/adapters/`. Unreal is **kept so Unreal games can connect later**; it is not current work and is not required to use Unity.
 
 **Host game stays in charge** of movement and combat. Fear AI returns affective state and semantic intents.

@@ -8,5 +8,7 @@ null
 .DS_Store
 __pycache__/
 *.pyc
-bin/
+**/bin/
+!/bin/
+!/bin/fear-ai.js
 obj/

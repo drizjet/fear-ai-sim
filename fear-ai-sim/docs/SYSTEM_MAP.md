@@ -1,7 +1,7 @@
 ---
 title: "Fear AI — System Map (read this first)"
 created: 2026-09-07
-updated: 2026-09-07
+updated: 2026-09-08
 type: navigation
 status: active
 ---
@@ -40,6 +40,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 
 - **Research sim (old surface):** `simulation.js`, `brain.js`, `closed-world.js`, Pixi/Electron/Tauri. Useful, not the shippable SDK.
 - **Middleware (plug-in surface):** `packages/core`, `packages/protocol`, `packages/runtime`, `packages/adapters/*`
+- **Unified CLI:** `bin/fear-ai.js` (`npm run cli -- <cmd>`), providing `server`, `explain`, `explain-faction`, `sim`, `benchmark`, `verify`.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

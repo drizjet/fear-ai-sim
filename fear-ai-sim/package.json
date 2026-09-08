@@ -24,7 +24,11 @@
     "desktop:build": "npm run tauri:build",
     "server": "node packages/runtime/bin/fear-ai-server.js",
     "benchmark": "node benchmarks/headless-benchmark.mjs",
-    "pack:adapters": "pwsh -File tools/packaging/pack-adapters.ps1"
+    "pack:adapters": "pwsh -File tools/packaging/pack-adapters.ps1",
+    "cli": "node bin/fear-ai.js"
+  },
+  "bin": {
+    "fear-ai": "./bin/fear-ai.js"
   },
   "main": "electron-main.cjs",
   "dependencies": {
