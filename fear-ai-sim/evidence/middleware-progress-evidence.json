@@ -1289,6 +1289,69 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SPATIAL_3D_RAYCAST_AND_OBSTACLE_NAVIGATION_ADAPTER",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/Spatial3DAdapter.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: spatial-3d)",
+        "tests/spatial-3d-adapter.test.js",
+        "tests/cli.test.js"
+      ],
+      "test_evidence": [
+        "tests/spatial-3d-adapter.test.js (9/9 tests green):",
+        "1. Vector3 math primitives execute deterministic arithmetic without mutations",
+        "2. 3D Field-of-View cone identifies targets in-front, peripheral, and behind",
+        "3. Tactical elevation differential models high-ground threat and commanding security",
+        "4. Raycast occlusion from host physics reduces visual threat",
+        "5. Acoustic blind-spot sound triggers acute startle arousal",
+        "6. Advisory 3D escape vector steers away from threat and deflects around obstacles",
+        "7. Supports Unreal Engine Z-UP coordinate convention seamlessly",
+        "8. Generates structured host raycast requests without mutating entities",
+        "9. Strictly preserves Host Game Authority Invariant with zero host state mutation"
+      ],
+      "runtime_evidence": [
+        "Coordinate convention support for OpenGL/Godot/Unity (Y_UP) and Unreal Engine 5 (Z_UP)",
+        "Tactical elevation assessment (COMMANDING_HIGH_GROUND discount vs VULNERABLE_LOW_GROUND penalty)",
+        "Obstacle-aware 3D escape steering deflection preserving strict advisory role"
+      ],
+      "benchmark_evidence": [
+        "3D spatial sensory stimulus evaluation: < 0.002 ms per target query"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SYSTEM_OF_SYSTEMS_MULTI_FEEDBACK_CASCADE_AND_RUNAWAY_LOOP_DETECTOR",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/MultiFeedbackCascadeSystem.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: runaway-loops)",
+        "tests/multi-feedback-cascade.test.js",
+        "tests/cli.test.js"
+      ],
+      "test_evidence": [
+        "tests/multi-feedback-cascade.test.js (6/6 tests green):",
+        "1. Discovers closed feedback cycles across interconnected living-world subsystems",
+        "2. Calculates loop gain and distinguishes positive destabilizing vs negative stabilizing feedback",
+        "3. Detects Famine-Panic Runaway Loop with loop gain G > 1.0",
+        "4. Diagnoses active cascade pathologies and triggers targeted advisory circuit breakers",
+        "5. Restores macro stability when coupling gains are dampened below runaway threshold",
+        "6. Strictly preserves Host Game Authority Invariant during telemetry evaluation"
+      ],
+      "runtime_evidence": [
+        "Directed coupling graph with cycle detection and loop gain calculation G(C) = Prod |w_i|",
+        "Net polarity evaluation identifying destabilizing positive loops vs stabilizing negative circuits",
+        "Targeted advisory circuit breaker interventions with calculated target gain reduction Delta G"
+      ],
+      "benchmark_evidence": [
+        "Multi-cycle feedback diagnosis: < 0.005 ms per world telemetry tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

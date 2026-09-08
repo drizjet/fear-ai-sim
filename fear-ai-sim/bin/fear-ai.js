@@ -46,7 +46,14 @@ import {
     EPISTEMIC_PROVENANCE,
     FactionGovernanceSystem,
     GOVERNANCE_ARCHETYPES,
-    FACTION_DIRECTIVES
+    FACTION_DIRECTIVES,
+    Spatial3DAdapter,
+    Vector3,
+    TACTICAL_ELEVATION_STATUS,
+    OCCLUSION_STATUS,
+    MultiFeedbackCascadeSystem,
+    CASCADE_PATHOLOGIES,
+    CIRCUIT_BREAKER_INTERVENTIONS
 } from '../packages/core/index.js';
 import { BinaryWireProtocol, BinaryFrameReader } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
@@ -98,6 +105,10 @@ function printHelp() {
     console.log(`                     Options: --entities <1000> --json`);
     console.log(`  governance         Deliberate incident across faction collective governance structures (Front C/Section 33)`);
     console.log(`                     Options: --archetype <junta|oligarchy|tribe|despot|church> --severity <0..1> --json`);
+    console.log(`  spatial-3d         Evaluate 3D spatial sensory stimulus, elevation, and obstacle avoidance (Front D/Section 9)`);
+    console.log(`                     Options: --elevation <meters> --occlusion <0..1> --obstacles --json`);
+    console.log(`  runaway-loops      Diagnose system-of-systems feedback loops and circuit breakers (Front E/Sections 61–65)`);
+    console.log(`                     Options: --threshold <1.0> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -799,6 +810,100 @@ function handleGovernance(options) {
     }
 }
 
+function handleSpatial3D(options) {
+    const adapter = new Spatial3DAdapter();
+    const elev = parseFloat(options.elevation ?? 3.5);
+    const occlusion = parseFloat(options.occlusion ?? 0.2);
+
+    const observer = {
+        position: Vector3.create(0, 0, 0),
+        forward: Vector3.create(0, 0, 1),
+        eyeHeight: 1.6
+    };
+    const target = {
+        position: Vector3.create(0, elev, 10),
+        threatIntensity: 0.75,
+        acousticSignature: 0.6
+    };
+
+    const stimulus = adapter.evaluate3DSpatialStimulus(observer, target, { raycastOcclusion: occlusion });
+    
+    let obstacles = [];
+    if (options.obstacles) {
+        obstacles = [
+            { position: Vector3.create(0, 0, -3), radius: 1.2 }
+        ];
+    }
+    const escape = adapter.computeAdvisoryEscapeVector(observer, target.position, obstacles);
+
+    const result = {
+        stimulus,
+        escape
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: 3D Spatial & Raycast Navigation Appraisal (Section 9) ===\n`);
+    console.log(`Observer Position: (0.00, 0.00, 0.00) | Eye Height: 1.60m | Forward: (0, 0, 1)`);
+    console.log(`Target Position:   (0.00, ${elev.toFixed(2)}, 10.00) | Threat: 0.75`);
+    console.log(`\nSensory Appraisal:`);
+    console.log(`  • 3D Distance:             ${stimulus.distance.toFixed(2)} m`);
+    console.log(`  • Azimuth / Pitch:         ${stimulus.azimuthDeg}° / ${stimulus.pitchDeg}°`);
+    console.log(`  • In Field-of-View:        ${stimulus.inFieldOfView ? 'YES' : 'NO'}`);
+    console.log(`  • Tactical Elevation:      ${stimulus.tacticalElevation.status} (x${stimulus.tacticalElevation.modifier.toFixed(3)})`);
+    console.log(`  • Line-of-Sight Occlusion: ${stimulus.occlusion.status} (${(stimulus.occlusion.ratio * 100).toFixed(1)}%)`);
+    console.log(`  • Effective Threat:        ${stimulus.effectiveThreatIntensity.toFixed(4)}`);
+    console.log(`\nAdvisory Escape Steering:`);
+    console.log(`  • Recommended Vector:      (${escape.recommendedVector.x.toFixed(2)}, ${escape.recommendedVector.y.toFixed(2)}, ${escape.recommendedVector.z.toFixed(2)})`);
+    console.log(`  • Speed Ratio:             ${escape.speedRatio.toFixed(2)}`);
+    console.log(`  • Obstacle Deflection:     ${escape.obstacleDeflectionApplied ? 'YES (angle: ' + escape.deflectionAngleDeg + '°)' : 'NONE'}\n`);
+}
+
+function handleRunawayLoops(options) {
+    const system = new MultiFeedbackCascadeSystem({
+        gainRunawayThreshold: parseFloat(options.threshold ?? 1.0)
+    });
+    const diagnosis = system.diagnoseRunawayCascades();
+
+    if (options.json) {
+        console.log(JSON.stringify(diagnosis, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: System-of-Systems Multi-Feedback Cascade Analysis (Sections 61–65) ===\n`);
+    console.log(`Topology Overview:`);
+    console.log(`  • Active Feedback Cycles:  ${diagnosis.activeCycleCount}`);
+    console.log(`  • Runaway Loops (G > 1.0): ${diagnosis.runawayLoopCount}`);
+    console.log(`  • System Stability Status: ${diagnosis.isSystemStable ? 'STABLE' : 'DESTABILIZING_RUNAWAY'}\n`);
+
+    console.log(`Cycle Gain Evaluations:`);
+    for (const c of diagnosis.cycleEvaluations) {
+        const flag = c.isRunaway ? ' [RUNAWAY!]' : (c.isPositiveFeedback ? ' (amplifying)' : ' (stabilizing)');
+        console.log(`  • ${c.cycle}`);
+        console.log(`    ↳ Loop Gain G = ${c.loopGain.toFixed(4)} | Polarity = ${c.netPolarity > 0 ? '+1' : '-1'}${flag}`);
+    }
+
+    if (diagnosis.detectedPathologies.length > 0) {
+        console.log(`\nDetected Cascade Pathologies:`);
+        for (const p of diagnosis.detectedPathologies) {
+            console.log(`  • [${p.pathology}] Severity: ${(p.severity * 100).toFixed(1)}% | Loop Gain: ${p.loopGain}`);
+            console.log(`    Triggering Path: ${p.triggeringCycle}`);
+        }
+    }
+
+    if (diagnosis.recommendedCircuitBreakers.length > 0) {
+        console.log(`\nAdvisory Circuit Breaker Interventions:`);
+        for (const b of diagnosis.recommendedCircuitBreakers) {
+            console.log(`  • Intervention:   ${b.intervention} (Subsystem: ${b.targetSubsystem})`);
+            console.log(`    Target Gain Δ:  -${b.targetGainReduction.toFixed(3)}`);
+            console.log(`    Rationale:      ${b.rationale}\n`);
+        }
+    }
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -833,6 +938,12 @@ async function main() {
             break;
         case 'governance':
             handleGovernance(options);
+            break;
+        case 'spatial-3d':
+            handleSpatial3D(options);
+            break;
+        case 'runaway-loops':
+            handleRunawayLoops(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);

@@ -129,3 +129,18 @@ export {
     GOVERNANCE_ARCHETYPES,
     FACTION_DIRECTIVES
 } from './src/FactionGovernanceSystem.js';
+export {
+    Spatial3DAdapter,
+    TACTICAL_ELEVATION_STATUS,
+    OCCLUSION_STATUS,
+    COORDINATE_CONVENTIONS,
+    Vector3
+} from './src/Spatial3DAdapter.js';
+export {
+    MultiFeedbackCascadeSystem,
+    COUPLING_VARIABLES,
+    CASCADE_PATHOLOGIES,
+    CIRCUIT_BREAKER_INTERVENTIONS
+} from './src/MultiFeedbackCascadeSystem.js';
+
+

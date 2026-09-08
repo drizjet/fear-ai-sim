@@ -143,4 +143,26 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('MERCHANT_OLIGARCHY');
         expect(res.stdout).toContain('TRIBAL_CONSENSUS');
     });
+
+    it('executes "spatial-3d" and outputs 3D spatial sensory appraisal and escape vectors', async () => {
+        const res = await runCli(['spatial-3d', '--elevation', '4.0', '--occlusion', '0.3', '--obstacles']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('3D Spatial & Raycast Navigation Appraisal');
+        expect(res.stdout).toContain('Tactical Elevation:');
+        expect(res.stdout).toContain('VULNERABLE_LOW_GROUND');
+        expect(res.stdout).toContain('Line-of-Sight Occlusion:');
+        expect(res.stdout).toContain('Advisory Escape Steering:');
+        expect(res.stdout).toContain('Obstacle Deflection:');
+    });
+
+    it('executes "runaway-loops" and outputs multi-feedback cascade loop gain diagnosis', async () => {
+        const res = await runCli(['runaway-loops']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('System-of-Systems Multi-Feedback Cascade Analysis');
+        expect(res.stdout).toContain('Active Feedback Cycles:');
+        expect(res.stdout).toContain('Runaway Loops');
+        expect(res.stdout).toContain('RUNAWAY_FAMINE_PANIC_CASCADE');
+        expect(res.stdout).toContain('PERPETUAL_RETALIATION_WAR_VORTEX');
+        expect(res.stdout).toContain('INJECT_STRATEGIC_GRAIN_RESERVE');
+    });
 });
