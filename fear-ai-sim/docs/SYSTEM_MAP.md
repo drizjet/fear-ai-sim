@@ -43,6 +43,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Unified CLI:** `bin/fear-ai.js` (`npm run cli -- <cmd>`), providing `server`, `dashboard`, `explain`, `explain-faction`, `sim`, `benchmark`, `adversarial`, `counterfactual`, `godot`, `verify`.
 - **Designer Dashboard (Sections XXXI & XXXII):** `fear-ai dashboard` (zero-dependency interactive web dashboard on `127.0.0.1:8766` for threat attribution, persona curves, faction escalation, route safety, and replay).
 - **Godot 4.6 Multi-Station Showcase (Front A):** `npm run godot:showcase` or `fear-ai godot` (`tests/godot_project/`), featuring 7 live behavioral stations (Threat Appraisal, Sound Habituation, Crowd Panic Cascade, Leader Rally, Trauma Zone, Caravan Danger Reroute, Faction Stance Interaction) with overhead fear bars, intent badges, and camera tour navigation.
+- **External Host Integration (Front D / Epoch B):** True external host integration verified with the pre-existing, independent Rust RTS engine `Pixel Pets` (`C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets\tests\fear_ai_external_host_integration.rs` & `examples/external-game-proof/PIXEL_PETS_INTEGRATION_REPORT.md`), demonstrating 100% Host Game Authority preservation with zero core mutation.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
@@ -52,7 +53,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 | Adapter | Status | Active work? |
 |---|---|---|
 | Node / Python / C# library | Runnable against the local server | Yes — language clients for the protocol |
-| Godot 4.6 | Headless binary on this host. Adapter is advisory (`get_movement_hint()`). | Optional live check only |
+| Godot 4.6 | Headless binary on this host. Adapter is advisory (`get_movement_hint()`). Showcase verified (7/7 stations). | Ready / verified interactive showcase |
 | Unity UPM | `IMPLEMENTED_NOT_VERIFIED` — Editor not installed. Adapter is advisory (`RecommendedVector`). | Only if a Unity host is actually wanted |
 | Unreal 5 plugin | `DEFERRED_KEEP_ADAPTER` / `IMPLEMENTED_NOT_VERIFIED` | Not now. Keep the plugin so Unreal games can connect later. Do not install UE5 today. |
 
@@ -63,7 +64,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - K=60 raw Fear-vs-Utility advantage is **not** statistically established.
 - N/R traits are entangled. O/A weak or unresolved.
 - Human evaluation: prepared, **blocked** (no participants).
-- “External game integration” so far is **in-repo demos** (`examples/reference-game/`, Outpost Omega), not an unrelated shipped game. Do not treat those as Milestone N complete.
+- External game integration verified on `Pixel Pets` (independent Rust RTS engine). Non-invasive advisory intent integration verified with 0 core mutations. Additional external game genres (e.g. 3D action, Turn-based) remain frontiers.
 
 ## Source of truth vs stale files
 
