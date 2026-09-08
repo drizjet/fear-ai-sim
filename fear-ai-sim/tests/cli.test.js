@@ -250,5 +250,33 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Numerical Integrity Audit:');
         expect(res.stdout).toContain('CLEAN');
     });
+
+    it('executes "stream" and outputs ring buffer throughput and delta compression savings', async () => {
+        const res = await runCli(['stream', '--entities', '150']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Cross-Engine Binary Streaming Buffer');
+        expect(res.stdout).toContain('Batch Configuration:');
+        expect(res.stdout).toContain('Generated Chunks:');
+        expect(res.stdout).toContain('Out-of-Order Reassembly:');
+        expect(res.stdout).toContain('VERIFIED');
+        expect(res.stdout).toContain('Zero-Allocation Ring Buffer Performance:');
+        expect(res.stdout).toContain('Delta Frame Compression');
+        expect(res.stdout).toContain('bandwidth savings');
+    });
+
+    it('executes "trauma" and outputs persona mutation and phobic avoidance vectors', async () => {
+        const res = await runCli(['trauma', '--severity', '0.85', '--extinction']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Diachronic Persona Mutation & Trauma Crystallization');
+        expect(res.stdout).toContain('Incident Type:');
+        expect(res.stdout).toContain('NEAR_DEATH_SURVIVAL');
+        expect(res.stdout).toContain('Personality Trait Remodeling:');
+        expect(res.stdout).toContain('Neuroticism:');
+        expect(res.stdout).toContain('Conditioned Phobic Reaction');
+        expect(res.stdout).toContain('Phobic Dread Spike:');
+        expect(res.stdout).toContain('Repulsive Avoidance:');
+        expect(res.stdout).toContain('Rehabilitation Extinction:');
+    });
 });
+
 

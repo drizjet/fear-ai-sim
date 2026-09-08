@@ -187,3 +187,11 @@ export {
     COLLISION_SCENARIOS,
     SYSTEMIC_HEALTH_METRICS
 } from './src/EmergentSystemCollisionHarness.js';
+export {
+    TraumaCrystallizationEngine,
+    PhobicTriggerRegistry,
+    TRAUMA_TYPES,
+    TRAUMA_STAGES,
+    PHOBIC_CATEGORIES
+} from './src/TraumaCrystallizationEngine.js';
+

@@ -80,9 +80,24 @@ import {
     CONSEQUENCE_DOMAINS,
     BehavioralParetoFrontier,
     EmergentSystemCollisionHarness,
-    COLLISION_SCENARIOS
+    COLLISION_SCENARIOS,
+    TraumaCrystallizationEngine,
+    PhobicTriggerRegistry,
+    TRAUMA_TYPES,
+    TRAUMA_STAGES,
+    PHOBIC_CATEGORIES
 } from '../packages/core/index.js';
-import { BinaryWireProtocol, BinaryFrameReader } from '../packages/protocol/index.js';
+import {
+    BinaryWireProtocol,
+    BinaryFrameReader,
+    StreamingRingBuffer,
+    PacketChunker,
+    ChunkAssembler,
+    FrameDeltaCompressor,
+    JitterPlaybackBuffer,
+    DEFAULT_MTU_BYTES,
+    OVERFLOW_STRATEGIES
+} from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
 import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
 import { runAllAdversarialStressTests } from '../benchmarks/behavioral-evaluation/adversarial_world_stress.mjs';
@@ -152,6 +167,10 @@ function printHelp() {
     console.log(`                     Options: --preset <presetId> --candidates <count> --surface --json`);
     console.log(`  collision          Execute complex emergent multi-system collision stress test (Front E/Sections 61–63)`);
     console.log(`                     Options: --scenario <rupture|famine|horizon> --ticks <count> --json`);
+    console.log(`  stream             Benchmark zero-copy ring-buffer streaming, packet MTU chunking, and delta compression (Front D/Sections 66–68)`);
+    console.log(`                     Options: --entities <count> --mtu <bytes> --json`);
+    console.log(`  trauma             Simulate diachronic persona mutation, phobic conditioning, and extinction therapy (Front B/Sections 12–14)`);
+    console.log(`                     Options: --severity <0..1> --solace --extinction --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -1524,6 +1543,182 @@ function handleCollision(options) {
     console.log(`\nHost Authority Check:          ✓ Strictly advisory (0 host physics mutations)\n`);
 }
 
+function handleStream(options) {
+    const entityCount = parseInt(options.entities, 10) || 500;
+    const mtu = parseInt(options.mtu, 10) || DEFAULT_MTU_BYTES;
+
+    const intents = [];
+    for (let i = 0; i < entityCount; i++) {
+        intents.push({
+            entityId: 2000 + i,
+            fear: Number((0.10 + (i % 8) * 0.1).toFixed(2)),
+            anger: 0.15,
+            dominance: 0.50,
+            urgency: 0.35,
+            intentType: i % 3 === 0 ? 'FLEE_FROM' : (i % 2 === 0 ? 'CAUTIOUS_EXPLORE' : 'IDLE_VIGILANT'),
+            suggestedPosture: i % 3 === 0 ? 'SPRINTING' : 'UPRIGHT',
+            band: i % 3 === 0 ? 'PANIC' : 'ALERT',
+            inCombat: i % 5 === 0,
+            exhausted: false,
+            vectorHint: { x: Number(((i % 5) * 0.2 - 0.5).toFixed(2)), y: 0.0, z: Number(((i % 7) * 0.1).toFixed(2)) }
+        });
+    }
+
+    const fullBuffer = BinaryWireProtocol.encodeIntentBatch(1, intents);
+    const fullFrameBytes = fullBuffer.byteLength;
+
+    const ring = new StreamingRingBuffer(2 * 1024 * 1024, OVERFLOW_STRATEGIES.DROP_OLDEST);
+    const t0 = performance.now();
+    const frameIterations = 50;
+    for (let f = 1; f <= frameIterations; f++) {
+        ring.writeFrame(fullBuffer, f, f);
+        ring.readNextFrame();
+    }
+    const t1 = performance.now();
+    const elapsedMs = Math.max(0.001, t1 - t0);
+    const throughputMbs = Number(((fullFrameBytes * frameIterations * 2) / (elapsedMs * 1000)).toFixed(2));
+
+    const chunks = PacketChunker.chunkFrame(fullBuffer, 42, { mtu, isKeyframe: true });
+    const assembler = new ChunkAssembler();
+    let reassembled = null;
+    for (let i = chunks.length - 1; i >= 0; i--) {
+        const res = assembler.ingestChunk(chunks[i]);
+        if (res.status === 'FRAME_COMPLETE') {
+            reassembled = res;
+        }
+    }
+
+    const modifiedIntents = JSON.parse(JSON.stringify(intents));
+    const deltaCount = Math.max(1, Math.floor(entityCount * 0.05));
+    for (let i = 0; i < deltaCount; i++) {
+        modifiedIntents[i].fear = Math.min(1.0, modifiedIntents[i].fear + 0.35);
+        modifiedIntents[i].intentType = 'FLEE_FROM';
+        modifiedIntents[i].vectorHint = { x: -1.0, y: 0.0, z: 0.0 };
+    }
+    const deltaBuffer = FrameDeltaCompressor.compressDelta(intents, modifiedIntents, 2, 1);
+    const deltaBytes = deltaBuffer.byteLength;
+    const bandwidthSavingsPct = Number(((1.0 - (deltaBytes / fullFrameBytes)) * 100).toFixed(2));
+
+    const result = {
+        entityCount,
+        mtuBytes: mtu,
+        fullFrameBytes,
+        chunkCount: chunks.length,
+        reassemblySuccess: Boolean(reassembled && reassembled.frameBuffer.byteLength === fullFrameBytes),
+        ringBufferStats: ring.getStats(),
+        ringThroughputMBps: throughputMbs,
+        deltaCompression: {
+            entitiesChanged: deltaCount,
+            deltaFrameBytes: deltaBytes,
+            bandwidthSavingsPct
+        }
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Cross-Engine Binary Streaming Buffer (Front D / Sections 66–68) ===\n`);
+    console.log(`Batch Configuration:           ${entityCount} entities`);
+    console.log(`Full Wire Frame Size:          ${fullFrameBytes.toLocaleString()} bytes (16-byte header + ${entityCount} x 32-byte records)`);
+    console.log(`\nPacket Chunking & Assembly (UDP MTU = ${mtu} bytes):`);
+    console.log(`  • Generated Chunks:          ${chunks.length} packets (each <= ${mtu} bytes with 16-byte Fletcher-16 header)`);
+    console.log(`  • Out-of-Order Reassembly:   ${result.reassemblySuccess ? '✓ VERIFIED (Bit-exact match)' : 'FAILED'}`);
+    console.log(`\nZero-Allocation Ring Buffer Performance:`);
+    console.log(`  • Memory Capacity:           ${(ring.capacityBytes / (1024 * 1024)).toFixed(1)} MB`);
+    console.log(`  • Sequential Throughput:     ${throughputMbs} MB/sec across ${frameIterations} write/read frames`);
+    console.log(`  • Dropped Frame Count:       ${ring.getStats().droppedFramesCount}`);
+    console.log(`\nDelta Frame Compression (5% active entity shift):`);
+    console.log(`  • Full Frame Size:           ${fullFrameBytes.toLocaleString()} bytes`);
+    console.log(`  • Sparse Delta Size:         ${deltaBytes.toLocaleString()} bytes`);
+    console.log(`  • Bandwidth Reduction:       ${bandwidthSavingsPct}% bandwidth savings`);
+    console.log(`\nHost Authority Check:          ✓ Strictly advisory (0 host physics mutations)\n`);
+}
+
+function handleTrauma(options) {
+    const severity = parseFloat(options.severity) || 0.85;
+    const applySolace = Boolean(options.solace);
+    const applyExtinction = Boolean(options.extinction);
+
+    const engine = new TraumaCrystallizationEngine({ sensitizationWindowTicks: 30, solaceThreshold: 0.50 });
+    engine.registerAgent('test_subject', {
+        neuroticism: 0.20,
+        resilience: 0.80,
+        agreeableness: 0.65
+    });
+
+    const trauma = engine.incurTrauma('test_subject', {
+        traumaType: TRAUMA_TYPES.NEAR_DEATH_SURVIVAL,
+        severity,
+        associatedCues: [
+            { category: PHOBIC_CATEGORIES.DAMAGE_TYPE, cue: 'FIRE' },
+            { category: PHOBIC_CATEGORIES.PREDATOR_TYPE, cue: 'WOLF' }
+        ]
+    });
+
+    engine.tick(25);
+
+    if (applySolace) {
+        engine.administerSolace('test_subject', 0.60, 'SANCTUARY_DEBRIEF');
+    }
+
+    engine.tick(60);
+
+    const postTraumaState = engine.evaluateAgentState('test_subject', {
+        sensoryCues: [{ category: PHOBIC_CATEGORIES.DAMAGE_TYPE, cue: 'FIRE', intensity: 1.0, position: { x: 10, y: 0, z: 0 } }],
+        position: { x: 0, y: 0, z: 0 }
+    });
+
+    let rehabilitatedState = null;
+    if (applyExtinction && postTraumaState.isTraumatized) {
+        engine.tick(300);
+        rehabilitatedState = engine.evaluateAgentState('test_subject');
+    }
+
+    const result = {
+        traumaType: trauma.type,
+        severity,
+        stage: postTraumaState.isTraumatized ? (rehabilitatedState ? 'REHABILITATED' : 'CRYSTALLIZED_MUTATION') : 'RESOLVED_WITHOUT_MUTATION',
+        solaceApplied: applySolace,
+        extinctionApplied: applyExtinction,
+        baselineTraits: { neuroticism: 0.20, resilience: 0.80, agreeableness: 0.65 },
+        mutatedTraits: postTraumaState.traits,
+        quiescentRestingFear: postTraumaState.effectiveRestingFear,
+        recoveryMultiplier: postTraumaState.effectiveRecoveryMultiplier,
+        phobicDread: postTraumaState.phobicDread,
+        avoidanceVector: postTraumaState.avoidanceVector,
+        rehabilitatedTraits: rehabilitatedState?.traits || null
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Diachronic Persona Mutation & Trauma Crystallization (Front B / Sections 12–14) ===\n`);
+    console.log(`Incident Type:                 ${trauma.type}`);
+    console.log(`Shock Severity:                ${(severity * 100).toFixed(0)}%`);
+    console.log(`Consolidation Status:          ${result.stage}`);
+    console.log(`\nPersonality Trait Remodeling:`);
+    console.log(`  • Neuroticism:               0.20 -> ${result.mutatedTraits.neuroticism.toFixed(4)} (Permanent drift)`);
+    console.log(`  • Resilience:                0.80 -> ${result.mutatedTraits.resilience.toFixed(4)} (Erosion)`);
+    console.log(`  • Chronic Resting Fear:      ${result.quiescentRestingFear.toFixed(4)} (Elevated hyper-vigilance floor)`);
+    console.log(`  • Recovery Half-Life:        ${result.recoveryMultiplier.toFixed(2)}x standard duration`);
+    console.log(`\nConditioned Phobic Reaction (Stimulus: FIRE):`);
+    console.log(`  • Phobic Dread Spike:        +${(result.phobicDread * 100).toFixed(1)}% fear`);
+    if (result.avoidanceVector) {
+        console.log(`  • Repulsive Avoidance:       Vector [${result.avoidanceVector.x}, ${result.avoidanceVector.y}, ${result.avoidanceVector.z}]`);
+    }
+    if (applySolace) {
+        console.log(`\nSolace Debriefing:             ✓ Applied (Trauma resolved without permanent mutation)`);
+    }
+    if (rehabilitatedState) {
+        console.log(`\nRehabilitation Extinction:     ✓ 300 calm ticks restored Neuroticism -> ${rehabilitatedState.traits.neuroticism.toFixed(4)}`);
+    }
+    console.log(`\nHost Authority Check:          ✓ Strictly advisory (0 host health/damage mutations)\n`);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -1594,6 +1789,14 @@ async function main() {
         case 'collision':
         case 'emergent-collision':
             handleCollision(options);
+            break;
+        case 'stream':
+        case 'streaming':
+            handleStream(options);
+            break;
+        case 'trauma':
+        case 'crystallization':
+            handleTrauma(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);

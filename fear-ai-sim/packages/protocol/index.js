@@ -31,3 +31,20 @@ export {
     POSTURE_CODES,
     BAND_CODES
 } from './src/BinaryWireProtocol.js';
+
+export {
+    StreamingRingBuffer,
+    PacketChunker,
+    ChunkAssembler,
+    FrameDeltaCompressor,
+    JitterPlaybackBuffer,
+    STREAMING_MAGIC,
+    STREAMING_PROTOCOL_VERSION,
+    DEFAULT_MTU_BYTES,
+    CHUNK_HEADER_SIZE_BYTES,
+    OVERFLOW_STRATEGIES,
+    CHUNK_FLAGS,
+    DELTA_FIELD_FLAGS,
+    computeFletcher16
+} from './src/StreamingFrameBuffer.js';
+
