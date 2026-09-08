@@ -284,9 +284,10 @@ export class FrontierValleySimulation {
             this.factionSystem.advanceTick(1);
 
             // Check if route danger triggers reroutes
-            const passRoute = this.civSystem.routes.get(FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS);
-            if (passRoute && passRoute.perceivedDanger >= 0.60) {
-                this.macroMetrics.routeFailures++;
+            for (const route of this.civSystem.routes.values()) {
+                if (route.perceivedDanger >= 0.60) {
+                    this.macroMetrics.routeFailures++;
+                }
             }
 
             // Sample fear across groups
@@ -351,6 +352,74 @@ export class FrontierValleySimulation {
                 wildlife: (this.factionSystem.getFaction(FRONTIER_VALLEY_FACTIONS.WILDLIFE)?.militaryReadiness ?? 0) > 0.1
             }
         };
+    }
+
+    /**
+     * Serializes complete Frontier Valley simulation state for deterministic replay and counterfactual forks.
+     * @returns {Object} snapshot
+     */
+    getState() {
+        return {
+            seed: this.seed,
+            currentTick: this.currentTick,
+            rngState: this.rng.getState(),
+            macroMetrics: { ...this.macroMetrics },
+            settlements: Array.from(this.settlements.entries()).map(([id, s]) => ({
+                id,
+                position: { ...s.position },
+                population: s.population,
+                wealth: s.wealth,
+                resources: { ...s.resources }
+            })),
+            factionSystem: this.factionSystem.getState(),
+            civSystem: this.civSystem.getState(),
+            worldSystem: this.worldSystem.exportState()
+        };
+    }
+
+    /**
+     * Restores simulation state from a snapshot.
+     * @param {Object} snapshot
+     */
+    setState(snapshot) {
+        if (!snapshot) return;
+        this.seed = snapshot.seed ?? this.seed;
+        this.currentTick = snapshot.currentTick ?? 0;
+        if (snapshot.rngState) {
+            this.rng.setState(snapshot.rngState);
+        }
+        if (snapshot.macroMetrics) {
+            this.macroMetrics = { ...snapshot.macroMetrics };
+        }
+        if (Array.isArray(snapshot.settlements)) {
+            this.settlements.clear();
+            for (const s of snapshot.settlements) {
+                this.settlements.set(s.id, {
+                    ...s,
+                    position: { ...s.position },
+                    resources: { ...s.resources }
+                });
+            }
+        }
+        if (snapshot.factionSystem) {
+            this.factionSystem.setState(snapshot.factionSystem);
+        }
+        if (snapshot.civSystem) {
+            this.civSystem.setState(snapshot.civSystem);
+        }
+        if (snapshot.worldSystem) {
+            this.worldSystem.importState(snapshot.worldSystem);
+        }
+    }
+
+    /**
+     * Clones the simulation at the current tick, producing an independent running instance.
+     * @returns {FrontierValleySimulation}
+     */
+    fork() {
+        const cloned = new FrontierValleySimulation({ seed: this.seed });
+        cloned.setState(this.getState());
+        return cloned;
     }
 }
 

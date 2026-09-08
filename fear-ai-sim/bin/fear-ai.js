@@ -32,7 +32,11 @@ import {
     DesignerTuningSafetyValidator,
     ReplayWorkbench,
     FrontierValleySimulation,
-    WorldDegeneracyDetector
+    WorldDegeneracyDetector,
+    EconomicFeedbackSystem,
+    EconomicPathologyDetector,
+    WorldCounterfactualEngine,
+    COUNTERFACTUAL_MUTATIONS
 } from '../packages/core/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
 import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
@@ -73,6 +77,10 @@ function printHelp() {
     console.log(`                     Options: --preset <preset_id>`);
     console.log(`  frontier-valley    Run the Frontier Valley multi-seed simulation + degeneracy check (Front C)`);
     console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
+    console.log(`  counterfactual-world Run causal world fork experiment (Factual vs Counterfactual) (Front E/C)`);
+    console.log(`                     Options: --seed <88888> --fork <15> --horizon <40> --mutation <pacify-bandits|pacify-route|scarcity> --json`);
+    console.log(`  economy            Run systemic commodity production, famine fear, and pathology check (Front C)`);
+    console.log(`                     Options: --ticks <50> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -523,6 +531,90 @@ function handleDiffReplay(options) {
     }
 }
 
+function handleCounterfactualWorld(options) {
+    const seed = parseInt(options.seed || '88888', 10);
+    const forkTick = parseInt(options.fork || '15', 10);
+    const horizonTicks = parseInt(options.horizon || '40', 10);
+    const mutationType = options.mutation || 'pacify-bandits';
+
+    console.log(BANNER);
+    console.log(`=== CAUSAL COUNTERFACTUAL WORLD FORK EXPERIMENT ===`);
+    console.log(`Seed: ${seed} | Fork Tick: ${forkTick} | Horizon: ${horizonTicks} ticks | Intervention: ${mutationType}\n`);
+
+    const sim = new FrontierValleySimulation({ seed });
+
+    let mutation;
+    if (mutationType === 'pacify-route') {
+        mutation = {
+            type: COUNTERFACTUAL_MUTATIONS.ALTER_ROUTE_SECURITY,
+            params: { routeId: 'HighlandPass', perceivedDanger: 0.05, baseSecurity: 0.95 }
+        };
+    } else if (mutationType === 'scarcity') {
+        mutation = {
+            type: COUNTERFACTUAL_MUTATIONS.DEGRADE_COMMODITY_SCARCITY,
+            params: { settlementId: 'Riverbend', commodity: 'food', targetLevel: 0.0 }
+        };
+    } else {
+        mutation = {
+            type: COUNTERFACTUAL_MUTATIONS.PACIFY_BANDIT_RAIDERS,
+            params: {}
+        };
+    }
+
+    const report = WorldCounterfactualEngine.runExperiment({
+        simulation: sim,
+        forkTick,
+        horizonTicks,
+        mutation
+    });
+
+    if (options.json) {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+    }
+
+    console.log(`Causal Finding:`);
+    console.log(`  • First Divergence:   ${report.firstDivergenceTick ? 'Tick ' + report.firstDivergenceTick : 'None (Invariant)'}`);
+    console.log(`  • Δ Population Fear:  ${(report.ate.meanPopulationFearDiff > 0 ? '+' : '') + report.ate.meanPopulationFearDiff}`);
+    console.log(`  • Δ Route Failures:   ${report.ate.routeFailuresDiff}`);
+    console.log(`  • Δ Panic Incidents:  ${report.ate.panicIncidentsDiff}`);
+    console.log(`  • Δ Total Encounters: ${report.ate.totalEncountersDiff}`);
+    console.log(`\nCausal Narrative:\n  ${report.causalNarrative}\n`);
+}
+
+function handleEconomy(options) {
+    const ticks = parseInt(options.ticks || '50', 10);
+
+    console.log(BANNER);
+    console.log(`=== SYSTEMIC ECONOMIC FEEDBACK & PATHOLOGY CHECK ===`);
+    console.log(`Simulating ${ticks} economic ticks across settlements...\n`);
+
+    const econ = new EconomicFeedbackSystem();
+    econ.registerSettlementMarket('Northwatch', { population: 45, initialStockpiles: { food: 30, timber: 80 } });
+    econ.registerSettlementMarket('Riverbend', { population: 65, initialStockpiles: { food: 150, timber: 20 }, production: { food: 4.0 } });
+    econ.registerSettlementMarket('Oakhaven', { population: 90, initialStockpiles: { food: 100, timber: 50 }, garrison: 0.8 });
+
+    econ.tick(ticks);
+
+    const report = EconomicPathologyDetector.validate(econ);
+
+    if (options.json) {
+        console.log(JSON.stringify({ markets: Array.from(econ.settlementMarkets.keys()).map(id => econ.getMarketSummary(id)), report }, null, 2));
+        return;
+    }
+
+    console.log(`Settlement Market State:`);
+    for (const [id] of econ.settlementMarkets.entries()) {
+        const summary = econ.getMarketSummary(id);
+        console.log(`  • ${id.padEnd(12)}: Food Stockpile=${summary.foodStockpile}, Price=$${summary.foodPrice}, Famine Fear Delta=+${summary.desperationFearModifier}`);
+    }
+
+    console.log(`\nPathology Validation: ${report.healthy ? '✓ CERTIFIED HEALTHY (Zero Critical Pathologies)' : '✗ PATHOLOGIES DETECTED'}`);
+    for (const p of report.pathologies) {
+        console.log(`  • [${p.severity}] ${p.type}: ${p.description}`);
+    }
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -542,6 +634,12 @@ async function main() {
             break;
         case 'frontier-valley':
             handleFrontierValley(options);
+            break;
+        case 'counterfactual-world':
+            handleCounterfactualWorld(options);
+            break;
+        case 'economy':
+            handleEconomy(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);

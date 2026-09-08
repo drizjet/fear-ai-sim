@@ -104,3 +104,12 @@ export {
     FRONTIER_VALLEY_SETTLEMENTS,
     FRONTIER_VALLEY_ROUTES
 } from './src/FrontierValleySimulation.js';
+export {
+    EconomicFeedbackSystem,
+    EconomicPathologyDetector,
+    ECONOMIC_PATHOLOGIES
+} from './src/EconomicFeedbackSystem.js';
+export {
+    WorldCounterfactualEngine,
+    COUNTERFACTUAL_MUTATIONS
+} from './src/WorldCounterfactualEngine.js';

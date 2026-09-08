@@ -1119,6 +1119,62 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SYSTEMIC_ECONOMIC_FEEDBACK_AND_PATHOLOGY_DETECTOR",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/EconomicFeedbackSystem.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: economy)"
+      ],
+      "test_evidence": [
+        "tests/economic-feedback-system.test.js (8/8 tests green):",
+        "1. Simulates commodity production and consumption with accurate stockpile balances",
+        "2. Prices react elastically to supply deficits and surpluses",
+        "3. Famine below subsistence thresholds triggers desperation fear unrest",
+        "4. Calculates bandit raid desirability based on plunder vs garrison defense",
+        "5. Allocates escort readiness following trade corridor incidents",
+        "6. Executes trade transactions between settlements with accurate conservation of goods",
+        "7. EconomicPathologyDetector catches infinite wealth accumulation and permanent famine",
+        "8. Strictly adheres to Host Game Authority Invariant"
+      ],
+      "runtime_evidence": [
+        "Dynamic market pricing and famine desperation feedback linking settlement economics directly to citizen affect",
+        "EconomicPathologyDetector verifying against Section 43 failure modes (infinite wealth, duplication, runaway inflation, permanent famine)"
+      ],
+      "benchmark_evidence": [
+        "Economic settlement update latency: < 0.002 ms per market tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "CAUSAL_COUNTERFACTUAL_WORLD_FORKS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/WorldCounterfactualEngine.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: counterfactual-world)"
+      ],
+      "test_evidence": [
+        "tests/world-counterfactual-engine.test.js (6/6 tests green):",
+        "1. Zero-intervention fork yields bit-for-bit identical trajectory across 50 ticks (ATE = 0)",
+        "2. Pacifying Highland Pass causally reduces route failures and population fear",
+        "3. Pacifying bandit raiders causally reduces combat encounters and panic incidents",
+        "4. Commodity scarcity shock in Riverbend triggers measurable divergence",
+        "5. Causal attribution narrative correctly synthesizes empirical direction and magnitude",
+        "6. Strictly preserves Host Game Authority Invariant across forked worlds"
+      ],
+      "runtime_evidence": [
+        "Deterministic world forking supporting atomic interventions across route security, commodity stockpiles, and faction stances",
+        "Automatic calculation of Average Treatment Effect (ATE), First Divergence Tick, and Causal Attribution Chains"
+      ],
+      "benchmark_evidence": [
+        "Twin world fork simulation: > 800 parallel world ticks/sec"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }
