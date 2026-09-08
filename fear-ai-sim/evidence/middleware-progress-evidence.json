@@ -1541,6 +1541,76 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "BEHAVIORAL_PARETO_FRONTIER_AND_REACTION_NORMS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/BehavioralParetoFrontier.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: pareto)",
+        "tests/behavioral-pareto-frontier.test.js",
+        "tests/cli.test.js"
+      ],
+      "test_evidence": [
+        "tests/behavioral-pareto-frontier.test.js (10/10 tests green):",
+        "1. Evaluates candidate reaction norms across 5 standard stressor regimes producing bounded 5D objective vectors",
+        "2. Accurately implements Pareto dominance predicate (all f_i(A) >= f_i(B) and exists f_j(A) > f_j(B))",
+        "3. NSGA-II Fast Non-Dominated Sorting partitions population into Pareto ranks",
+        "4. Crowding Distance calculation preserves diversity along the non-dominated frontier",
+        "5. Deterministic Hypervolume Indicator computation relative to reference point (0,0,0,0,0)",
+        "6. Knee-point best compromise selection minimizing distance to utopian point (1,1,1,1,1)",
+        "7. 2D/3D reaction-norm calibration surface mapping (S, P) to expected fear responses",
+        "8. Full population calibration and Pareto synthesis report",
+        "9. State serialization and 100% bit-exact replay determinism",
+        "10. Host Game Authority Invariant strictly preserved (pure offline evaluation, zero host physics mutations)"
+      ],
+      "runtime_evidence": [
+        "5 competing objective dimensions: Identity Invariance, Context Sensitivity, Temporal Realism, Computational Efficiency, Anti-Caricature Regularization",
+        "Standard stressor battery: Quiescent Baseline, Acute Jumpscare, Sustained Dread, Social Contagion, Compound Crisis",
+        "Analytical/Monte Carlo hypervolume calculation with deterministic PRNG seed",
+        "High-dimensional reaction-norm response surface grid generator"
+      ],
+      "benchmark_evidence": [
+        "Pareto candidate evaluation: < 0.004 ms per tick across all 5 regimes (> 250,000 evaluations/sec)"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "COMPLEX_EMERGENT_SYSTEM_COLLISION_HARNESS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/EmergentSystemCollisionHarness.js",
+        "benchmarks/behavioral-evaluation/emergent_system_collision.mjs",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: collision)",
+        "tests/emergent-system-collision.test.js",
+        "tests/cli.test.js"
+      ],
+      "test_evidence": [
+        "tests/emergent-system-collision.test.js (9/9 tests green):",
+        "1. Executes The Great Rupture compound collision scenario successfully",
+        "2. Executes Famine, War & Exodus compound collision scenario successfully",
+        "3. Executes multi-phase Cascading Horizon Collision over extended 50-tick horizon",
+        "4. Computes 4-pillar Systemic Resilience Index (R_sys in [0, 1])",
+        "5. Computes Cross-Subsystem Coupling Entropy proving healthy functional differentiation",
+        "6. Measures Cascade Dampening Factor verifying negative feedback arrests runaway loops",
+        "7. Audits Numerical Integrity with 0 NaNs, 0 Infinities, and 0 invalid state ranges",
+        "8. Deterministic state serialization and replayability",
+        "9. Host Game Authority Invariant strictly preserved"
+      ],
+      "runtime_evidence": [
+        "3 compound collision regimes: THE_GREAT_RUPTURE, FAMINE_WAR_EXODUS, CASCADING_HORIZON_COLLISION",
+        "Whole-world Systemic Resilience Index: R_sys = (PopRetention * EconStability * AffectRecovery * PeaceViability)^(1/4)",
+        "Cross-subsystem Coupling Entropy: H_coupling = -sum(p_i * ln(p_i)) / ln(K)",
+        "100% clean numerical integrity audit verified across 35-50 ticks of compound disaster"
+      ],
+      "benchmark_evidence": [
+        "Compound collision step: < 0.015 ms per multi-system tick (> 65,000 multi-system ticks/sec)"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -176,3 +176,14 @@ export {
     INTERVENTION_TYPES,
     CONSEQUENCE_DOMAINS
 } from './src/ScenarioInterventionSystem.js';
+export {
+    BehavioralParetoFrontier,
+    OBJECTIVE_KEYS,
+    DEFAULT_OBJECTIVE_WEIGHTS,
+    STANDARD_STRESSOR_REGIMES
+} from './src/BehavioralParetoFrontier.js';
+export {
+    EmergentSystemCollisionHarness,
+    COLLISION_SCENARIOS,
+    SYSTEMIC_HEALTH_METRICS
+} from './src/EmergentSystemCollisionHarness.js';

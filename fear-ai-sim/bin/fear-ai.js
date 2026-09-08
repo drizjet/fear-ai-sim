@@ -77,7 +77,10 @@ import {
     ROAMING_ENCOUNTER_RESOLUTIONS,
     ScenarioInterventionSystem,
     INTERVENTION_TYPES,
-    CONSEQUENCE_DOMAINS
+    CONSEQUENCE_DOMAINS,
+    BehavioralParetoFrontier,
+    EmergentSystemCollisionHarness,
+    COLLISION_SCENARIOS
 } from '../packages/core/index.js';
 import { BinaryWireProtocol, BinaryFrameReader } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
@@ -145,6 +148,10 @@ function printHelp() {
     console.log(`                     Options: --bands <number> --ticks <number> --json`);
     console.log(`  intervene          Execute player/designer scenario interventions and track causal consequences (Front A/Sections 116–117)`);
     console.log(`                     Options: --action <threat|assassinate|blockade|drought|peace> --ticks <number> --json`);
+    console.log(`  pareto             Evaluate candidate reaction norms on Behavioral Pareto Frontier & Calibration Surface (Front B/Sections 10–11 & 89)`);
+    console.log(`                     Options: --preset <presetId> --candidates <count> --surface --json`);
+    console.log(`  collision          Execute complex emergent multi-system collision stress test (Front E/Sections 61–63)`);
+    console.log(`                     Options: --scenario <rupture|famine|horizon> --ticks <count> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -1415,6 +1422,108 @@ function handleIntervene(options) {
     console.log(`  • Host Authority Check:      ✓ Strictly advisory (0 host physics mutations)\n`);
 }
 
+function handlePareto(options) {
+    const presetId = options.preset || 'STOIC_VETERAN';
+    const numCandidates = parseInt(options.candidates, 10) || 5;
+    const wantSurface = Boolean(options.surface);
+
+    const basePreset = CANONICAL_PRESETS[presetId] || CANONICAL_PRESETS.STOIC_VETERAN;
+    const frontier = new BehavioralParetoFrontier({ evaluationTicksPerRegime: 15 });
+
+    const candidates = [];
+    for (let i = 0; i < numCandidates; i++) {
+        const factor = 1.0 + (i - Math.floor(numCandidates / 2)) * 0.12;
+        candidates.push({
+            id: `${presetId}_variant_${i + 1}`,
+            presetId,
+            traits: {
+                ...basePreset.traits,
+                neuroticism: Math.max(0.05, Math.min(0.95, basePreset.traits.neuroticism * factor)),
+                resilience: Math.max(0.05, Math.min(0.95, basePreset.traits.resilience * (2.0 - factor)))
+            },
+            behaviorCard: { ...basePreset.behaviorCard }
+        });
+    }
+
+    const report = frontier.calibratePopulation(candidates);
+    let surface = null;
+    if (wantSurface && report.bestCompromise) {
+        surface = frontier.generateCalibrationSurface(report.bestCompromise.candidate, 4);
+    }
+
+    const result = {
+        preset: presetId,
+        totalEvaluated: report.totalEvaluated,
+        hypervolume: report.hypervolume,
+        bestCompromise: report.bestCompromise ? {
+            id: report.bestCompromise.id,
+            objectives: report.bestCompromise.objectives,
+            distanceToUtopia: report.distanceToUtopia
+        } : null,
+        front1Size: report.front1Size,
+        surface
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Behavioral Pareto Frontier (Front B / Sections 10–11 & 89) ===\n`);
+    console.log(`Target Archetype Preset:       ${presetId}`);
+    console.log(`Candidates Evaluated:          ${report.totalEvaluated}`);
+    console.log(`Non-Dominated Front Size:      ${report.front1Size}`);
+    console.log(`Hypervolume Indicator:         ${report.hypervolume.toFixed(4)}`);
+    if (report.bestCompromise) {
+        console.log(`\nOptimal Knee-Point Compromise:  ${report.bestCompromise.id}`);
+        console.log(`  • Identity Invariance:       ${report.bestCompromise.objectives.identity_invariance.toFixed(4)}`);
+        console.log(`  • Context Sensitivity:       ${report.bestCompromise.objectives.context_sensitivity.toFixed(4)}`);
+        console.log(`  • Temporal Realism:          ${report.bestCompromise.objectives.temporal_realism.toFixed(4)}`);
+        console.log(`  • Computational Efficiency:  ${report.bestCompromise.objectives.computational_efficiency.toFixed(4)}`);
+        console.log(`  • Anti-Caricature Score:     ${report.bestCompromise.objectives.anti_caricature.toFixed(4)}`);
+        console.log(`  • Distance to Utopia:        ${report.distanceToUtopia.toFixed(4)}`);
+    }
+    if (surface) {
+        console.log(`\nCalibration Surface Grid (${surface.resolution}x${surface.resolution}): Generated ${surface.gridSize} points.`);
+    }
+    console.log(`\nHost Authority Check:          ✓ Strictly advisory (0 host transforms mutated)\n`);
+}
+
+function handleCollision(options) {
+    const rawScenario = (options.scenario || 'rupture').toLowerCase();
+    let scenarioName = COLLISION_SCENARIOS.THE_GREAT_RUPTURE;
+    if (rawScenario.includes('famine') || rawScenario.includes('exodus')) {
+        scenarioName = COLLISION_SCENARIOS.FAMINE_WAR_EXODUS;
+    } else if (rawScenario.includes('horizon') || rawScenario.includes('cascade')) {
+        scenarioName = COLLISION_SCENARIOS.CASCADING_HORIZON_COLLISION;
+    }
+
+    const ticks = parseInt(options.ticks, 10) || 35;
+    const harness = new EmergentSystemCollisionHarness();
+    const result = harness.runCollision(scenarioName, { ticks });
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Complex Emergent System Collision Harness (Front E / Sections 61–63) ===\n`);
+    console.log(`Compound Collision Scenario:   ${result.scenario}`);
+    console.log(`Simulation Duration:           ${result.totalTicks} ticks`);
+    console.log(`Systemic Health & Resilience Metrics:`);
+    console.log(`  • Systemic Resilience Index: ${result.metrics.resilienceIndex.toFixed(4)} (4-pillar geometric mean)`);
+    console.log(`  • Coupling Entropy:          ${result.metrics.couplingEntropy.toFixed(4)} (activity differentiation)`);
+    console.log(`  • Cascade Dampening Factor:  ${result.metrics.cascadeDampening.toFixed(4)}`);
+    console.log(`  • Recovery Latency:          ${result.metrics.recoveryLatency} ticks post-shock`);
+    console.log(`  • Numerical Integrity Audit: ${result.metrics.numericalIntegrity.status} (0 NaNs, 0 Infs)`);
+    console.log(`\nPillar Breakdown:`);
+    console.log(`  • Population Retention:      ${result.metrics.pillars.populationRetention.toFixed(4)}`);
+    console.log(`  • Economic Stability:        ${result.metrics.pillars.economicStability.toFixed(4)}`);
+    console.log(`  • Affective Recovery:        ${result.metrics.pillars.affectiveRecovery.toFixed(4)}`);
+    console.log(`  • Peace Viability:           ${result.metrics.pillars.peaceViability.toFixed(4)}`);
+    console.log(`\nHost Authority Check:          ✓ Strictly advisory (0 host physics mutations)\n`);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -1477,6 +1586,14 @@ async function main() {
         case 'intervene':
         case 'intervention':
             handleIntervene(options);
+            break;
+        case 'pareto':
+        case 'reaction-norm':
+            handlePareto(options);
+            break;
+        case 'collision':
+        case 'emergent-collision':
+            handleCollision(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);

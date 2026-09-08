@@ -225,5 +225,30 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Causal Attribution & Persistence:');
         expect(res.stdout).toContain('Host Authority Check:');
     });
+
+    it('executes "pareto" and outputs non-dominated front and knee-point compromise', async () => {
+        const res = await runCli(['pareto', '--preset', 'STOIC_VETERAN', '--candidates', '4', '--surface']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Behavioral Pareto Frontier');
+        expect(res.stdout).toContain('Target Archetype Preset:');
+        expect(res.stdout).toContain('Candidates Evaluated:');
+        expect(res.stdout).toContain('Hypervolume Indicator:');
+        expect(res.stdout).toContain('Optimal Knee-Point Compromise:');
+        expect(res.stdout).toContain('Identity Invariance:');
+        expect(res.stdout).toContain('Calibration Surface Grid');
+    });
+
+    it('executes "collision" and outputs whole-world systemic resilience metrics', async () => {
+        const res = await runCli(['collision', '--scenario', 'rupture', '--ticks', '20']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Complex Emergent System Collision Harness');
+        expect(res.stdout).toContain('Compound Collision Scenario:');
+        expect(res.stdout).toContain('THE_GREAT_RUPTURE');
+        expect(res.stdout).toContain('Systemic Resilience Index:');
+        expect(res.stdout).toContain('Coupling Entropy:');
+        expect(res.stdout).toContain('Cascade Dampening Factor:');
+        expect(res.stdout).toContain('Numerical Integrity Audit:');
+        expect(res.stdout).toContain('CLEAN');
+    });
 });
 
