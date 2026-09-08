@@ -119,3 +119,13 @@ export {
     AFFORDANCE_DIMENSIONS,
     SITUATION_PATHOLOGIES
 } from './src/SituationStrengthProfiler.js';
+export {
+    EpistemicBeliefEngine,
+    EPISTEMIC_PROVENANCE,
+    BELIEF_CATEGORIES
+} from './src/EpistemicBeliefEngine.js';
+export {
+    FactionGovernanceSystem,
+    GOVERNANCE_ARCHETYPES,
+    FACTION_DIRECTIVES
+} from './src/FactionGovernanceSystem.js';

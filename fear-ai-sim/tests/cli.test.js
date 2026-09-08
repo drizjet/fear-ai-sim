@@ -134,4 +134,13 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Zero-Copy Read:');
         expect(res.stdout).toContain('Throughput:');
     });
+
+    it('executes "governance" and outputs collective deliberation results', async () => {
+        const res = await runCli(['governance', '--severity', '0.7']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('FACTION COLLECTIVE GOVERNANCE & DELIBERATION');
+        expect(res.stdout).toContain('MILITARY_JUNTA');
+        expect(res.stdout).toContain('MERCHANT_OLIGARCHY');
+        expect(res.stdout).toContain('TRIBAL_CONSENSUS');
+    });
 });

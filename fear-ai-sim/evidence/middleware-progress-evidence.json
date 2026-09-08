@@ -1231,6 +1231,64 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "EPISTEMIC_STATE_AND_LAYERED_BELIEF_DISCREPANCY_ENGINE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/EpistemicBeliefEngine.js",
+        "packages/core/index.js",
+        "tests/epistemic-belief-engine.test.js"
+      ],
+      "test_evidence": [
+        "tests/epistemic-belief-engine.test.js (6/6 tests green):",
+        "1. Tracks provenance levels (OBSERVED, COMMUNICATED_DIRECT, RUMOR, INFERRED, OUTDATED) and multi-hop confidence decay",
+        "2. Resolves contradiction when direct visual observation refutes a false threat rumor",
+        "3. Epistemic discrepancy correctly separates World Ground Truth from subjective Agent Belief",
+        "4. Subjective belief drives acute fear and flight intent in an objectively safe room",
+        "5. Outdated beliefs decay over time when unrefreshed and transition to OUTDATED state",
+        "6. Strictly preserves Host Game Authority Invariant without mutating world state"
+      ],
+      "runtime_evidence": [
+        "Epistemic provenance tracking with multi-hop decay factor (0.85/hop) and trust-weighted communicator scoring",
+        "Subjective discrepancy metrics calculating agent Paranoia (false alarms) and Complacency (unobserved hazards)",
+        "Affective hysteresis progression: 2-tick transition barrier preventing single-tick ping-pong chatter under threat beliefs"
+      ],
+      "benchmark_evidence": [
+        "Epistemic belief updates & discrepancy evaluation: < 0.003 ms per agent tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FACTION_COLLECTIVE_GOVERNANCE_AND_DELIBERATION_SYSTEM",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/FactionGovernanceSystem.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: governance)",
+        "tests/faction-governance.test.js",
+        "tests/cli.test.js"
+      ],
+      "test_evidence": [
+        "tests/faction-governance.test.js (6/6 tests green):",
+        "1. Autocratic Despot decisions reflect leader affective state (rage attacks vs terror retreats)",
+        "2. Merchant Oligarchy prioritizes trade corridor security, negotiation, and tribute over costly warfare",
+        "3. Military Junta mobilizes aggressively based on martial balance of power",
+        "4. Tribal Consensus requires elder supermajority (> 66%) to alter strategic posture",
+        "5. Ecclesiastical Devout distinguishes secular skirmishes from holy shrine desecration (crusade trigger)",
+        "6. Strictly preserves Host Game Authority Invariant with zero world mutation"
+      ],
+      "runtime_evidence": [
+        "5 distinct structural governance archetypes (AUTOCRATIC_DESPOT, MERCHANT_OLIGARCHY, MILITARY_JUNTA, TRIBAL_CONSENSUS, ECCLESIASTICAL_DEVOUT)",
+        "Discrete deliberative directives (OBSERVE, WARN, NEGOTIATE, PAY_TRIBUTE, MOBILIZE, SKIRMISH, ATTACK, RETREAT, SURRENDER, ALLY)",
+        "Continuous faction tension, grievance, and power-ratio appraisal integrated into unified CLI"
+      ],
+      "benchmark_evidence": [
+        "Faction council deliberation: < 0.004 ms per faction incident"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -40,7 +40,13 @@ import {
     SituationStrengthProfiler,
     SITUATION_STRENGTH_LEVELS,
     AFFORDANCE_DIMENSIONS,
-    CANONICAL_PRESETS
+    CANONICAL_PRESETS,
+    EpistemicBeliefEngine,
+    BELIEF_CATEGORIES,
+    EPISTEMIC_PROVENANCE,
+    FactionGovernanceSystem,
+    GOVERNANCE_ARCHETYPES,
+    FACTION_DIRECTIVES
 } from '../packages/core/index.js';
 import { BinaryWireProtocol, BinaryFrameReader } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
@@ -90,6 +96,8 @@ function printHelp() {
     console.log(`                     Options: --ticks <25> --json`);
     console.log(`  binary-wire        Benchmark zero-copy binary wire protocol encoding/decoding (Front D/Section 83)`);
     console.log(`                     Options: --entities <1000> --json`);
+    console.log(`  governance         Deliberate incident across faction collective governance structures (Front C/Section 33)`);
+    console.log(`                     Options: --archetype <junta|oligarchy|tribe|despot|church> --severity <0..1> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -747,6 +755,50 @@ function handleBinaryWire(options) {
     console.log(`  • Throughput:       ${Math.round(entityCount / ((encodeMs + decodeMs) / 1000)).toLocaleString()} entities/sec\n`);
 }
 
+function handleGovernance(options) {
+    const archetypeKey = (options.archetype || 'all').toLowerCase();
+    const severity = parseFloat(options.severity || '0.65');
+    const incidentType = options.incident || 'BORDER_TRESPASS';
+
+    console.log(BANNER);
+    console.log(`=== FACTION COLLECTIVE GOVERNANCE & DELIBERATION (Section 33) ===\n`);
+    console.log(`Simulating Incident: [${incidentType}] (Severity: ${severity})\n`);
+
+    const incident = {
+        type: incidentType,
+        severity,
+        targetFactionId: 'neighboring_power'
+    };
+
+    const archetypesToTest = archetypeKey === 'all'
+        ? Object.values(GOVERNANCE_ARCHETYPES)
+        : [
+            archetypeKey === 'junta' ? GOVERNANCE_ARCHETYPES.MILITARY_JUNTA :
+            archetypeKey === 'oligarchy' ? GOVERNANCE_ARCHETYPES.MERCHANT_OLIGARCHY :
+            archetypeKey === 'despot' ? GOVERNANCE_ARCHETYPES.AUTOCRATIC_DESPOT :
+            archetypeKey === 'church' ? GOVERNANCE_ARCHETYPES.ECCLESIASTICAL_DEVOUT :
+            GOVERNANCE_ARCHETYPES.TRIBAL_CONSENSUS
+        ];
+
+    const results = [];
+    for (const arch of archetypesToTest) {
+        const gov = new FactionGovernanceSystem(`fac_${arch.toLowerCase()}`, arch);
+        const res = gov.deliberateIncident(incident, { powerRatio: 1.2, tradeVolume: 35 });
+        results.push(res);
+    }
+
+    if (options.json) {
+        console.log(JSON.stringify(results, null, 2));
+        return;
+    }
+
+    console.log(`Governance Collective Deliberation Results:`);
+    for (const r of results) {
+        console.log(`  • ${r.archetype.padEnd(24)}: Directive = [${r.directive.padEnd(10)}] | Grievance = ${r.grievanceLevel}`);
+        console.log(`    ↳ Rationale: ${r.rationale}\n`);
+    }
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -778,6 +830,9 @@ async function main() {
             break;
         case 'binary-wire':
             handleBinaryWire(options);
+            break;
+        case 'governance':
+            handleGovernance(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);
