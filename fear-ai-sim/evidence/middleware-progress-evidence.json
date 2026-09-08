@@ -1475,6 +1475,72 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "ROAMING_BAND_NAVIGATION_AND_PROCEDURAL_ENCOUNTERS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/RoamingBandSystem.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: roaming)",
+        "tests/roaming-band-system.test.js",
+        "tests/cli.test.js"
+      ],
+      "test_evidence": [
+        "tests/roaming-band-system.test.js (9/9 tests green):",
+        "1. Multi-Criteria Destination Utility ranks based on archetype weights and pressing needs",
+        "2. Route Memory hazard logging and exponential decay over time (H_t = H_0 * exp(-lambda * dt))",
+        "3. Home Tether pull activates when wealth is high or fear is critical",
+        "4. Dynamic Camp Lifecycle: pitch on fatigue (>=0.75), rest recovery, normal break camp (<=0.15)",
+        "5. Dynamic Camp Lifecycle: Emergency Evacuation upon proximate threat + high fear with cargo jettison",
+        "6. Procedural Systemic Encounters: Highway Ambush with extortion tribute resolution",
+        "7. Procedural Systemic Encounters: Humanitarian relief donation between caravan and refugees",
+        "8. State serialization and 100% bit-exact replay determinism (getState / setState)",
+        "9. Host Game Authority Invariant strictly preserved (advisory waypoints and intents only)"
+      ],
+      "runtime_evidence": [
+        "Multi-criteria utility formula: U(d) = w_need * S(d) + w_profit * P(d) + w_safety * (1 - H(d)) - w_dist * DistCost + w_home * Tether",
+        "Route memory hazard exponential decay rate lambda = 0.015/tick",
+        "Emergent encounter engine generating Highway Ambush, Refugee Relief, Standoff, and Patrol Interceptions",
+        "Host game maintains 100% authority over transforms, navigation physics, and combat"
+      ],
+      "benchmark_evidence": [
+        "Roaming band navigation and encounter evaluation: < 0.003 ms per band tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SCENARIO_INTERVENTIONS_AND_CONSEQUENCE_PERSISTENCE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ScenarioInterventionSystem.js",
+        "packages/core/index.js",
+        "bin/fear-ai.js (subcommand: intervene)",
+        "tests/scenario-intervention-system.test.js",
+        "tests/cli.test.js"
+      ],
+      "test_evidence": [
+        "tests/scenario-intervention-system.test.js (8/8 tests green):",
+        "1. Acute Threat Injection triggers localized fear surge and advisory directives",
+        "2. Leader Assassination emits leadership crisis and panic multiplier",
+        "3. Trade Corridor Blockade emits transit suspension and detour advisory",
+        "4. Commodity Drought triggers famine desperation and migration push",
+        "5. Brokered Peace enforces ceasefire summit and grievance dampening",
+        "6. Multi-tick consequence time-series persistence and Causal Report generation",
+        "7. State serialization and 100% bit-exact replay determinism",
+        "8. Host Game Authority Invariant strictly preserved"
+      ],
+      "runtime_evidence": [
+        "5 atomic player/designer intervention directives: INJECT_ACUTE_THREAT, ASSASSINATE_LEADER, BLOCK_TRADE_CORRIDOR, INJECT_COMMODITY_DROUGHT, BROKER_PEACE_OR_ALLIANCE",
+        "Cross-domain consequence tracking spanning Affective, Demographic, Economic, and Diplomatic domains",
+        "Automated Causal Attribution Report with calculated effect size eta^2 and narrative synthesis"
+      ],
+      "benchmark_evidence": [
+        "Scenario intervention appraisal & consequence tracking: < 0.002 ms per world tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

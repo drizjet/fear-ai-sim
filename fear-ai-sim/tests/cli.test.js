@@ -205,4 +205,25 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('Footprint Reduction:');
         expect(res.stdout).toContain('VERIFIED BIT-EXACT PARITY');
     });
+
+    it('executes "roaming" and outputs destination utility and emergent encounters', async () => {
+        const res = await runCli(['roaming', '--ticks', '15']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Roaming Band Navigation & Procedural Encounters');
+        expect(res.stdout).toContain('Simulation Summary:');
+        expect(res.stdout).toContain('Active Roaming Bands:');
+        expect(res.stdout).toContain('Top Multi-Criteria Destination Utility');
+        expect(res.stdout).toContain('Emergent Systemic Encounters:');
+    });
+
+    it('executes "intervene" and outputs causal consequence persistence metrics', async () => {
+        const res = await runCli(['intervene', '--action', 'blockade', '--ticks', '5']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Scenario Consequence & Player Interventions');
+        expect(res.stdout).toContain('Intervention Directive:');
+        expect(res.stdout).toContain('BLOCK_TRADE_CORRIDOR');
+        expect(res.stdout).toContain('Causal Attribution & Persistence:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
 });
+

@@ -162,7 +162,17 @@ export {
     SaveSizeCompactor,
     SNAPSHOT_VERSIONS
 } from './src/WorldSnapshotMigrationCompactor.js';
-
-
-
-
+export {
+    RoamingBandSystem,
+    BAND_ARCHETYPES,
+    BAND_STATES,
+    ROAMING_INTENTS,
+    ENCOUNTER_CATEGORIES,
+    ENCOUNTER_RESOLUTIONS as ROAMING_ENCOUNTER_RESOLUTIONS,
+    DEFAULT_BAND_CONFIG
+} from './src/RoamingBandSystem.js';
+export {
+    ScenarioInterventionSystem,
+    INTERVENTION_TYPES,
+    CONSEQUENCE_DOMAINS
+} from './src/ScenarioInterventionSystem.js';

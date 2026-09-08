@@ -67,7 +67,7 @@ describe('Section 8 / Epoch B: Pixel Pets True External Host Integration', () =>
         expect(content).toContain('Host game (Pixel Pets) remains 100% authoritative');
 
         // Confirms Fear AI does not directly mutate unit transforms or health
-        expect(content).toContain('assert_eq!(unit_after.x, 100.0');
-        expect(content).toContain('assert_eq!(unit_after.hp, 50.0');
+        expect(content).toMatch(/assert_eq!\s*\(\s*unit_after\.x,\s*100\.0/);
+        expect(content).toMatch(/assert_eq!\s*\(\s*unit_after\.hp,\s*50\.0/);
     });
 });

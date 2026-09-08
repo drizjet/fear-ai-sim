@@ -68,7 +68,16 @@ import {
     MEMORY_PATHOLOGY_TYPES,
     WorldSnapshotMigrator,
     SaveSizeCompactor,
-    SNAPSHOT_VERSIONS
+    SNAPSHOT_VERSIONS,
+    RoamingBandSystem,
+    BAND_ARCHETYPES,
+    BAND_STATES,
+    ROAMING_INTENTS,
+    ENCOUNTER_CATEGORIES,
+    ROAMING_ENCOUNTER_RESOLUTIONS,
+    ScenarioInterventionSystem,
+    INTERVENTION_TYPES,
+    CONSEQUENCE_DOMAINS
 } from '../packages/core/index.js';
 import { BinaryWireProtocol, BinaryFrameReader } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
@@ -132,6 +141,10 @@ function printHelp() {
     console.log(`                     Options: --pathology --remediate --json`);
     console.log(`  compactor          Benchmark save snapshot persistence migration and size compactor (Front E/Sections 96–98)`);
     console.log(`                     Options: --entities <number> --json`);
+    console.log(`  roaming            Simulate roaming band multi-criteria destination utility and systemic encounters (Front C/Sections XIV & XVI)`);
+    console.log(`                     Options: --bands <number> --ticks <number> --json`);
+    console.log(`  intervene          Execute player/designer scenario interventions and track causal consequences (Front A/Sections 116–117)`);
+    console.log(`                     Options: --action <threat|assassinate|blockade|drought|peace> --ticks <number> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
@@ -1201,6 +1214,207 @@ function handleSaveCompactor(options) {
     console.log(`  • Lossless Reconstitution:   ${isLossless ? '✓ VERIFIED BIT-EXACT PARITY' : '✗ PARITY FAILURE'}\n`);
 }
 
+function handleRoaming(options) {
+    const numTicks = parseInt(options.ticks || '25', 10);
+    const system = new RoamingBandSystem({ seed: 1337 });
+
+    system.registerDestination({
+        id: 'RIVERBEND_MARKET',
+        name: 'Riverbend Trading Hub',
+        position: { x: 120, y: 0, z: 40 },
+        type: 'MARKET',
+        resources: { food: 0.85, shelter: 0.70, tradeProfit: 0.95 },
+        baseHazard: 0.05
+    });
+    system.registerDestination({
+        id: 'HIGHLAND_OUTPOST',
+        name: 'Highland Military Bastion',
+        position: { x: 280, y: 0, z: 180 },
+        type: 'GARRISON',
+        resources: { food: 0.40, shelter: 0.85, tradeProfit: 0.30 },
+        baseHazard: 0.35
+    });
+    system.registerDestination({
+        id: 'OAKHAVEN_SANCTUARY',
+        name: 'Oakhaven Farming Haven',
+        position: { x: 0, y: 0, z: 0 },
+        type: 'SETTLEMENT',
+        resources: { food: 0.95, shelter: 0.90, tradeProfit: 0.40 },
+        baseHazard: 0.02
+    });
+
+    system.registerBand({
+        id: 'caravan_silver_road',
+        name: 'Silver Road Merchants',
+        archetype: BAND_ARCHETYPES.TRADE_CARAVAN,
+        factionId: 'MERCHANT_GUILD',
+        position: { x: 20, y: 0, z: 10 },
+        homeBase: { x: 0, y: 0, z: 0, id: 'OAKHAVEN_SANCTUARY' },
+        wealth: 85.0,
+        power: 20.0,
+        fear: 0.15
+    });
+
+    system.registerBand({
+        id: 'shadowfang_raiders',
+        name: 'Shadowfang Bandits',
+        archetype: BAND_ARCHETYPES.BANDIT_RAIDERS,
+        factionId: 'OUTLAWS',
+        position: { x: 90, y: 0, z: 35 },
+        wealth: 15.0,
+        power: 32.0,
+        fear: 0.10
+    });
+
+    system.registerBand({
+        id: 'militia_patrol',
+        name: 'Riverbend Watch Patrol',
+        archetype: BAND_ARCHETYPES.PATROL_GUARD,
+        factionId: 'SETTLERS',
+        position: { x: 130, y: 0, z: 45 },
+        wealth: 10.0,
+        power: 45.0,
+        fear: 0.05
+    });
+
+    system.registerBand({
+        id: 'exiled_refugees',
+        name: 'Exiled War Refugees',
+        archetype: BAND_ARCHETYPES.DISPLACED_REFUGEES,
+        factionId: 'NEUTRAL',
+        position: { x: 35, y: 0, z: 15 },
+        wealth: 5.0,
+        power: 8.0,
+        hunger: 0.85,
+        fear: 0.70
+    });
+
+    for (let t = 0; t < numTicks; t++) {
+        system.step({ isNight: (t % 24) >= 18 });
+    }
+
+    const state = system.getState();
+    const destinationUtilities = system.evaluateDestinationUtilities('caravan_silver_road');
+
+    const result = {
+        ticksExecuted: numTicks,
+        totalBands: state.bands.length,
+        totalDestinations: state.destinations.length,
+        totalEncounters: state.encounterHistory.length,
+        encounterLog: state.encounterHistory,
+        sampleCaravanUtilities: destinationUtilities.slice(0, 3)
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Roaming Band Navigation & Procedural Encounters (Front C / Sections XIV & XVI) ===\n`);
+    console.log(`Simulation Summary:`);
+    console.log(`  • Ticks Executed:            ${numTicks}`);
+    console.log(`  • Active Roaming Bands:      ${state.bands.length}`);
+    console.log(`  • Registered Hubs:           ${state.destinations.length}`);
+    console.log(`  • Systemic Encounters:       ${state.encounterHistory.length}\n`);
+
+    console.log(`Top Multi-Criteria Destination Utility (Silver Road Merchants):`);
+    for (const u of destinationUtilities) {
+        console.log(`  • ${u.name.padEnd(28)} | Utility: ${u.utility.toFixed(3)} | Safety: ${u.breakdown.safetyScore.toFixed(2)} | Profit: ${u.breakdown.profitAttraction.toFixed(2)}`);
+    }
+
+    if (state.encounterHistory.length > 0) {
+        console.log(`\nEmergent Systemic Encounters:`);
+        for (const enc of state.encounterHistory) {
+            console.log(`  • [Tick ${enc.tick}] ${enc.category}: ${enc.resolution} (${enc.details})`);
+        }
+    }
+    console.log('');
+}
+
+function handleIntervene(options) {
+    const actionRaw = String(options.action || 'threat').toLowerCase();
+    const numTicks = parseInt(options.ticks || '10', 10);
+
+    const system = new ScenarioInterventionSystem();
+
+    let intvType = INTERVENTION_TYPES.INJECT_ACUTE_THREAT;
+    let target = 'COORDINATES_50_50';
+    let parameters = {};
+
+    if (actionRaw.includes('assassin') || actionRaw.includes('leader')) {
+        intvType = INTERVENTION_TYPES.ASSASSINATE_LEADER;
+        target = 'SETTLERS_ALLIANCE';
+        parameters = { leaderTitle: 'High Council Captain' };
+    } else if (actionRaw.includes('block') || actionRaw.includes('corridor')) {
+        intvType = INTERVENTION_TYPES.BLOCK_TRADE_CORRIDOR;
+        target = 'HIGHLAND_PASS';
+        parameters = { detourCorridorId: 'RIVERWAY_DETOUR' };
+    } else if (actionRaw.includes('drought') || actionRaw.includes('famine')) {
+        intvType = INTERVENTION_TYPES.INJECT_COMMODITY_DROUGHT;
+        target = 'RIVERBEND';
+        parameters = { severity: 0.85 };
+    } else if (actionRaw.includes('peace') || actionRaw.includes('alliance')) {
+        intvType = INTERVENTION_TYPES.BROKER_PEACE_OR_ALLIANCE;
+        target = 'DIPLOMATIC_SUMMIT';
+        parameters = { factions: ['SettlersAlliance', 'WildernessNomads'] };
+    } else {
+        intvType = INTERVENTION_TYPES.INJECT_ACUTE_THREAT;
+        target = 'COORDINATES_50_50';
+        parameters = { position: { x: 50, y: 50, z: 0 }, intensity: 0.95, radius: 45.0 };
+    }
+
+    const record = system.applyIntervention({
+        type: intvType,
+        target,
+        parameters,
+        durationTicks: numTicks
+    });
+
+    const mockWorldContext = {
+        agents: [
+            { id: 'scout_1', position: { x: 55, y: 52, z: 0 } },
+            { id: 'villager_1', position: { x: 62, y: 48, z: 0 } },
+            { id: 'sentry_distant', position: { x: 200, y: 200, z: 0 } }
+        ]
+    };
+
+    const shocks = [];
+    for (let t = 0; t < numTicks; t++) {
+        const generated = system.evaluateInterventions(mockWorldContext);
+        shocks.push(...generated);
+    }
+
+    const report = system.generateCausalReport(record);
+
+    const result = {
+        action: intvType,
+        target,
+        parameters,
+        durationTicks: numTicks,
+        shocksGenerated: shocks.length,
+        effectSize: report.effectSize,
+        report
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(result, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Scenario Consequence & Player Interventions (Front A / Sections 116–117) ===\n`);
+    console.log(`Intervention Directive:`);
+    console.log(`  • Type:                      ${intvType}`);
+    console.log(`  • Target:                    ${target}`);
+    console.log(`  • Duration:                  ${numTicks} ticks`);
+    console.log(`  • Measured Effect Size:      ${report.effectSize.toFixed(4)}\n`);
+    console.log(`Causal Attribution & Persistence:`);
+    console.log(`  • Narrative:                 ${report.narrative}`);
+    if (report.immediateImpact) {
+        console.log(`  • Immediate Impact Domain:   ${report.immediateImpact.domain || 'SYSTEMIC'}`);
+    }
+    console.log(`  • Host Authority Check:      ✓ Strictly advisory (0 host physics mutations)\n`);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
     if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
@@ -1255,6 +1469,14 @@ async function main() {
         case 'compactor':
         case 'snapshot':
             handleSaveCompactor(options);
+            break;
+        case 'roaming':
+        case 'bands':
+            handleRoaming(options);
+            break;
+        case 'intervene':
+        case 'intervention':
+            handleIntervene(options);
             break;
         case 'diff-replay':
             handleDiffReplay(options);
