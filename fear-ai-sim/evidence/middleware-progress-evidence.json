@@ -3847,6 +3847,30 @@
         "Fixed-port dashboard suite remains theoretically exposed to parallel timing flakes (observed once, not quarantined)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RETENTION_SOAK10K_NOW3_4",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        ".gitignore now excludes evidence/heavy-suites.json (untracked; verdict record lives in ledger milestones)",
+        "tests/world-soak-10k.test.js (10k-tick degeneration-monitored soak, serialized gate only)",
+        "tools/heavy-suites.mjs gate extended to 8 suites (slow plus engine-spawn)"
+      ],
+      "test_evidence": [
+        "10k soak green (55 s jest, 27 s plain node); default matrix 331/331 suites (2383 tests); heavy gate 8/8; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "10k ticks: zero degeneration flags, 10000 route decisions, population equilibrates at 44, wealth 104 to 36329 linear (correctly silent under acceleration predicates), 190k events at 19 per tick",
+        "Gate exclusion verified both ways (--listTests 0 by default, 1 with bypass)",
+        "Host game authority invariant strictly preserved (advisory soak only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "10k soak about 27 s plain node, 55 s under jest (jsdom plus ESM overhead)"
+      ],
+      "known_gaps": [
+        "100k/1m-tick ladders still open (LATER-18; event-log memory at 19 per tick needs compaction first)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

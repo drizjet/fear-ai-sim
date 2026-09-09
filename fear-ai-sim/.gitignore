@@ -12,3 +12,6 @@ __pycache__/
 !/bin/
 !/bin/fear-ai.js
 obj/
+# NOW-3: heavy-gate verdict snapshot refreshes every run; record lives in
+# the evidence ledger milestones, not in a churning artifact.
+evidence/heavy-suites.json

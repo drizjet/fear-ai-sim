@@ -35,12 +35,13 @@ export const HEAVY_SUITES = [
   'tests/godot-showcase-verification.test.js',
   'tests/external-pixel-pets-integration.test.js',
   'tests/external-reference-game.test.js',
+  'tests/world-soak-10k.test.js',
 ];
 
 // Single source of truth for the default-gate split: jest.config.js imports
 // this so `npm test` skips these suites; `npm run test:heavy` runs them
-// serialized. Add new engine-spawn suites here, never in jest.config.js
-// directly (the gate-split test enforces this).
+// serialized. Add new slow or engine-spawn suites here, never in
+// jest.config.js directly (the gate-split test enforces this).
 export const HEAVY_IGNORE_PATTERNS = HEAVY_SUITES.map((s) => s.replace(/\./g, '\\.'));
 
 export function runHeavySuites({ suites = HEAVY_SUITES, maxAttempts = 2, logDir = null } = {}) {
