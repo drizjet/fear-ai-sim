@@ -2059,6 +2059,41 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "EXECUTION_AWARE_ADVISORY_LOOP_AND_HOST_FEEDBACK",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/HostFeedbackLoop.js (HostFeedbackLoop, INTENT_OUTCOMES, FAILURE_REASONS, per-agent reliability, structural unavailability, safe fallbacks, deterministic ranking)",
+        "packages/core/index.js (Exports for HostFeedbackLoop and feedback enums)",
+        "bin/fear-ai.js (Added 'feedback', 'execution-aware', 'host-feedback' CLI subcommands with --agent, --intent, --outcome, --reason, --json)",
+        "tests/host-feedback-loop.test.js (reliability gain, phantom filtering, flake tolerance, interruption semantics, per-agent isolation, uncertainty calibration, authority/determinism)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/host-feedback-loop.test.js (7/7 tests green):",
+        "1. Goal completions raise intent reliability",
+        "2. Repeated rejections filter phantom intents from rankings",
+        "3. Single flakes never mark unavailable; structural streak does",
+        "4. Interruptions decay confidence without affordance verdicts",
+        "5. Per-agent isolation with shared global stats",
+        "6. Unseen intents express uncertainty with calibrated confidence",
+        "7. Authority invariant and determinism strictly preserved",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai feedback, fear-ai feedback --json",
+        "Full regression: 283 suites / 2033 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "SEEK_COVER x3 NO_PATH marks agent-local unavailability; rankIntents demotes to FLEE_FROM fallback",
+        "Transient HOST_BUSY and single flakes never trigger unavailability verdicts",
+        "GOAL_COMPLETED clears unavailability (host navmesh fixes propagate back into advisory layer)",
+        "Host game authority invariant strictly preserved (advisory re-ranking only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Outcome report + re-rank latency: < 0.05 ms per agent query",
+        "CLI feedback --json roundtrip: ~125 ms process spawn inclusive"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

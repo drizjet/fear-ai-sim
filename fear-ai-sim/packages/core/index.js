@@ -251,6 +251,12 @@ export {
     CausalEventGraph,
     CAUSAL_DOMAINS
 } from './src/CausalEventGraph.js';
+export {
+    HostFeedbackLoop,
+    INTENT_OUTCOMES,
+    FAILURE_REASONS,
+    DEFAULT_EXECUTION_FALLBACKS
+} from './src/HostFeedbackLoop.js';
 
 
 

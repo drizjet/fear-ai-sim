@@ -120,7 +120,10 @@ import {
     TRANSGRESSION_TYPES,
     ATONEMENT_TYPES,
     CausalEventGraph,
-    CAUSAL_DOMAINS
+    CAUSAL_DOMAINS,
+    HostFeedbackLoop,
+    INTENT_OUTCOMES,
+    FAILURE_REASONS
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -228,6 +231,8 @@ function printHelp() {
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  causal-graph       Build causal event DAG and explain systemic outcome root causes (Frontier E/Sections 156–160)`);
     console.log(`                     Options: --outcome <id> --depth <n> --threshold <0..1> --narrative --json`);
+    console.log(`  feedback           Report host execution outcomes and re-rank advisory intents (Sections 208–211, 288–293)`);
+    console.log(`                     Options: --agent <id> --intent <TYPE> --outcome <GOAL_COMPLETED|INTENT_REJECTED|EXECUTION_FAILED|ACTION_INTERRUPTED> --reason <NO_PATH|BLOCKED|UNSUPPORTED|HOST_BUSY|STALE_INTENT> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1243,6 +1248,46 @@ function handleCausalGraph(options) {
     console.log(`=== CAUSAL EVENT GRAPH & ROOT-CAUSE EXPLAINER (Frontier E/Sections 156–160) ===\n`);
     console.log(narrative);
     console.log(`\nHost Authority Check:         ✓ Strictly advisory causal explanations (0 host physics/inventory mutations)\n`);
+}
+function handleFeedback(options) {
+    const agentId = options.agent || 'scout_01';
+    const loop = new HostFeedbackLoop();
+    loop.recordRecommendation(agentId, 10, { type: 'SEEK_COVER', urgency: 0.85 });
+    loop.recordRecommendation(agentId, 11, { type: 'FLEE_FROM', urgency: 0.8 });
+    for (let i = 0; i < 3; i++) {
+        loop.reportOutcome({ agentId, tick: 12 + i, intentType: 'SEEK_COVER', outcome: INTENT_OUTCOMES.EXECUTION_FAILED, reason: FAILURE_REASONS.NO_PATH });
+    }
+    loop.reportOutcome({ agentId, tick: 15, intentType: 'FLEE_FROM', outcome: INTENT_OUTCOMES.GOAL_COMPLETED, reason: FAILURE_REASONS.UNKNOWN });
+    let liveReport = null;
+    if (options.intent && options.outcome) {
+        const outcomeKey = String(options.outcome).toUpperCase().replace(/-/g, '_');
+        const matchedOutcome = INTENT_OUTCOMES[outcomeKey] || INTENT_OUTCOMES.EXECUTION_FAILED;
+        const reasonKey = options.reason ? String(options.reason).toUpperCase().replace(/-/g, '_') : 'UNKNOWN';
+        const matchedReason = FAILURE_REASONS[reasonKey] || FAILURE_REASONS.UNKNOWN;
+        liveReport = loop.reportOutcome({ agentId, tick: 16, intentType: String(options.intent).toUpperCase(), outcome: matchedOutcome, reason: matchedReason });
+    }
+    const ranking = loop.rankIntents(agentId, [
+        { type: 'SEEK_COVER', score: 0.9 },
+        { type: 'FLEE_FROM', score: 0.8 },
+        { type: 'WARN_GROUP', score: 0.6 },
+        { type: 'FREEZE', score: 0.4 }
+    ]);
+    const summary = loop.getAgentSummary(agentId);
+    const audit = loop.auditImmutability();
+    const payload = { agentId, liveReport, ranking, summary, audit };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== EXECUTION-AWARE ADVISORY LOOP (Sections 208–211, 288–293) ===\n`);
+    console.log(`Agent:                      ${agentId}`);
+    console.log(`SEEK_COVER unavailable:     ${loop.isUnavailable(agentId, 'SEEK_COVER') ? 'YES (host reported NO_PATH x3 → no phantom cover orders)' : 'no'}`);
+    console.log(`FLEE_FROM reliability:      ${loop.reliability(agentId, 'FLEE_FROM')}`);
+    console.log(`Top advisory intent:        ${ranking.top.type}${ranking.downgraded ? ' (SAFE FALLBACK)' : ''}`);
+    console.log(`Rejected alternatives:      ${ranking.rejectedAlternatives.map((r) => `${r.type}→${r.fallback}`).join(', ') || 'none'}`);
+    if (liveReport) console.log(`Live report:                ${liveReport.intentType} ${liveReport.outcome} (${liveReport.reason})`);
+    console.log(`\nHost Authority Check:         ✓ Advisory re-ranking only (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2579,6 +2624,11 @@ async function main() {
         case 'causal':
         case 'root-cause':
             handleCausalGraph(options);
+            break;
+        case 'feedback':
+        case 'execution-aware':
+        case 'host-feedback':
+            handleFeedback(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

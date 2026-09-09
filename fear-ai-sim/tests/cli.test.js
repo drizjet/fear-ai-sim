@@ -474,6 +474,26 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.narrative).toContain('PRIMARY ROOT CAUSE');
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "feedback" and outputs execution-aware re-ranking', async () => {
+        const res = await runCli(['feedback']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('EXECUTION-AWARE ADVISORY LOOP');
+        expect(res.stdout).toContain('SEEK_COVER unavailable:     YES');
+        expect(res.stdout).toContain('Top advisory intent:        FLEE_FROM');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "feedback --json" and returns structured ranking payload', async () => {
+        const res = await runCli(['feedback', '--agent', 'scout_01', '--intent', 'SEEK_COVER', '--outcome', 'EXECUTION_FAILED', '--reason', 'NO_PATH', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.agentId).toBe('scout_01');
+        expect(parsed.ranking.top.type).toBe('FLEE_FROM');
+        expect(parsed.ranking.rejectedAlternatives.map((r) => r.type)).toContain('SEEK_COVER');
+        expect(parsed.liveReport.outcome).toBe('EXECUTION_FAILED');
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 
