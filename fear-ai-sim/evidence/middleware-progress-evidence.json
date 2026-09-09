@@ -4706,6 +4706,29 @@
         "RECOVER still has no escalation path (renewed lethal threat during convalescence cannot re-panic until recovery completes); FearCore hysteresis audit now warranted"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TRIBUTE_VERDICT_NOW19",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/valley-war-pacing.test.js gains tribute tripwire: max bandit power ratio below 1.4 with zero extortions across 5 seeds times 500 ticks"
+      ],
+      "test_evidence": [
+        "Pacing battery 7/7; full matrix 342/342 suites (2477 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Verdict: unreachable by stats consistent with doctrine, not by accident. The 1.4 threshold encodes overwhelming imbalance (tribute under near-peer odds should be combat); observed max is 1.20 over 1560 bandit encounters with victim wealth always above the 0.3 bar",
+        "No stat tuning performed: lowering the threshold or inflating bandit strength to force tribute events would corrupt the encounter doctrine the threshold encodes",
+        "Tripwire fails loudly if future stat tuning opens the path, forcing conscious re-examination instead of silent behavior change",
+        "Host game authority invariant strictly preserved (analytical battery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Tripwire runs in about 50 ms under jest"
+      ],
+      "known_gaps": [
+        "Deliberate tribute-scenario coverage still absent (no fixture forces powerRatio above 1.4 end to end)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

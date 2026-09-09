@@ -105,4 +105,34 @@ describe('NOW-16: extortion provocation mapping', () => {
       FRONTIER_VALLEY_FACTIONS.WILDLIFE,
     ).incidents.length).toBe(before);
   });
+
+  it('NOW-19: tribute path unreachable under current stats (tripwire)', () => {
+    // Verdict: unreachable by stats consistent with doctrine, not by
+    // accident. Extortion needs powerRatio above 1.4 (overwhelming
+    // imbalance: tribute under near-peer odds would mean the victim
+    // should fight, i.e. combat). Observed max is 1.20 across 1560
+    // bandit encounters, so the NOW-16 wiring stays latent by design.
+    // If stat tuning ever opens this path, this test fails loudly and
+    // forces conscious re-examination instead of silent behavior change.
+    let maxRatio = 0;
+    let extortions = 0;
+    for (const seed of [4242, 7, 77, 1234, 999]) {
+      const sim = new FrontierValleySimulation({ seed });
+      for (let t = 0; t < 500; t++) {
+        sim.advance(1);
+        for (const enc of sim.worldSystem.activeEncounters || []) {
+          if (enc.advisoryResolution === 'EXTORTION_PAID') extortions++;
+          const a = sim.worldSystem.groups.get(enc.partyAId);
+          const b = sim.worldSystem.groups.get(enc.partyBId);
+          if (!a || !b) continue;
+          const bandit = a.type === 'BANDITS' ? a : (b.type === 'BANDITS' ? b : null);
+          if (!bandit) continue;
+          const victim = bandit === a ? b : a;
+          maxRatio = Math.max(maxRatio, bandit.militaryStrength / Math.max(0.05, victim.militaryStrength));
+        }
+      }
+    }
+    expect(extortions).toBe(0);
+    expect(maxRatio).toBeLessThan(1.4);
+  });
 });
