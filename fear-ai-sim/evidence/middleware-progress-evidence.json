@@ -4658,6 +4658,28 @@
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
       "next_action": "FEEDBACK_SWEEP_NOW18"
+    },
+    {
+      "milestone": "FEEDBACK_SWEEP_NOW18",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/trauma-feedback-sweep.test.js sweeps fragile, average, stoic, and stoic-max through threat-then-safety: crystallization, trait bounds, identity ordering, determinism"
+      ],
+      "test_evidence": [
+        "Sweep battery 4/4 in about 1 s; full matrix 342/342 suites (2473 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "All archetypes crystallize exactly once with floors in 0.19-0.24 (severity-driven, narrow) while traits separate widely (N 0.31-0.94: identity-driven)",
+        "No permanent panic, no bound violations, fragile ordering preserved over stoic on floor, N, and R",
+        "Host game authority invariant strictly preserved (analytical battery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Sweep battery about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Betrayal-path erosion (agreeableness) unexercised in runtime (only NEAR_DEATH incurred); floor formula ignores resilience"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
