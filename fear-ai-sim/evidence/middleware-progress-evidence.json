@@ -4615,6 +4615,49 @@
         "Panic-onset offset unwired; feedback strength untuned across persona archetypes (one probe persona only)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_8",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 3 milestones since CCI-7 (OUTBREAK_PACING_NOW15, EXTORTION_GRIEVANCE_NOW16, TRAUMA_FEEDBACK_NEXT20), CCI-7 candidate status review, gate-state rerun",
+        "3 commits since CCI-7; all CCI-7 NOW items (15/16) plus NEXT-20 closed and verified",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 341/341 suites (2469 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-17 panic-onset offset wiring (re-examine FearCore injection point; deferred as invasive in NEXT-20).",
+        "NOW-18 trauma feedback strength sweep across persona archetypes (one probe persona measured; feedback now default-on).",
+        "NOW-19 extortion trigger examination (tribute path unreachable in 2500 ticks: design or accident?).",
+        "NEXT-7 merchant belief-formation dynamics (carried).",
+        "NEXT-8 near-neighbor persona discrimination under noise (carried).",
+        "NEXT-9 compaction-wired 100k soak (carried).",
+        "NEXT-10 nested-JSON transport guard (carried).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+        "NEXT-12 handshake determinism review (carried).",
+        "NEXT-13 constructor-only over-credit audit (carried).",
+        "NEXT-14 infinite-loop containment research (carried).",
+        "NEXT-15 FearServer fixed-port production review (carried).",
+        "NEXT-16 trade-dependency conflict behavior (carried).",
+        "NEXT-17 richer rally dynamics for specificity guards (carried).",
+        "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+        "NEXT-21 numeric-field histograms in middle summaries (carried).",
+        "NEXT-22 long-horizon war degeneracy soak beyond 2000 ticks (extends NOW-15).",
+        "LATER-20 second external host architecture (gated on external project availability).",
+        "LATER-21 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-18 (feedback strength bounds the default-on behavior change across the persona space)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "FEEDBACK_SWEEP_NOW18"
     }
   ]
 }
