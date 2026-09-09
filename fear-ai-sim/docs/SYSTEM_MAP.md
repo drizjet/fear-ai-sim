@@ -115,6 +115,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Failure Matrix V3 and Advisory Path Budgets (Sections CXXXVII–CXLII, CCXX–CCXXII):** new engines registered as degradable resilience modules with simultaneous-fault tests; per-link and full-chain latency ceilings plus heap-growth leak detection as regression budgets.
 - **FABE Chunk-Integration Dimensions (Sections CXLVI–CXLIX, CL–CLIII):** `FabeChunkIntegrationSuite` scores six chunk-era dimensions against frozen thresholds with a naive-vector hard negative; retrieval parity recorded honestly (`fear-ai fabe-chunks`).
 - **Memory Relevance and Pathology (Sections XV–XVII):** `MemoryRelevanceScorer` ranks episodic/semantic recall by recency, importance, emotional salience, entity/location/goal match with bounded top-K; `MemoryPathologyBattery` proves eight adversarial guarantees (dedup, saturation, runaway, bounds, rename, flip, flashbulb, trivia decay) (`fear-ai memory-relevance`).
+- **Interaction Coverage Tooling (Sections CCIV–CCV, CLXXXIII):** `InteractionCoverageGraph` mines tested vs benchmark-composed edges across 85 modules and ranks 22 integration-debt pairs; `scripts/cli-dispatch-lint.mjs` fails on duplicate switch labels (`fear-ai coverage`).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

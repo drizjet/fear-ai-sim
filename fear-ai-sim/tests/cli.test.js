@@ -1097,6 +1097,22 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.ranking.ranked.length).toBe(3);
         expect(parsed.pathology.allPass).toBe(true);
     });
+
+    it('executes "coverage" and reports tested edges with debt', async () => {
+        const res = await runCli(['coverage', '--top', '3']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('SUBSYSTEM INTERACTION COVERAGE');
+        expect(res.stdout).toMatch(/Tested edges: \d+/);
+    });
+
+    it('executes "coverage --json" and returns graph payload', async () => {
+        const res = await runCli(['coverage', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.nodeCount).toBeGreaterThan(50);
+        expect(parsed.testedEdges.length).toBeGreaterThan(20);
+        expect(Array.isArray(parsed.debt)).toBe(true);
+    });
 });
 
 

@@ -3157,7 +3157,39 @@
       ],
       "known_gaps": [
         "Memory classes still absent: social, relationship, place, route, rumor, faction (deferred to CHUNK 2/3 territory)",
-        "Duplicate switch-case CLI shadowing has bitten twice; no automated guard yet"
+        "Duplicate switch-case CLI shadowing has bitten twice; automated guard added this chunk (see INTERACTION_COVERAGE_TOOLING)"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "INTERACTION_COVERAGE_TOOLING",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/InteractionCoverageGraph.js (85 nodes; tested edges from tests co-use; composed edges from benchmark co-use; connectivity-ranked debt; isolated list; bin/ excluded to avoid import-all noise; .mjs benchmarks included)",
+        "scripts/cli-dispatch-lint.mjs (fails on duplicate case labels; exit 1 on duplicates)",
+        "packages/core/index.js (InteractionCoverageGraph export)",
+        "bin/fear-ai.js (Added 'coverage', 'interaction-coverage' subcommands with --top, --json)",
+        "tests/interaction-coverage.test.js (node counts, known edge evidence, determinism, debt honesty, isolation honesty, lint clean)"
+      ],
+      "test_evidence": [
+        "tests/interaction-coverage.test.js (6/6 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai coverage, fear-ai coverage --json",
+        "Full regression: 322 suites / 2305 tests green in a single pass; guardian:check CLEAN; evidence lint clean"
+      ],
+      "runtime_evidence": [
+        "Graph reports 85 modules, 63 tested edges, 33 benchmark-composed edges, 22 debt pairs, 6 isolated modules",
+        "Top debt is load-bearing, not trivia: AffectiveAgent+LayeredMemorySystem, AffectiveAgent+RelationshipTensorSystem, FactionSystem+LayeredMemorySystem co-run in scale benchmarks with no joint test",
+        "Dispatch lint: 170 unique case labels, 0 duplicates",
+        "CLI edit caused three mid-chunk breakages (orphaned case block before switch, deleted const command/options, duplicated help line); all caught by node --check plus CLI smoke runs before commit",
+        "Miner self-reference handled honestly: edges keep full evidence lists instead of first-match single file",
+        "Host game authority invariant strictly preserved (read-only miner, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Coverage tests complete in under 1 s; CLI coverage in under 1 s"
+      ],
+      "known_gaps": [
+        "Name-substring matching undercounts edges where tests alias imports; debt list is an upper bound, not exact",
+        "22 debt pairs and 6 isolated modules remain open as future joint-test work"
       ],
       "next_action": "MAINTAIN"
     }

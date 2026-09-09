@@ -417,6 +417,9 @@ export {
  MemoryPathologyBattery,
  MEMORY_PATHOLOGY_PROBES
 } from './src/MemoryPathologyBattery.js';
+export {
+ InteractionCoverageGraph
+} from './src/InteractionCoverageGraph.js';
 
 
 

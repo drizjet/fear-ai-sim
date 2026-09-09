@@ -100,6 +100,7 @@ import {
     CHUNK_DIMENSION_THRESHOLDS,
     MemoryRelevanceScorer,
     MemoryPathologyBattery,
+    InteractionCoverageGraph,
     ScenarioValidator,
     ScenarioInstantiator,
     ScenarioFuzzer,
@@ -218,9 +219,10 @@ function printHelp() {
     console.log(`  frontier-valley    Run the Frontier Valley multi-seed simulation + degeneracy check (Front C)`);
     console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
     console.log(`  fabe-chunks        Run FABE chunk-integration dimensions with frozen thresholds (Sections CXLVI-CXLIX)`);
-    console.log(`                     Options: --seeds <11,22,33> --json`);
     console.log(`  memory-relevance   Run memory relevance ranking demo + pathology battery (Sections XV-XVII)`);
     console.log(`                     Options: --top <5> --json`);
+    console.log(`  coverage           Report subsystem interaction coverage: tested edges, debt, isolated (Sections CCIV-CCV)`);
+    console.log(`                     Options: --top <10> --json`);
     console.log(`  scenario           Validate declarative scenarios, run procedural fuzzing, and step instances (Frontiers A & E)`);
     console.log(`                     Options: --validate <path> | --fuzz [seed] | --ticks <n> | --json`);
     console.log(`  metamorphic        Execute 5 canonical metamorphic relations (MR1-MR5) semantic invariant battery (Frontier E)`);
@@ -855,6 +857,28 @@ function handleMemory(options) {
         console.log(`  • ${p.probe.padEnd(26)} [${p.pass ? 'PASS' : 'FAIL'}] ${p.observed}`);
     }
     console.log(`\nHost Authority Check: ✓ Advisory memory only (0 host physics/inventory mutations)\n`);
+}
+function handleCoverage(options) {
+    const topN = Math.max(1, Math.min(50, parseInt(options.top || '10', 10) || 10));
+    const graph = new InteractionCoverageGraph(process.cwd());
+    const report = graph.build();
+    if (options.json) {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== SUBSYSTEM INTERACTION COVERAGE (Sections CCIV-CCV) ===\n`);
+    console.log(`Modules: ${report.nodeCount} | Tested edges: ${report.testedEdges.length} | Benchmark-composed: ${report.composedEdges.length}`);
+    console.log(`Integration debt (composed, never jointly tested): ${report.debt.length}`);
+    console.log(`Isolated (named in no test/benchmark): ${report.isolated.length}\n`);
+    console.log(`Top-${topN} debt pairs:`);
+    for (const d of report.debt.slice(0, topN)) {
+        console.log(`  • ${d.pair.join(' + ').padEnd(60)} composed in ${d.composedIn}`);
+    }
+    if (report.isolated.length > 0) {
+        console.log(`\nIsolated modules: ${report.isolated.join(', ')}`);
+    }
+    console.log(`\nHost Authority Check: ✓ Read-only miner (0 host physics/inventory mutations)\n`);
 }
 
 function handleScenario(options) {
@@ -3482,6 +3506,10 @@ async function main() {
         case 'memory-relevance':
         case 'relevance':
             handleMemory(options);
+            break;
+        case 'coverage':
+        case 'interaction-coverage':
+            handleCoverage(options);
             break;
         case 'scenario':
             handleScenario(options);
