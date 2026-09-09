@@ -4969,6 +4969,27 @@
         "Restraint applies to valley banditry paths only; SKIRMISH/BORDER/TREATY incident types accept restraint in FactionSystem but no live caller passes it yet"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RECOVER_BETRAYAL_INTERACTION_NEXT25",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "No source change: verdict chunk. Probes showed betrayal during RECOVER leaves convalescence undisturbed (exits to CALM on schedule) while the wound lifecycles alongside and crystallizes; the NOW-20 lethal-threat override fires with betrayal trauma active (RECOVER to PANIC, never through CALM)",
+        "One false alarm during probing: an early observation window (69 ticks) caught the betrayal still in SENSITIZATION and looked like defusal; full-window observation showed normal crystallization. Recorded here so future probes run full windows",
+        "Judged coherent rather than defective: RECOVER is fear-state recovery while trauma is adaptive-layer state (Section VI layer separation); betrayal carrying no fear spike is an observed modeling boundary, not a bug"
+      ],
+      "test_evidence": [
+        "NEXT-25 battery 2/2 in tests/betrayal-erosion.test.js (battery 15/15): convalescence completes plus wound crystallizes with erosion; override re-panics without recovery completion",
+        "No stash mutation applies (no source change); the tests discriminate against either subsystem regressing (stalled RECOVER, broken override, or defused betrayal all fail loudly)",
+        "Full matrix 343/343 (2506 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Probes run in milliseconds; betrayal battery ~1 s; matrix ~43 s"
+      ],
+      "known_gaps": [
+        "Betrayal injects no fear/arousal of its own; a betrayed agent's fear trajectory is identical to an unbetrayed twin until traits drift. Whether social wounds should carry an acute fear spike is unexplored"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

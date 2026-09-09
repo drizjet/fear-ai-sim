@@ -180,3 +180,58 @@ describe('NOW-27: social-repair defuse boundary', () => {
         expect(sim.agents.get('victim').traits.agreeableness).toBeCloseTo(0.7, 3);
     });
 });
+
+describe('NEXT-25: RECOVER times betrayal interaction', () => {
+    // Verdict: layers stay independent and coherent. Convalescence
+    // (fear-state recovery) proceeds undisturbed by a fresh social wound
+    // while the wound lifecycles normally alongside it; the NOW-20
+    // lethal-threat override still fires with betrayal trauma active.
+    // No source change: these tests pin the verdict.
+    const HARD = [{ agent_id: 'a1', threats: [{ type: 'PREDATOR', distance: 2, intensity: 1.0 }] }];
+    const IDLE = [{ agent_id: 'a1' }, { agent_id: 'a2' }];
+    function convalescing(seed = 77) {
+        const sim = new RuntimeSimulation({ seed });
+        sim.registerAgent('a1', { neuroticism: 0.5, resilience: 0.5, agreeableness: 0.7 });
+        sim.registerAgent('a2', {});
+        for (let t = 0; t < 150; t++) sim.batchTick(HARD, 0.0166);
+        for (let t = 0; t < 300; t++) {
+            sim.batchTick(IDLE, 0.0166);
+            if (sim.agents.get('a1').fearCore.state === 'RECOVER') break;
+        }
+        expect(sim.agents.get('a1').fearCore.state).toBe('RECOVER');
+        return sim;
+    }
+
+    it('betrayal during RECOVER neither stalls convalescence nor escapes wounding', () => {
+        const sim = convalescing();
+        sim.reportSocialEvent({ event: 'BETRAYAL', actorId: 'a2', targetId: 'a1', weight: 2.0, severity: 1.0 });
+        let exit = null;
+        for (let t = 0; t < 400 && exit === null; t++) {
+            sim.batchTick(IDLE, 0.0166);
+            const st = sim.agents.get('a1').fearCore.state;
+            if (st !== 'RECOVER') exit = st;
+        }
+        // Convalescence still completes on its own terms.
+        expect(exit).toBe('CALM');
+        // The wound lifecycled alongside and crystallized despite the calm.
+        for (let t = 0; t < 300; t++) sim.batchTick(IDLE, 0.0166);
+        const rec = sim.coreTrauma.agentRecords.get('a1');
+        expect(rec.crystallizedTraumas.some((x) => x.type === 'BETRAYAL_ABANDONMENT')).toBe(true);
+        expect(sim.agents.get('a1').traits.agreeableness).toBeLessThan(0.7);
+    });
+
+    it('lethal threat during betrayal convalescence re-panics without completing recovery', () => {
+        const sim = convalescing();
+        sim.reportSocialEvent({ event: 'BETRAYAL', actorId: 'a2', targetId: 'a1', weight: 2.0, severity: 1.0 });
+        let sawCalm = false;
+        let panicked = false;
+        for (let t = 0; t < 400 && !panicked; t++) {
+            sim.batchTick(HARD, 0.0166);
+            const st = sim.agents.get('a1').fearCore.state;
+            if (st === 'CALM') sawCalm = true;
+            if (st === 'PANIC') panicked = true;
+        }
+        expect(panicked).toBe(true);
+        expect(sawCalm).toBe(false);
+    });
+});

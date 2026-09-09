@@ -180,6 +180,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Social Transport NOW-25:** `POST /api/v1/social/event` exposes host-reported social events over HTTP (validated, 400-mapped errors, trauma_id echo). Fixed a real matrix flake alongside: two server suites shared fixed port 8799 under parallel workers.
 - **Betrayal Tuning NOW-26/27:** weight/2 severity mapping upheld (monotonic, clean override); repair boundary pinned at 3 events with late-repair irrelevance, post-crystallization irreversibility, and asymptotic extinction recovery. No source change.
 - **Trade Restraint NEXT-16:** host-reported trade flow feeds a valley ledger; dependent victims cool grievances (0.65 raid to 0.24 at 0.9 dependency) while trust/fear losses stand. No autonomous trade flow yet — arrivals carry no faction semantics.
+- **RECOVER x Betrayal NEXT-25:** betrayal during convalescence disturbs neither layer (RECOVER completes, wound still crystallizes); lethal-threat override fires with betrayal active. Judged coherent, no source change.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
