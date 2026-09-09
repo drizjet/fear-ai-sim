@@ -325,6 +325,20 @@ export {
  MisinformationCascadeHarness,
  DEFAULT_CASCADE_CONFIG
 } from './src/MisinformationCascadeHarness.js';
+export {
+ SocialBehaviorEffects,
+ SOCIAL_DECISIONS,
+ scoreSocialDecisions,
+ contagionGate
+} from './src/SocialBehaviorEffects.js';
+export {
+ SocialEventEngine,
+ SOCIAL_EVENTS
+} from './src/SocialEventEngine.js';
+export {
+ CollectiveCourageHarness,
+ DEFAULT_COURAGE_CONFIG
+} from './src/CollectiveCourageHarness.js';
 
 
 

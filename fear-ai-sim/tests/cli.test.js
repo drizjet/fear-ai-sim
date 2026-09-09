@@ -735,6 +735,57 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.trustAsymmetry).toBeGreaterThan(0);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "social" and scores relationship-driven decisions', async () => {
+        const res = await runCli(['social']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('SOCIAL BEHAVIOR EFFECTS');
+        expect(res.stdout).toContain('Friend help / warn:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "social --json" and returns decision payload', async () => {
+        const res = await runCli(['social', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.friend.help).toBeGreaterThan(parsed.rival.help);
+        expect(parsed.captainLethal.followLeader).toBeGreaterThanOrEqual(parsed.captainCalm.followLeader);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "event" and applies witnessed rescue', async () => {
+        const res = await runCli(['event']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('SOCIAL EVENT');
+        expect(res.stdout).toContain('Bob trusts Alice now:       0.6');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "event --json" and returns event payload', async () => {
+        const res = await runCli(['event', '--kind', 'BETRAYAL', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.kind).toBe('BETRAYAL');
+        expect(parsed.direct.trust).toBeLessThan(-0.5);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "morale" and isolates leadership under fire', async () => {
+        const res = await runCli(['morale']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('COLLECTIVE COURAGE');
+        expect(res.stdout).toContain('Verdict:                    COLLECTIVE_COURAGE');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "morale --json" and returns experiment payload', async () => {
+        const res = await runCli(['morale', '--losses', '5', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.verdict).toBe('BOTH_BREAK');
+        expect(parsed.leaderArm.holdsDuty).toBe(false);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

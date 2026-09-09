@@ -141,7 +141,11 @@ import {
     LongHorizonCharacterLife,
     InformationPropagationEngine,
     AnticipatoryFearEngine,
-    MisinformationCascadeHarness
+    MisinformationCascadeHarness,
+    SocialBehaviorEffects,
+    SocialEventEngine,
+    CollectiveCourageHarness,
+    RelationshipTensorSystem
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -276,6 +280,11 @@ function printHelp() {
     console.log(`                     Options: --json`);
     console.log(`  cascade            Run false-alarm cascade experiment: panic, reroutes, trust cost (Section XXII)`);
     console.log(`                     Options: --agents <n> --ticks <n> --json`);
+    console.log(`  social             Score how relationships alter helping, warning, following, trade (Section XXV)`);
+    console.log(`                     Options: --json`);
+    console.log(`  event              Apply a social event: rescue, betrayal, deception with witnesses (Section XXIV)`);
+    console.log(`  morale             Run casualty sequence: morale vs fear with and without a leader (Sections XXXI–XXXIII)`);
+    console.log(`                     Options: --members <n> --losses <n> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1661,6 +1670,67 @@ function handleCascade(options) {
     console.log(`Verdict:                    ${exp.verdict} (asymmetry ${exp.trustAsymmetry})`);
     console.log(`North road:                 ${exp.falseArm.northRoadAdvisory}`);
     console.log(`\nHost Authority Check:         ✓ Simulated settlement only (0 host physics/inventory mutations)\n`);
+}
+function handleSocial(options) {
+    const fx = new SocialBehaviorEffects();
+    const friend = { trust: 0.8, fear: 0, respect: 0.6, affection: 0.7, grievance: 0, familiarity: 0.8, obligation: 0.3, dominance: 0 };
+    const rival = { trust: -0.7, fear: 0.2, respect: 0.3, affection: -0.6, grievance: 0.8, familiarity: 0.6, obligation: 0, dominance: 0.2 };
+    const captain = { trust: 0.7, fear: 0.3, respect: 0.9, affection: 0.4, grievance: 0, familiarity: 0.9, obligation: 0.2, dominance: 0.5 };
+    const payload = {
+        friend: fx.score(friend, { pressure: 0.5 }),
+        rival: fx.score(rival, { pressure: 0.5 }),
+        captainCalm: fx.score(captain, { pressure: 0, isLeader: true }),
+        captainLethal: fx.score(captain, { pressure: 1, isLeader: true }),
+        audit: fx.auditImmutability()
+    };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== SOCIAL BEHAVIOR EFFECTS (Section XXV) ===\n`);
+    console.log(`Friend help / warn:         ${payload.friend.help} / ${payload.friend.warn}`);
+    console.log(`Rival help / desert:        ${payload.rival.help} / ${payload.rival.desert}`);
+    console.log(`Captain follow (calm→lethal): ${payload.captainCalm.followLeader} → ${payload.captainLethal.followLeader}`);
+    console.log(`\nHost Authority Check:         ✓ Advisory scores only (0 host physics/inventory mutations)\n`);
+}
+function handleEvent(options) {
+    const tensor = new RelationshipTensorSystem();
+    const eng = new SocialEventEngine();
+    const kind = (options.kind || 'RESCUE').toUpperCase();
+    tensor.getRelationship('carol', 'bob').trust = 0.8;
+    const res = eng.applyEvent(tensor, kind, 'alice', 'bob', { witnesses: ['carol'] });
+    const payload = { kind, direct: res.direct, witnessUpdates: res.witnessUpdates, audit: eng.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== SOCIAL EVENT (Section XXIV) ===\n`);
+    console.log(`Event:                      ${kind} (alice → bob, witnessed by carol)`);
+    console.log(`Bob trusts Alice now:       ${res.direct.trust}`);
+    console.log(`Carol's update:             ${res.witnessUpdates.length > 0 ? `trust ${res.witnessUpdates[0].trust}` : 'unmoved (distrusts reporter)'}`);
+    console.log(`\nHost Authority Check:         ✓ Advisory ledger only (0 host physics/inventory mutations)\n`);
+}
+
+
+function handleCourage(options) {
+    const harness = new CollectiveCourageHarness();
+    const members = options.members !== undefined ? Math.max(3, Math.min(24, parseInt(options.members, 10))) : 8;
+    const losses = options.losses !== undefined ? Math.max(1, Math.min(members - 1, parseInt(options.losses, 10))) : 2;
+    const order = Array.from({ length: losses }, (_, i) => `member_${i}`);
+    const exp = harness.runExperiment({ members, casualtyOrder: order });
+    const payload = { ...exp, audit: harness.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== COLLECTIVE COURAGE (Sections XXXI–XXXIII) ===\n`);
+    console.log(`Leader arm:                 morale ${exp.leaderArm.finalMorale} vs fear ${exp.leaderArm.finalFear} → ${exp.leaderArm.holdsDuty ? 'HOLDS DUTY' : 'BREAKS'}`);
+    console.log(`Leaderless arm:             morale ${exp.leaderlessArm.finalMorale} vs fear ${exp.leaderlessArm.finalFear} → ${exp.leaderlessArm.holdsDuty ? 'HOLDS DUTY' : 'BREAKS'}`);
+    console.log(`Verdict:                    ${exp.verdict}`);
+    console.log(`\nHost Authority Check:         ✓ Simulated squad only (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -3062,6 +3132,21 @@ async function main() {
         case 'false-alarm':
         case 'misinformation':
             handleCascade(options);
+            break;
+        case 'social':
+        case 'behavior-effects':
+        case 'relationships-matter':
+            handleSocial(options);
+            break;
+        case 'event':
+        case 'social-event':
+        case 'witness':
+            handleEvent(options);
+            break;
+        case 'morale':
+        case 'casualties':
+        case 'collective-courage':
+            handleCourage(options);
             break;
         case 'perceive':
         case 'perception':

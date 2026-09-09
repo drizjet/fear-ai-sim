@@ -91,6 +91,9 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Rumor Propagation Network (Section XX):** `InformationPropagationEngine` spreads rumors along sparse directed listen edges with credibility-weighted hop decay, mutation rolls, temporal decay, and corrections that cost lying origins 30% credibility (`fear-ai rumor`).
 - **Anticipatory Fear from Information (Section XXI):** `AnticipatoryFearEngine` converts hearsay into saturating, extinguishable dread for never-observed roads/factions/regions, with observation dominating rumor and advisory route ranking (`fear-ai dread`).
 - **Misinformation Cascade with Trust Cost (Section XXII):** `MisinformationCascadeHarness` runs FALSE-vs-TRUE two-arm experiments proving false army rumors panic settlements, reroute trade, and burn origin credibility while true rumors confirm free (`fear-ai cascade`).
+- **Social Behavior Effects from Relationships (Section XXV):** `SocialBehaviorEffects` maps directed relationship vectors to eight willingness scores plus a contagion gate, so trust, grievance, and pressure visibly move helping, warning, following, trade, and desertion (`fear-ai social`).
+- **Social Events with Witness Reputation (Section XXIV):** `SocialEventEngine` translates ten semantic events onto tensor storage with credibility-scaled witness broadcast and a deception lifecycle where exposure strikes as betrayal (`fear-ai event`).
+- **Collective Courage under Casualties (Sections XXXI–XXXIII):** `CollectiveCourageHarness` folds host-reported losses into morale-vs-fear dynamics with leader/leaderless two-arm verdicts proving terrified-yet-dutiful squads (`fear-ai morale`).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

@@ -2486,6 +2486,82 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SOCIAL_BEHAVIOR_EFFECTS_FROM_RELATIONSHIPS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/SocialBehaviorEffects.js (8 scored decisions plus contagion gate; grievance brake continuous; pressure taxes prosocial acts but rallies followers)",
+        "packages/core/index.js (Exports for SocialBehaviorEffects, decisions, scoring functions)",
+        "bin/fear-ai.js (Added 'social', 'behavior-effects', 'relationships-matter' CLI subcommands with --json)",
+        "tests/social-behavior-effects.test.js (gradual veto, asymmetry, pressure duality, obedience-with-dread, contagion gating)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/social-behavior-effects.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai social, fear-ai social --json"
+      ],
+      "runtime_evidence": [
+        "Friend help 0.48 vs rival 0.07; captain followership rises calm 0.83 to lethal 1.0",
+        "Feared-but-respected captain obeyed without desertion; abused rival deserts faster",
+        "Host game authority invariant strictly preserved (advisory scores only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Decision scoring latency: < 0.005 ms per directed pair"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SOCIAL_EVENTS_WITH_WITNESS_REPUTATION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/SocialEventEngine.js (10 semantic events layered on tensor storage; witness broadcast scaled by reporter credibility; deception lifecycle with exposure as betrayal)",
+        "packages/core/index.js (Exports for SocialEventEngine and event constants)",
+        "bin/fear-ai.js (Added 'event', 'social-event', 'witness' CLI subcommands with --kind, --json)",
+        "tests/social-event-engine.test.js (rescue vs betrayal scale, credibility-scaled witnesses, deception interest, loud failures)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/social-event-engine.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai event, fear-ai event --json"
+      ],
+      "runtime_evidence": [
+        "Rescue builds 0.6 trust; trusted-reporter witnesses learn, distrusted-reporter witnesses barely move",
+        "Unexposed deception earns 0.35 trust; exposure strikes as betrayal (-0.5) plus flavor delta and witness fallout",
+        "Host game authority invariant strictly preserved (advisory ledger only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Event application latency: < 0.01 ms per event with witnesses"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "COLLECTIVE_COURAGE_UNDER_CASUALTIES",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/CollectiveCourageHarness.js (host-reported casualty sequences; morale separated from fear; leader-vs-leaderless two-arm verdicts)",
+        "packages/core/index.js (Exports for CollectiveCourageHarness and courage config)",
+        "bin/fear-ai.js (Added 'morale', 'casualties', 'collective-courage' CLI subcommands with --members, --losses, --json; yielded 'courage' alias to incumbent goal arbitration)",
+        "tests/collective-courage.test.js (casualty ratchet, leader buffering, fear-morale separation, heavy-loss break, determinism)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/collective-courage.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai morale, fear-ai morale --json",
+        "Full regression: 299 suites / 2150 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "2 losses in 8: leader arm holds (morale 0.70 vs fear 0.57), leaderless breaks (morale 0.18) — COLLECTIVE_COURAGE",
+        "5 losses in 8: both arms break; single-loss squad stays terrified yet dutiful",
+        "Host game authority invariant strictly preserved (simulated squad only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Casualty experiment latency: < 1 ms per two-arm run"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }
