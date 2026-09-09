@@ -91,3 +91,39 @@ describe('CVII NOW-8: trauma plus pacing runtime sinks', () => {
     expect(traumaOutputs(5, evil)).toEqual(traumaOutputs(5, null));
   });
 });
+
+describe('CVII NOW-13: core per-agent trauma memory sinks', () => {
+  const THREAT = [{ agent_id: 'a1', threats: [{ type: 'PREDATOR', distance: 2, intensity: 1.0 }] }];
+  function panicSim(seed = 77, ticks = 0, hooks = null, opts = {}) {
+    const sim = new RuntimeSimulation({ seed, ...opts });
+    sim.registerAgent('a1', { neuroticism: 0.9, resilience: 0.1 });
+    const outs = [];
+    for (let t = 0; t < ticks; t++) outs.push(sim.batchTick(THREAT, 0.0166, { hooks }));
+    return { sim, outs };
+  }
+
+  it('panic episodes record active traumas and crystallize over time', () => {
+    const hooks = new ObservabilityHooks();
+    const { sim } = panicSim(77, 5, hooks);
+    const rec = sim.coreTrauma.agentRecords.get('a1');
+    expect(rec.activeTraumas.length).toBeGreaterThanOrEqual(1);
+    expect(hooks.summarize('sim_core_traumas_active').last).toBeGreaterThanOrEqual(1);
+    const late = panicSim(77, 150, hooks);
+    const lateRec = late.sim.coreTrauma.agentRecords.get('a1');
+    expect(lateRec.crystallizedTraumas.length).toBeGreaterThanOrEqual(1);
+    expect(hooks.summarize('sim_core_traumas_crystallized').last).toBeGreaterThanOrEqual(1);
+  });
+
+  it('observe-only wiring leaves agent outputs identical (no feedback path)', () => {
+    const hooks = new ObservabilityHooks();
+    const { outs: on } = panicSim(77, 20, hooks);
+    const { outs: off } = panicSim(77, 20, null, { enableCoreTrauma: false });
+    expect(on).toEqual(off);
+  });
+
+  it('core trauma state is deterministic across identical runs', () => {
+    const a = panicSim(77, 150, null);
+    const b = panicSim(77, 150, null);
+    expect(JSON.stringify(a.sim.coreTrauma.getState())).toBe(JSON.stringify(b.sim.coreTrauma.getState()));
+  });
+});

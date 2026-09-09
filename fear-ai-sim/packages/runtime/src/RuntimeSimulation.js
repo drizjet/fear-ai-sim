@@ -7,6 +7,8 @@ import {
     DeterministicRng,
     AffectiveAgent,
     TraumaZoneSystem,
+    TraumaCrystallizationEngine,
+    TRAUMA_TYPES,
     ContagionGraph,
     PacingDirector
 } from '../../core/index.js';
@@ -21,9 +23,14 @@ export class RuntimeSimulation {
         this.agents = new Map(); // agentId -> AffectiveAgent
         this.pendingObservations = new Map(); // agentId -> observation
         this.trauma = new TraumaZoneSystem(options.traumaConfig || {});
+        // NOW-13: core per-agent trauma memory, observe-only. The engine
+        // records and crystallizes; nothing feeds back into agent behavior
+        // yet (feedback is a separate frontier).
+        this.coreTrauma = new TraumaCrystallizationEngine(options.coreTraumaConfig || {});
         this.contagion = new ContagionGraph(options.contagionConfig || {});
         this.pacing = new PacingDirector(options.pacingConfig || {});
         this.enableTrauma = options.enableTrauma ?? true;
+        this.enableCoreTrauma = options.enableCoreTrauma ?? true;
         this.enableContagion = options.enableContagion ?? true;
         this.enablePacing = options.enablePacing ?? true;
         this.tickCount = 0;
@@ -59,6 +66,11 @@ export class RuntimeSimulation {
         }
 
         this.agents.set(id, agent);
+        // Observe-only trauma record; skip when present so re-registration
+        // with fresh traits never wipes an agent's trauma history.
+        if (this.enableCoreTrauma && !this.coreTrauma.agentRecords.has(id)) {
+            this.coreTrauma.registerAgent(id, traits);
+        }
         return agent;
     }
 
@@ -177,6 +189,31 @@ export class RuntimeSimulation {
 
             const output = agent.tick(dt, obs, context);
             outputs.push(output);
+            // NOW-13: observe-only trauma recording. A fresh panic episode
+            // incurs one acute trauma; the engine lifecycle runs below.
+            // Nothing here alters agent behavior (no feedback path). Panic
+            // read from post-tick agent state, same as the peer survey above.
+            const agentPanicking = agent.fearCore.state === 'PANIC' || agent.currentFear > 0.8;
+            if (this.enableCoreTrauma && agentPanicking) {
+                const rec = this.coreTrauma.agentRecords.get(agent.id);
+                if (rec && rec.activeTraumas.length === 0) {
+                    this.coreTrauma.incurTrauma(agent.id, {
+                        traumaType: TRAUMA_TYPES.NEAR_DEATH_SURVIVAL,
+                        severity: Math.max(0.1, Math.min(1.0, agent.currentFear)),
+                        description: 'Runtime panic episode'
+                    });
+                }
+            }
+        }
+        // NOW-13: advance the core trauma lifecycle (observe-only).
+        let coreActive = 0;
+        let coreCrystallized = 0;
+        if (this.enableCoreTrauma) {
+            this.coreTrauma.tick(1);
+            for (const rec of this.coreTrauma.agentRecords.values()) {
+                coreActive += rec.activeTraumas.length;
+                coreCrystallized += rec.crystallizedTraumas.length;
+            }
         }
 
         // CVII sink: read-only post-tick metrics; fault-isolated.
@@ -193,6 +230,9 @@ export class RuntimeSimulation {
                 hooks.emit('sim_trauma_zones', this.trauma.zones.length, { tick: this.tickCount });
                 hooks.emit('sim_pacing_intensity', pacingIntensity, { tick: this.tickCount });
                 hooks.emit('sim_pacing_progress', this.pacing.getProgress(), { tick: this.tickCount });
+                // NOW-13: core per-agent trauma memory counts.
+                hooks.emit('sim_core_traumas_active', coreActive, { tick: this.tickCount });
+                hooks.emit('sim_core_traumas_crystallized', coreCrystallized, { tick: this.tickCount });
             } catch {
                 // A broken sink must never break the tick.
             }

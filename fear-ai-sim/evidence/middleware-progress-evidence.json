@@ -4431,6 +4431,30 @@
         "No raids after tick ~115 on seed 4242 (encounter generation lull, unexamined); EXTORTION_PAID feeds no grievance"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "CORE_TRAUMA_SINK_NOW13",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/runtime/src/RuntimeSimulation.js constructs TraumaCrystallizationEngine (opt-out via enableCoreTrauma), registers agents without wiping history, incurs one acute trauma per fresh panic episode, ticks the lifecycle, and emits active plus crystallized counts on the fault-isolated block",
+        "tests/observability-sinks.test.js gains NOW-13 describe: record-to-crystallize lifecycle, observe-only identity, determinism"
+      ],
+      "test_evidence": [
+        "Sink suite 8/8 in about 1 s; full matrix 340/340 suites (2458 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Panic run crystallizes exactly one trauma by tick 150 with byte-identical state across identical seeds",
+        "Outputs with the engine on equal outputs with it off: observe-only proof, no feedback path yet",
+        "Caught mid-build: guessed output.panicking field does not exist (panic read from post-tick agent state instead); constructor edit dropped the agents Map initializations (restored)",
+        "Host game authority invariant strictly preserved (advisory memory only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Sink suite about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Trauma-to-behavior feedback unwired (crystallized traits do not alter live agents); no solace path in runtime; unregistration leaves core records behind"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -160,6 +160,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Faction Scale NOW-10/11:** 40 factions evaluate 1560 pairs in ~1 ms; hub purge with 8000 inbound edges sub-ms — reverse index rejected as needless machinery.
 - **Frontier Audit CCI-6:** 20 ranked candidates across NOW/NEXT/LATER tiers; all CCI-5 NOW items closed. Next: natural valley war outbreak (live escalation dynamics).
 - **Live Wars NOW-14:** valley raids feed faction grievances and the escalation machine runs every tick — natural outbreak plus de-escalation phases, deterministically; fear/panic/route metrics untouched.
+- **Core Trauma Sink NOW-13:** per-agent trauma memory wired into the runtime observe-only (panic records, lifecycle ticks, counts emitted); outputs proven identical with the engine on or off.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
