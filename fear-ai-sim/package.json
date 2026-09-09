@@ -12,6 +12,7 @@
     "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "test:ci": "node --experimental-vm-modules node_modules/jest/bin/jest.js --ci --coverage --reporters=default",
     "test:mutations": "node evidence/replay-mutations.mjs",
+    "test:heavy": "node tools/heavy-suites.mjs",
     "lint:evidence": "node evidence/lint.mjs",
     "evidence:migrate": "node evidence/migrate.mjs",
     "evidence:seed": "node evidence/seed-slice-coverage.mjs",

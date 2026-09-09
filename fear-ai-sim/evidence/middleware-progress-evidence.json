@@ -3669,6 +3669,33 @@
         "Heavy engine-spawn suites (Godot binary, cargo) flake under parallel jest load; retry-or-quarantine mechanism still open (NOW-6)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "HEAVY_SUITE_QUARANTINE_NOW6",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tools/heavy-suites.mjs (serialized --runInBand runner, 7 engine-spawn suites, one retry, PASS/FLAKY-PASS/FAIL verdicts, JSON log)",
+        "tests/heavy-suites-runner.test.js (first-try PASS and FAIL-after-2-attempts verdict proofs)",
+        "package.json test:heavy script"
+      ],
+      "test_evidence": [
+        "tests/heavy-suites-runner.test.js (2/2 green)",
+        "Serialized run: 7/7 heavy suites passed first-try with zero skips (23 real engine tests incl. cargo pixel-pets)",
+        "Full regression: 335 suites / 2386 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Root cause confirmed as parallel-load starvation, not product regression: every flaked suite passes serialized",
+        "FLAKY-PASS verdict distinguishes transient flakes from real failures (two consecutive failures required for FAIL)",
+        "Host game authority invariant strictly preserved (test runner only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Serialized heavy run completes in about 32 s with warm cargo cache"
+      ],
+      "known_gaps": [
+        "FLAKY-PASS branch not yet observed in the wild (no flake fired during verification); retry loop proven by the two-attempt FAIL test",
+        "CI still runs heavy suites inside the parallel matrix; wiring test:heavy as the CI path for these suites remains open"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

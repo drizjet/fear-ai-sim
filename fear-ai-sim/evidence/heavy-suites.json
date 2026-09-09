@@ -1,0 +1,47 @@
+{
+  "when": "2026-09-09T17:39:50.547Z",
+  "verdicts": [
+    {
+      "suite": "tests/godot-binary-websocket-loopback.test.js",
+      "verdict": "PASS",
+      "attempts": 1,
+      "tail": "\n(node:43860) ExperimentalWarning: VM Modules is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS tests/godot-binary-websocket-loopback.test.js\n  Front D / Sections 74–75: Godot 4 & Live Loopback Binary WebSocket Integration\n    √ 1. FearServer processes raw Binary Wire Protocol v2 frames over WebSocket (14 ms)\n    √ 2. Godot 4.6 headless client executes live binary loopback with 100% pass rate (290 ms)\n    √ 3. Strictly preserves Host Game Authority Invariant across binary wire communication (1 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       3 passed, 3 total\nSnapshots:   0 total\nTime:        0.84 s, estimated 1 s\nRan all test suites matching tests/godot-binary-websocket-loopback.test.js.\n"
+    },
+    {
+      "suite": "tests/godot-civilization-showcase.test.js",
+      "verdict": "PASS",
+      "attempts": 1,
+      "tail": "\n(node:37936) ExperimentalWarning: VM Modules is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS tests/godot-civilization-showcase.test.js\n  Milestone H: Interactive Multi-Agent Godot Showcase Integration\n    √ 1. GDScript showcase file exists and contains valid multi-agent logic (2 ms)\n    √ 2. Godot conformance test file exists and contains 3 validation checks (1 ms)\n    √ 3. Official Godot 4.6 Engine executes civilization conformance cleanly (215 ms)\n    √ 4. Host Game Authority Invariant is rigorously maintained\n\nTest Suites: 1 passed, 1 total\nTests:       4 passed, 4 total\nSnapshots:   0 total\nTime:        0.653 s, estimated 1 s\nRan all test suites matching tests/godot-civilization-showcase.test.js.\n"
+    },
+    {
+      "suite": "tests/godot-roundtrip-budget.test.js",
+      "verdict": "PASS",
+      "attempts": 1,
+      "tail": "  console.log\n          [roundtrip] p50=1.03ms max=10.03ms over 20 loopbacks\n\n      at Object.<anonymous> (tests/godot-roundtrip-budget.test.js:79:21)\n\n  console.log\n          [godot-engine] Roundtrip Latency=6.73ms\n\n      at Object.<anonymous> (tests/godot-roundtrip-budget.test.js:109:21)\n\n\n(node:22996) ExperimentalWarning: VM Modules is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS tests/godot-roundtrip-budget.test.js\n  Section CXV: advisory roundtrip budgets\n    √ 1. JS loopback p50 roundtrip under 500 ms ceiling (64 ms)\n    √ 2. Godot engine-measured latency under 500 ms ceiling (187 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       2 passed, 2 total\nSnapshots:   0 total\nTime:        0.762 s, estimated 2 s\nRan all test suites matching tests/godot-roundtrip-budget.test.js.\n"
+    },
+    {
+      "suite": "tests/godot-server-failure.test.js",
+      "verdict": "PASS",
+      "attempts": 1,
+      "tail": "\n(node:12304) ExperimentalWarning: VM Modules is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS tests/godot-server-failure.test.js\n  Section CXIV: Godot/FearServer failure drill (kill, restart, hold)\n    √ 1. Baseline advisory then server kill observed as client close (35 ms)\n    √ 2. Restart on same port and seed reproduces identical advisory (6 ms)\n    √ 3. Real-engine Godot drill holds last advisory with no server (1865 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       3 passed, 3 total\nSnapshots:   0 total\nTime:        2.397 s, estimated 4 s\nRan all test suites matching tests/godot-server-failure.test.js.\n"
+    },
+    {
+      "suite": "tests/godot-showcase-verification.test.js",
+      "verdict": "PASS",
+      "attempts": 1,
+      "tail": "\n(node:30468) ExperimentalWarning: VM Modules is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS tests/godot-showcase-verification.test.js\n  Front A / Section 6: Godot 4.6 Multi-Station Showcase Verification\n    √ detects Godot 4.6 installation and required project files (3 ms)\n    √ executes all 10 showcase stations headlessly with 100% pass rate (282 ms)\n    √ strictly preserves Host Game Authority Invariant across showcase scripts (1 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       3 passed, 3 total\nSnapshots:   0 total\nTime:        0.753 s, estimated 1 s\nRan all test suites matching tests/godot-showcase-verification.test.js.\n"
+    },
+    {
+      "suite": "tests/external-pixel-pets-integration.test.js",
+      "verdict": "PASS",
+      "attempts": 1,
+      "tail": "\n(node:67760) ExperimentalWarning: VM Modules is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS tests/external-pixel-pets-integration.test.js (22.527 s)\n  Section 8 / Epoch B: Pixel Pets True External Host Integration\n    √ verifies independent external host codebase exists and is properly configured (2 ms)\n    √ verifies external integration test and report exist (1 ms)\n    √ executes external integration test in Pixel Pets repository with 100% pass rate (22425 ms)\n    √ strictly preserves the Host Game Authority Invariant across the integration adapter (1 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       4 passed, 4 total\nSnapshots:   0 total\nTime:        22.866 s, estimated 29 s\nRan all test suites matching tests/external-pixel-pets-integration.test.js.\n"
+    },
+    {
+      "suite": "tests/external-reference-game.test.js",
+      "verdict": "PASS",
+      "attempts": 1,
+      "tail": "ration Simulation: Dungeon Crawler 2D ===\n\n      at runDungeonSimulation (examples/reference-game/simulation_runner.js:19:13)\n\n  console.log\n    Initialized DungeonWorld (20x20). Registered 3 NPCs into Fear AI.\n\n      at runDungeonSimulation (examples/reference-game/simulation_runner.js:60:13)\n\n  console.log\n    Simulation completed 50 turns.\n\n      at runDungeonSimulation (examples/reference-game/simulation_runner.js:106:13)\n\n  console.log\n    - Average Frame / Turn Time: 0.1565 ms\n\n      at runDungeonSimulation (examples/reference-game/simulation_runner.js:107:13)\n\n  console.log\n    - Max Frame / Turn Time:     2.6404 ms\n\n      at runDungeonSimulation (examples/reference-game/simulation_runner.js:108:13)\n\n  console.log\n    - Final Combat Engagements:  2\n\n      at runDungeonSimulation (examples/reference-game/simulation_runner.js:109:13)\n\n  console.log\n    - Miner Final Health:        50 / 80\n\n      at runDungeonSimulation (examples/reference-game/simulation_runner.js:110:13)\n\n  console.log\n    - Miner Position:            (2, 2)\n\n      at runDungeonSimulation (examples/reference-game/simulation_runner.js:111:13)\n\n\n(node:81592) ExperimentalWarning: VM Modules is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\nPASS tests/external-reference-game.test.js\n  In-repo reference game (public API demo, not unrelated title)\n    √ 1. Pre-existing game engine maintains exclusive authority over movement and combat (1 ms)\n    √ 2. Fear AI Adapter registers NPCs and generates advisory intents without mutating host state (1 ms)\n    √ 3. Complete 50-turn reference game simulation executes cleanly with sub-millisecond latency (21 ms)\n    √ 4. Civilians escape to Sanctuary via legal pathfinding under threat pressure (1 ms)\n\nTest Suites: 1 passed, 1 total\nTests:       4 passed, 4 total\nSnapshots:   0 total\nTime:        0.496 s, estimated 1 s\nRan all test suites matching tests/external-reference-game.test.js.\n"
+    }
+  ]
+}
