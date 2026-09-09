@@ -3637,8 +3637,36 @@
         "Adjacency tests complete in under 2 s"
       ],
       "known_gaps": [
-        "NOW-5 lesion-feed expansion still open (perception noise, belief contradiction, succession shock)",
-        "Godot-spawn parallel flake still without quarantine"
+        "NOW-5 lesion-feed expansion closed below (succession-shock substituted with misinformation-trust: succession already covered in adjacency tests)",
+        "Heavy-suite parallel flakes recur (godot-server-failure, pixel-pets cargo); quarantine still open"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "LESION_EXPANSION_NOW5",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/InteractionMutationHarness.js (3 new lesions: perception-noise, belief-contradiction, misinformation-trust; battery now 6/6)",
+        "tests/interaction-mutations.test.js (tests 4-7: new lesions plus 6-count battery pin)"
+      ],
+      "test_evidence": [
+        "tests/interaction-mutations.test.js (7/7 tests green)",
+        "Full regression: 334 suites / 2384 tests green on rerun; guardian:check CLEAN",
+        "One transient external-pixel-pets-integration fail in a parallel full run (cargo suite green alone and green directly via cargo, full-green after); parallel-load flake, not a regression"
+      ],
+      "runtime_evidence": [
+        "Heavy sensor degradation raises perceptual uncertainty over identical observations (seed-matched engines)",
+        "Clear-sight disconfirmation drops threat confidence from 0.98 with a contradiction-log entry; confirmation holds",
+        "Corrected false rumor costs origin trust asymmetrically vs confirmed true rumor (cascade verdict CASCADE_WITH_TRUST_COST)",
+        "External pixel-pets Rust host re-verified green directly (3 scenarios, host authority intact); unaffected by the seeded-RNG change",
+        "Two mid-build file damages from range edits; repaired and verified",
+        "Host game authority invariant strictly preserved (advisory lesions only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Mutation tests complete in under 2 s"
+      ],
+      "known_gaps": [
+        "Heavy engine-spawn suites (Godot binary, cargo) flake under parallel jest load; retry-or-quarantine mechanism still open (NOW-6)"
       ],
       "next_action": "MAINTAIN"
     }

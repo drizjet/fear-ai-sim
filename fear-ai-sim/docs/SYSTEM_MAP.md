@@ -131,6 +131,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Store-Size Scaling (Section LXXVIII):** relevance rank over 1000 entries ~0.8ms, 5000-insert rumor flood single-digit ms, battery ~2ms — measured, no optimization needed, pinned by regression tests.
 - **Frontier Audit CCI-2:** 20 ranked candidates across NOW/NEXT/LATER tiers; top-4 verified-open unwired adjacencies (blockade→corridors, motive→destinations, dilemma→stances, succession→cohesion) selected as the next chunk.
 - **Unwired Adjacency NOW-1–4:** blockade throttles reversibly price corridor hazard; motive pressure bends destination choice (identity default); dilemma scenarios run from live stances; succession lands on cohesion/morale — 10 joint tests, no schema v2 needed.
+- **Lesion Expansion NOW-5:** perception-noise, belief-contradiction, and misinformation-trust lesions join the battery (6/6 detected); pixel-pets Rust host re-verified green directly with host authority intact.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

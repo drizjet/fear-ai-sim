@@ -33,13 +33,35 @@ describe('Sections CCXXXI-CCXXXII: InteractionMutationHarness', () => {
         expect(r.baseline).toBeGreaterThan(r.lesioned);
         expect(r.degraded).toBe(true);
     });
+    it('4. Sensor degradation raises perceptual uncertainty', () => {
+        const h = new InteractionMutationHarness();
+        const r = h.lesionPerceptionNoise();
+        expect(r.lesioned).toBeGreaterThan(r.baseline);
+        expect(r.degraded).toBe(true);
+    });
 
-    it('4. Full battery detects every lesion deterministically', () => {
+    it('5. Clear-sight disconfirmation lowers belief confidence', () => {
+        const h = new InteractionMutationHarness();
+        const r = h.lesionBeliefContradiction();
+        expect(r.baseline).toBeCloseTo(0.98, 10);
+        expect(r.lesioned).toBeLessThan(r.baseline);
+        expect(r.degraded).toBe(true);
+    });
+
+    it('6. Corrected false rumor costs origin trust asymmetrically', () => {
+        const h = new InteractionMutationHarness();
+        const r = h.lesionMisinformationTrust();
+        expect(r.lesioned).toBeGreaterThan(r.baseline);
+        expect(r.degraded).toBe(true);
+    });
+
+    it('7. Full battery detects every lesion deterministically', () => {
         const h = new InteractionMutationHarness();
         const a = h.runAll();
         const b = h.runAll();
         expect(a).toEqual(b);
         expect(a.allDetected).toBe(true);
         expect(a.detected).toBe(a.total);
+        expect(a.total).toBe(6);
     });
 });
