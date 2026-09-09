@@ -3397,7 +3397,36 @@
       ],
       "known_gaps": [
         "Scenario/intervention live-ID labels still embed wall-clock/randomness; first-divergence comparisons must exclude label fields (unverified whether they do)",
-        "Next ranked frontiers: CXV in-engine overhead; social/faction/place memory; second external host (gated); LOD/scale work"
+        "CXV in-engine overhead unmeasured at that time; measured below"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SUBSYSTEM_OVERHEAD_AND_ROUNDTRIP",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/SubsystemOverheadHarness.js (13 subsystems, warmup plus median-us, generous regression ceilings, no models or extrapolation)",
+        "packages/core/index.js (SubsystemOverheadHarness, OVERHEAD_BUDGETS_US exported)",
+        "tests/subsystem-overhead.test.js (measured-set contract, budget headroom, structure determinism, chunk-era coverage)",
+        "tests/godot-roundtrip-budget.test.js (JS loopback p50 plus Godot engine-printed latency vs 500 ms ceilings)"
+      ],
+      "test_evidence": [
+        "tests/subsystem-overhead.test.js (4/4 tests green)",
+        "tests/godot-roundtrip-budget.test.js (2/2 tests green, real Godot 4.6 binary)",
+        "Full regression: 330 suites / 2354 tests green in a single pass; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Slowest advisory-path median: memory.relevance 37.9us; affect.tick 15.5us; all 13 subsystems under half their ceilings",
+        "JS loopback p50 0.94ms (max 19.19ms over 20); Godot engine-measured roundtrip 6.77ms; both under 500ms loopback ceilings",
+        "Honest scope: same-machine IPC ceilings, not gameplay frame claims; store workloads are representative-small (relevance over ~20 entries); scaling with store size unmeasured",
+        "Host game authority invariant strictly preserved (measurement only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Overhead tests complete in under 2 s; roundtrip tests in under 2 s"
+      ],
+      "known_gaps": [
+        "Overhead scaling with memory/store size (100s-1000s of entries) unmeasured",
+        "Social/faction/place memory still absent; second external host still gated; LOD/scale work still open"
       ],
       "next_action": "MAINTAIN"
     }

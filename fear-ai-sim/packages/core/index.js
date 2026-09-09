@@ -429,6 +429,10 @@ export {
  RouteMemory,
  DEFAULT_ROUTE_MEMORY_CONFIG
 } from './src/RouteMemory.js';
+export {
+ SubsystemOverheadHarness,
+ OVERHEAD_BUDGETS_US
+} from './src/SubsystemOverheadHarness.js';
 
 
 
