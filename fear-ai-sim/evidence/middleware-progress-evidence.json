@@ -4364,6 +4364,48 @@
         "Hundreds-of-factions scale unmeasured; stance evaluation is per-pair lazy with no pair cache"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_6",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 5 milestones since CCI-5 (SEMANTIC_MIDDLE_NOW5, TRAUMA_PACING_SINKS_NOW8, WAR_ALLIANCE_RANK_NOW7, SOCIAL_GAMING_NOW9, FACTION_SCALE_NOW10_11), CCI-5 candidate status review, gate-state rerun",
+        "5 commits since CCI-5; all CCI-5 NOW items (5/7/8/9/10/11) closed and verified",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 340/340 suites (2454 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-12 middle-summary value distributions (extends NOW-5; allowed true/false splits missing).",
+        "NOW-13 TraumaCrystallizationEngine sink path (extends NOW-8 to core per-agent trauma memory).",
+        "NOW-14 natural valley war outbreak (faction escalation must promote THREATEN on its own; unblocks de-escalation ranking).",
+        "NEXT-7 merchant belief-formation dynamics (carried).",
+        "NEXT-8 near-neighbor persona discrimination under noise (carried).",
+        "NEXT-9 compaction-wired 100k soak (carried; NOW-5 middle tier strengthens the case).",
+        "NEXT-10 nested-JSON transport guard (carried).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+        "NEXT-12 handshake determinism review (carried).",
+        "NEXT-13 constructor-only over-credit audit (carried).",
+        "NEXT-14 infinite-loop containment research (carried).",
+        "NEXT-15 FearServer fixed-port production review (carried).",
+        "NEXT-16 trade-dependency conflict behavior (carried).",
+        "NEXT-17 richer rally dynamics for specificity guards (cry-wolf contrast only 2x).",
+        "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (extends NOW-10).",
+        "NEXT-19 de-escalation intervention ranking (needs NOW-14 live wars first).",
+        "LATER-20 second external host architecture (gated on external project availability).",
+        "LATER-21 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-14 (live wars unblock de-escalation ranking and prove escalation dynamics end to end)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "LIVE_WARS_NOW14"
     }
   ]
 }
