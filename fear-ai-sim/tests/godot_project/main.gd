@@ -60,7 +60,7 @@ func _setup_hud() -> void:
 	hbox.position = Vector2(16, 10)
 	bot_bar.add_child(hbox)
 	
-	for i in range(1, 10):
+	for i in range(1, 11):
 		var btn = Button.new()
 		btn.text = "Station %d" % i
 		btn.pressed.connect(func(): jump_to_station(i))
@@ -162,6 +162,7 @@ func trigger_current_event() -> void:
 		7: station_controller.trigger_station_7_escalate()
 		8: station_controller.trigger_station_8_ambush()
 		9: station_controller.trigger_station_9_dispatch()
+		10: station_controller.trigger_station_10_ambush()
 
 func reset_current_station() -> void:
 	if not station_controller:
@@ -172,10 +173,10 @@ func reset_current_station() -> void:
 		3: station_controller.reset_station_3()
 		4: station_controller.reset_station_4()
 		5: station_controller.reset_station_5()
-		6: station_controller.reset_station_6()
 		7: station_controller.reset_station_7()
 		8: station_controller.reset_station_8()
 		9: station_controller.reset_station_9()
+		10: station_controller.reset_station_10()
 
 func _update_telemetry() -> void:
 	if not _telemetry_label or not station_controller:
@@ -257,9 +258,9 @@ func _update_telemetry() -> void:
 func _run_headless_verification() -> void:
 	# Run through each station headlessly
 	await get_tree().create_timer(0.2).timeout
-	for i in range(1, 10):
+	for i in range(1, 11):
 		jump_to_station(i)
 		trigger_current_event()
 		await get_tree().create_timer(0.1).timeout
-	print("[GODOT SHOWCASE HEADLESS] All 9 stations verified successfully.")
+	print("[GODOT SHOWCASE HEADLESS] All 10 stations verified successfully.")
 	get_tree().quit(0)

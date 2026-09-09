@@ -3,7 +3,7 @@
  *
  * Front A / Section 6: Real-Engine Godot 4.6 Multi-Station Showcase Conformance Test.
  *
- * Verifies all 9 behavioral stations in official Godot 4.6 console binary:
+ * Verifies all 10 behavioral stations in official Godot 4.6 console binary:
  * 1. Station 1: Individual Fear & Threat Appraisal
  * 2. Station 2: Ambiguous Sound & Habituation Curve
  * 3. Station 3: Crowd Social Contagion Cascade
@@ -13,6 +13,7 @@
  * 7. Station 7: 14-Stage Faction Escalation Ladder
  * 8. Station 8: Regional Dynamic Trade Supply & Ambush Escorts
  * 9. Station 9: Multi-Observer Fog-of-War & Epistemic Rumor Decay
+ * 10. Station 10: Valley Advisory Chain Monitor
  */
 
 import { describe, it, expect } from '@jest/globals';
@@ -58,7 +59,7 @@ describe('Front A / Section 6: Godot 4.6 Multi-Station Showcase Verification', (
     expect(fs.existsSync(path.join(projectDir, 'run_showcase_conformance.gd'))).toBe(true);
   });
 
-  it('executes all 9 showcase stations headlessly with 100% pass rate', () => {
+  it('executes all 10 showcase stations headlessly with 100% pass rate', () => {
     if (!godotExe) {
       console.warn('[SKIP] Godot 4.6 binary not found in expected environment paths.');
       return;
@@ -77,7 +78,7 @@ describe('Front A / Section 6: Godot 4.6 Multi-Station Showcase Verification', (
     const output = (res.stdout || '') + (res.stderr || '');
 
     expect(res.status).toBe(0);
-    expect(output).toContain('GODOT 4.6 MULTI-STATION SHOWCASE CONFORMANCE: 9 / 9 PASSED (100%)');
+    expect(output).toContain('GODOT 4.6 MULTI-STATION SHOWCASE CONFORMANCE: 10 / 10 PASSED (100%)');
     expect(output).toContain('Station 1: Raw Fear=');
     expect(output).toContain('Station 2: Burst 1 Fear=');
     expect(output).toContain('Station 3: Agitator Panic=');
@@ -87,6 +88,7 @@ describe('Front A / Section 6: Godot 4.6 Multi-Station Showcase Verification', (
     expect(output).toContain('Station 7: Border Dist=');
     expect(output).toContain('Station 8: Mass Conserved=');
     expect(output).toContain('Station 9: Fog-of-War Decoupled');
+    expect(output).toContain('Station 10: chain applied');
   });
 
   it('strictly preserves Host Game Authority Invariant across showcase scripts', () => {

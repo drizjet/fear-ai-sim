@@ -109,6 +109,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Cognitive LOD Budgeted Tiers (Section LXXVI):** `LodDirector` assigns LOD0–LOD4 under host caps with hysteresis-gated transitions and cadence due-lists (`fear-ai lod`).
 - **Identity Vault Abstraction Restoration (Section LXXVII):** `IdentityVault` seals identity exactly with top-12 bonds and bounded abstract drift, restoring identical decisions (`fear-ai vault`).
 - **Honest Population Scale Measurement (Sections LXXVIII–LXXIX):** `ScaleHarness` times live engine load to 10k agents with extrapolation flagged in code, never footnotes (`fear-ai scale`).
+- **Godot Station 10 Valley Chain Monitor (Sections CXI–CXIV):** tenth showcase station applies `POST /api/v1/advisory/chain` payloads with link-down fail-safe hold; 10/10 conformance passes headless in-engine with zero script errors.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
@@ -118,7 +119,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 | Adapter | Status | Active work? |
 |---|---|---|
 | Node / Python / C# library | Runnable against the local server | Yes — language clients for the protocol |
-| Godot 4.6 | Headless binary on host. Native binary wire loopback (< 7ms roundtrip). 9-station interactive showcase verified (9/9 stations). Adapter is advisory (`get_movement_hint()`). | Ready / verified interactive showcase & binary loopback |
+| Godot 4.6 | Headless binary on host. Native binary wire loopback (< 7ms roundtrip). 10-station interactive showcase verified (10/10 stations, incl. Valley Advisory Chain Monitor with link-down fail-safe). Adapter is advisory (`get_movement_hint()`). | Ready / verified interactive showcase & binary loopback |
 | Unity UPM | `IMPLEMENTED_NOT_VERIFIED` — Editor not installed. Adapter is advisory (`RecommendedVector`). | Only if a Unity host is actually wanted |
 | Unreal 5 plugin | `DEFERRED_KEEP_ADAPTER` / `IMPLEMENTED_NOT_VERIFIED` | Not now. Keep the plugin so Unreal games can connect later. Do not install UE5 today. |
 

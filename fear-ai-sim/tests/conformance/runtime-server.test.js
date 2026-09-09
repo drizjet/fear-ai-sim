@@ -139,6 +139,23 @@ describe('FearServer Integration Tests (WebSocket & HTTP REST)', () => {
         expect(loadRes.body.status).toBe('LOADED');
         expect(loadRes.body.agentCount).toBe(1);
     });
+    it('serves POST /api/v1/advisory/chain with the unbroken valley chain', async () => {
+        const res = await httpPost(`${httpBase}/api/v1/advisory/chain`, {});
+        expect(res.status).toBe(200);
+        expect(res.body.type).toBe('ADVISORY_CHAIN_RESPONSE');
+        expect(res.body.seed).toBe(424242);
+        expect(res.body.unbroken).toBe(true);
+        expect(res.body.links.ROUTE_DANGER.danger).toBeGreaterThan(0);
+    });
+
+    it('serves POST /api/v1/advisory/chain with custom seeds and rejects bad seeds', async () => {
+        const res = await httpPost(`${httpBase}/api/v1/advisory/chain`, { seed: 99 });
+        expect(res.status).toBe(200);
+        expect(res.body.seed).toBe(99);
+        expect(res.body.unbroken).toBe(true);
+        const bad = await httpPost(`${httpBase}/api/v1/advisory/chain`, { seed: 'soon' });
+        expect(bad.status).toBe(400);
+    });
 
     // -------------------------------------------------------------------------
     // WebSocket Tests

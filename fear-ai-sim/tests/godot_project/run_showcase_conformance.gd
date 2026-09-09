@@ -21,7 +21,7 @@ func _init() -> void:
 
 	var all_pass = true
 	var pass_count = 0
-	var total_count = 9
+	var total_count = 10
 
 	# --------------------------------------------------------------------------
 	# STATION 1: Individual Threat Appraisal & FLEE_FROM
@@ -281,6 +281,33 @@ func _init() -> void:
 		])
 		all_pass = false
 
+	# --------------------------------------------------------------------------
+	# STATION 10: Valley Advisory Chain Monitor (server JSON shape contract)
+	# --------------------------------------------------------------------------
+	print("\n--- Testing Station 10: Valley Advisory Chain Monitor ---")
+	var StationCtrl = load("res://station_controller.gd")
+	var monitor = StationCtrl.new()
+	root.add_child(monitor)
+	monitor._init_station_10()
+	# Canned payload mirrors POST /api/v1/advisory/chain exactly.
+	var chain_payload = {
+		"links": { "ROUTE_DANGER": { "corridorId": "highland_pass", "danger": 0.5 } },
+		"checks": { "ROUTE_DANGER": true },
+		"unbroken": true
+	}
+	var applied = monitor.apply_station_10_chain(chain_payload)
+	var danger_ok = is_equal_approx(monitor.s10_route_danger, 0.5)
+	# Link failure must hold last state, never invent advisories.
+	var held_danger = monitor.s10_route_danger
+	var refused = monitor.apply_station_10_chain({})
+	var fail_safe = (refused == false and monitor.s10_link_down and is_equal_approx(monitor.s10_route_danger, held_danger))
+	if applied and danger_ok and fail_safe:
+		print("[PASS] Station 10: chain applied (danger=%.2f), link-down holds last state" % monitor.s10_route_danger)
+		pass_count += 1
+	else:
+		print("[FAIL] Station 10: applied=%s danger_ok=%s fail_safe=%s" % [applied, danger_ok, fail_safe])
+		all_pass = false
+	monitor.queue_free()
 	# --------------------------------------------------------------------------
 	# FINAL REPORT
 	# --------------------------------------------------------------------------

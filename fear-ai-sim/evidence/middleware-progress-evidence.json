@@ -2974,6 +2974,34 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "GODOT_STATION_10_VALLEY_CHAIN_MONITOR",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/runtime/src/FearServer.js (POST /api/v1/advisory/chain serving ValleyChainScenario with seed validation)",
+        "tests/godot_project/station_controller.gd (Station 10: chain apply with link-down fail-safe hold, reroute visuals, draw status)",
+        "tests/godot_project/main.gd (station 10 nav, trigger, reset, headless loop)",
+        "tests/godot_project/run_showcase_conformance.gd (Station 10 contract block: apply plus fail-safe)",
+        "tests/conformance/runtime-server.test.js (endpoint tests: default seed, custom seed, bad seed rejection)"
+      ],
+      "test_evidence": [
+        "Godot 4.6 headless conformance: 10/10 stations pass in-engine",
+        "Live scene headless run: zero script errors, all 10 stations verified",
+        "tests/conformance/runtime-server.test.js (6/6 green including 2 new endpoint tests)",
+        "Full regression: 315 suites / 2258 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Station 10 applies server-shape payloads (danger 0.50) and holds last state on invalid input",
+        "Live scene run caught a pre-existing dead call (trigger_station_9_dispatch undefined); function added, scene clean",
+        "Host game authority invariant strictly preserved (Godot owns movement, Fear AI supplies chain data)"
+      ],
+      "benchmark_evidence": [
+        "Headless 10-station conformance completes in under 1 s in-engine",
+        "Advisory chain endpoint responds in under 5 ms on loopback"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

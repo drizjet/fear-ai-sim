@@ -21,7 +21,8 @@ const STATIONS = {
 	6: { "name": "Trade Caravan Danger Reroute", "pos": Vector2(1750, 950) },
 	7: { "name": "Faction Stance Interaction", "pos": Vector2(1050, 620) },
 	8: { "name": "Regional Trade Supply & Ambush Escorts", "pos": Vector2(350, 620) },
-	9: { "name": "Multi-Observer Fog-of-War & Epistemic Rumor", "pos": Vector2(1750, 620) }
+	9: { "name": "Multi-Observer Fog-of-War & Epistemic Rumor", "pos": Vector2(1750, 620) },
+	10: { "name": "Valley Advisory Chain Monitor", "pos": Vector2(1050, 1290) }
 }
 
 # --- Station 1 Nodes ---
@@ -82,6 +83,19 @@ var s9_courier_arrived: bool = false
 var s9_capital_perceived_threat: float = 0.0
 var s9_rumor_decay_factor: float = 1.25
 
+# --- Station 10 Nodes (Valley Advisory Chain Monitor) ---
+# Godot owns all movement and visuals here. Fear AI supplies chain data
+# through apply_station_10_chain() (same JSON shape as
+# POST /api/v1/advisory/chain). On missing/invalid data the station holds
+# last state and flags link-down instead of inventing advisories.
+var s10_caravan: Array[ShowcaseAgent] = []
+var s10_threat: Node2D
+var s10_route_danger: float = 0.05
+var s10_active_route: String = "HIGHLAND_PASS"
+var s10_route_progress: float = 0.0
+var s10_chain_unbroken: bool = false
+var s10_link_down: bool = true
+
 func _ready() -> void:
 	_init_station_1()
 	_init_station_2()
@@ -92,6 +106,7 @@ func _ready() -> void:
 	_init_station_7()
 	_init_station_8()
 	_init_station_9()
+	_init_station_10()
 
 func _physics_process(delta: float) -> void:
 	_update_station_1(delta)
@@ -103,6 +118,7 @@ func _physics_process(delta: float) -> void:
 	_update_station_7(delta)
 	_update_station_8(delta)
 	_update_station_9(delta)
+	_update_station_10(delta)
 	queue_redraw()
 
 # ==============================================================================
@@ -525,7 +541,6 @@ func _update_station_9(delta: float) -> void:
 	elif not s9_courier_arrived:
 		# Before courier arrives: Capital Commander is in total Spatial Fog-of-War (Ground Truth Unperceived)
 		s9_capital_commander.fear_component.evaluate_local([])
-
 func trigger_station_9_dispatch() -> void:
 	s9_ground_truth_active = true
 	s9_courier_dispatched = true
@@ -545,6 +560,81 @@ func reset_station_9() -> void:
 	if s9_courier:
 		s9_courier.global_position = center + Vector2(-100, 25)
 		s9_courier.fear_component.evaluate_local([])
+
+# ==============================================================================
+# STATION 10: Valley Advisory Chain Monitor
+# ==============================================================================
+func _init_station_10() -> void:
+	var center = STATIONS[10]["pos"]
+	s10_caravan.clear()
+	var master = _create_agent("Valley Master", "Merchant", Color(0.9, 0.5, 0.2), center + Vector2(-150, -50), 0.4, 0.6, 0.05)
+	var scout = _create_agent("Valley Scout", "Scout", Color(0.2, 0.7, 1.0), center + Vector2(-180, -50), 0.5, 0.5, 0.05)
+	s10_caravan.append(master)
+	s10_caravan.append(scout)
+	s10_threat = Node2D.new()
+	s10_threat.name = "Valley_Ambush_Threat"
+	s10_threat.add_to_group("fear_threats")
+	s10_threat.global_position = center + Vector2(120, -50)
+	add_child(s10_threat)
+	s10_route_danger = 0.05
+	s10_active_route = "HIGHLAND_PASS"
+	s10_chain_unbroken = false
+	s10_link_down = true
+
+# Applies one advisory chain payload (server JSON shape). Returns true when
+# the payload was valid and applied, false when the link is down and last
+# state was held.
+func apply_station_10_chain(payload: Dictionary) -> bool:
+	if payload.is_empty() or not payload.has("links"):
+		s10_link_down = true
+		return false
+	var links = payload["links"]
+	if not (links is Dictionary) or not links.has("ROUTE_DANGER"):
+		s10_link_down = true
+		return false
+	var rd = links["ROUTE_DANGER"]
+	if not (rd is Dictionary) or not rd.has("danger"):
+		s10_link_down = true
+		return false
+	var danger = float(rd["danger"])
+	if danger < 0.0 or danger > 1.0:
+		s10_link_down = true
+		return false
+	s10_route_danger = danger
+	s10_chain_unbroken = bool(payload.get("unbroken", false))
+	s10_link_down = false
+	return true
+
+func _update_station_10(delta: float) -> void:
+	if s10_caravan.size() < 2:
+		return
+	# Fail-safe: link down freezes the caravan in place (host-safe hold).
+	if s10_link_down:
+		return
+	var center = STATIONS[10]["pos"]
+	if s10_route_danger >= 0.60:
+		s10_active_route = "RIVER_DETOUR"
+	else:
+		s10_active_route = "HIGHLAND_PASS"
+	s10_route_progress += delta * 30.0
+	var target_y = -50.0 if s10_active_route == "HIGHLAND_PASS" else 60.0
+	var x_pos = -150.0 + fmod(s10_route_progress, 300.0)
+	s10_caravan[0].has_patrol_target = true
+	s10_caravan[0].patrol_target = center + Vector2(x_pos, target_y)
+	s10_caravan[1].has_patrol_target = true
+	s10_caravan[1].patrol_target = center + Vector2(x_pos - 30.0, target_y)
+
+func trigger_station_10_ambush() -> void:
+	s10_route_danger = 0.85
+	s10_link_down = false
+
+func reset_station_10() -> void:
+	s10_route_danger = 0.05
+	s10_active_route = "HIGHLAND_PASS"
+	s10_route_progress = 0.0
+	s10_chain_unbroken = false
+	s10_link_down = true
+
 
 # ==============================================================================
 # HELPER & DRAWING
@@ -624,3 +714,10 @@ func _draw() -> void:
 	draw_string(ThemeDB.fallback_font, c9 + Vector2(80, 52), "Capital (Epistemic)", HORIZONTAL_ALIGNMENT_CENTER, 80, 8, Color(0.8, 0.5, 1.0))
 	if s9_courier_dispatched and not s9_courier_arrived:
 		draw_line(c9 + Vector2(-90, 15), s9_courier.global_position, Color(1.0, 0.9, 0.3, 0.5), 1.5)
+	# Station 10 Valley Chain Monitor Visuals
+	var c10 = STATIONS[10]["pos"]
+	var chain_color = Color(0.4, 0.8, 0.4, 0.8) if s10_chain_unbroken else (Color(0.6, 0.6, 0.6, 0.6) if s10_link_down else Color(1.0, 0.8, 0.2, 0.8))
+	draw_line(c10 + Vector2(-150, -50), c10 + Vector2(150, -50), chain_color, 3.0)
+	draw_line(c10 + Vector2(-150, 60), c10 + Vector2(150, 60), Color(0.3, 0.7, 1.0, 0.8), 3.0)
+	var chain_label = "LINK DOWN — HOLDING" if s10_link_down else ("CHAIN UNBROKEN" if s10_chain_unbroken else "CHAIN LIVE (Danger: %.2f)" % s10_route_danger)
+	draw_string(ThemeDB.fallback_font, c10 + Vector2(-80, -58), chain_label, HORIZONTAL_ALIGNMENT_CENTER, 160, 8, chain_color)

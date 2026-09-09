@@ -7,6 +7,7 @@
 import http from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { RuntimeSimulation } from './RuntimeSimulation.js';
+import { ValleyChainScenario } from '../../core/index.js';
 import {
     PROTOCOL_VERSION,
     MESSAGE_TYPES,
@@ -31,6 +32,7 @@ export class FearServer {
             this.host = '127.0.0.1';
         }
         this.simulation = new RuntimeSimulation(options);
+        this.chainScenario = new ValleyChainScenario();
         this.maxPayloadBytes = options.maxPayloadBytes || (50 * 1024 * 1024);
 
         this.httpServer = null;
@@ -296,6 +298,24 @@ export class FearServer {
                     return this._sendJson(res, 400, { error: loadResult.error, code: 'UNSUPPORTED_SNAPSHOT_VERSION' });
                 }
                 return this._sendJson(res, 200, { status: 'LOADED', tick: this.simulation.tickCount, agentCount: this.simulation.agents.size });
+            }
+
+            case '/api/v1/advisory/chain': {
+                // Canonical valley advisory chain for Godot Station 10 and any
+                // HTTP host: deterministic, bounded, advisory-only.
+                const seed = body?.seed === undefined ? 424242 : Number(body.seed);
+                if (!Number.isInteger(seed)) {
+                    return this._sendJson(res, 400, { error: 'seed must be an integer', code: ERROR_CODES.VALIDATION_FAILED });
+                }
+                const report = this.chainScenario.run({ seed });
+                return this._sendJson(res, 200, {
+                    type: 'ADVISORY_CHAIN_RESPONSE',
+                    seed: report.seed,
+                    links: report.links,
+                    checks: report.checks,
+                    unbroken: report.unbroken,
+                    summary: report.summary
+                });
             }
 
             default:
