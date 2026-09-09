@@ -3818,7 +3818,35 @@
       "known_gaps": [
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
-      "next_action": "COVERAGE_CHUNK"
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "COVERAGE_MINER_FIX_NOW1_2",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/InteractionCoverageGraph.js (unambiguous-only aliases, import-attributed alias hits, one-hop harness expansion, expandedEvidence plus ambiguousAliases in report)",
+        "tests/interaction-coverage.test.js (tests 7-10: phantom-debt absence, expansion evidence, ambiguity neutralization, import attribution)",
+        "bin/fear-ai.js coverage text output shows harness-expanded and ambiguous-alias counts"
+      ],
+      "test_evidence": [
+        "Miner tests 10/10 green; CLI coverage tests green",
+        "Default matrix 331/331 suites (2383 tests) green on rerun; guardian:check CLEAN",
+        "One transient designer-dashboard red in a parallel matrix run (fixed-port timing under load); green alone and on matrix rerun"
+      ],
+      "runtime_evidence": [
+        "CCI-3 NOW-1 debt exposed as an alias false positive: INTENT_CODES imported from protocol credited ParallelBatchEvaluator; no real batch-x-valley composition exists (ValleyChainScenario is a narrative chain, not an entity cohort), so no joint test was forced",
+        "Miner now reports 0 debt, 0 isolated, 356 tested edges (195 before), 325 harness-expanded pairs, 2 neutralized ambiguous aliases",
+        "InteractionMutationHarness, MisinformationCascadeHarness, PerceptionRobustnessEngine now show 7, 4, 2 tested edges (0 before)",
+        "Host game authority invariant strictly preserved (read-only miner, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Miner build under 1 s; coverage CLI under 1 s"
+      ],
+      "known_gaps": [
+        "Constructor-only harness tests may over-credit incident pairs (documented approximation in module header)",
+        "Fixed-port dashboard suite remains theoretically exposed to parallel timing flakes (observed once, not quarantined)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

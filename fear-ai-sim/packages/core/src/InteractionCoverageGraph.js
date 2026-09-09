@@ -3,7 +3,7 @@
  * interaction coverage.
  *
  * Nodes are packages/core/src modules. An edge between A and B exists when
- * one scanning root references both modules — by module base name OR by any
+ * one scanning root references both modules — by module base name OR by an
  * exported symbol alias (PascalCase / UPPER_SNAKE export names, so tests
  * that import { scoreSocialDecisions } still count for SocialBehaviorEffects):
  * - tested edge: a tests/ file (recursive) names both (joint test coverage).
@@ -12,9 +12,17 @@
  *   integration debt when no tested edge exists.
  * - bin/ excluded: the CLI imports every module, which would mark all
  *   pairs "composed" and drown real co-use signal in noise.
- *
- * Fully deterministic: directory scans sorted, pairs canonicalized,
- * rankings by (debt rank, name). Read-only; never executes scanned code.
+ * Alias attribution (anti-phantom rules, CCI-3):
+ * - ambiguous symbols (exported by 2+ core modules) credit no module.
+ * - an alias hit counts only with a core-attributable import naming the
+ *   symbol from a core path; same-named exports from protocol/runtime
+ *   (e.g. INTENT_CODES) must not credit core modules.
+ * One-hop harness expansion: a test naming harness H also credits (H, M)
+ * for core modules M referenced inside H's source — compositions
+ * encapsulated in harnesses are exercised by their tests even when test
+ * text names only the harness. Limit: only incident (H, M) pairs expand,
+ * so unrelated (A, B) debt can never clear this way; constructor-only
+ * tests may over-credit their harness's pairs (accepted, documented).
  */
 
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
@@ -58,6 +66,16 @@ function pairKey(a, b) {
     return a < b ? `${a} ${b}` : `${b} ${a}`;
 }
 
+function isCoreSource(spec) {
+    if (typeof spec !== 'string') return false;
+    const s = spec.replace(/\\/g, '/');
+    // Barrel or file imports resolving into packages/core (any depth or
+    // relative form). Protocol/runtime/example paths are NOT core: their
+    // same-named exports (e.g. INTENT_CODES) must not credit core modules.
+    return /(^|\/)packages\/core\/(index|src)(\/|$|\.)/.test(s)
+        || /(^|\/)core\/(index|src)(\.js)?($|\?)/.test(s);
+}
+
 function escapeRegExp(s) {
     return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -68,7 +86,8 @@ function escapeRegExp(s) {
  * are excluded to avoid substring noise.
  */
 function collectAliases(coreDir, moduleNames) {
-    const aliasToModule = new Map(); // symbol -> module
+    const aliasToModule = new Map(); // symbol -> module (unambiguous only)
+    const claimants = new Map(); // symbol -> Set(modules exporting it)
     const declRe = /export\s+(?:const|class|function|async\s+function)\s+([A-Za-z0-9_]+)/g;
     const listRe = /export\s*\{([^}]*)\}/g;
     const isAlias = (s) => s.length >= 6 && (/[A-Z]/.test(s) || /_/.test(s));
@@ -80,19 +99,27 @@ function collectAliases(coreDir, moduleNames) {
         } catch {
             continue;
         }
-        const add = (sym) => {
+        const add = (sym, claimant) => {
             const clean = sym.trim().split(/\s+as\s+/).pop().trim();
-            if (isAlias(clean) && !aliasToModule.has(clean)) {
-                aliasToModule.set(clean, name);
-            }
+            if (!isAlias(clean)) return;
+            if (!claimants.has(clean)) claimants.set(clean, new Set());
+            claimants.get(clean).add(claimant);
         };
         let m;
-        while ((m = declRe.exec(text)) !== null) add(m[1]);
+        while ((m = declRe.exec(text)) !== null) add(m[1], name);
         while ((m = listRe.exec(text)) !== null) {
-            for (const part of m[1].split(',')) add(part);
+            for (const part of m[1].split(',')) add(part, name);
         }
     }
-    return aliasToModule;
+    // Ambiguous symbols (claimed by 2+ modules, e.g. INTENT_CODES exported
+    // by both ParallelBatchEvaluator and the protocol package) credit no
+    // module: first-to-claim used to fabricate phantom compositions.
+    const ambiguousAliases = [];
+    for (const [sym, owners] of claimants) {
+        if (owners.size === 1) aliasToModule.set(sym, [...owners][0]);
+        else ambiguousAliases.push(sym);
+    }
+    return { aliasToModule, ambiguousAliases: ambiguousAliases.sort() };
 }
 
 export class InteractionCoverageGraph {
@@ -105,7 +132,9 @@ export class InteractionCoverageGraph {
         this.moduleNames = listJsRecursive(this.coreDir)
             .map(baseNameNoExt)
             .filter((n) => n !== 'batch_evaluator_worker');
-        this.aliasToModule = collectAliases(this.coreDir, this.moduleNames);
+        const { aliasToModule, ambiguousAliases } = collectAliases(this.coreDir, this.moduleNames);
+        this.aliasToModule = aliasToModule;
+        this.ambiguousAliases = ambiguousAliases;
     }
 
     referencedModules(text) {
@@ -113,10 +142,26 @@ export class InteractionCoverageGraph {
         for (const name of this.moduleNames) {
             if (text.includes(name)) found.add(name);
         }
+        // Alias hits count only with a core-attributable import: a bare
+        // textual mention may resolve to another package's same-named
+        // export (e.g. INTENT_CODES from protocol, not core). Without an
+        // import naming the symbol from a core path, the hit is skipped.
+        const coreImports = new Set();
+        const importRe = /import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]/g;
+        const requireRe = /(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
+        let im;
+        while ((im = importRe.exec(text)) !== null) {
+            if (!isCoreSource(im[2])) continue;
+            for (const part of im[1].split(',')) coreImports.add(part.trim().split(/\s+as\s+/).pop().trim());
+        }
+        while ((im = requireRe.exec(text)) !== null) {
+            if (!isCoreSource(im[2])) continue;
+            for (const part of im[1].split(',')) coreImports.add(part.trim().split(/\s+as\s+/).pop().trim());
+        }
         for (const [sym, mod] of this.aliasToModule) {
             if (found.has(mod)) continue;
             const re = new RegExp(`\\b${escapeRegExp(sym)}\\b`);
-            if (re.test(text)) found.add(mod);
+            if (re.test(text) && coreImports.has(sym)) found.add(mod);
         }
         return [...found].sort();
     }
@@ -157,7 +202,57 @@ export class InteractionCoverageGraph {
         };
 
         const coreFiles = listJsRecursive(this.coreDir);
-        scanFiles(listJsRecursive(join(this.repoRoot, 'tests')), tested);
+        // One-hop harness map: harness module -> core modules its source
+        // references. A test naming only the harness still exercises the
+        // composition encapsulated inside it, so those (harness, internal)
+        // pairs count as tested-by-that-test. Approximation and its limit:
+        // a test that never executes the composition (e.g. constructor-only)
+        // over-credits; only incident (harness, internal) pairs expand, so
+        // unrelated (A, B) debt can never be cleared this way.
+        const coreRefs = new Map();
+        for (const file of coreFiles) {
+            let text = '';
+            try {
+                text = readFileSync(file, 'utf8');
+            } catch {
+                continue;
+            }
+            const self = baseNameNoExt(file);
+            coreRefs.set(self, this.referencedModules(text).filter((r) => r !== self));
+        }
+        const expandedEvidence = [];
+        const addTested = (a, b, short, via = null) => {
+            const key = pairKey(a, b);
+            if (!tested.has(key)) tested.set(key, []);
+            const list = tested.get(key);
+            if (!list.includes(short)) list.push(short);
+            if (via) expandedEvidence.push({ pair: key.split(' '), file: short, via });
+        };
+        const scanTests = (files) => {
+            for (const file of files) {
+                let text = '';
+                try {
+                    text = readFileSync(file, 'utf8');
+                } catch {
+                    continue;
+                }
+                const refs = this.referencedModules(text);
+                for (const r of refs) touched.add(r);
+                const short = shortName(file);
+                for (let i = 0; i < refs.length; i++) {
+                    for (let j = i + 1; j < refs.length; j++) {
+                        addTested(refs[i], refs[j], short);
+                    }
+                }
+                for (const h of refs) {
+                    for (const m of coreRefs.get(h) || []) {
+                        touched.add(m);
+                        addTested(h, m, short, h);
+                    }
+                }
+            }
+        };
+        scanTests(listJsRecursive(join(this.repoRoot, 'tests')));
         scanFiles(listJsRecursive(join(this.repoRoot, 'benchmarks', 'behavioral-evaluation')), composed);
         scanFiles(coreFiles, composed, true);
         scanFiles(listJsRecursive(join(this.repoRoot, 'packages', 'runtime', 'src')), composed);
@@ -193,7 +288,9 @@ export class InteractionCoverageGraph {
             testedEdges: [...tested.entries()].sort().map(([key, evidence]) => ({ pair: key.split(' '), evidence })),
             composedEdges: [...composed.entries()].sort().map(([key, evidence]) => ({ pair: key.split(' '), evidence })),
             debt,
-            isolated
+            isolated,
+            expandedEvidence: expandedEvidence.sort((a, b) => a.pair.join(' ').localeCompare(b.pair.join(' '))),
+            ambiguousAliases: this.ambiguousAliases
         };
     }
 }

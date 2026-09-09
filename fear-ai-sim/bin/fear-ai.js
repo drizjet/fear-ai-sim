@@ -876,7 +876,8 @@ function handleCoverage(options) {
     console.log(`=== SUBSYSTEM INTERACTION COVERAGE (Sections CCIV-CCV) ===\n`);
     console.log(`Modules: ${report.nodeCount} | Tested edges: ${report.testedEdges.length} | Benchmark-composed: ${report.composedEdges.length}`);
     console.log(`Integration debt (composed, never jointly tested): ${report.debt.length}`);
-    console.log(`Isolated (named in no test/benchmark): ${report.isolated.length}\n`);
+    console.log(`Isolated (named in no test/benchmark): ${report.isolated.length}`);
+    console.log(`Harness-expanded tested pairs: ${(report.expandedEvidence || []).length} | Ambiguous aliases neutralized: ${(report.ambiguousAliases || []).length}\n`);
     console.log(`Top-${topN} debt pairs:`);
     for (const d of report.debt.slice(0, topN)) {
         console.log(`  • ${d.pair.join(' + ').padEnd(60)} composed in ${d.composedIn}`);

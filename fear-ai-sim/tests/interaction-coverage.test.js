@@ -65,6 +65,46 @@ describe('Sections CCIV-CCV: InteractionCoverageGraph', () => {
             expect(e.evidence).not.toContain('InteractionCoverageGraph');
         }
     });
+    it('7. Cross-package alias collision no longer fabricates debt', () => {
+        const r = build();
+        const phantom = r.debt.find((d) =>
+            d.pair.includes('ParallelBatchEvaluator') && d.pair.includes('ValleyChainScenario'));
+        expect(phantom).toBeUndefined();
+        // Unit: INTENT_CODES imported from protocol credits no core module.
+        const g = new InteractionCoverageGraph(ROOT);
+        const refs = g.referencedModules(
+            "import { INTENT_CODES } from '../../protocol/index.js';\nconst x = INTENT_CODES.FLEE;\n");
+        expect(refs).not.toContain('ParallelBatchEvaluator');
+    });
+
+    it('8. Harness-encapsulated compositions count as tested (one-hop expansion)', () => {
+        const r = build();
+        const edges = r.testedEdges.filter((e) => e.pair.includes('InteractionMutationHarness'));
+        expect(edges.length).toBeGreaterThanOrEqual(5);
+        const via = r.expandedEvidence.filter((e) => e.via === 'InteractionMutationHarness');
+        expect(via.length).toBeGreaterThan(0);
+        expect(via.some((e) => e.file === 'tests/interaction-mutations.test.js')).toBe(true);
+    });
+    it('9. Ambiguous symbols credit neither claimant without attribution', () => {
+        const r = build();
+        expect(r.ambiguousAliases).toContain('COMMODITY_TYPES');
+        // COMMODITY_TYPES is exported by both CivilizationSimulationSystem
+        // and EconomicFeedbackSystem: a bare mention credits neither.
+        const g = new InteractionCoverageGraph(ROOT);
+        const refs = g.referencedModules('const x = COMMODITY_TYPES.FOOD;\n');
+        expect(refs).not.toContain('CivilizationSimulationSystem');
+        expect(refs).not.toContain('EconomicFeedbackSystem');
+    });
+
+    it('10. Alias credits the module only with a core-attributable import', () => {
+        const g = new InteractionCoverageGraph(ROOT);
+        const withCore = g.referencedModules(
+            "import { DEFAULT_CASCADE_CONFIG } from '../packages/core/index.js';\nconst c = DEFAULT_CASCADE_CONFIG;\n");
+        expect(withCore).toContain('MisinformationCascadeHarness');
+        const viaProtocol = g.referencedModules(
+            "import { DEFAULT_CASCADE_CONFIG } from '../../protocol/index.js';\nconst c = DEFAULT_CASCADE_CONFIG;\n");
+        expect(viaProtocol).not.toContain('MisinformationCascadeHarness');
+    });
 });
 
 describe('Section CLXXXIII tooling: CLI dispatch lint', () => {
