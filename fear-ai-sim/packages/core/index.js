@@ -420,6 +420,15 @@ export {
 export {
  InteractionCoverageGraph
 } from './src/InteractionCoverageGraph.js';
+export {
+ RumorMemory,
+ RUMOR_BELIEF_STATUS,
+ DEFAULT_RUMOR_MEMORY_CONFIG
+} from './src/RumorMemory.js';
+export {
+ RouteMemory,
+ DEFAULT_ROUTE_MEMORY_CONFIG
+} from './src/RouteMemory.js';
 
 
 

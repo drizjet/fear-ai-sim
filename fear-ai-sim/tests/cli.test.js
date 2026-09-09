@@ -1093,7 +1093,7 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         const res = await runCli(['memory-relevance', '--top', '3', '--json']);
         expect(res.code).toBe(0);
         const parsed = JSON.parse(res.stdout.trim());
-        expect(parsed.ranking.evaluated).toBe(5);
+        expect(parsed.ranking.evaluated).toBe(7);
         expect(parsed.ranking.ranked.length).toBe(3);
         expect(parsed.pathology.allPass).toBe(true);
     });

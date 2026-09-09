@@ -120,6 +120,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Debt Paydown: World-Group-Contagion (CCV):** joint tests prove panic scatter vs rally, graph-to-agent contagion loop, faction-driven skirmish encounters, history-to-memory writes, and route demotion; measured debt 19 → 5 pairs with zero engine source changes.
 - **Debt Zero plus RNG Fix (CCV/CCI):** thin-pair tests retire the last 5 debt pairs (22 → 0 total); found and fixed latent `rng.next()` TypeError in the long-horizon benchmark path; removed one dead import; coverage test accepts retirement as terminal state.
 - **Isolated-Module Verdicts (CCIV):** all 6 isolates were miner-scope artifacts (alias imports, subdir tests, source composition); miner v2 adds recursive scans, export aliases, consumer roots; isolated empty, 1 tolerated debt pair documented (`fear-ai coverage`).
+- **Rumor and Route Memory (Section XV):** `RumorMemory` holds heard rumors with trust-scaled reinforcement, sticky corrections, decay, and forgetting audit; `RouteMemory` learns per-agent familiarity and danger; both compete in relevance ranking (`fear-ai memory-relevance`, 7 candidates).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

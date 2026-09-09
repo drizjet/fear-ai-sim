@@ -3306,7 +3306,41 @@
       ],
       "known_gaps": [
         "Consumer scan covers js/mjs only; Python/C#/Godot adapter references to core modules are invisible to the miner",
-        "Next ranked frontiers: absent rumor/social/route memory classes; Godot living-world lab expansion; second external host (gated); LOD/massive-population scale work"
+        "Rumor/social/route memory classes absent at that time; rumor and route stores built below (social/faction/place memory still open)"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RUMOR_AND_ROUTE_MEMORY",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/RumorMemory.js (hear/reinforce-cap/correct/disconfirm/decay/forget-audit/bound/state/recall/recallCandidates)",
+        "packages/core/src/RouteMemory.js (traversal familiarity, incident collapse, danger memory, disuse fade, eviction, state, candidates)",
+        "packages/core/src/MemoryRelevanceScorer.js (rank accepts extraStores; corrected rumors excluded via recall; stores read-only)",
+        "packages/core/index.js (RumorMemory, RouteMemory, configs exported)",
+        "bin/fear-ai.js (memory-relevance demo ranks 7 candidates including rumor and route entries)",
+        "tests/rumor-route-memory.test.js (12 lifecycle and competition tests)"
+      ],
+      "test_evidence": [
+        "tests/rumor-route-memory.test.js (12/12 tests green, first run)",
+        "tests/cli.test.js (memory-relevance evaluated count updated 5 to 7, green)",
+        "Full regression: 326 suites / 2341 tests green in a single pass; guardian:check CLEAN",
+        "fear-ai coverage: 87 modules, 177 tested edges, 1 tolerated debt pair, 0 isolated"
+      ],
+      "runtime_evidence": [
+        "Ambush rumor (0.5595) outranks distant trivia (0.258) for ambush context; corrected rumors never surface",
+        "Corrections are sticky: rehearing a corrected rumor does not resurrect it; corrections survive flood eviction",
+        "Safe traversals build familiarity above 0.3 and calm danger below prior; severity-0.9 incident spikes danger above 0.6",
+        "Four CLI breakages from range edits (dropped graph import, dropped battery line, dropped json conditional); all caught by child-process CLI tests, never by eyeballing head-truncated output",
+        "Lesson reinforced: head-truncated CLI output hides tail crashes; failing child-process tests caught what manual smoke runs missed",
+        "Host game authority invariant strictly preserved (advisory stores only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Rumor-route tests complete in under 2 s; CLI memory-relevance in under 1 s"
+      ],
+      "known_gaps": [
+        "Social, faction, and place memory classes still absent (relationship tensors and faction stances cover adjacent ground)",
+        "Next ranked frontiers: Godot living-world lab expansion; second external host (gated); LOD/massive-population scale work"
       ],
       "next_action": "MAINTAIN"
     }

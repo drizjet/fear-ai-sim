@@ -93,14 +93,15 @@ export class MemoryRelevanceScorer {
     }
 
     /**
-     * Rank episodic + semantic memories; return top-K with breakdowns.
+     * Rank episodic + semantic memories plus optional extra stores
+     * (RumorMemory, RouteMemory via recallCandidates()); return top-K.
      * Deterministic: ties broken by (tick asc, id/key asc).
      * @param {object} memorySystem - LayeredMemorySystem
      * @param {object} ctx - query context
      * @param {number} [topK=5]
-     * @returns {{ ranked: Array, evaluated: number, topK: number }}
+     * @param {Array} [extraStores=[]] - stores with recallCandidates()
      */
-    rank(memorySystem, ctx = {}, topK = 5) {
+    rank(memorySystem, ctx = {}, topK = 5, extraStores = []) {
         const k = Math.max(1, Math.min(50, Math.floor(Number(topK) || 5)));
         const scored = [];
         const episodic = Array.isArray(memorySystem?.episodic) ? memorySystem.episodic : [];
@@ -114,6 +115,29 @@ export class MemoryRelevanceScorer {
         for (const mem of semantic) {
             const { score, factors } = this.scoreSemantic(mem, ctx);
             scored.push({ layer: 'semantic', id: mem.key ?? null, type: mem.category ?? null, tick: Number(mem.lastSeenTick) || 0, score, factors });
+        }
+        for (const store of Array.isArray(extraStores) ? extraStores : []) {
+            const layer = store?.storeLayer || 'auxiliary';
+            let candidates = [];
+            try {
+                candidates = typeof store?.recallCandidates === 'function' ? store.recallCandidates() : [];
+            } catch {
+                candidates = [];
+            }
+            for (const c of Array.isArray(candidates) ? candidates : []) {
+                const pseudo = {
+                    salience: c.salience ?? 0,
+                    tick: c.tick ?? 0,
+                    arousal: 0,
+                    valence: 0,
+                    participants: [],
+                    location: c.location ?? null,
+                    type: c.type ?? null,
+                    details: { topic: (c.tags || []).join(' ') }
+                };
+                const { score, factors } = this.scoreEpisodic(pseudo, ctx);
+                scored.push({ layer, id: c.id ?? null, type: c.type ?? null, tick: Number(c.tick) || 0, score, factors });
+            }
         }
         scored.sort((a, b) => {
             if (b.score !== a.score) return b.score - a.score;

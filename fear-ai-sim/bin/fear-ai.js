@@ -101,6 +101,8 @@ import {
     MemoryRelevanceScorer,
     MemoryPathologyBattery,
     InteractionCoverageGraph,
+    RumorMemory,
+    RouteMemory,
     ScenarioValidator,
     ScenarioInstantiator,
     ScenarioFuzzer,
@@ -840,7 +842,11 @@ function handleMemory(options) {
     sys.recordSemantic('far-quarry', 'RESOURCE', { x: 900, y: 0, z: 0 }, 0.7, {}, 20);
     sys.tickCount = 100;
     const ctx = { nowTick: 100, entityIds: ['orc-7'], position: { x: 12, y: 0, z: 0 }, locationRadius: 50, goalTags: ['ambush', 'hazard'] };
-    const ranking = new MemoryRelevanceScorer().rank(sys, ctx, topK);
+    const rumors = new RumorMemory();
+    rumors.hear({ id: 'r1', topic: 'ROAD_AMBUSH', claim: 'ambush on north road', source: 'elder', origin: 'scout', confidence: 0.9 }, 0.9, 95);
+    const routes = new RouteMemory();
+    routes.recordTraversal('north-road', { safe: true, tick: 90 });
+    const ranking = new MemoryRelevanceScorer().rank(sys, ctx, topK, [rumors, routes]);
     const battery = new MemoryPathologyBattery().runAll();
     if (options.json) {
         console.log(JSON.stringify({ ranking, pathology: battery }, null, 2));
