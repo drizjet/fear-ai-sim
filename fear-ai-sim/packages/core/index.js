@@ -436,6 +436,10 @@ export {
 export {
  InteractionMutationHarness
 } from './src/InteractionMutationHarness.js';
+export {
+ PlaceMemory,
+ DEFAULT_PLACE_MEMORY_CONFIG
+} from './src/PlaceMemory.js';
 
 
 

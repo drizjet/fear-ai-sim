@@ -3485,6 +3485,33 @@
         "Godot-spawn tests show rare parallel-load transients; no quarantine mechanism"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "MEMORY_TAXONOMY_COMPLETE_XV",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/PlaceMemory.js (per-agent valenced place attachment: visits, fear imprints, decay, eviction, state, scorer candidates)",
+        "packages/core/index.js (PlaceMemory, DEFAULT_PLACE_MEMORY_CONFIG exported)",
+        "tests/place-memory.test.js (5 lifecycle tests plus executable taxonomy verdict mapping all 10 XV classes to stores)"
+      ],
+      "test_evidence": [
+        "tests/place-memory.test.js (6/6 tests green)",
+        "Full regression: 332 suites / 2365 tests green in a single pass; guardian:check CLEAN",
+        "fear-ai coverage: 90 modules, 187 tested edges, 0 isolated"
+      ],
+      "runtime_evidence": [
+        "Taxonomy verdict: 9 of 10 XV classes already covered by adjacent systems (sensory/episodic/threat/trauma in LayeredMemorySystem, social/relationship in RelationshipTensorSystem, route in RouteMemory, rumor in RumorMemory, faction in FactionSystem); only personal place-attachment was inexpressible, so only it was built",
+        "Haunted mill outranks trivia in relevance ranking; fondness saturates; fear imprints over fondness; faint traces evicted",
+        "No-build decisions recorded with reasons rather than silently skipped",
+        "Host game authority invariant strictly preserved (advisory store only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Place-memory tests complete in under 2 s"
+      ],
+      "known_gaps": [
+        "Second external host still gated on host availability; LOD/scale work still open; overhead-vs-store-size unmeasured"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
