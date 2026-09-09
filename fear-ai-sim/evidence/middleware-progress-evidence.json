@@ -3566,6 +3566,49 @@
         "Second external host still gated on host availability; lesion feed coverage still 3 of many"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_2",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: coverage miner (90 modules, 195 tested edges, 1 tolerated debt, 0 isolated), evidence gap aggregation across 118 milestones, adjacency verification by grep plus API reads",
+        "12 commits since last CCI audit; all 12 verified green at commit time"
+      ],
+      "test_evidence": [
+        "No new tests: audit is analysis. Adjacency gaps re-verified open by direct source reads 2026-09-09",
+        "Full regression at audit time: 333 suites / 2371 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open wiring gaps, joint-test machinery ready), NEXT (structural scale/workbench), LATER (gated/external), NEVER-unless-policy-changes.",
+        "NOW-1 blockade-throttles-to-corridors: BlockadeEngine publishes throttles no consumer reads; TradeCaravanSupplyChainSystem prices corridor hazard independently. Joint test or thin glue.",
+        "NOW-2 motive-to-destination: MovementMotiveRanker.rank WHY output never feeds RoamingBandSystem.evaluateDestinationUtilities WHERE. Composition test or thin glue.",
+        "NOW-3 security-dilemma-to-stances: SecurityDilemmaHarness has zero references to FactionSystem bilateral stances. Fastest red-team win: does the dilemma scenario change any stance?",
+        "NOW-4 succession-to-cohesion: SuccessionEngine deltas never apply to FactionSystem cohesion (deferred for schema v2; re-examine whether v2 is truly needed).",
+        "NOW-5 lesion-feed expansion: perception-noise, belief-contradiction, succession-shock lesions (harness exists, add 3 experiments).",
+        "NOW-6 Godot-spawn flake quarantine: retry-once or quarantine tag for engine-spawn suites under parallel load.",
+        "NEXT-7 overhead-vs-large-civilization: civ/world at 100s of groups and routes (stores measured, world not).",
+        "NEXT-8 Living-world soak 10k-100k ticks watching stagnation/runaway/memory (LXXII; soak harness absent).",
+        "NEXT-9 World phase-transition mapping (LXXIII; thresholds unknown).",
+        "NEXT-10 Counterfactual intervention ranking end-to-end (LXVII; engine exists, Valley-chain proof missing).",
+        "NEXT-11 History compaction with causal-anchor preservation (LXXI; SaveSizeCompactor exists, anchor proof missing).",
+        "NEXT-12 Protocol fuzzing battery (CXXX; never built).",
+        "NEXT-13 Plugin resource budgets and timeouts (CIII; registry exists, enforcement proof missing).",
+        "NEXT-14 Observability optionality metamorphic test (CVII; telemetry ON vs OFF identity).",
+        "LATER-15 Second external host (pixel-pets candidate on disk; needs owner approval per project rules).",
+        "LATER-16 Unity Editor verification (no Editor installed; stays IMPLEMENTED_NOT_VERIFIED).",
+        "LATER-17 Human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-18 Metric-gaming battery: deliberately bad agents scoring well (CLVI; never built).",
+        "LATER-19 Near-neighbor persona discrimination under noise (X; partial).",
+        "LATER-20 Research watch ingestion (CLXVII; no literature access this session).",
+        "Selected next: NOW-1 through NOW-4 as one Unwired-Adjacency chunk (same joint-test pattern, possible thin glue)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve — miner re-checks each run"
+      ],
+      "next_action": "UNWIRED_ADJACENCY_CHUNK"
     }
   ]
 }
