@@ -4926,6 +4926,27 @@
         "Matrix flake root-caused and fixed alongside: runtime-server and transport-failure-matrix suites both bound fixed port 8799 under parallel jest workers; transport suite moved to 8801 (test-only change, verified free of references)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "BETRAYAL_TUNING_NOW26_NOW27",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "No source change: characterization chunk. Sweeps showed the weight/2 default spans the full severity range monotonically (0.1 to 1.0 to 1.0 across weights 0.1/1.0/2.0) with clean explicit-severity override both directions, and the repair boundary is a sharp documented step (2 repairs at 0.60 solace fail, 3 at 0.90 defuse against the 0.65 bar). Both behaviors upheld as designed",
+        "Lifecycle closure verified: late repair inside the window defuses regardless of timing; post-crystallization repair cannot undo the record; extinction therapy restores eroded agreeableness asymptotically over long calm"
+      ],
+      "test_evidence": [
+        "6 new tests in tests/betrayal-erosion.test.js (battery 13/13): default-severity values, monotonic trait damage, bidirectional override, 2-vs-3 repair boundary, late-repair timing irrelevance, irreversibility plus asymptotic extinction recovery",
+        "One assertion corrected mid-build: extinction approaches baseline asymptotically (0.69999 after 2000 ticks), so the test pins closeness rather than equality",
+        "Full matrix 343/343 (2501 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Sweeps run in milliseconds under node; betrayal battery ~1 s; matrix ~44 s"
+      ],
+      "known_gaps": [
+        "Even the lightest betrayal (weight 0.1) crystallizes under calm leaving a small scar; deemed defensible (grudges form easily, extinction fades them) but a minimum-severity floor for crystallization remains unexplored",
+        "Repair cliff (2 vs 3 events is all-or-nothing) matches the existing threshold design but graded defusal is unexplored"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

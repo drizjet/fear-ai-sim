@@ -95,3 +95,88 @@ describe('betrayal-path erosion in runtime', () => {
         expect(sim.social.hasRelationship('victim', 'betrayer')).toBe(false);
     });
 });
+
+describe('NOW-26: betrayal severity mapping', () => {
+    function outcome(weight, severity) {
+        const sim = world();
+        sim.reportSocialEvent({
+            event: 'BETRAYAL', actorId: 'betrayer', targetId: 'victim',
+            weight, ...(severity === null ? {} : { severity })
+        });
+        calm(sim, 250);
+        const rec = sim.coreTrauma.agentRecords.get('victim');
+        return {
+            incurred: rec.crystallizedTraumas[0]?.severity,
+            agreeableness: sim.agents.get('victim').traits.agreeableness
+        };
+    }
+
+    it('omitted severity defaults to weight/2 across the weight range', () => {
+        expect(outcome(0.1, null).incurred).toBeCloseTo(0.1, 10);
+        expect(outcome(1.0, null).incurred).toBeCloseTo(0.5, 10);
+        expect(outcome(2.0, null).incurred).toBeCloseTo(1.0, 10);
+    });
+
+    it('trait damage scales monotonically with mapped severity', () => {
+        const light = outcome(0.1, null).agreeableness;
+        const mid = outcome(1.0, null).agreeableness;
+        const heavy = outcome(2.0, null).agreeableness;
+        expect(light).toBeGreaterThan(mid);
+        expect(mid).toBeGreaterThan(heavy);
+        expect(heavy).toBeGreaterThanOrEqual(0.1);
+    });
+
+    it('explicit severity overrides weight in both directions', () => {
+        // Heavy act, host-downplayed severity: mild outcome.
+        expect(outcome(2.0, 0.2).agreeableness).toBeGreaterThan(outcome(2.0, null).agreeableness);
+        // Light act, host-upgraded severity: full outcome.
+        expect(outcome(0.1, 1.0).agreeableness).toBe(outcome(2.0, null).agreeableness);
+    });
+});
+
+describe('NOW-27: social-repair defuse boundary', () => {
+    function woundAndRepair(repairs, repairTick = 0, totalCalm = 250) {
+        const sim = world();
+        sim.reportSocialEvent({ event: 'BETRAYAL', actorId: 'betrayer', targetId: 'victim', weight: 2.0, severity: 1.0 });
+        calm(sim, repairTick);
+        for (let i = 0; i < repairs; i++) {
+            sim.reportSocialEvent({ event: 'AID', actorId: 'friend', targetId: 'victim' });
+        }
+        calm(sim, totalCalm - repairTick);
+        const rec = sim.coreTrauma.agentRecords.get('victim');
+        return {
+            crystallized: rec.crystallizedTraumas.length,
+            agreeableness: sim.agents.get('victim').traits.agreeableness
+        };
+    }
+
+    it('two repairs cannot defuse; three repairs can (0.60 vs 0.90 against the 0.65 bar)', () => {
+        expect(woundAndRepair(2).crystallized).toBe(1);
+        const healed = woundAndRepair(3);
+        expect(healed.crystallized).toBe(0);
+        expect(healed.agreeableness).toBe(0.7);
+    });
+
+    it('late repair inside the window still defuses; timing within the window is irrelevant', () => {
+        const healed = woundAndRepair(3, 100);
+        expect(healed.crystallized).toBe(0);
+        expect(healed.agreeableness).toBe(0.7);
+    });
+
+    it('post-crystallization repair cannot undo, but long calm heals through extinction', () => {
+        const sim = world();
+        sim.reportSocialEvent({ event: 'BETRAYAL', actorId: 'betrayer', targetId: 'victim', weight: 2.0, severity: 1.0 });
+        calm(sim, 250);
+        for (let i = 0; i < 3; i++) {
+            sim.reportSocialEvent({ event: 'AID', actorId: 'friend', targetId: 'victim' });
+        }
+        calm(sim, 50);
+        const rec = sim.coreTrauma.agentRecords.get('victim');
+        // Crystallization is irreversible by repair: the record stands.
+        expect(rec.crystallizedTraumas.length).toBe(1);
+        // Extinction therapy restores traits toward baseline over long calm
+        // (asymptotic: approaches but never exactly touches baseline).
+        calm(sim, 2000);
+        expect(sim.agents.get('victim').traits.agreeableness).toBeCloseTo(0.7, 3);
+    });
+});

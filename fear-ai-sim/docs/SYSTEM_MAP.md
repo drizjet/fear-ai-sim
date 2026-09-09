@@ -178,6 +178,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Tribute Fixture NEXT-24:** staged 5x-imbalance scenario drives EXTORTION_PAID through live generation into provocation plus threat pressure; complements the NOW-19 tripwire (which guards canonical stats from opening the path accidentally).
 - **Frontier Audit CCI-10:** 26 ranked candidates (3 NOW, 19 NEXT, 4 LATER); all CCI-9 NOW items plus NEXT-23/24 closed. Next: server transport exposure for the social path (NOW-25).
 - **Social Transport NOW-25:** `POST /api/v1/social/event` exposes host-reported social events over HTTP (validated, 400-mapped errors, trauma_id echo). Fixed a real matrix flake alongside: two server suites shared fixed port 8799 under parallel workers.
+- **Betrayal Tuning NOW-26/27:** weight/2 severity mapping upheld (monotonic, clean override); repair boundary pinned at 3 events with late-repair irrelevance, post-crystallization irreversibility, and asymptotic extinction recovery. No source change.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
