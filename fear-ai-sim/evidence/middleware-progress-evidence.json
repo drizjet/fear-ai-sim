@@ -3340,7 +3340,35 @@
       ],
       "known_gaps": [
         "Social, faction, and place memory classes still absent (relationship tensors and faction stances cover adjacent ground)",
-        "Next ranked frontiers: Godot living-world lab expansion; second external host (gated); LOD/massive-population scale work"
+        "Godot CXIV failure coverage absent at that time; built below"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "GODOT_FAILURE_DRILL_CXIV",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/godot-server-failure.test.js (kill observed as client close, refused reconnect, restart determinism, real-engine drill)",
+        "tests/godot_project/test_server_failure_drill.gd (absent-server failsafe holds last advisory, exits 0)"
+      ],
+      "test_evidence": [
+        "tests/godot-server-failure.test.js (3/3 tests green, first run, real Godot 4.6 binary)",
+        "Pre-existing Godot suites re-verified green: showcase (3/3), civilization (4/4), loopback (3/3)",
+        "Full regression: 327 suites / 2344 tests green in a single pass; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Server kill observed by client as close event; reconnect refused while down; host holds last advisory value-identical",
+        "Restart on same port and seed reproduces bit-identical advisory for identical observation",
+        "Godot headless drill prints FAILSAFE_HOLD_LAST_ADVISORY and exits 0 with no server listening",
+        "All phase transitions observed via events, no sleep-hoped timing",
+        "Host game authority invariant strictly preserved (hold buffer is host-owned; Fear AI writes nothing on failure)"
+      ],
+      "benchmark_evidence": [
+        "Failure tests complete in under 4 s including real-engine drill"
+      ],
+      "known_gaps": [
+        "In-engine Godot performance overhead (CXV) still unmeasured with new chunk-era systems loaded",
+        "Second external host still gated on host availability"
       ],
       "next_action": "MAINTAIN"
     }
