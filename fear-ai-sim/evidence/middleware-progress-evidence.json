@@ -3726,6 +3726,30 @@
         "Calm-settlement to panic and cohesive-faction to split transitions not yet mapped (no settlement-panic or faction-split control identified)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PANIC_SPLIT_PHASE_NOW8",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/world-panic-split-transitions.test.js (4 tests: crowd bifurcation, cascade anatomy, secession ladder, determinism)"
+      ],
+      "test_evidence": [
+        "New tests 4/4 green; full parallel matrix 337/338 suites (sole red is the known pixel-pets cargo parallel flake, green alone in 37 s); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Crowd bifurcates at 3 seeded panickers of 10 (SELF_PRESERVATION threshold 0.25); full anatomy calm, alert, cascade, stampede pinned",
+        "Town secedes after 3 brutalization days (crossing in 2 to 3), deterministically, founding its own polity",
+        "All four LXXIII transitions now mapped (trade, faction, panic, split); every crossing is interior",
+        "Third parallel-matrix pixel-pets flake instance (53 s in matrix, 37 s green alone): CI-rewire to test:heavy as the heavy-suite path is now the pressing reliability item",
+        "Host game authority invariant strictly preserved (advisory sweeps only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Both transition ladders complete in under 3 s"
+      ],
+      "known_gaps": [
+        "CI still runs heavy suites inside the parallel matrix; rewiring the default gate to exclude-then-run test:heavy remains open and is now the top reliability frontier"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
