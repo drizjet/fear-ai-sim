@@ -4837,6 +4837,26 @@
         "Damping slope (1/4) set by legacy-pin compatibility, not by fitted data; steeper or nonlinear shapes unexplored"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TRIBUTE_FIXTURE_NEXT24",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "No source change: the EXTORTION_PAID generation plus consequence path already existed and was correct; only live coverage was absent. Fixture stages a scenario override (fresh group ids, canonical stats untouched) in tests/valley-war-pacing.test.js",
+        "Staged pair: BANDITS militaryStrength 1.0 vs SETTLERS caravan 0.2/wealth 0.9 at identical position, driven through public evaluateEncounters plus _recordEncounterConsequences (same white-box level as the existing NOW-16 synthetic pattern)"
+      ],
+      "test_evidence": [
+        "NEXT-24 battery 3/3: generation yields EXTORTION_PAID with 5.00x rationale; generated encounter flows into PROVOCATION grievance (above 0, below raid-level 0.65) plus convoy threat-pressure rise; determinism per seed",
+        "Tripwire complement: NOW-19 guards from below (canonical stats must not open the path accidentally); NEXT-24 guards from above (staged overwhelming imbalance must resolve as tribute)",
+        "Pacing battery 10/10; full matrix 343/343 (2491 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Fixture evaluates one proximity pair without advancing the valley; pacing battery ~1 s; matrix ~40 s"
+      ],
+      "known_gaps": [
+        "Tribute wealth transfer itself is advisory-only rationale text (no host inventory touched, by constitution); no advise-quantity field emitted for hosts that want a suggested amount"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

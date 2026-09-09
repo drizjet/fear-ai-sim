@@ -136,3 +136,71 @@ describe('NOW-16: extortion provocation mapping', () => {
     expect(maxRatio).toBeLessThan(1.4);
   });
 });
+
+describe('NEXT-24: deliberate tribute-scenario fixture', () => {
+  // NOW-19 proved the extortion path unreachable under doctrine stats
+  // (max ratio 1.20 vs the 1.4 bar). This fixture deliberately stages an
+  // overwhelming-imbalance scenario override — overpowered bandits facing
+  // a wealthy weak convoy — and drives it through live generation plus
+  // consequence recording, so the EXTORTION_PAID branch stays exercised
+  // end to end instead of latent. Scenario overrides are not stat tuning:
+  // canonical group stats are untouched.
+  function stageTribute(seed = 4242) {
+    const sim = new FrontierValleySimulation({ seed });
+    const at = { x: 1000, y: 0, z: 1000 };
+    sim.worldSystem.registerGroup('tribute_raiders', {
+      type: 'BANDITS',
+      factionId: FRONTIER_VALLEY_FACTIONS.BANDITS,
+      memberCount: 12,
+      position: { ...at },
+      militaryStrength: 1.0,
+      wealth: 0.1
+    });
+    sim.worldSystem.registerGroup('tribute_convoy', {
+      type: 'CARAVAN',
+      factionId: FRONTIER_VALLEY_FACTIONS.SETTLERS,
+      memberCount: 4,
+      position: { ...at },
+      militaryStrength: 0.2,
+      wealth: 0.9
+    });
+    return sim;
+  }
+
+  function tributeEncounter(sim) {
+    const encounters = sim.worldSystem.evaluateEncounters({ factionSystem: sim.factionSystem });
+    return encounters.find((e) => {
+      const ids = [e.partyAId, e.partyBId];
+      return ids.includes('tribute_raiders') && ids.includes('tribute_convoy');
+    });
+  }
+
+  it('overwhelming imbalance generates EXTORTION_PAID with a 5x rationale', () => {
+    const enc = tributeEncounter(stageTribute());
+    expect(enc).toBeDefined();
+    expect(enc.advisoryResolution).toBe('EXTORTION_PAID');
+    expect(enc.diagnosticRationale).toMatch(/5\.00x/);
+  });
+
+  it('generated tribute flows into provocation plus threat pressure', () => {
+    const sim = stageTribute();
+    const stance = sim.factionSystem.getBilateralStance(
+      FRONTIER_VALLEY_FACTIONS.SETTLERS,
+      FRONTIER_VALLEY_FACTIONS.BANDITS
+    );
+    stance.grievance = 0.0;
+    const before = sim.worldSystem.groups.get('tribute_convoy').drivers.threatPressure;
+    sim._recordEncounterConsequences([tributeEncounter(sim)]);
+    expect(stance.grievance).toBeGreaterThan(0);
+    expect(stance.grievance).toBeLessThan(0.65);
+    expect(sim.worldSystem.groups.get('tribute_convoy').drivers.threatPressure)
+      .toBeGreaterThan(before);
+  });
+
+  it('tribute generation is deterministic per seed', () => {
+    const a = tributeEncounter(stageTribute(77));
+    const b = tributeEncounter(stageTribute(77));
+    expect(a.advisoryResolution).toBe(b.advisoryResolution);
+    expect(a.diagnosticRationale).toBe(b.diagnosticRationale);
+  });
+});
