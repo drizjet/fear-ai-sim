@@ -4019,6 +4019,32 @@
         "Synchronous infinite loops cannot be preempted single-threaded (documented limit; budgets detect and disable after the fact, they do not interrupt)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "EVENT_COMPACTION_NEXT8",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/EventLogCompactor.js (anchor tiers, per-type boundaries, transitive parent closure, per-window bulk summaries, opt-in drops, verifyAnchorClosure)",
+        "tests/event-log-compaction.test.js (8 tests: synthetic chain, real-log proof, determinism, anchor survival, dangling, cycles, malformed, drops)",
+        "packages/core/index.js barrel export"
+      ],
+      "test_evidence": [
+        "Compaction tests 8/8 green (about 11 s, default matrix); full matrix 337/337 suites (2425 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "2000-tick contact log (47k events, 23MB) compacts to 36 percent smaller with every raid kept and parent closure verified closed",
+        "Bulk summaries reconstruct per-type counts exactly (summarized plus kept equals original)",
+        "Dangling parents reported never fatal; cycles terminate; typeless garbage dropped; explicit drops beat boundaries but lose to parent closure",
+        "Prior gap confirmed: SaveSizeCompactor preserves zero event history; event compaction is new capability, not a duplicate",
+        "Host game authority invariant strictly preserved (advisory log surgery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "47k-event compaction in 133 ms plain node"
+      ],
+      "known_gaps": [
+        "36 percent savings is modest (middle tier kept wholesale); deeper tiers need semantic summarization beyond bookkeeping"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

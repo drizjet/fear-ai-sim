@@ -145,6 +145,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Protocol Fuzz NEXT-9:** 11-test hostile-input battery over JSON and binary paths; fixed a real null-member crash plus NaN/Infinity leaks — adversarial shapes now sanitize or reject, never throw.
 - **Observability Optionality NEXT-11:** closed-world tick carries an optional read-only telemetry sink proven non-interfering — hooked and unhooked 500-tick worlds are identical, saboteur subscribers included.
 - **Plugin Budgets NEXT-10:** extensions carry latency ledgers with opt-in detect-report-disable (hog skipped after one flagged tick, chronic throwers auto-disabled) plus reentrancy guard — pathological plugins degrade to zero, never the tick.
+- **Event Compaction NEXT-8:** tiered log compaction keeps every causal anchor plus parent closure while bookkeeping collapses to counted summaries — 2000-tick logs shrink 36% with closure verified closed.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

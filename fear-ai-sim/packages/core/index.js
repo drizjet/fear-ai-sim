@@ -163,6 +163,12 @@ export {
     SNAPSHOT_VERSIONS
 } from './src/WorldSnapshotMigrationCompactor.js';
 export {
+    compactEventLog,
+    verifyAnchorClosure,
+    DEFAULT_ANCHOR_TYPES,
+    DEFAULT_BULK_TYPES
+} from './src/EventLogCompactor.js';
+export {
     RoamingBandSystem,
     BAND_ARCHETYPES,
     BAND_STATES,
