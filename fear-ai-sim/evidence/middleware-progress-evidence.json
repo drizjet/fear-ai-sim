@@ -3455,6 +3455,36 @@
         "Social/faction/place memory still absent; second external host still gated; LOD/scale work still open"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "INTERACTION_MUTATIONS_CCXXXI_II",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/InteractionMutationHarness.js (3 black-box lesions: leader-calming, route-danger, trauma-dread; inputs-only, never monkey-patched)",
+        "packages/core/index.js (InteractionMutationHarness exported)",
+        "tests/interaction-mutations.test.js (4 lesion sensitivity tests)"
+      ],
+      "test_evidence": [
+        "tests/interaction-mutations.test.js (4/4 tests green)",
+        "Full regression: 331 suites / 2359 tests green on rerun; guardian:check CLEAN",
+        "One transient godot-server-failure fail in a parallel full run (pass-alone before and full-green after); unconfirmed flake under parallel Godot-spawn load, not a regression signal"
+      ],
+      "runtime_evidence": [
+        "Leader-calming lesion: rallies 3 to 0 with a single-factor cut (same calm present leader, leadership 0.95 to 0.20; no removal, no collapse confound)",
+        "Route-danger lesion: utility demotion 0.60 to exactly 0.00 when the incident feed is cut",
+        "Trauma-dread lesion: live fear 0.872 to 0.380 when recalled dread is zeroed",
+        "CCXXXIII already covered by explanation-fidelity forgery rejection (swapped winners, forged layers); not duplicated",
+        "Two mid-build file damages from range edits (orphaned bodies, eaten registrations); repaired and verified",
+        "Host game authority invariant strictly preserved (advisory lesions only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Mutation tests complete in under 7 s"
+      ],
+      "known_gaps": [
+        "Lesion set covers 3 of many possible feeds (perception noise, belief contradiction, succession shocks uncovered)",
+        "Godot-spawn tests show rare parallel-load transients; no quarantine mechanism"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

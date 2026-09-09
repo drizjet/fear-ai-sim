@@ -125,6 +125,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Red Team: Cross-Process Determinism (CCIII):** falsified the determinism claim cross-process (Math.random fallback diverged FREEZE vs PANIC at tick 29); per-agent seeded fallback RNGs now make separate processes bit-identical, pinned by a spawn-based regression gate.
 - **Subsystem Overhead and Roundtrip (LXXIX/CXV/CCXXI):** measured per-call medians for 13 subsystems (slowest 37.9us, all under half their ceilings); JS loopback p50 0.94ms and Godot engine-measured 6.77ms under 500ms ceilings — same-machine IPC scope, not frame claims.
 - **Divergence Volatile Keys (CIX/CX):** first-divergence comparator accepts caller-supplied volatile-key exclusions; timestamp-only replays compare equal while genuine grievance changes still diverge (entity allowlist was already label-blind).
+- **Interaction Mutations (CCXXXI–CCXXXII):** lesion battery proves benchmarks detect breakage — leader-calming cut collapses rallies 3→0, danger-feed cut blinds trade demotion, dread zeroing drops fear 0.872→0.380 (black-box lesions, zero engine changes).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

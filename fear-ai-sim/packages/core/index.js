@@ -433,6 +433,9 @@ export {
  SubsystemOverheadHarness,
  OVERHEAD_BUDGETS_US
 } from './src/SubsystemOverheadHarness.js';
+export {
+ InteractionMutationHarness
+} from './src/InteractionMutationHarness.js';
 
 
 
