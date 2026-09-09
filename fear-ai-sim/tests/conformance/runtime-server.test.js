@@ -157,6 +157,39 @@ describe('FearServer Integration Tests (WebSocket & HTTP REST)', () => {
         expect(bad.status).toBe(400);
     });
 
+    it('serves POST /api/v1/social/event for host-reported social events', async () => {
+        // NOW-25: the runtime betrayal path must be reachable by real hosts
+        // over HTTP, not just in-process.
+        for (const id of ['soc_victim', 'soc_actor']) {
+            const reg = await httpPost(`${httpBase}/api/v1/register`, { agent_id: id });
+            expect(reg.status).toBe(200);
+        }
+        const betray = await httpPost(`${httpBase}/api/v1/social/event`, {
+            event: 'BETRAYAL', actor_id: 'soc_actor', target_id: 'soc_victim', weight: 1.5
+        });
+        expect(betray.status).toBe(200);
+        expect(betray.body.status).toBe('APPLIED');
+        expect(typeof betray.body.trauma_id).toBe('string');
+        const aid = await httpPost(`${httpBase}/api/v1/social/event`, {
+            event: 'AID', actor_id: 'soc_actor', target_id: 'soc_victim'
+        });
+        expect(aid.status).toBe(200);
+        expect(aid.body.trauma_id).toBeNull();
+    });
+
+    it('rejects malformed social events and unknown participants', async () => {
+        const missing = await httpPost(`${httpBase}/api/v1/social/event`, { event: 'BETRAYAL' });
+        expect(missing.status).toBe(400);
+        const badEvent = await httpPost(`${httpBase}/api/v1/social/event`, {
+            event: 'MURDER', actor_id: 'soc_actor', target_id: 'soc_victim'
+        });
+        expect(badEvent.status).toBe(400);
+        const ghost = await httpPost(`${httpBase}/api/v1/social/event`, {
+            event: 'BETRAYAL', actor_id: 'nobody', target_id: 'soc_victim'
+        });
+        expect(ghost.status).toBe(400);
+    });
+
     // -------------------------------------------------------------------------
     // WebSocket Tests
     // -------------------------------------------------------------------------

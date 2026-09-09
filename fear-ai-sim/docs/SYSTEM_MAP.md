@@ -177,6 +177,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Resilience Floor NEXT-23:** hyper-vigilance floor now scales with baseline resilience (fragile settles ~0.26, stoic ~0.17 under identical threat; R=0.5 reference unchanged). Slope kept gentle to respect pinned high-resilience fixtures.
 - **Tribute Fixture NEXT-24:** staged 5x-imbalance scenario drives EXTORTION_PAID through live generation into provocation plus threat pressure; complements the NOW-19 tripwire (which guards canonical stats from opening the path accidentally).
 - **Frontier Audit CCI-10:** 26 ranked candidates (3 NOW, 19 NEXT, 4 LATER); all CCI-9 NOW items plus NEXT-23/24 closed. Next: server transport exposure for the social path (NOW-25).
+- **Social Transport NOW-25:** `POST /api/v1/social/event` exposes host-reported social events over HTTP (validated, 400-mapped errors, trauma_id echo). Fixed a real matrix flake alongside: two server suites shared fixed port 8799 under parallel workers.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

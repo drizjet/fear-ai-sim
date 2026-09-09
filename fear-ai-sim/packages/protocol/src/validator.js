@@ -10,6 +10,7 @@ import {
 } from './types.js';
 import { FEAR_BANDS } from '../../core/src/FearCore.js';
 import { ACTION_INTENTS } from '../../core/src/IntentResolver.js';
+import { SOCIAL_EVENTS } from '../../core/src/SocialEventEngine.js';
 
 const finiteOr = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 const clamp01Finite = (v, fallback) => {
@@ -156,6 +157,39 @@ export class ProtocolValidator {
             value: {
                 type: MESSAGE_TYPES.UNREGISTER_AGENT,
                 agent_id: String(raw.agent_id).trim().slice(0, 256)
+            }
+        };
+    }
+
+    static validateSocialEvent(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Social event must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        if (typeof raw.event !== 'string' || !SOCIAL_EVENTS.includes(raw.event)) {
+            errors.push(`Property "event" must be one of: ${SOCIAL_EVENTS.join(', ')}`);
+        }
+        for (const key of ['actor_id', 'target_id']) {
+            if (raw[key] === undefined || raw[key] === null || String(raw[key]).trim().length === 0) {
+                errors.push(`Missing or empty "${key}"`);
+            }
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const witnesses = Array.isArray(raw.witnesses)
+            ? [...new Set(raw.witnesses.map(String))].filter((w) => w.trim().length > 0).slice(0, 32)
+            : [];
+        return {
+            valid: true,
+            value: {
+                event: raw.event,
+                actor_id: String(raw.actor_id).trim().slice(0, 256),
+                target_id: String(raw.target_id).trim().slice(0, 256),
+                weight: typeof raw.weight === 'number' && Number.isFinite(raw.weight) ? raw.weight : 1.0,
+                witnesses,
+                exposed: raw.exposed === true,
+                severity: typeof raw.severity === 'number' && Number.isFinite(raw.severity) ? raw.severity : null
             }
         };
     }

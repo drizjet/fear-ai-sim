@@ -270,6 +270,42 @@ export class FearServer {
                 return this._sendJson(res, 200, { status: 'ADDED', zone_id: zoneId });
             }
 
+            case '/api/v1/social/event': {
+                // NOW-25: host-reported semantic social event. Same contract
+                // as RuntimeSimulation.reportSocialEvent; transport-only
+                // validation here, advisory state changes inside.
+                const val = ProtocolValidator.validateSocialEvent(body || {});
+                if (!val.valid) {
+                    return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                }
+                let result;
+                try {
+                    result = this.simulation.reportSocialEvent({
+                        event: val.value.event,
+                        actorId: val.value.actor_id,
+                        targetId: val.value.target_id,
+                        weight: val.value.weight,
+                        witnesses: val.value.witnesses,
+                        exposed: val.value.exposed,
+                        severity: val.value.severity
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.VALIDATION_FAILED });
+                }
+                if (result === null) {
+                    return this._sendJson(res, 400, { error: 'Social reporting is disabled on this server', code: ERROR_CODES.VALIDATION_FAILED });
+                }
+                return this._sendJson(res, 200, {
+                    status: 'APPLIED',
+                    event: val.value.event,
+                    actor_id: val.value.actor_id,
+                    target_id: val.value.target_id,
+                    trauma_id: result.traumaId,
+                    direct: result.direct,
+                    witness_updates: result.witnessUpdates
+                });
+            }
+
             case '/api/v1/pacing': {
                 this.simulation.pacing.setOverride(body.intensity ?? null);
                 return this._sendJson(res, 200, { status: 'UPDATED', pacing: this.simulation.pacing.getState() });

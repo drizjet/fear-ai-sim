@@ -4904,7 +4904,28 @@
       "known_gaps": [
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
-      "next_action": "SOCIAL_TRANSPORT_NOW25"
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SOCIAL_TRANSPORT_NOW25",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "POST /api/v1/social/event on FearServer: validates via new ProtocolValidator.validateSocialEvent (event allowlist from SOCIAL_EVENTS, non-empty actor/target, witnessed capped at 32, weight/severity sanitized), delegates to RuntimeSimulation.reportSocialEvent, maps UNKNOWN-agent/participant throws to 400, returns APPLIED plus trauma_id and relationship updates; null (disabled social) returns 400",
+        "Validator imports SOCIAL_EVENTS from core SocialEventEngine, following the existing FearCore/IntentResolver import precedent in that file"
+      ],
+      "test_evidence": [
+        "4 new tests: 2 HTTP conformance (BETRAYAL yields trauma_id string plus APPLIED; AID yields null trauma; malformed/unknown-event/unknown-agent all 400) and 2 validator unit tests (sanitization plus rejections)",
+        "Mutation check: exactly the 4 new tests fail with validator plus server changes stashed; all 11 pre-existing pass both ways",
+        "Full matrix 343/343 (2495 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "One HTTP round trip per report; transport batteries ~1 s; matrix ~40 s"
+      ],
+      "known_gaps": [
+        "WebSocket path has no social message type yet (HTTP-only); validateIncomingMessage accepts unknown messages defensively so a SOCIAL_EVENT type can be added later",
+        "Matrix flake root-caused and fixed alongside: runtime-server and transport-failure-matrix suites both bound fixed port 8799 under parallel jest workers; transport suite moved to 8801 (test-only change, verified free of references)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

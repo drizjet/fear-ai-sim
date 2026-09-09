@@ -108,4 +108,24 @@ describe('Protocol v1.0.0 Validator', () => {
         const invalidOutput = { ...validOutput, fear_band: 'SUPER_SAIYAN' };
         expect(ProtocolValidator.isValidAgentOutput(invalidOutput)).toBe(false);
     });
+
+    it('validates social events with sanitized participants', () => {
+        const res = ProtocolValidator.validateSocialEvent({
+            event: 'BETRAYAL', actor_id: 'a', target_id: 'b', weight: 1.5,
+            witnesses: ['c', 'c', '  '], exposed: false
+        });
+        expect(res.valid).toBe(true);
+        expect(res.value.actor_id).toBe('a');
+        expect(res.value.weight).toBe(1.5);
+        expect(res.value.witnesses).toEqual(['c']);
+        expect(res.value.severity).toBeNull();
+    });
+
+    it('rejects unknown social events and empty participants', () => {
+        expect(ProtocolValidator.validateSocialEvent(
+            { event: 'MURDER', actor_id: 'a', target_id: 'b' }).valid).toBe(false);
+        expect(ProtocolValidator.validateSocialEvent(
+            { event: 'AID', actor_id: '  ', target_id: 'b' }).valid).toBe(false);
+        expect(ProtocolValidator.validateSocialEvent(null).valid).toBe(false);
+    });
 });

@@ -64,7 +64,9 @@ function httpPostJson(port, path, payload) {
 
 describe('Transport Failure Matrix & Stress Verification', () => {
     let server;
-    const testPort = 8799;
+    // NOTE: runtime-server.test.js owns 8799; parallel jest workers collide
+    // on fixed ports, so this suite takes 8801 (verified free of references).
+    const testPort = 8801;
 
     beforeAll(async () => {
         // Configure small maxPayloadBytes (256 KB) for deterministic payload testing
