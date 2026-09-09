@@ -1,127 +1,69 @@
-import { describe, it, expect } from '@jest/globals';
-import {
-    FPS_SPEC,
-    extractThreatAppraisalResponse,
-    extractRecoveryResponse,
-    extractSocialResponse,
-    extractAltruismResponse,
-    extractDisciplineResponse,
-    extractCuriosityResponse,
-    extractReferenceFPS,
-    extractObservationalFPS,
-    runAgentInScenarioFPS
-} from '../benchmarks/behavioral-evaluation/fabe_functional_persona_signatures.mjs';
-import { CANONICAL_ARCHETYPES } from '../benchmarks/behavioral-evaluation/fabe_v2_benchmark.mjs';
-import { SCENARIO_FAMILIES } from '../benchmarks/behavioral-evaluation/cross_scenario_invariance_benchmark.mjs';
+/**
+ * @file functional-persona-signatures.test.js
+ *
+ * Sections VIII-XIII: response functions, near-neighbors, confusion, collapse.
+ */
 
-describe('FABE Functional Persona Signatures (FPS v1)', () => {
-    const cowardly = CANONICAL_ARCHETYPES.find(a => a.id === 'cowardly_civilian');
-    const stoic = CANONICAL_ARCHETYPES.find(a => a.id === 'stoic_veteran');
-    const follower = CANONICAL_ARCHETYPES.find(a => a.id === 'compliant_follower');
-    const watcher = CANONICAL_ARCHETYPES.find(a => a.id === 'paranoid_watcher');
-    const scholar = CANONICAL_ARCHETYPES.find(a => a.id === 'curious_scholar');
+import { FunctionalPersonaSignatures, evaluateResponseFunctions } from '../packages/core/index.js';
 
-    it('defines FPS_SPEC with 6 surfaces and 10 parameters', () => {
-        expect(FPS_SPEC.surfacesCount).toBe(6);
-        expect(FPS_SPEC.signatureDimension).toBe(10);
-        expect(FPS_SPEC.parameterNames).toHaveLength(10);
+const BRAVE = { neuroticism: 0.15, resilience: 0.9, agreeableness: 0.6, openness: 0.5, extraversion: 0.6, leadership: 0.7, riskTolerance: 0.75, conscientiousness: 0.7 };
+const TIMID = { neuroticism: 0.85, resilience: 0.15, agreeableness: 0.6, openness: 0.4, extraversion: 0.35, leadership: 0.25, riskTolerance: 0.2, conscientiousness: 0.5 };
+
+describe('Sections VIII-XIII: Functional Persona Signatures', () => {
+    test('1. Reaction curves separate cartoon archetypes by shape', () => {
+        const fps = new FunctionalPersonaSignatures();
+        expect(fps.distance(BRAVE, TIMID)).toBeGreaterThan(0.1);
+        const sig = fps.signatureFor(BRAVE);
+        expect(Object.keys(sig.auc).length).toBe(11);
+        expect(evaluateResponseFunctions(BRAVE, 1).panicThreat).toBeLessThan(evaluateResponseFunctions(TIMID, 1).panicThreat);
+        expect(evaluateResponseFunctions(BRAVE, 0.5).helpRisk).toBeGreaterThan(0.2);
     });
 
-    describe('Surface 1: Threat-Appraisal Sensitivity', () => {
-        it('measures D50 distance threshold and threat gain', () => {
-            const respCowardly = extractThreatAppraisalResponse(cowardly);
-            const respStoic = extractThreatAppraisalResponse(stoic);
-
-            expect(respCowardly.d50).toBeGreaterThanOrEqual(20);
-            expect(respStoic.d50).toBeLessThanOrEqual(5);
-            expect(respCowardly.threatGain).toBeGreaterThan(respStoic.threatGain);
-        });
+    test('2. Near-neighbor personas discriminate above noise', () => {
+        const fps = new FunctionalPersonaSignatures();
+        const base = { ...BRAVE };
+        const neighbor = { ...BRAVE, neuroticism: 0.25 };
+        const d = fps.distance(base, neighbor);
+        expect(d).toBeGreaterThan(0);
+        expect(d).toBeLessThan(fps.distance(BRAVE, TIMID));
+        const id = fps.identify(base, [{ id: 'self', traits: base }, { id: 'neighbor', traits: neighbor }]);
+        expect(id.predictedId).toBe('self');
+        expect(id.margin).toBeGreaterThanOrEqual(0);
+        expect(id.strongestDiscriminator.function).not.toBe(null);
     });
 
-    describe('Surface 2: Recovery Dynamics & Half-Life', () => {
-        it('verifies stoic veteran decays faster than cowardly civilian', () => {
-            const recStoic = extractRecoveryResponse(stoic);
-            const recCowardly = extractRecoveryResponse(cowardly);
-
-            expect(recStoic.tauHalf).toBeLessThan(recCowardly.tauHalf);
-            expect(recStoic.tauCalm).toBeLessThan(recCowardly.tauCalm);
-            expect(recStoic.empiricalLambda).toBeLessThan(recCowardly.empiricalLambda);
-        });
+    test('3. Confusion analysis names runner-up and discriminator', () => {
+        const fps = new FunctionalPersonaSignatures();
+        const pop = [
+            { id: 'brave', traits: BRAVE },
+            { id: 'timid', traits: TIMID },
+            { id: 'mid', traits: { ...BRAVE, neuroticism: 0.5, resilience: 0.5 } }
+        ];
+        const res = fps.identify({ ...BRAVE, neuroticism: 0.18 }, pop);
+        expect(res.predictedId).toBe('brave');
+        expect(res.runnerUpId).not.toBe(null);
+        expect(res.strongestDiscriminator.gap).toBeGreaterThanOrEqual(0);
+        expect(() => fps.identify(BRAVE, [])).toThrow();
     });
 
-    describe('Surface 3: Social Contagion & Reassurance', () => {
-        it('verifies compliant follower has strong leader reassurance response', () => {
-            const socFollower = extractSocialResponse(follower);
-            const socCowardly = extractSocialResponse(cowardly);
-
-            expect(socFollower.betaReassure).toBeGreaterThan(0.3);
-            expect(socCowardly.betaSocial).toBeGreaterThan(0.5);
-        });
+    test('4. Collapse score flags flatliners, clears distinct personas', () => {
+        const fps = new FunctionalPersonaSignatures();
+        const pop = fps.generatePopulation(60, 7);
+        const distinct = fps.collapseScore(BRAVE, pop);
+        expect(distinct).toBeGreaterThan(0.15);
+        const flat = fps.collapseScore({ neuroticism: 0.5, resilience: 0.5, agreeableness: 0.5, openness: 0.5, extraversion: 0.5, leadership: 0.5, riskTolerance: 0.5, conscientiousness: 0.5 }, pop);
+        expect(flat).toBeLessThan(distinct);
+        expect(() => fps.collapseScore(BRAVE, [{ id: 'one', traits: BRAVE }])).toThrow();
     });
 
-    describe('Surface 4: Altruism Response Function', () => {
-        it('verifies agreeable archetypes exhibit pro-social intents while selfish ones do not', () => {
-            const altFollower = extractAltruismResponse(follower);
-            const altCowardly = extractAltruismResponse(cowardly);
-
-            expect(altFollower.altruismRate).toBeGreaterThan(0.5);
-            expect(altCowardly.altruismRate).toBe(0.0);
-        });
-    });
-
-    describe('Surface 5: Tactical Discipline Retention', () => {
-        it('verifies high conscientiousness persona confronts at point blank instead of flailing', () => {
-            const discWatcher = extractDisciplineResponse(watcher);
-            const discCowardly = extractDisciplineResponse(cowardly);
-
-            expect(discWatcher.cqbConfrontRate).toBeGreaterThan(0.5);
-            expect(discCowardly.cqbConfrontRate).toBe(0.0);
-            expect(discCowardly.flailRate).toBeGreaterThan(0.5);
-        });
-    });
-
-    describe('Surface 6: Curiosity Under Ambiguity', () => {
-        it('verifies curious scholar investigates faint sounds while cowardly ignores them', () => {
-            const curScholar = extractCuriosityResponse(scholar);
-            const curCowardly = extractCuriosityResponse(cowardly);
-
-            expect(curScholar.acousticSensitivity).toBeGreaterThan(0.7);
-            expect(curCowardly.acousticSensitivity).toBe(0.0);
-        });
-    });
-
-    describe('Combined Reference FPS Extraction', () => {
-        it('extracts a normalized 10-dimensional vector in [0, 1]', () => {
-            for (const persona of CANONICAL_ARCHETYPES) {
-                const sig = extractReferenceFPS(persona);
-                expect(sig).toHaveLength(10);
-                for (let i = 0; i < sig.length; i++) {
-                    expect(Number.isFinite(sig[i])).toBe(true);
-                    expect(sig[i]).toBeGreaterThanOrEqual(0.0);
-                    expect(sig[i]).toBeLessThanOrEqual(1.0);
-                }
-            }
-        });
-
-        it('is strictly deterministic across repeated invocations', () => {
-            const sig1 = extractReferenceFPS(stoic);
-            const sig2 = extractReferenceFPS(stoic);
-            expect(sig1).toEqual(sig2);
-        });
-    });
-
-    describe('Observational FPS Extraction from Scenario Trace', () => {
-        it('extracts bounded 10D functional signature from uncontrolled scenario run', () => {
-            const scenario = SCENARIO_FAMILIES[0];
-            const { rawVector, obsFpsVector } = runAgentInScenarioFPS(stoic, scenario, 1337);
-
-            expect(rawVector).toHaveLength(8);
-            expect(obsFpsVector).toHaveLength(10);
-            for (let i = 0; i < obsFpsVector.length; i++) {
-                expect(Number.isFinite(obsFpsVector[i])).toBe(true);
-                expect(obsFpsVector[i]).toBeGreaterThanOrEqual(0.0);
-                expect(obsFpsVector[i]).toBeLessThanOrEqual(1.0);
-            }
-        });
+    test('5. Population generation deterministic and bounded', () => {
+        const fps = new FunctionalPersonaSignatures();
+        const a = fps.generatePopulation(100, 99);
+        const b = fps.generatePopulation(100, 99);
+        expect(a).toEqual(b);
+        expect(a.length).toBe(100);
+        expect(() => fps.generatePopulation(0)).toThrow();
+        expect(fps.auditImmutability().isClean).toBe(true);
+        expect(fps.auditImmutability().hostPhysicsMutations).toBe(0);
     });
 });

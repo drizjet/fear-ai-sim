@@ -632,6 +632,58 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.dangerOverride).toBe('OVERRIDE_DANGER');
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "identity" and separates guard from civilian souls', async () => {
+        const res = await runCli(['identity']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('CHARACTER IDENTITY ARCHITECTURE');
+        expect(res.stdout).toContain('Guard top intent:           stand');
+        expect(res.stdout).toContain('Civilian top intent:        flee');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "identity --json" and returns decision frames', async () => {
+        const res = await runCli(['identity', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.guard.topIntent).toBe('stand');
+        expect(parsed.civilian.topIntent).toBe('flee');
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "persona" and reports signature distances', async () => {
+        const res = await runCli(['persona']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('FUNCTIONAL PERSONA SIGNATURES');
+        expect(res.stdout).toContain('Identified as:              brave');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "persona --json" and returns confusion payload', async () => {
+        const res = await runCli(['persona', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.braveVsTimid).toBeGreaterThan(parsed.braveVsNeighbor);
+        expect(parsed.identification.predictedId).toBe('brave');
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "life" and reports stability verdict', async () => {
+        const res = await runCli(['life', '--ticks', '100']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('LONG-HORIZON CHARACTER LIFE');
+        expect(res.stdout).toContain('Verdict:                    STABLE');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "life --json" and returns life report', async () => {
+        const res = await runCli(['life', '--ticks', '100', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.verdict).toBe('STABLE');
+        expect(parsed.finalStabilityGap).toBeLessThan(0.1);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

@@ -135,7 +135,10 @@ import {
     ExtensionRegistry,
     ObservabilityHooks,
     TuningValidator,
-    IntentStabilizer
+    IntentStabilizer,
+    CharacterIdentityArchitecture,
+    FunctionalPersonaSignatures,
+    LongHorizonCharacterLife
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -256,11 +259,14 @@ function printHelp() {
     console.log(`  extensions         Run third-party advisory plugins in isolated contracts (Sections 201–203)`);
     console.log(`                     Options: --json`);
     console.log(`  metrics            Emit and summarize optional observability metrics (Section 194)`);
-    console.log(`                     Options: --json`);
-    console.log(`  tuning             Validate designer tuning, show defaults and zero-config starter (Sections 227–230)`);
-    console.log(`                     Options: --neuroticism <0..1> --resilience <0..1> --json`);
     console.log(`  steady             Stabilize frame-rate intents with cooldown hysteresis and chatter metric (Sections 294–296)`);
     console.log(`                     Options: --ticks <n> --json`);
+    console.log(`  identity           Run three-layer character decision frame: identity + adaptive + state (Sections VI–VII)`);
+    console.log(`                     Options: --neuroticism <0..1> --resilience <0..1> --fear <0..1> --json`);
+    console.log(`  persona            Compare functional persona signatures: curves, near-neighbor margin, collapse score (Sections VIII–XIII)`);
+    console.log(`                     Options: --json`);
+    console.log(`  life               Run long-horizon character life: drift, stability, collapse verdict at 100/1000/10000 ticks (Sections XIII–XIV)`);
+    console.log(`                     Options: --ticks <100|1000|10000> --seed <n> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1521,6 +1527,68 @@ function handleSteady(options) {
     console.log(`Lethal override:            ${danger.switched ? `YES (${danger.reason})` : 'no'}`);
     console.log(`Chatter rate:               ${chatter.rate} (${chatter.flips} flips / 64-tick window)`);
     console.log(`\nHost Authority Check:         ✓ Advisory damping only (0 host physics/inventory mutations)\n`);
+}
+function handleIdentity(options) {
+    const arch = new CharacterIdentityArchitecture();
+    const n = options.neuroticism !== undefined ? parseFloat(options.neuroticism) : 0.3;
+    const r = options.resilience !== undefined ? parseFloat(options.resilience) : 0.8;
+    const fear = options.fear !== undefined ? parseFloat(options.fear) : 0.7;
+    arch.registerCharacter('guard_01', { neuroticism: n, resilience: r, loyalty: 0.85, leadership: 0.6 });
+    arch.registerCharacter('civilian_01', { neuroticism: 0.8, resilience: 0.25, loyalty: 0.4, leadership: 0.2 });
+    const guard = arch.tick('guard_01', { trauma: 0.02 }, { fear, perceivedDanger: fear, urgency: 0.5 });
+    const civilian = arch.tick('civilian_01', { trauma: 0.02 }, { fear, perceivedDanger: fear, urgency: 0.5 });
+    const payload = { guard, civilian, guardDrift: arch.drift('guard_01'), audit: arch.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== CHARACTER IDENTITY ARCHITECTURE (Sections VI–VII) ===\n`);
+    console.log(`Guard top intent:           ${guard.topIntent} (stand ${guard.tendencies.stand}, flee ${guard.tendencies.flee})`);
+    console.log(`Civilian top intent:        ${civilian.topIntent} (stand ${civilian.tendencies.stand}, flee ${civilian.tendencies.flee})`);
+    console.log(`Same fear, different souls: guard holds, civilian flees — tendencies, not scripts.`);
+    console.log(`\nHost Authority Check:         ✓ Advisory tendencies only (0 host physics/inventory mutations)\n`);
+}
+
+function handlePersona(options) {
+    const fps = new FunctionalPersonaSignatures();
+    const brave = { neuroticism: 0.15, resilience: 0.9, agreeableness: 0.6, openness: 0.5, extraversion: 0.6, leadership: 0.7, riskTolerance: 0.75, conscientiousness: 0.7 };
+    const neighbor = { ...brave, neuroticism: 0.25 };
+    const timid = { neuroticism: 0.85, resilience: 0.15, agreeableness: 0.6, openness: 0.4, extraversion: 0.35, leadership: 0.25, riskTolerance: 0.2, conscientiousness: 0.5 };
+    const pop = fps.generatePopulation(60, 7);
+    const id = fps.identify(brave, [{ id: 'brave', traits: brave }, { id: 'neighbor', traits: neighbor }, { id: 'timid', traits: timid }]);
+    const collapse = fps.collapseScore(brave, pop);
+    const payload = { braveVsTimid: fps.distance(brave, timid), braveVsNeighbor: fps.distance(brave, neighbor), identification: id, collapseScore: collapse, audit: fps.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== FUNCTIONAL PERSONA SIGNATURES (Sections VIII–XIII) ===\n`);
+    console.log(`Brave vs timid distance:    ${payload.braveVsTimid} (cartoon archetypes separate)`);
+    console.log(`Brave vs N+.10 neighbor:    ${payload.braveVsNeighbor} (near-neighbor margin survives)`);
+    console.log(`Identified as:              ${id.predictedId} (margin ${id.margin}, via ${id.strongestDiscriminator.function})`);
+    console.log(`Collapse score:             ${collapse} (1 = distinct, 0 = generic)`);
+    console.log(`\nHost Authority Check:         ✓ Pure response math (0 host physics/inventory mutations)\n`);
+}
+
+function handleLife(options) {
+    const life = new LongHorizonCharacterLife();
+    const ticks = [100, 1000, 10000].includes(parseInt(options.ticks, 10)) ? parseInt(options.ticks, 10) : 1000;
+    const seed = options.seed !== undefined ? parseInt(options.seed, 10) : 42;
+    const traits = { neuroticism: 0.45, resilience: 0.65, agreeableness: 0.55, openness: 0.5, extraversion: 0.5, leadership: 0.6, riskTolerance: 0.5, conscientiousness: 0.6 };
+    const rep = life.runLife(traits, ticks, seed);
+    const payload = { ...rep, audit: life.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== LONG-HORIZON CHARACTER LIFE (Sections XIII–XIV) ===\n`);
+    console.log(`Horizon:                    ${ticks} ticks (seed ${seed})`);
+    console.log(`Verdict:                    ${rep.verdict} (final drift ${rep.finalDrift}, signature gap ${rep.finalStabilityGap})`);
+    console.log(`Nearest attractor:          ${rep.nearestAttractor.name} at ${rep.nearestAttractor.d} — farther than self, identity holds.`);
+    console.log(`\nHost Authority Check:         ✓ Simulated life only (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2892,6 +2960,21 @@ async function main() {
         case 'stabilize':
         case 'chatter':
             handleSteady(options);
+            break;
+        case 'identity':
+        case 'character':
+        case 'persona-layers':
+            handleIdentity(options);
+            break;
+        case 'persona':
+        case 'signatures':
+        case 'response-surface':
+            handlePersona(options);
+            break;
+        case 'life':
+        case 'long-horizon':
+        case 'character-life':
+            handleLife(options);
             break;
         case 'perceive':
         case 'perception':

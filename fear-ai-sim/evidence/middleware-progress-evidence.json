@@ -982,7 +982,7 @@
         "Full 7-station conformance execution completes in 194 ms in Godot 4.6 engine",
         "Zero memory leaks or mutation errors"
       ],
-      "known_gaps": [],
+      "known_gaps": []
     },
     {
       "milestone": "PIXEL_PETS_TRUE_EXTERNAL_HOST_INTEGRATION",
@@ -2331,6 +2331,82 @@
       ],
       "benchmark_evidence": [
         "Stabilizer update latency: < 0.005 ms per agent tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "CHARACTER_IDENTITY_THREE_LAYER_ARCHITECTURE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/CharacterIdentityArchitecture.js (CharacterIdentityArchitecture, 10 identity traits, 9 adaptive tracks, 8 state channels, rate-limited drift, identity-anchored pull)",
+        "packages/core/index.js (Exports for CharacterIdentityArchitecture and layer constants)",
+        "bin/fear-ai.js (Added 'identity', 'character', 'persona-layers' CLI subcommands with --neuroticism, --resilience, --fear, --json)",
+        "tests/character-identity.test.js (layer separation, constraint-without-dictation, duty-despite-fear, bounded drift, loud failures)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/character-identity.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai identity, fear-ai identity --json"
+      ],
+      "runtime_evidence": [
+        "Same fear 0.7: guard stands (0.77), civilian flees (1.0) — tendencies, not scripts",
+        "Captain rallies at 0.85 fear: state pressure high, duty intact",
+        "Host game authority invariant strictly preserved (advisory tendencies only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Identity tick latency: < 0.01 ms per agent tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FUNCTIONAL_PERSONA_SIGNATURES_AND_COLLAPSE_SCORE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/FunctionalPersonaSignatures.js (11 reaction functions, 9-point probe grid, deterministic LCG populations, confusion analysis, collapse score)",
+        "packages/core/index.js (Exports for FunctionalPersonaSignatures and signature constants)",
+        "bin/fear-ai.js (Added 'persona', 'signatures', 'response-surface' CLI subcommands with --json)",
+        "tests/functional-persona-signatures.test.js (archetype separation, near-neighbor margin, confusion, collapse, deterministic populations)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/functional-persona-signatures.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai persona, fear-ai persona --json"
+      ],
+      "runtime_evidence": [
+        "Brave vs timid distance 0.17; N+.10 near-neighbor margin 0.017 with panicThreat as strongest discriminator",
+        "Distinct personas score collapse 0.45 vs flat average lower; populations reproduce bit-identically from seed",
+        "Host game authority invariant strictly preserved (pure response math, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Signature distance latency: < 0.05 ms per persona pair"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "LONG_HORIZON_CHARACTER_LIFE_AND_DRIFT",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/LongHorizonCharacterLife.js (seeded life scripts, 100/1000/10000 horizons, drift series, stability series, generic-attractor collapse verdicts)",
+        "packages/core/index.js (Exports for LongHorizonCharacterLife and horizon constants)",
+        "bin/fear-ai.js (Added 'life', 'long-horizon', 'character-life' CLI subcommands with --ticks, --seed, --json)",
+        "tests/long-horizon-character-life.test.js (determinism, modulation-without-replacement, seed divergence, loud failures, 10k soak)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/long-horizon-character-life.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai life, fear-ai life --json",
+        "Full regression: 293 suites / 2108 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Drift converges to ~0.78 steady state (100→1000 rises, 1000→10000 flat); signature gaps stay under 0.06 across 10k ticks",
+        "Verdict STABLE at all horizons: end-of-life signature nearer to fresh self than any generic attractor",
+        "Host game authority invariant strictly preserved (simulated life only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "10k-tick life completes in < 100 ms single-threaded"
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"

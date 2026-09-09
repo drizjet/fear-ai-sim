@@ -291,8 +291,25 @@ export {
     DESIGNER_DEFAULTS
 } from './src/TuningValidator.js';
 export {
-    IntentStabilizer
+ IntentStabilizer
 } from './src/IntentStabilizer.js';
+export {
+ CharacterIdentityArchitecture,
+ IDENTITY_TRAITS,
+ ADAPTIVE_TRACKS,
+ STATE_CHANNELS
+} from './src/CharacterIdentityArchitecture.js';
+export {
+ FunctionalPersonaSignatures,
+ SIGNATURE_FUNCTIONS,
+ DEFAULT_PROBE_GRID,
+ evaluateResponseFunctions
+} from './src/FunctionalPersonaSignatures.js';
+export {
+ LongHorizonCharacterLife,
+ LIFE_HORIZONS,
+ GENERIC_ATTRACTORS
+} from './src/LongHorizonCharacterLife.js';
 
 
 
