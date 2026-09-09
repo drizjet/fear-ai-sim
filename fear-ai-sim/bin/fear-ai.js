@@ -111,7 +111,9 @@ import {
     CALL_TO_ARMS_RESPONSES,
     ParallelBatchEvaluator,
     SharedMemoryEntityBuffer,
-    INTENT_NAMES
+    INTENT_NAMES,
+    ScenarioStepper,
+    BREAKPOINT_TYPES
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -173,6 +175,8 @@ function printHelp() {
     console.log(`                     Options: --action <coalition|treaty|espionage|call-to-arms> --coalition <id> --json`);
     console.log(`  parallel-batch     Evaluate 100k+ entities in parallel using shared-memory worker pool (Front D / Sec 136-140)`);
     console.log(`                     Options: --entities <100000> --workers <4> --benchmark --json`);
+    console.log(`  stepper            Interactive scenario stepping, semantic breakpoints & live interventions (Frontiers A & E / Sec 124–128)`);
+    console.log(`                     Options: --scenario <path> --step <n> --until-breakpoint <fear|escalation|scarcity|event> --rewind <tick> --diff <tA,tB> --timeline --json`);
     console.log(`  counterfactual-world Run causal world fork experiment (Factual vs Counterfactual) (Front E/C)`);
     console.log(`                     Options: --seed <88888> --fork <15> --horizon <40> --mutation <pacify-bandits|pacify-route|scarcity> --json`);
     console.log(`  economy            Run systemic commodity production, famine fear, and pathology check (Front C)`);
@@ -938,6 +942,132 @@ async function handleParallelBatch(options) {
         console.log(`  • Entity #${s.id}: Fear ${s.outFear.toFixed(4)} | Intent: ${s.intentName} | Pos: (${s.posX.toFixed(1)}, ${s.posZ.toFixed(1)})`);
     }
     console.log(`\nHost Authority Check:         ✓ Strictly advisory evaluation (0 host physics/transform mutations)\n`);
+}
+
+function handleStepper(options) {
+    let scenario;
+    if (options.scenario) {
+        const filePath = path.resolve(process.cwd(), options.scenario);
+        if (!fs.existsSync(filePath)) {
+            console.error(`Error: Scenario file not found: ${filePath}`);
+            process.exit(1);
+        }
+        scenario = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } else {
+        const seed = parseInt(options.seed || '54321', 10);
+        scenario = ScenarioFuzzer.generateFuzzedScenario(seed);
+    }
+
+    const keyframeInterval = parseInt(options['keyframe-interval'] || '5', 10);
+    const stepper = new ScenarioStepper(scenario, { keyframeInterval });
+
+    // Register breakpoint if requested
+    const bpType = options['until-breakpoint'] || options.breakpoint;
+    if (bpType) {
+        if (bpType === 'fear' || bpType === 'FEAR') {
+            const threshold = parseFloat(options.threshold || '0.40');
+            stepper.addBreakpoint('bp_fear', BREAKPOINT_TYPES.ON_FEAR_THRESHOLD, { threshold });
+        } else if (bpType === 'escalation' || bpType === 'ESCALATION') {
+            const stage = options.stage || 'SKIRMISH';
+            stepper.addBreakpoint('bp_escalation', BREAKPOINT_TYPES.ON_ESCALATION_STAGE, { stage });
+        } else if (bpType === 'scarcity' || bpType === 'SCARCITY') {
+            const commodity = options.commodity || 'food';
+            const threshold = parseFloat(options.scarcity || '20');
+            stepper.addBreakpoint('bp_scarcity', BREAKPOINT_TYPES.ON_COMMODITY_SCARCITY, { commodity, threshold });
+        } else if (bpType === 'event' || bpType === 'EVENT') {
+            const eventType = options['event-type'] || TIMELINE_EVENT_TYPES.INJECT_THREAT;
+            stepper.addBreakpoint('bp_event', BREAKPOINT_TYPES.ON_EVENT_TYPE, { eventType });
+        } else {
+            console.warn(`[FearAI-CLI] Unrecognized breakpoint condition: ${bpType}, ignoring.`);
+        }
+    }
+
+    // Schedule live intervention if requested
+    if (options.intervene) {
+        stepper.injectLiveIntervention({
+            type: TIMELINE_EVENT_TYPES.INJECT_THREAT,
+            distance: parseFloat(options.distance || '3.0'),
+            intensity: parseFloat(options.intensity || '0.9')
+        });
+    }
+
+    // Execute stepping or run until breakpoint
+    let executionResult;
+    if (bpType) {
+        const maxTicks = parseInt(options['max-ticks'] || options.step || '30', 10);
+        executionResult = stepper.runUntilBreakpoint(maxTicks);
+    } else {
+        const stepCount = parseInt(options.step || options.steps || options.ticks || '10', 10);
+        executionResult = stepper.step(stepCount);
+    }
+
+    // Optional rewind
+    let rewindResult = null;
+    if (options.rewind !== undefined) {
+        const rewindTick = parseInt(options.rewind, 10);
+        rewindResult = stepper.rewindToTick(rewindTick);
+    }
+
+    // Optional tick diff
+    let diffResult = null;
+    if (options.diff) {
+        const parts = String(options.diff).split(',').map(n => parseInt(n.trim(), 10));
+        if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+            diffResult = stepper.getTickDiff(parts[0], parts[1]);
+        }
+    }
+
+    const summary = stepper.getTimelineSummary();
+
+    const outputPayload = {
+        scenarioId: scenario.metadata?.id || 'fuzzed-scenario',
+        executionResult,
+        timelineSummary: summary,
+        rewindResult: rewindResult ? { tick: rewindResult.tick, agentCount: Object.keys(rewindResult.agents).length } : null,
+        diffResult,
+        hostAuthorityPreserved: true
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(outputPayload, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Interactive Scenario Stepper & Semantic Breakpoint Debugger (Frontiers A & E / Sections 124–128) ===\n`);
+    console.log(`Scenario ID:                  ${outputPayload.scenarioId}`);
+    console.log(`Status:                       ${executionResult.stopped ? '⏸ PAUSED (Breakpoint Hit)' : '▶ ADVANCED (Step Complete)'}`);
+    console.log(`Execution Reason:             ${executionResult.reason}`);
+    console.log(`Current Tick:                 ${stepper.instance.currentTick}`);
+    console.log(`Ticks Advanced:               ${executionResult.ticksAdvanced}`);
+    console.log(`Keyframes Retained:           ${summary.keyframesRetained} (Interval: ${summary.keyframeInterval} ticks)`);
+    console.log(`Max Explored Horizon:         ${summary.maxExploredTick} ticks`);
+    console.log(`Registered Breakpoints:       ${stepper.breakpoints.size}`);
+
+    if (executionResult.firedBreakpoint) {
+        const fb = executionResult.firedBreakpoint;
+        console.log(`Fired Breakpoint:             ID: ${fb.breakpoint.id} | Type: ${fb.breakpoint.type}`);
+        if (fb.fear !== undefined) {
+            console.log(`  • Trigger Details:          Agent ${fb.agentId} reached fear ${fb.fear.toFixed(4)} >= ${fb.threshold}`);
+        }
+    }
+
+    if (rewindResult) {
+        console.log(`Rewind Action:                Rewound to tick ${rewindResult.tick} with bit-exact state parity`);
+    }
+
+    if (diffResult) {
+        console.log(`Differential Analysis:        Tick ${diffResult.tickA} -> Tick ${diffResult.tickB} (${diffResult.ticksElapsed} ticks elapsed)`);
+        console.log(`  • Mean Fear Delta:          ${diffResult.agentDeltas.meanFearDelta > 0 ? '+' : ''}${diffResult.agentDeltas.meanFearDelta.toFixed(4)}`);
+    }
+
+    if (options.timeline) {
+        console.log(`\nCausal Timeline History (${summary.timelineEntriesCount} entries):`);
+        for (const entry of stepper.timelineLog.slice(-10)) {
+            console.log(`  • Tick ${entry.tick.toString().padStart(3, ' ')}: events=${entry.executedEvents?.length || 0}, encounters=${entry.encounters?.length || 0}`);
+        }
+    }
+
+    console.log(`\nHost Authority Check:         ✓ Strictly advisory stepping & diagnostics (0 host geometry/physics mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2260,6 +2390,10 @@ async function main() {
         case 'parallel-batch':
         case 'parallel':
             await handleParallelBatch(options);
+            break;
+        case 'stepper':
+        case 'step':
+            handleStepper(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

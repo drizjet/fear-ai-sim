@@ -234,6 +234,10 @@ export {
     INTENT_CODES,
     INTENT_NAMES
 } from './src/ParallelBatchEvaluator.js';
+export {
+    ScenarioStepper,
+    BREAKPOINT_TYPES
+} from './src/ScenarioStepper.js';
 
 
 

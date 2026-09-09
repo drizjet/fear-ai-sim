@@ -410,6 +410,28 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.sampleEntities.length).toBe(3);
         expect(parsed.hostAuthorityCheck).toBe('CLEAN_ADVISORY_ONLY');
     });
+
+    it('executes "stepper" and outputs interactive simulation stepping summary', async () => {
+        const res = await runCli(['stepper', '--step', '8']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Interactive Scenario Stepper & Semantic Breakpoint Debugger');
+        expect(res.stdout).toContain('Current Tick:                 8');
+        expect(res.stdout).toContain('Ticks Advanced:               8');
+        expect(res.stdout).toContain('Keyframes Retained:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "stepper --json" with live intervention and semantic breakpoint', async () => {
+        const res = await runCli(['stepper', '--step', '15', '--intervene', '--until-breakpoint', 'fear', '--threshold', '0.4', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.scenarioId).toBeDefined();
+        expect(parsed.executionResult.stopped).toBe(true);
+        expect(parsed.executionResult.reason).toBe('BREAKPOINT_TRIGGERED');
+        expect(parsed.executionResult.firedBreakpoint.fear).toBeGreaterThanOrEqual(0.4);
+        expect(parsed.timelineSummary.keyframesRetained).toBeGreaterThanOrEqual(1);
+        expect(parsed.hostAuthorityPreserved).toBe(true);
+    });
 });
 
 
