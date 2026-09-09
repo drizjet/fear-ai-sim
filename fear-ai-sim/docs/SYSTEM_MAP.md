@@ -148,6 +148,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Event Compaction NEXT-8:** tiered log compaction keeps every causal anchor plus parent closure while bookkeeping collapses to counted summaries — 2000-tick logs shrink 36% with closure verified closed.
 - **Metric Gaming NEXT-12:** deliberately bad agents that ace single metrics (statue stability, caricature identifiability, hollow composure) — each caught by a paired guard metric pinned in the battery.
 - **Frontier Audit CCI-4:** 20 ranked candidates across NOW/NEXT/LATER tiers; all CCI-3 NOW items closed. Next: fear/panic-outcome ranking plus telemetry sinks on uninstrumented paths.
+- **Rank + Sinks NOW-1/2:** intervention ranking covers fear and panic with outcome-dependent champions; valley advance and runtime batch carry proven-non-interfering telemetry sinks.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

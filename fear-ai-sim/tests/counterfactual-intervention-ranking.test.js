@@ -105,6 +105,27 @@ describe('LXVII: counterfactual intervention ranking', () => {
     expect(higher[0]).not.toBe(COUNTERFACTUAL_MUTATIONS.ALTER_ROUTE_SECURITY);
   });
 
+  it('bandit pacification wins fear and panic outcomes (no universal optimum)', () => {
+    for (const metric of ['meanPopulationFear', 'panicIncidents']) {
+      const r = rankAll({ outcome: { metric, direction: 'lower' } });
+      expect(r.recommendation.mutation.type).toBe(COUNTERFACTUAL_MUTATIONS.PACIFY_BANDIT_RAIDERS);
+      expect(r.recommendation.score).toBeGreaterThan(0);
+      // Route security, the routeFailures champion, does nothing here.
+      const routeFix = r.ranking.find((e) => e.mutation.type === COUNTERFACTUAL_MUTATIONS.ALTER_ROUTE_SECURITY);
+      expect(routeFix.score).toBe(0);
+    }
+  });
+
+  it('counterfactual trajectories are outcome-independent (only scoring changes)', () => {
+    const fear = rankAll({ outcome: { metric: 'meanPopulationFear', direction: 'lower' } });
+    const panic = rankAll({ outcome: { metric: 'panicIncidents', direction: 'lower' } });
+    const byType = (r) => Object.fromEntries(r.ranking.map((e) => [e.mutation.type, e]));
+    // Same candidate, same fork base: the full counterfactual summary for
+    // PACIFY matches across both rankings, whatever each one scores.
+    expect(byType(fear)[COUNTERFACTUAL_MUTATIONS.PACIFY_BANDIT_RAIDERS].counterfactualSummary)
+      .toEqual(byType(panic)[COUNTERFACTUAL_MUTATIONS.PACIFY_BANDIT_RAIDERS].counterfactualSummary);
+  });
+
   it('an inapplicable intervention fails loudly instead of ranking silently', () => {
     expect(() => WorldCounterfactualEngine.rankInterventions({
       createSimulation: () => new FrontierValleySimulation({ seed: SEED }),

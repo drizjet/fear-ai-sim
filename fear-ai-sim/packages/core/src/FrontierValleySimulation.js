@@ -238,7 +238,7 @@ export class FrontierValleySimulation {
      * @param {number} ticks
      * @returns {Object} Macro summary metrics
      */
-    advance(ticks = 1) {
+    advance(ticks = 1, { hooks = null } = {}) {
         for (let i = 0; i < ticks; i++) {
             this.currentTick++;
 
@@ -317,6 +317,17 @@ export class FrontierValleySimulation {
             );
             if (nomadBilateral && nomadBilateral.stage === ESCALATION_STAGES.ALLY) {
                 this.macroMetrics.alliancesFormed = Math.max(this.macroMetrics.alliancesFormed, 1);
+            }
+            // CVII sink: read-only post-tick metrics; fault-isolated.
+            if (hooks && typeof hooks.emit === 'function') {
+                try {
+                    const summary = this.getMacroSummary();
+                    hooks.emit('valley_tick', this.currentTick, { tick: this.currentTick });
+                    hooks.emit('valley_fear', summary.meanPopulationFear, { tick: this.currentTick });
+                    hooks.emit('valley_panics', summary.panicIncidents, { tick: this.currentTick });
+                } catch {
+                    // A broken sink must never break the tick.
+                }
             }
         }
 

@@ -166,6 +166,8 @@ export class WorldCounterfactualEngine {
                 factual,
                 counterfactual: counter,
                 firstDivergenceTick: result.firstDivergenceTick,
+                factualSummary: result.factualSummary,
+                counterfactualSummary: result.counterfactualSummary,
             };
         });
         ranking.sort((a, b) => b.score - a.score);

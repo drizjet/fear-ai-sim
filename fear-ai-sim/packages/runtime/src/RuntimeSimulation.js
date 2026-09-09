@@ -104,7 +104,7 @@ export class RuntimeSimulation {
      * @param {number} [dt=0.0166] - Elapsed delta time in seconds
      * @returns {Array<object>} array of AgentStateOutput
      */
-    tick(dt = 0.0166) {
+    tick(dt = 0.0166, { hooks = null } = {}) {
         this.tickCount++;
         this.contagion.clearEdges();
 
@@ -179,6 +179,18 @@ export class RuntimeSimulation {
             outputs.push(output);
         }
 
+        // CVII sink: read-only post-tick metrics; fault-isolated.
+        if (hooks && typeof hooks.emit === 'function') {
+            try {
+                hooks.emit('sim_tick', this.tickCount, { tick: this.tickCount });
+                hooks.emit('sim_agents', this.agents.size, { tick: this.tickCount });
+                hooks.emit('sim_mean_fear', avgFear, { tick: this.tickCount });
+                hooks.emit('sim_panicking', panickingCount, { tick: this.tickCount });
+            } catch {
+                // A broken sink must never break the tick.
+            }
+        }
+
         return outputs;
     }
 
@@ -188,7 +200,7 @@ export class RuntimeSimulation {
      * @param {number} [dt=0.0166]
      * @returns {Array<object>}
      */
-    batchTick(observations = [], dt = 0.0166) {
+    batchTick(observations = [], dt = 0.0166, { hooks = null } = {}) {
         if (Array.isArray(observations)) {
             for (const obs of observations) {
                 if (obs && obs.agent_id) {
@@ -196,7 +208,7 @@ export class RuntimeSimulation {
                 }
             }
         }
-        return this.tick(dt);
+        return this.tick(dt, { hooks });
     }
 
     /**
