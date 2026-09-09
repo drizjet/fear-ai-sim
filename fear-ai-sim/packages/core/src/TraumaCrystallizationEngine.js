@@ -335,8 +335,16 @@ export class TraumaCrystallizationEngine {
 
         record.solaceAccumulator += solaceAmount;
 
+        // Betrayal-path rule: a social wound is not dissolved by mere calm.
+        // BETRAYAL_ABANDONMENT traumas ignore passive sanctuary sources and
+        // accrue solace only from interpersonal repair (e.g. SOCIAL_REPAIR_*).
+        // Without this, the runtime's per-calm-tick sanctuary solace defuses
+        // every betrayal within ~3 ticks and the agreeableness-erosion path
+        // below can never fire.
+        const isPassiveSanctuary = typeof source === 'string' && source.startsWith('SANCTUARY');
         for (const trauma of record.activeTraumas) {
             if (trauma.stage === TRAUMA_STAGES.SENSITIZATION_WINDOW || trauma.stage === TRAUMA_STAGES.ACUTE_SHOCK) {
+                if (trauma.type === TRAUMA_TYPES.BETRAYAL_ABANDONMENT && isPassiveSanctuary) continue;
                 trauma.solaceReceived += solaceAmount;
             }
         }

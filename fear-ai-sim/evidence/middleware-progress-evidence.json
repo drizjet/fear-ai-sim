@@ -4794,6 +4794,29 @@
         "Intermediate forcing (ANXIOUS/ALERT) during RECOVER deliberately left out: moderate fear keeps decaying through progress rather than churning bands"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "BETRAYAL_PATH_RUNTIME",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "RuntimeSimulation.reportSocialEvent: host-reported semantic social events land on an advisory RelationshipTensorSystem via SocialEventEngine (opt-out enableSocial flag); betrayal-path events (BETRAYAL, ABANDONMENT, LEADERSHIP_FAILURE, exposed DECEPTION) incur BETRAYAL_ABANDONMENT trauma on the victim; AID/RESCUE/SHARED_DANGER administer interpersonal SOCIAL_REPAIR solace",
+        "TraumaCrystallizationEngine solace rule: BETRAYAL_ABANDONMENT ignores passive SANCTUARY* sources and accrues only interpersonal repair; without this the per-calm-tick sanctuary solace defused every betrayal within ~3 ticks and the erosion code below was unreachable in calm",
+        "Runtime batchTick advances social decay (no-op while tensor empty); unregisterAgent purges social edges",
+        "Mid-build repair: an edit range silently deleted the enableTraumaFeedback flag lines; caught on diff review and restored before any test ran (diff purely additive since)"
+      ],
+      "test_evidence": [
+        "tests/betrayal-erosion.test.js 7/7: wound incurs trauma plus trust/grievance moves; unrepaired betrayal crystallizes under calm and erodes agreeableness 0.7 to ~0.39; 3x AID repair defuses with traits intact; AID alone incurs nothing; determinism per seed; contract throws plus opt-out null; unregister purges edges",
+        "Mutation check: all 7 fail with packages/ changes stashed, pass with them applied",
+        "Full matrix 343/343 (2486 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Betrayal battery ~1 s under jest; matrix ~38 s"
+      ],
+      "known_gaps": [
+        "Betrayal severity defaults to weight/2 when host omits severity; no field validation of that mapping against designer intent yet",
+        "No dedicated social-repair tuning (repair potency fixed at 0.30 per event); threshold interplay with solaceThreshold unmeasured"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

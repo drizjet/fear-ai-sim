@@ -10,7 +10,10 @@ import {
     TraumaCrystallizationEngine,
     TRAUMA_TYPES,
     ContagionGraph,
-    PacingDirector
+    PacingDirector,
+    RelationshipTensorSystem,
+    SocialEventEngine,
+    SOCIAL_EVENTS
 } from '../../core/index.js';
 
 export class RuntimeSimulation {
@@ -35,6 +38,11 @@ export class RuntimeSimulation {
         this.enableTraumaFeedback = options.enableTraumaFeedback ?? true;
         this.enableContagion = options.enableContagion ?? true;
         this.enablePacing = options.enablePacing ?? true;
+        // Betrayal-path chunk: host-reported semantic social events land on
+        // advisory relationship state. Opt-out preserves observe-only runs.
+        this.social = new RelationshipTensorSystem(options.socialConfig || {});
+        this.socialEvents = new SocialEventEngine();
+        this.enableSocial = options.enableSocial ?? true;
         this.tickCount = 0;
     }
 
@@ -87,6 +95,7 @@ export class RuntimeSimulation {
         // NEXT-20: core trauma records are keyed by agent; drop them with
         // the agent so long worlds cannot accumulate the dead.
         this.coreTrauma.agentRecords.delete(id);
+        if (this.enableSocial) this.social.purgeAgent(id);
         return this.agents.delete(id);
     }
 
@@ -114,6 +123,61 @@ export class RuntimeSimulation {
      */
     addTraumaZone(x, y, z = 0, intensity = 1.0, radius = 150, lifetimeTicks = 1800) {
         return this.trauma.addZone(x, y, z, intensity, radius, lifetimeTicks);
+    }
+
+    /**
+     * Report a host-observed semantic social event (betrayal-path chunk).
+     * The host owns world truth; Fear AI updates advisory relationship
+     * state, and betrayal-path events additionally incur BETRAYAL_ABANDONMENT
+     * trauma on the victim so the agreeableness-erosion loop runs end to
+     * end (previously only NEAR_DEATH_SURVIVAL was ever incurred).
+     * @param {object} [report={}]
+     * @param {string} report.event SOCIAL_EVENTS value
+     * @param {string} report.actorId who acted
+     * @param {string} report.targetId who experienced it
+     * @param {number} [report.weight=1.0] interaction weight in [0.1, 2.0]
+     * @param {Array<string>} [report.witnesses=[]] observing third parties
+     * @param {boolean} [report.exposed=false] deception-exposure flag
+     * @param {number|null} [report.severity=null] trauma severity in [0, 1]; defaults to weight/2
+     * @returns {object|null} engine result plus trauma id, or null when social is disabled
+     */
+    reportSocialEvent(report = {}) {
+        if (!this.enableSocial) return null;
+        const { event, actorId, targetId } = report;
+        if (!SOCIAL_EVENTS.includes(event)) throw new Error(`UNKNOWN_SOCIAL_EVENT: ${event}`);
+        const actor = String(actorId);
+        const target = String(targetId);
+        if (!this.agents.has(actor) || !this.agents.has(target)) throw new Error('UNKNOWN_SOCIAL_AGENT');
+        const result = this.socialEvents.applyEvent(this.social, event, actor, target, {
+            weight: report.weight,
+            witnesses: report.witnesses,
+            exposed: report.exposed === true
+        });
+        // Betrayal path: events whose direct pass carries a BETRAYAL or
+        // ABANDONMENT interaction wound the victim's social trust store.
+        const exposed = report.exposed === true;
+        const isBetrayalPath = event === 'BETRAYAL' || event === 'ABANDONMENT'
+            || event === 'LEADERSHIP_FAILURE' || (event === 'DECEPTION' && exposed);
+        let traumaId = null;
+        if (isBetrayalPath && this.enableCoreTrauma) {
+            const w = typeof report.weight === 'number' && Number.isFinite(report.weight) ? report.weight : 1.0;
+            const sev = typeof report.severity === 'number' && Number.isFinite(report.severity)
+                ? Math.max(0.1, Math.min(1.0, report.severity))
+                : Math.max(0.1, Math.min(1.0, w / 2));
+            traumaId = this.coreTrauma.incurTrauma(target, {
+                traumaType: TRAUMA_TYPES.BETRAYAL_ABANDONMENT,
+                severity: sev,
+                description: `Host-reported ${event} by ${actor}`
+            }).id;
+        }
+        // Social repair: genuine aid, rescue, or shared danger directed at
+        // the target counts as interpersonal solace toward betrayal-path
+        // wounds (passive sanctuary calm explicitly does not; see engine).
+        const isRepair = event === 'AID' || event === 'RESCUE' || event === 'SHARED_DANGER';
+        if (isRepair && this.enableCoreTrauma) {
+            this.coreTrauma.administerSolace(target, 0.30, `SOCIAL_REPAIR_${event}`);
+        }
+        return { ...result, traumaId };
     }
 
     /**
@@ -248,6 +312,9 @@ export class RuntimeSimulation {
                 }
             }
         }
+        // Relationship decay (grievance forgiveness, obligation expiry).
+        // No-op while the tensor is empty, so observe-only runs are untouched.
+        if (this.enableSocial) this.social.tick(1);
 
         // CVII sink: read-only post-tick metrics; fault-isolated.
         if (hooks && typeof hooks.emit === 'function') {
