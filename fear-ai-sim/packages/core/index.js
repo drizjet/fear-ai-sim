@@ -310,6 +310,21 @@ export {
  LIFE_HORIZONS,
  GENERIC_ATTRACTORS
 } from './src/LongHorizonCharacterLife.js';
+export {
+ InformationPropagationEngine,
+ PROPAGATED_RUMOR_TOPICS,
+ RUMOR_STATUS,
+ DEFAULT_PROPAGATION_CONFIG
+} from './src/InformationPropagationEngine.js';
+export {
+ AnticipatoryFearEngine,
+ DREAD_TARGETS,
+ DEFAULT_DREAD_CONFIG
+} from './src/AnticipatoryFearEngine.js';
+export {
+ MisinformationCascadeHarness,
+ DEFAULT_CASCADE_CONFIG
+} from './src/MisinformationCascadeHarness.js';
 
 
 

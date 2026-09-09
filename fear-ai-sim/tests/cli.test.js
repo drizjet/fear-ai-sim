@@ -684,6 +684,57 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.finalStabilityGap).toBeLessThan(0.1);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "rumor" and spreads hearsay through trust edges', async () => {
+        const res = await runCli(['rumor']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('RUMOR PROPAGATION NETWORK');
+        expect(res.stdout).toContain('Rumor reach:                5/5 agents');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "rumor --json" and returns network payload', async () => {
+        const res = await runCli(['rumor', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.reach).toBe(5);
+        expect(parsed.status).toBe('ACTIVE');
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "dread" and scores fear without observation', async () => {
+        const res = await runCli(['dread']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('ANTICIPATORY FEAR FROM INFORMATION');
+        expect(res.stdout).toContain('never observed');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "dread --json" and returns dread payload', async () => {
+        const res = await runCli(['dread', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.northDread).toBeGreaterThan(0.3);
+        expect(parsed.ranked[0].id).toBe('south_road');
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "cascade" and prices false alarms in trust', async () => {
+        const res = await runCli(['cascade']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('FALSE-ALARM CASCADE EXPERIMENT');
+        expect(res.stdout).toContain('CASCADE_WITH_TRUST_COST');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "cascade --json" and returns experiment payload', async () => {
+        const res = await runCli(['cascade', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.verdict).toBe('CASCADE_WITH_TRUST_COST');
+        expect(parsed.trustAsymmetry).toBeGreaterThan(0);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

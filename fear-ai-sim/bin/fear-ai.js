@@ -138,7 +138,10 @@ import {
     IntentStabilizer,
     CharacterIdentityArchitecture,
     FunctionalPersonaSignatures,
-    LongHorizonCharacterLife
+    LongHorizonCharacterLife,
+    InformationPropagationEngine,
+    AnticipatoryFearEngine,
+    MisinformationCascadeHarness
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -267,6 +270,12 @@ function printHelp() {
     console.log(`                     Options: --json`);
     console.log(`  life               Run long-horizon character life: drift, stability, collapse verdict at 100/1000/10000 ticks (Sections XIII–XIV)`);
     console.log(`                     Options: --ticks <100|1000|10000> --seed <n> --json`);
+    console.log(`  rumor              Spread a rumor through a settlement trust network with decay and correction (Section XX)`);
+    console.log(`                     Options: --ticks <n> --seed <n> --json`);
+    console.log(`  dread              Score anticipatory dread for unseen roads/factions/regions from information (Section XXI)`);
+    console.log(`                     Options: --json`);
+    console.log(`  cascade            Run false-alarm cascade experiment: panic, reroutes, trust cost (Section XXII)`);
+    console.log(`                     Options: --agents <n> --ticks <n> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1589,6 +1598,69 @@ function handleLife(options) {
     console.log(`Verdict:                    ${rep.verdict} (final drift ${rep.finalDrift}, signature gap ${rep.finalStabilityGap})`);
     console.log(`Nearest attractor:          ${rep.nearestAttractor.name} at ${rep.nearestAttractor.d} — farther than self, identity holds.`);
     console.log(`\nHost Authority Check:         ✓ Simulated life only (0 host physics/inventory mutations)\n`);
+}
+function handleRumor(options) {
+    const n = options.ticks !== undefined ? Math.max(1, Math.min(50, parseInt(options.ticks, 10))) : 8;
+    const seed = options.seed !== undefined ? parseInt(options.seed, 10) : 11;
+    const net = new InformationPropagationEngine({}, seed);
+    for (const a of ['elder', 'scout', 'merchant', 'guard', 'smith']) net.registerAgent(a, a === 'elder' ? 0.8 : 0.5);
+    net.addListenEdge('scout', 'elder');
+    net.addListenEdge('merchant', 'scout');
+    net.addListenEdge('guard', 'scout');
+    net.addListenEdge('smith', 'merchant');
+    const rumorId = net.injectRumor('ROAD_AMBUSH', 'Ambush on the north road', 'elder', { confidence: 0.9 });
+    for (let t = 0; t < n; t++) net.advanceTick();
+    const stats = net.networkStats();
+    const rumor = net.rumors.get(rumorId);
+    const payload = { stats, reach: rumor.recipients.size, hops: rumor.hops, status: rumor.status, audit: net.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== RUMOR PROPAGATION NETWORK (Section XX) ===\n`);
+    console.log(`Rumor reach:                ${rumor.recipients.size}/5 agents in ${n} ticks (${rumor.hops} hops)`);
+    console.log(`Status:                     ${rumor.status} (mutations ${rumor.mutations})`);
+    console.log(`Smith holds:                ${net.heldBy('smith').length > 0 ? `yes at ${net.heldBy('smith')[0].confidence}` : 'no'}`);
+    console.log(`\nHost Authority Check:         ✓ Message passing only (0 host physics/inventory mutations)\n`);
+}
+
+function handleDread(options) {
+    const eng = new AnticipatoryFearEngine({}, { neuroticism: 0.55, resilience: 0.45 });
+    eng.absorb('ROAD', 'north_road', { confidence: 0.9, observed: false, threatLevel: 0.9 });
+    eng.absorb('ROAD', 'north_road', { confidence: 0.85, observed: false, threatLevel: 0.9 });
+    eng.absorb('FACTION', 'red_clan', { confidence: 0.7, observed: false, threatLevel: 0.8 });
+    const ranked = eng.rankRoutes([{ id: 'north_road' }, { id: 'south_road', danger: 0.1 }, { id: 'east_pass', danger: 0.3 }]);
+    const payload = { northDread: eng.dreadOf('ROAD', 'north_road'), clanDread: eng.dreadOf('FACTION', 'red_clan'), ranked, audit: eng.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== ANTICIPATORY FEAR FROM INFORMATION (Section XXI) ===\n`);
+    console.log(`North road dread:           ${payload.northDread} (never observed — pure hearsay)`);
+    console.log(`Red clan dread:             ${payload.clanDread}`);
+    console.log(`Route ranking:              ${ranked.map((r) => `${r.id}=${r.advisory}`).join(', ')}`);
+    console.log(`\nHost Authority Check:         ✓ Advisory dread only (0 host physics/inventory mutations)\n`);
+}
+
+function handleCascade(options) {
+    const harness = new MisinformationCascadeHarness();
+    const agents = options.agents !== undefined ? Math.max(4, Math.min(40, parseInt(options.agents, 10))) : 12;
+    const ticks = options.ticks !== undefined ? Math.max(4, Math.min(40, parseInt(options.ticks, 10))) : 10;
+    const exp = harness.runExperiment({ agents, ticks });
+    const payload = { ...exp, audit: harness.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== FALSE-ALARM CASCADE EXPERIMENT (Section XXII) ===\n`);
+    console.log(`FALSE arm peak panic:       ${exp.falseArm.peakPanic} → ${exp.falseArm.correctionStatus} (trust loss ${exp.falseArm.trustLoss})`);
+    console.log(`TRUE arm peak panic:        ${exp.trueArm.peakPanic} → ${exp.trueArm.correctionStatus} (trust loss ${exp.trueArm.trustLoss})`);
+    console.log(`Verdict:                    ${exp.verdict} (asymmetry ${exp.trustAsymmetry})`);
+    console.log(`North road:                 ${exp.falseArm.northRoadAdvisory}`);
+    console.log(`\nHost Authority Check:         ✓ Simulated settlement only (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2975,6 +3047,21 @@ async function main() {
         case 'long-horizon':
         case 'character-life':
             handleLife(options);
+            break;
+        case 'rumor':
+        case 'propagate':
+        case 'information':
+            handleRumor(options);
+            break;
+        case 'dread':
+        case 'anticipate':
+        case 'anticipatory':
+            handleDread(options);
+            break;
+        case 'cascade':
+        case 'false-alarm':
+        case 'misinformation':
+            handleCascade(options);
             break;
         case 'perceive':
         case 'perception':

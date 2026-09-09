@@ -2410,6 +2410,82 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RUMOR_PROPAGATION_NETWORK",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/InformationPropagationEngine.js (sparse directed listen edges, credibility-weighted hop decay, mutation rolls, temporal decay, correction with trust penalty)",
+        "packages/core/index.js (Exports for InformationPropagationEngine and propagation constants)",
+        "bin/fear-ai.js (Added 'rumor', 'propagate', 'information' CLI subcommands with --ticks, --seed, --json)",
+        "tests/information-propagation.test.js (hop decay, isolation, decay-vs-correction, determinism, max-hop bounds)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/information-propagation.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai rumor, fear-ai rumor --json"
+      ],
+      "runtime_evidence": [
+        "Elder rumor reaches 5/5 agents in 8 ticks over 3 hops with 1 mutation; isolated hermit hears nothing",
+        "Stale rumors decay to DECAYED; lying origins lose 30% credibility on correction",
+        "Host game authority invariant strictly preserved (message passing only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "100-tick 12-agent cascade completes in < 5 ms single-threaded"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "ANTICIPATORY_FEAR_FROM_INFORMATION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/AnticipatoryFearEngine.js (saturating dread uptake, identity-tinted absorption, observed-dominates-hearsay, extinction toward baseline, advisory route ranking)",
+        "packages/core/index.js (Exports for AnticipatoryFearEngine and dread constants)",
+        "bin/fear-ai.js (Added 'dread', 'anticipate', 'anticipatory' CLI subcommands with --json)",
+        "tests/anticipatory-fear.test.js (hearsay dread, observation dominance, saturation, extinction, route ranking)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/anticipatory-fear.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai dread, fear-ai dread --json"
+      ],
+      "runtime_evidence": [
+        "North road dread 0.59 from hearsay alone; observation outweighs rumor at equal confidence",
+        "20 identical rumors saturate without stacking; 200 quiet ticks extinguish hearsay dread to zero",
+        "Host game authority invariant strictly preserved (advisory dread only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Dread absorb latency: < 0.005 ms per item"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "MISINFORMATION_CASCADE_WITH_TRUST_COST",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/MisinformationCascadeHarness.js (two-arm FALSE-vs-TRUE design, chain-plus-shortcut topology, panic/muster series, route impact, trust asymmetry verdict)",
+        "packages/core/index.js (Exports for MisinformationCascadeHarness and cascade config)",
+        "bin/fear-ai.js (Added 'cascade', 'false-alarm', 'misinformation' CLI subcommands with --agents, --ticks, --json)",
+        "tests/misinformation-cascade.test.js (false panic, trust cost, true confirmation, asymmetry, small-settlement determinism)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/misinformation-cascade.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai cascade, fear-ai cascade --json",
+        "Full regression: 296 suites / 2129 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "FALSE arm: 58% peak panic then CORRECTED with 0.24 trust loss; TRUE arm: same panic then CONFIRMED with zero trust loss",
+        "North road flips to AVOID on hearsay; verdict CASCADE_WITH_TRUST_COST with 0.24 asymmetry",
+        "Host game authority invariant strictly preserved (simulated settlement only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Full two-arm experiment completes in < 10 ms single-threaded"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }
