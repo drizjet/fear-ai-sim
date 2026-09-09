@@ -2164,6 +2164,75 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PERCEPTION_ROBUSTNESS_AND_SENSOR_FUSION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/PerceptionRobustnessEngine.js (PerceptionRobustnessEngine, NOISE_PROFILES, seeded latency/dropout/occlusion/noise/false-positive/false-negative pipeline, conflict fusion with ghost-lifted uncertainty)",
+        "packages/core/index.js (Exports for PerceptionRobustnessEngine and percept enums)",
+        "bin/fear-ai.js (Added 'perceive', 'perception', 'sensor' CLI subcommands with --occlusion, --latency, --noise, --profile, --dropout, --json)",
+        "tests/perception-robustness.test.js (occlusion, latency, dropout determinism, ghosts/misses, conflict fusion, non-Gaussian profiles, authority)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/perception-robustness.test.js (7/7 tests green):",
+        "1. Occlusion attenuates visual intensity monotonically",
+        "2. Latency delays observations and flags stale ticks",
+        "3. Dropout schedule is deterministic across reruns",
+        "4. Ghosts stay visible and misses are counted, never silent",
+        "5. Audio-danger plus visual-safe investigates with high uncertainty",
+        "6. Non-Gaussian profiles generalize beyond textbook noise",
+        "7. Authority invariant and replay determinism hold",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai perceive, fear-ai perceive --json"
+      ],
+      "runtime_evidence": [
+        "Occlusion 0.8 drops 0.9 stimulus to 0.18 vs 0.72 at occlusion 0.2",
+        "Audio-only danger fuses to INVESTIGATE_SOUND at 0.65 uncertainty instead of blind flight",
+        "Ghost detections lift fusion uncertainty floor to 0.55 and count into metrics",
+        "Host game authority invariant strictly preserved (advisory perception only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Perception sample latency: < 0.02 ms per agent tick",
+        "CLI perceive --json roundtrip: ~140 ms process spawn inclusive"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "HOST_TIME_DISCIPLINE_AND_MULTIRATE_SCHEDULING",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/HostTimeDiscipline.js (HostTimeDiscipline, SUBSYSTEM_CADENCES, dt-normalized fear integration, pause/resume, dilation clamp, cadence scheduler, clock-fault fallback)",
+        "packages/core/index.js (Exports for HostTimeDiscipline and cadence map)",
+        "bin/fear-ai.js (Added 'host-time', 'clock', 'multirate' CLI subcommands with --dt, --ticks, --scale, --pause-at, --json)",
+        "tests/host-time-discipline.test.js (dt stability, pause/resume, dilation, cadences, fault fallback, 10k soak, replay parity)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/host-time-discipline.test.js (7/7 tests green):",
+        "1. Variable dt converges without overshoot or NaN",
+        "2. Pause freezes time and resume continues bit-identical",
+        "3. Time dilation scales applied dt deterministically",
+        "4. Multi-rate schedule fires affect/social/faction on cadence",
+        "5. Host clock faults fall back safely and are counted",
+        "6. Ten-thousand-tick soak stays bounded and finite",
+        "7. Identical dt sequences replay bit-identically",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai host-time, fear-ai host-time --json",
+        "Full regression: 287 suites / 2069 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "60 fine ticks and 60 coarse ticks converge within 0.05 with zero overshoot",
+        "Pause holds simTime frozen across paused ticks; resume matches uninterrupted clock",
+        "120-tick demo runs affect 120 / social 24 / faction 6 with zero corrections",
+        "Host game authority invariant strictly preserved (time accounting only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Clock advance + fear integration: < 0.01 ms per tick",
+        "CLI host-time --json roundtrip: ~145 ms process spawn inclusive"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

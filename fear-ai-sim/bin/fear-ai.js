@@ -128,7 +128,10 @@ import {
     MODULE_STATUS,
     GoalArbitrationEngine,
     GOAL_TYPES,
-    ROLE_CONSTRAINTS
+    ROLE_CONSTRAINTS,
+    PerceptionRobustnessEngine,
+    NOISE_PROFILES,
+    HostTimeDiscipline
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -242,6 +245,10 @@ function printHelp() {
     console.log(`                     Options: --fail <memory,economy> --disable <world> --json`);
     console.log(`  goals              Arbitrate fear vs duty/loyalty goals with role constraints and courage detection (Sections 212–214, 216)`);
     console.log(`                     Options: --agent <id> --fear <0..1> --duty <0..1> --goal <HOLD_POST|PROTECT_ALLY|ESCORT_CARAVAN> --constraint <NEVER_ABANDON_POST|MUST_PROTECT_ALLY> --json`);
+    console.log(`  perceive           Degrade stimuli through occlusion/latency/dropout/noise and fuse visual+audio (Sections 219–222)`);
+    console.log(`                     Options: --occlusion <0..1> --latency <ticks> --noise <std> --profile <GAUSSIAN|UNIFORM|SPIKE|BIAS> --dropout <period> --json`);
+    console.log(`  host-time          Advance variable-dt clock with pause/dilation and multi-rate schedule (Sections 163–164, 223–226)`);
+    console.log(`                     Options: --dt <seconds> --ticks <n> --scale <factor> --pause-at <tick> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1357,6 +1364,62 @@ function handleGoals(options) {
     console.log(`Fear overridden:            ${result.fearOverridden ? 'YES' : 'no'}`);
     console.log(`Vetoed intents:             ${result.vetoedIntents.map((v) => `${v.goal}:${v.vetoReason}`).join(', ') || 'none'}`);
     console.log(`\nHost Authority Check:         ✓ Advisory goal ranking only (0 host physics/inventory mutations)\n`);
+}
+function handlePerceive(options) {
+    const engine = new PerceptionRobustnessEngine({ seed: 4242 });
+    engine.setProfile('scout_01', {
+        occlusion: options.occlusion !== undefined ? Math.max(0, Math.min(1, parseFloat(options.occlusion))) : 0.5,
+        latencyTicks: options.latency !== undefined ? Math.max(0, parseInt(options.latency, 10)) : 0,
+        noiseStd: options.noise !== undefined ? Math.max(0, parseFloat(options.noise)) : 0.05,
+        noiseProfile: (options.profile ? String(options.profile).toUpperCase() : 'GAUSSIAN'),
+        dropoutPeriod: options.dropout !== undefined ? Math.max(0, parseInt(options.dropout, 10)) : 0,
+        falsePositiveRate: 0.0,
+        falseNegativeRate: 0.0
+    });
+    const clear = engine.perceive('scout_01', 0, { visual: { intensity: 0.9 }, audio: null });
+    const conflict = engine.perceive('scout_01', 1, { visual: null, audio: { loudness: 0.85 } });
+    const metrics = engine.metricsFor('scout_01');
+    const audit = engine.auditImmutability();
+    const payload = { clear, conflict, metrics, audit };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== PERCEPTION ROBUSTNESS & SENSOR FUSION (Sections 219–222) ===\n`);
+    console.log(`Clear visual threat:        fused ${clear.fusedThreat} → ${clear.advisoryIntent} (uncertainty ${clear.uncertainty})`);
+    console.log(`Audio-only conflict:        fused ${conflict.fusedThreat} → ${conflict.advisoryIntent} (uncertainty ${conflict.uncertainty}, conflict ${conflict.conflict ? 'YES' : 'no'})`);
+    console.log(`\nHost Authority Check:         ✓ Advisory perception only (0 host physics/inventory mutations)\n`);
+}
+
+function handleHostTime(options) {
+    const dt = options.dt !== undefined ? parseFloat(options.dt) : 1 / 60;
+    const n = options.ticks !== undefined ? Math.max(1, Math.min(600, parseInt(options.ticks, 10))) : 120;
+    const clock = new HostTimeDiscipline();
+    if (options.scale !== undefined) clock.setTimeScale(parseFloat(options.scale));
+    const pauseAt = options['pause-at'] !== undefined ? parseInt(options['pause-at'], 10) : -1;
+    let fear = 0.1;
+    const ran = { affect: 0, social: 0, faction: 0 };
+    for (let i = 0; i < n; i++) {
+        if (i === pauseAt) clock.pause();
+        if (i === pauseAt + 2) clock.resume();
+        const step = clock.advance(dt);
+        fear = clock.integrateFear(fear, 0.9, step.dtApplied || dt);
+        for (const s of clock.runDue(step.tick, { affect: () => ran.affect++, social: () => ran.social++, faction: () => ran.faction++ })) void s;
+        if (step.paused) fear = clock.integrateFear(fear, 0.9, 0);
+    }
+    const audit = clock.auditImmutability();
+    const payload = { ticks: n, dt, simTime: clock.simTime, fear, ran, corrections: clock.corrections, pausedTicks: clock.pausedTicks, audit };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== HOST TIME DISCIPLINE & MULTI-RATE SCHEDULE (Sections 163–164, 223–226) ===\n`);
+    console.log(`Sim time after ${n} ticks:   ${clock.simTime}s (fear ${fear.toFixed(4)})`);
+    console.log(`Subsystem runs:             affect ${ran.affect} / social ${ran.social} / faction ${ran.faction}`);
+    console.log(`Corrections / paused:       ${clock.corrections} / ${clock.pausedTicks}`);
+    console.log(`\nHost Authority Check:         ✓ Time accounting only (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2708,6 +2771,16 @@ async function main() {
         case 'arbitrate':
         case 'courage':
             handleGoals(options);
+            break;
+        case 'perceive':
+        case 'perception':
+        case 'sensor':
+            handlePerceive(options);
+            break;
+        case 'host-time':
+        case 'clock':
+        case 'multirate':
+            handleHostTime(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

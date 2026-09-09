@@ -530,6 +530,41 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.courageous).toBe(true);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "perceive" and fuses degraded stimuli with uncertainty', async () => {
+        const res = await runCli(['perceive']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('PERCEPTION ROBUSTNESS & SENSOR FUSION');
+        expect(res.stdout).toContain('Audio-only conflict:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "perceive --json" and returns fusion payload', async () => {
+        const res = await runCli(['perceive', '--occlusion', '0.5', '--noise', '0.05', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.conflict.conflict).toBe(true);
+        expect(parsed.conflict.uncertainty).toBeGreaterThanOrEqual(0.6);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "host-time" and advances disciplined multi-rate clock', async () => {
+        const res = await runCli(['host-time']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('HOST TIME DISCIPLINE & MULTI-RATE SCHEDULE');
+        expect(res.stdout).toContain('Subsystem runs:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "host-time --json" and returns clock payload', async () => {
+        const res = await runCli(['host-time', '--ticks', '120', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.ran.affect).toBe(120);
+        expect(parsed.ran.social).toBe(24);
+        expect(parsed.ran.faction).toBe(6);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

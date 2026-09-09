@@ -269,6 +269,15 @@ export {
     COURAGE_FEAR_THRESHOLD,
     CALM_FEAR_CEILING
 } from './src/GoalArbitrationEngine.js';
+export {
+    PerceptionRobustnessEngine,
+    NOISE_PROFILES,
+    PERCEPT_INTENTS
+} from './src/PerceptionRobustnessEngine.js';
+export {
+    HostTimeDiscipline,
+    SUBSYSTEM_CADENCES
+} from './src/HostTimeDiscipline.js';
 
 
 
