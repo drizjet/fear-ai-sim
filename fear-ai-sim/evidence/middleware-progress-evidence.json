@@ -3943,6 +3943,32 @@
         "Ranking proven on one outcome (routeFailures) in one scenario family; fear and panic outcomes unranked"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PROTOCOL_FUZZ_NEXT9",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/protocol/src/validator.js (finite-number helpers, null observation guard)",
+        "tests/protocol-fuzz.test.js (11 tests: envelopes, truncation, numeric leaks, dt, pollution, drops, versions, permissiveness pin, determinism, floods, binary decoder)"
+      ],
+      "test_evidence": [
+        "Fuzz battery 11/11 green; full matrix 334/334 suites (2404 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Real crash found and fixed by fuzzing: null batch member threw inside validateObservation (now rejects with a verdict)",
+        "NaN and Infinity health, energy, positions, distances, intensities, and dt sanitized to safe defaults (previously leaked through)",
+        "200k-threat flood processes without hang; absurd binary entity count rejected by length check before any allocation",
+        "Binary decoder throw contract verified at the server boundary (magic pre-check plus try-catch, no crash path)",
+        "Recorded without change: unknown-type permissiveness (forward-compat default), Date.now handshake default (nondeterministic mint), unbounded finite dt (policy choice)",
+        "Host game authority invariant strictly preserved (validation only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Fuzz battery about 1 s including the 200k flood (104 ms)"
+      ],
+      "known_gaps": [
+        "Deeply nested JSON parse bombs are a server-transport concern above the validator (out of scope here)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

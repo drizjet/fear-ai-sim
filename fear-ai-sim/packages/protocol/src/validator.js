@@ -11,6 +11,12 @@ import {
 import { FEAR_BANDS } from '../../core/src/FearCore.js';
 import { ACTION_INTENTS } from '../../core/src/IntentResolver.js';
 
+const finiteOr = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
+const clamp01Finite = (v, fallback) => {
+    if (typeof v !== 'number' || !Number.isFinite(v)) return fallback;
+    return Math.max(0, Math.min(1.0, v));
+};
+
 export class ProtocolValidator {
     /**
      * Validate incoming raw message structure
@@ -155,6 +161,9 @@ export class ProtocolValidator {
     }
 
     static validateObservation(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Observation must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
         if (!raw.agent_id) {
             return { valid: false, errors: ['Missing required property "agent_id"'], code: ERROR_CODES.VALIDATION_FAILED };
         }
@@ -162,16 +171,16 @@ export class ProtocolValidator {
             valid: true,
             value: {
                 agent_id: String(raw.agent_id).slice(0, 256),
-                x: Number(raw.x) || 0,
-                y: Number(raw.y) || 0,
-                z: Number(raw.z) || 0,
+                x: finiteOr(Number(raw.x), 0) || 0,
+                y: finiteOr(Number(raw.y), 0) || 0,
+                z: finiteOr(Number(raw.z), 0) || 0,
                 velocity: raw.velocity ? {
-                    x: Number(raw.velocity.x) || 0,
-                    y: Number(raw.velocity.y) || 0,
-                    z: Number(raw.velocity.z) || 0
+                    x: finiteOr(Number(raw.velocity.x), 0) || 0,
+                    y: finiteOr(Number(raw.velocity.y), 0) || 0,
+                    z: finiteOr(Number(raw.velocity.z), 0) || 0
                 } : null,
-                health: typeof raw.health === 'number' ? Math.max(0, Math.min(1.0, raw.health)) : 1.0,
-                energy: typeof raw.energy === 'number' ? Math.max(0, Math.min(1.0, raw.energy)) : 1.0,
+                health: clamp01Finite(raw.health, 1.0),
+                energy: clamp01Finite(raw.energy, 1.0),
                 inSafeHaven: Boolean(raw.inSafeHaven),
                 obstacleAhead: Boolean(raw.obstacleAhead),
                 obstaclePresent: Boolean(raw.obstaclePresent),
@@ -182,7 +191,7 @@ export class ProtocolValidator {
     }
 
     static validateBatchTick(raw) {
-        const dt = typeof raw.dt === 'number' && raw.dt > 0 ? raw.dt : 0.0166;
+        const dt = typeof raw.dt === 'number' && Number.isFinite(raw.dt) && raw.dt > 0 ? raw.dt : 0.0166;
         const observations = [];
         if (Array.isArray(raw.observations)) {
             for (const obs of raw.observations) {
@@ -209,12 +218,12 @@ export class ProtocolValidator {
         return {
             id: s.id ? String(s.id) : null,
             type: STIMULUS_TYPES.includes(s.type) ? s.type : 'PREDATOR',
-            distance: typeof s.distance === 'number' ? Math.max(0, s.distance) : 10,
-            x: Number(s.x) || 0,
-            y: Number(s.y) || 0,
-            z: Number(s.z) || 0,
-            intensity: typeof s.intensity === 'number' ? Math.max(0, Math.min(1.0, s.intensity)) : 1.0,
-            confidence: typeof s.confidence === 'number' ? Math.max(0, Math.min(1.0, s.confidence)) : 1.0,
+            distance: typeof s.distance === 'number' && Number.isFinite(s.distance) ? Math.max(0, s.distance) : 10,
+            x: finiteOr(Number(s.x), 0) || 0,
+            y: finiteOr(Number(s.y), 0) || 0,
+            z: finiteOr(Number(s.z), 0) || 0,
+            intensity: clamp01Finite(s.intensity, 1.0),
+            confidence: clamp01Finite(s.confidence, 1.0),
             occluded: Boolean(s.occluded)
         };
     }
