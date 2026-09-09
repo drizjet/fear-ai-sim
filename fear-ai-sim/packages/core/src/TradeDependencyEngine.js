@@ -66,9 +66,24 @@ export class TradeDependencyEngine {
     }
 
     /**
+     * Compose with a retaliation model: restraint from the ledger flows
+     * into the model's recommendation in one call (CCV edge closure).
+     * @param {Array} ledger trade rows
+     * @param {object} model RetaliationModel-like ({ recommend(s,t,opts) })
+     * @param {string} importerId also the retaliation target
+     * @param {string} exporterId also the provocateur
+     * @returns {{ dependency, dampedLevel, restraint, advisory, recommendation }}
+     */
+    restrainedRecommend(ledger, model, importerId, exporterId, sourceId, targetId, nowTick = Infinity) {
+        if (!model || typeof model.recommend !== 'function') throw new Error('MODEL_MUST_RECOMMEND');
+        const base = this.advise(ledger, importerId, exporterId, 1, nowTick);
+        const recommendation = model.recommend(sourceId, targetId, { restraint: base.restraint });
+        return { ...base, recommendation };
+    }
+
+    /**
      * Dampen a retaliation level by dependency: the more you import from
      * the provocateur, the softer the answer.
-     * @param {number} level raw retaliation level in [0,1]
      * @param {number} dependencyRatio in [0,1]
      * @returns damped level
      */

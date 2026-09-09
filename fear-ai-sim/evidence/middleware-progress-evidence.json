@@ -2841,6 +2841,36 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PERIODIC_AUDIT_INTERACTION_AND_REDTEAM",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Import-edge coverage graph over 77 core modules: 20 recent modules, only ValleyChainScenario composes (6 edges)",
+        "RetaliationModel.recommend gains backward-compatible { restraint } hook; TradeDependencyEngine.restrainedRecommend closes the CCV edge",
+        "tests/dependency-restraint-interaction.test.js (composition, independence, insult-storm bound, massacre saturation plus recovery, 10k max-trauma bound)",
+        "Red-team attacks fired and held: 2000-tick insult storm caps at WARN 0.148; massacre x500 saturates finite and recovers under peace; 10k max-trauma ticks bound drift at 0.499"
+      ],
+      "test_evidence": [
+        "tests/dependency-restraint-interaction.test.js (5/5 tests green)"
+      ],
+      "runtime_evidence": [
+        "RAID at 0.48 THREATEN restrains to 0.144 WARN under 80% grain dependence via one call",
+        "No eternal war from trivia, no identity collapse under maximum trauma — strongest claims survive falsification",
+        "Host game authority invariant strictly preserved (advisory composition only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Restrained recommendation latency: < 0.01 ms per composed query"
+      ],
+      "known_gaps": [
+        "SocialBehaviorEffects.contagionGate never feeds GroupContagionSystem panic math",
+        "BlockadeEngine throttles never reach TradeCaravanSupplyChainSystem corridors",
+        "SuccessionEngine deltas never apply to FactionSystem cohesion state",
+        "MovementMotiveRanker never informs RoamingBandSystem destination choice",
+        "RefugeeInformationHarness never consumes SettlementMigrationSystem arrivals",
+        "SecurityDilemmaHarness never reads FactionSystem bilateral stances"
+      ],
+      "next_action": "WIRE_PRIORITY_EDGES_THEN_CHUNK_8_LOD"
     }
   ]
 }

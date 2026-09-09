@@ -90,10 +90,11 @@ export class RetaliationModel {
      * Advisory recommendation for target's response toward source.
      * @returns {{ intent, level, grievance, exhaustion }}
      */
-    recommend(sourceId, targetId) {
+    recommend(sourceId, targetId, options = {}) {
         const key = RetaliationModel.pairKey(sourceId, targetId);
         const acc = this.accounts.get(key) || { grievance: 0, exhaustion: 0 };
-        const netPressure = acc.grievance * (1 - acc.exhaustion * 0.7);
+        const restraint = clamp01(options.restraint ?? 0);
+        const netPressure = acc.grievance * (1 - acc.exhaustion * 0.7) * (1 - restraint);
         let intent = 'IGNORE';
         if (netPressure >= 0.7) intent = 'STRIKE_BACK';
         else if (netPressure >= 0.5) intent = 'PRESSURE';
