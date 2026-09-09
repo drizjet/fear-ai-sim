@@ -3871,6 +3871,31 @@
         "100k/1m-tick ladders still open (LATER-18; event-log memory at 19 per tick needs compaction first)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TRIPWIRE_ADJUDICATION_NOW5",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/world-degeneration-tripwires.test.js (4 negative-result tests pinning structural resistance)",
+        "tools/heavy-suites.mjs gate extended to 9 suites (tripwire file moved to serialized gate, 17 s)"
+      ],
+      "test_evidence": [
+        "Tripwire tests 4/4 green; default matrix 331/331 suites (2383 tests); heavy gate 9/9; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Default scenario never raids at any danger (bandit road-a vs merchant road-c spatial mismatch, not broken raids)",
+        "Sustained contact raids flat (early 214 vs late 242 per 1000 ticks; heat plus 0.2 per raid vs 0.95 per tick cooling equilibrates)",
+        "Wealth under 456-raid contact grows linearly without acceleration; event rate under maximal stress decelerates (24.4 to 22.8 per tick)",
+        "All three synthetic-only flags plus stagnation adjudicated: no endogenous trigger exists in the current economy, demography, bandit, or event machinery; they stand as synthetic-proven tripwires that fail loudly if future changes enable runaway",
+        "Host game authority invariant strictly preserved (advisory probes only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Tripwire file about 17 s under jest (serialized gate)"
+      ],
+      "known_gaps": [
+        "A future raid-heat rebalance or capital-feedback economy could arm these tripwires; the tests will catch it"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
