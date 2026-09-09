@@ -186,6 +186,13 @@ export class RuntimeSimulation {
                 hooks.emit('sim_agents', this.agents.size, { tick: this.tickCount });
                 hooks.emit('sim_mean_fear', avgFear, { tick: this.tickCount });
                 hooks.emit('sim_panicking', panickingCount, { tick: this.tickCount });
+                // NOW-8: trauma plus pacing telemetry on the same
+                // fault-isolated block. Read-only; subsystems already ticked.
+                // Numeric-only: ObservabilityHooks drops non-finite values,
+                // so session phase travels as progress ratio, not name.
+                hooks.emit('sim_trauma_zones', this.trauma.zones.length, { tick: this.tickCount });
+                hooks.emit('sim_pacing_intensity', pacingIntensity, { tick: this.tickCount });
+                hooks.emit('sim_pacing_progress', this.pacing.getProgress(), { tick: this.tickCount });
             } catch {
                 // A broken sink must never break the tick.
             }

@@ -4274,6 +4274,29 @@
         "Middle summaries carry no per-value distributions (for example allowed true/false splits); actor sample is identity-only"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TRAUMA_PACING_SINKS_NOW8",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/runtime/src/RuntimeSimulation.js tick sink block emits sim_trauma_zones, sim_pacing_intensity, and sim_pacing_progress on the existing fault-isolated block",
+        "tests/observability-sinks.test.js gains a NOW-8 describe: identity with trauma zone active plus hostile-sink safety"
+      ],
+      "test_evidence": [
+        "Sink suite 5/5 in about 1 s; full matrix 339/339 suites (2444 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Hooked vs unhooked batch outputs identical with a live trauma zone; throwing sink leaves trajectory untouched",
+        "Phase name not emitted: ObservabilityHooks is numeric-only by design, so session phase travels as progress ratio (documented at the emission site)",
+        "Host game authority invariant strictly preserved (read-only post-tick emissions, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Sink suite about 1 s under jest"
+      ],
+      "known_gaps": [
+        "TraumaCrystallizationEngine (core per-agent trauma memory) still has no sink path; session phase name not directly emittable through numeric hooks"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

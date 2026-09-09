@@ -154,6 +154,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Relation Scale NOW-6:** sparse-plus-cap tensor verified (50/agent, grudge-protected pruning, complete purge); 20k edges build in ~5 ms, tick sub-ms.
 - **Frontier Audit CCI-5:** 20 ranked candidates across NOW/NEXT/LATER tiers; all CCI-4 NOW items closed except NOW-5. Next: middle-tier semantic summarization for event compaction.
 - **Semantic Middle NOW-5:** repeated KEPT log events collapse into windowed summaries (span plus actor sample); real-log savings 29% to 56% with closure closed and reconstruction exact.
+- **Trauma/Pacing Sinks NOW-8:** runtime tick emits zone count, pacing intensity, and session progress on the fault-isolated block; hooked outputs proven identical, hostile sinks safe.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
