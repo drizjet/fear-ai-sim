@@ -190,4 +190,40 @@ describe('LXVII NOW-7: wars and alliances outcome ranking', () => {
     expect(b.advance(200).warsDeclared).toBe(1);
     expect(a.getMacroSummary()).toEqual(b.getMacroSummary());
   });
+
+  it('NEXT-19: ceasefire wins the live warsActive outcome where sticky flags tie', () => {
+    // Sticky warsDeclared is 1/1 under every candidate (war happened); the
+    // live phase separates peace-making (0) from war-continuation (1).
+    const F = { SETTLERS: 'SettlersAlliance', BANDITS: 'ShadowfangBandits' };
+    const ceasefire = {
+      type: COUNTERFACTUAL_MUTATIONS.CUSTOM_MUTATION,
+      params: { description: 'Ceasefire plus buffer zone' },
+      customFn: (sim) => {
+        const st = sim.factionSystem?.getBilateralStance(F.SETTLERS, F.BANDITS);
+        if (st) {
+          st.stage = 'NEGOTIATE'; st.grievance = 0.0; st.trust = 0.8;
+          st.territorialPressure = 0.0; st.fear = 0.0;
+        }
+        for (const g of sim.worldSystem.groups.values()) {
+          if (g.factionId === F.BANDITS) { g.position.x = 800; g.position.z = 800; }
+        }
+      },
+    };
+    const r = WorldCounterfactualEngine.rankInterventions({
+      createSimulation: () => new FrontierValleySimulation({ seed: SEED }),
+      ...HORIZON,
+      outcome: { metric: 'warsActive', direction: 'lower' },
+      candidates: [ceasefire, provoke, NULL],
+    });
+    expect(r.recommendation.mutation.params.description).toBe('Ceasefire plus buffer zone');
+    expect(r.recommendation.score).toBe(1);
+    // Sticky control: the same candidates tie on warsDeclared.
+    const sticky = WorldCounterfactualEngine.rankInterventions({
+      createSimulation: () => new FrontierValleySimulation({ seed: SEED }),
+      ...HORIZON,
+      outcome: { metric: 'warsDeclared', direction: 'lower' },
+      candidates: [ceasefire, provoke, NULL],
+    });
+    expect(new Set(sticky.ranking.map((e) => e.score)).size).toBe(1);
+  });
 });

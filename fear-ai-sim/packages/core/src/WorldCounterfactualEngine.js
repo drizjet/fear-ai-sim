@@ -89,8 +89,12 @@ export class WorldCounterfactualEngine {
                 const diffPanics = Math.abs(factSummary.panicIncidents - counterSummary.panicIncidents);
                 const diffWars = Math.abs((factSummary.warsDeclared ?? 0) - (counterSummary.warsDeclared ?? 0));
                 const diffAlliances = Math.abs((factSummary.alliancesFormed ?? 0) - (counterSummary.alliancesFormed ?? 0));
+                // NEXT-19: live phases catch peace-making (active 1→0) that
+                // sticky flags cannot see.
+                const diffWarsActive = Math.abs((factSummary.warsActive ?? 0) - (counterSummary.warsActive ?? 0));
+                const diffAlliancesActive = Math.abs((factSummary.alliancesActive ?? 0) - (counterSummary.alliancesActive ?? 0));
 
-                if (diffFear > 0.001 || diffEncounters > 0 || diffFailures > 0 || diffPanics > 0 || diffWars > 0 || diffAlliances > 0) {
+                if (diffFear > 0.001 || diffEncounters > 0 || diffFailures > 0 || diffPanics > 0 || diffWars > 0 || diffAlliances > 0 || diffWarsActive > 0 || diffAlliancesActive > 0) {
                     firstDivergenceTick = currentSimTick;
                     causalEvents.push({
                         tick: currentSimTick,
@@ -117,7 +121,9 @@ export class WorldCounterfactualEngine {
             totalEncountersDiff: finalCounter.totalEncounters - finalFact.totalEncounters,
             panicIncidentsDiff: finalCounter.panicIncidents - finalFact.panicIncidents,
             warsDeclaredDiff: finalCounter.warsDeclared - finalFact.warsDeclared,
-            alliancesFormedDiff: finalCounter.alliancesFormed - finalFact.alliancesFormed
+            alliancesFormedDiff: finalCounter.alliancesFormed - finalFact.alliancesFormed,
+            warsActiveDiff: (finalCounter.warsActive ?? 0) - (finalFact.warsActive ?? 0),
+            alliancesActiveDiff: (finalCounter.alliancesActive ?? 0) - (finalFact.alliancesActive ?? 0)
         };
 
         // 6. Formulate causal attribution narrative

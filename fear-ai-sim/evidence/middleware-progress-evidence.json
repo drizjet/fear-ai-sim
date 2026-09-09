@@ -4477,6 +4477,31 @@
         "Numeric-field histograms unbuilt (counts only, no min/max/mean); cross-window distribution rollups left to readers"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "WAR_PHASE_TRACKING_NEXT19",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/FrontierValleySimulation.js tracks live warsActive and alliancesActive per tick alongside the sticky flags and exposes both in macro summaries (fork/snapshot plumbing automatic via macroMetrics)",
+        "packages/core/src/WorldCounterfactualEngine.js divergence and ATE cover the live phases; rankInterventions scores them with zero engine changes (generic metric lookup)",
+        "tests/counterfactual-intervention-ranking.test.js gains de-escalation test: ceasefire-plus-buffer wins warsActive/lower while sticky warsDeclared ties"
+      ],
+      "test_evidence": [
+        "Ranking suite 14/14 in about 1 s; full matrix 340/340 suites (2461 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Ceasefire flips warsActive 1 to 0 (ATE -1, divergence tick 11) while sticky flags read 1/1: live phases separate peace-making from war-continuation",
+        "Peace requires the buffer zone, not words alone: stance-only NEGOTIATE fails as raids re-escalate within the horizon",
+        "Caught mid-build: two summary edits each ate a neighboring field (routeFailures, panicIncidents); both restored and verified present",
+        "Host game authority invariant strictly preserved (advisory tracking only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Ranking suite about 1 s under jest"
+      ],
+      "known_gaps": [
+        "War breaks out by tick 2 on seed 4242 (initial 0.8 grievance now live ammunition): outbreak timing untuned, permanent-war degeneracy unexamined at longer horizons"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

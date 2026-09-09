@@ -162,6 +162,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Live Wars NOW-14:** valley raids feed faction grievances and the escalation machine runs every tick — natural outbreak plus de-escalation phases, deterministically; fear/panic/route metrics untouched.
 - **Core Trauma Sink NOW-13:** per-agent trauma memory wired into the runtime observe-only (panic records, lifecycle ticks, counts emitted); outputs proven identical with the engine on or off.
 - **Value Distributions NOW-12:** middle summaries carry bounded per-value counts over caller-named fields (allowed splits, decisions, seasons); every distribution reconciles exactly.
+- **War Phases NEXT-19:** live warsActive/alliancesActive tracked alongside sticky flags — ceasefire-plus-buffer wins de-escalation ranking where sticky outcomes tie at 1/1.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

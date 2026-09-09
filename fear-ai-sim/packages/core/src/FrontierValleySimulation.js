@@ -62,6 +62,12 @@ export class FrontierValleySimulation {
         this.macroMetrics = {
             warsDeclared: 0,
             alliancesFormed: 0,
+            // NEXT-19: live (non-sticky) phase state. The sticky flags above
+            // record that war/alliance ever happened; these record whether
+            // the watched pairs are at war/allied RIGHT NOW, so peace-making
+            // interventions can score.
+            warsActive: 0,
+            alliancesActive: 0,
             routeFailures: 0,
             reroutesTriggered: 0,
             migrations: 0,
@@ -314,7 +320,6 @@ export class FrontierValleySimulation {
                     this.macroMetrics.panicIncidents++;
                 }
             }
-
             // Check bilateral escalation state for wars / alliances
             const bilateral = this.factionSystem.getBilateralStance(
                 FRONTIER_VALLEY_FACTIONS.SETTLERS,
@@ -323,6 +328,9 @@ export class FrontierValleySimulation {
             if (bilateral) {
                 if (bilateral.stage === ESCALATION_STAGES.ATTACK || bilateral.stage === ESCALATION_STAGES.SKIRMISH) {
                     this.macroMetrics.warsDeclared = Math.max(this.macroMetrics.warsDeclared, 1);
+                    this.macroMetrics.warsActive = 1;
+                } else {
+                    this.macroMetrics.warsActive = 0;
                 }
             }
 
@@ -332,6 +340,9 @@ export class FrontierValleySimulation {
             );
             if (nomadBilateral && nomadBilateral.stage === ESCALATION_STAGES.ALLY) {
                 this.macroMetrics.alliancesFormed = Math.max(this.macroMetrics.alliancesFormed, 1);
+                this.macroMetrics.alliancesActive = 1;
+            } else {
+                this.macroMetrics.alliancesActive = 0;
             }
             // CVII sink: read-only post-tick metrics; fault-isolated.
             if (hooks && typeof hooks.emit === 'function') {
@@ -434,6 +445,8 @@ export class FrontierValleySimulation {
             ticksExecuted: this.currentTick,
             warsDeclared: this.macroMetrics.warsDeclared,
             alliancesFormed: this.macroMetrics.alliancesFormed,
+            warsActive: this.macroMetrics.warsActive,
+            alliancesActive: this.macroMetrics.alliancesActive,
             routeFailures: this.macroMetrics.routeFailures,
             panicIncidents: this.macroMetrics.panicIncidents,
             totalEncounters: this.macroMetrics.totalEncounters,
