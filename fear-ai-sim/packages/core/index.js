@@ -365,6 +365,18 @@ export {
 export {
  ScarcityPressureHarness
 } from './src/ScarcityPressureHarness.js';
+export {
+ EncounterConsequenceEngine
+} from './src/EncounterConsequenceEngine.js';
+export {
+ RefugeeInformationHarness,
+ FLIGHT_CAUSES
+} from './src/RefugeeInformationHarness.js';
+export {
+ MovementMotiveRanker,
+ MOVEMENT_MOTIVES,
+ ARCHETYPE_MOTIVE_PRIORS
+} from './src/MovementMotiveRanker.js';
 
 
 

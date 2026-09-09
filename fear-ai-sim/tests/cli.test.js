@@ -891,6 +891,58 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.ranked[0].deprivation).toBeGreaterThan(0.3);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "encounter" and feeds outcomes back to the world', async () => {
+        const res = await runCli(['encounter']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('ENCOUNTER CONSEQUENCES');
+        expect(res.stdout).toContain('North road danger:          0.5');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "encounter --json" and returns consequence streams', async () => {
+        const res = await runCli(['encounter', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.corridorHazards[0].danger).toBe(0.5);
+        expect(parsed.rumorSeeds.length).toBe(3);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "refuge" and voices arrivals', async () => {
+        const res = await runCli(['refuge']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('REFUGEE INFORMATION');
+        expect(res.stdout).toContain('APPROACHING_ARMY');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "refuge --json" and returns arrival seeds', async () => {
+        const res = await runCli(['refuge', '--survivors', '40', '--cause', 'FAMINE', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.rumorSeeds[0].topic).toBe('RESOURCE_SCARCITY');
+        expect(parsed.cause).toBe('FAMINE');
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "motive" and ranks why over where', async () => {
+        const res = await runCli(['motive']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('MOVEMENT MOTIVES');
+        expect(res.stdout).toContain('Hungry caravan:             FOOD');
+        expect(res.stdout).toContain('Frightened refugees:        SAFETY');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "motive --json" and returns motive payload', async () => {
+        const res = await runCli(['motive', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.caravan.motive).toBe('FOOD');
+        expect(parsed.refugees.motive).toBe('SAFETY');
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

@@ -151,7 +151,10 @@ import {
     SecurityDilemmaHarness,
     TradeDependencyEngine,
     BlockadeEngine,
-    ScarcityPressureHarness
+    ScarcityPressureHarness,
+    EncounterConsequenceEngine,
+    RefugeeInformationHarness,
+    MovementMotiveRanker
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -302,6 +305,12 @@ function printHelp() {
     console.log(`  blockade           Deny corridors as strategy, priced for both sides (Section LIII)`);
     console.log(`                     Options: --commitment <0..1> --json`);
     console.log(`  scarcity           Score famine pressure into migration, raids, morale (Section XLIX)`);
+    console.log(`                     Options: --json`);
+    console.log(`  encounter          Convert ambush outcomes into route danger, rumors, escorts (Section LXIII)`);
+    console.log(`                     Options: --json`);
+    console.log(`  refuge             Turn refugee arrivals into rumor and dread seeds (Section LX)`);
+    console.log(`                     Options: --survivors <n> --cause <CAUSE> --json`);
+    console.log(`  motive             Rank why a band moves: food, safety, trade, rumor (Section LVI)`);
     console.log(`                     Options: --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
@@ -1875,6 +1884,63 @@ function handleScarcity(options) {
     }
     console.log(`\nHost Authority Check:         ✓ Advisory scores only (0 host physics/inventory mutations)\n`);
 }
+function handleEncounter(options) {
+    const eng = new EncounterConsequenceEngine();
+    const batch = eng.processBatch([
+        { category: 'HIGHWAY_AMBUSH', resolution: 'COMBAT_ENGAGEMENT', corridorId: 'north_road' },
+        { category: 'HIGHWAY_AMBUSH', resolution: 'EXTORTION_PAID', corridorId: 'north_road' },
+        { category: 'PEACEFUL_CONVERGENCE', resolution: 'PEACEFUL_TRADE', corridorId: 'silk_road' }
+    ]);
+    const payload = { ...batch, audit: eng.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== ENCOUNTER CONSEQUENCES (Section LXIII) ===\n`);
+    console.log(`North road danger:          ${batch.corridorHazards[0].danger} (max of ambush + extortion, never averaged)`);
+    console.log(`Rumor seeds:                ${batch.rumorSeeds.length} (survivors talk; traders gossip)`);
+    console.log(`Escort bump:                +${batch.escortAdvisories[0].tierBump} tiers on ${batch.escortAdvisories[0].corridorId}`);
+    console.log(`\nHost Authority Check:         ✓ Advisory streams only (0 host physics/inventory mutations)\n`);
+}
+
+function handleRefuge(options) {
+    const harness = new RefugeeInformationHarness();
+    const survivors = options.survivors !== undefined ? Math.max(1, Math.min(2000, parseInt(options.survivors, 10))) : 120;
+    const cause = (options.cause || 'WAR').toUpperCase();
+    const out = harness.processArrival({ survivors, dest: 'mill_town', originId: 'ashenvale', cause });
+    const payload = { survivors, cause, ...out, audit: harness.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== REFUGEE INFORMATION (Section LX) ===\n`);
+    console.log(`${survivors} survivors fled ${cause.toLowerCase()} at ashenvale.`);
+    if (out.rumorSeeds.length > 0) {
+        console.log(`They carry:                 ${out.rumorSeeds[0].topic} at ${out.rumorSeeds[0].confidence} confidence`);
+    } else {
+        console.log(`They carry:                 silence (unknown cause invents nothing)`);
+    }
+    console.log(`\nHost Authority Check:         ✓ Advisory seeds only (0 host physics/inventory mutations)\n`);
+}
+
+function handleMotive(options) {
+    const ranker = new MovementMotiveRanker();
+    const caravan = ranker.topMotive({ hunger: 0.95, fear: 0.2, wealth: 60, archetype: 'TRADE_CARAVAN' });
+    const refugees = ranker.topMotive({ fear: 0.9, rumorDread: 0.7, hunger: 0.6, archetype: 'DISPLACED_REFUGEES' });
+    const payload = { caravan, refugees, audit: ranker.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== MOVEMENT MOTIVES (Section LVI) ===\n`);
+    console.log(`Hungry caravan:             ${caravan.motive} (${caravan.weight}, margin ${caravan.margin})`);
+    console.log(`Frightened refugees:        ${refugees.motive} (${refugees.weight}, margin ${refugees.margin})`);
+    console.log(`Where is the destination score. Why-now is this ranking.`);
+    console.log(`\nHost Authority Check:         ✓ Advisory ranking only (0 host physics/inventory mutations)\n`);
+}
 
 function handleDiffReplay(options) {
     if (!options.fileA || !options.fileB) {
@@ -3320,6 +3386,21 @@ async function main() {
         case 'famine':
         case 'deprivation':
             handleScarcity(options);
+            break;
+        case 'encounter':
+        case 'ambush':
+        case 'consequences':
+            handleEncounter(options);
+            break;
+        case 'refuge':
+        case 'refugee':
+        case 'arrivals':
+            handleRefuge(options);
+            break;
+        case 'motive':
+        case 'why-move':
+        case 'motives':
+            handleMotive(options);
             break;
         case 'perceive':
         case 'perception':

@@ -2714,6 +2714,82 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "ENCOUNTER_CONSEQUENCES_WORLD_FEEDBACK",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/EncounterConsequenceEngine.js (resolution-weighted corridor hazards, rumor seeds, escort bumps, dread seeds; max-merge batching)",
+        "packages/core/index.js (Exports for EncounterConsequenceEngine)",
+        "bin/fear-ai.js (Added 'encounter', 'ambush', 'consequences' CLI subcommands with --json)",
+        "tests/encounter-consequences.test.js (ambush streams, peaceful silence, max-merge, loud failures, clean audits)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/encounter-consequences.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai encounter, fear-ai encounter --json"
+      ],
+      "runtime_evidence": [
+        "Ambush plus extortion merge to 0.5 danger by max, never averaged; peaceful trade seeds opportunity with zero dread",
+        "Canonical chain emits all four streams: hazard, rumor, escort +2 tiers, road dread",
+        "Host game authority invariant strictly preserved (advisory streams only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Consequence processing latency: < 0.01 ms per encounter"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "REFUGEE_INFORMATION_ARRIVAL_BRIDGE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/RefugeeInformationHarness.js (saturating witness credibility, cause-to-topic mapping, unknown-cause silence, topic-merged batches)",
+        "packages/core/index.js (Exports for RefugeeInformationHarness and flight causes)",
+        "bin/fear-ai.js (Added 'refuge', 'refugee', 'arrivals' CLI subcommands with --survivors, --cause, --json)",
+        "tests/refugee-information.test.js (saturation curve, cause mapping, silence rule, batch merge, clean audits)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/refugee-information.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai refuge, fear-ai refuge --json"
+      ],
+      "runtime_evidence": [
+        "120 war survivors seed APPROACHING_ARMY at 0.47; 900 survivors add under 0.4 more — saturation holds",
+        "Unknown causes produce zero seeds; empty arrivals rejected loudly",
+        "Host game authority invariant strictly preserved (advisory seeds only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Arrival processing latency: < 0.005 ms per arrival"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "MOVEMENT_MOTIVE_WHY_NOW_RANKING",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/MovementMotiveRanker.js (11 motives, archetype priors, rest-need damping, rumor-dread input, decisiveness margins)",
+        "packages/core/index.js (Exports for MovementMotiveRanker, motives, priors)",
+        "bin/fear-ai.js (Added 'motive', 'why-move', 'motives' CLI subcommands with --json)",
+        "tests/movement-motives.test.js (need vs profit, archetype separation, exhaustion damping, hearsay motion, determinism)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/movement-motives.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai motive, fear-ai motive --json",
+        "Full regression: 308 suites / 2213 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Starving caravan ranks FOOD 0.76 over TRADE; frightened refugees rank SAFETY 1.0 with 0.40 margin",
+        "Rumor dread alone moves bands with zero sightings; exhaustion damps all movement toward camp",
+        "Host game authority invariant strictly preserved (advisory ranking only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Motive ranking latency: < 0.005 ms per band"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

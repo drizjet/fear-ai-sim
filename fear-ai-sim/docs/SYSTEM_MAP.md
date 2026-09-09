@@ -100,6 +100,9 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Trade Dependency Conflict Restraint (Section LII):** `TradeDependencyEngine` converts ledger-window import shares into retaliation dampening with banded advisories up to AVOID_CONFLICT (`fear-ai depend`).
 - **Blockade as Economic Warfare (Section LIII):** `BlockadeEngine` publishes advisory corridor throttles with dilution, runner leakage, recommitment, upkeep accounting, and lift analysis (`fear-ai blockade`).
 - **Scarcity Pressure into Migration and Morale (Section XLIX):** `ScarcityPressureHarness` reads the live economy untouched and converts deprivation into migration push, raid temptation, and morale advisories (`fear-ai scarcity`).
+- **Encounter Consequences World Feedback (Section LXIII):** `EncounterConsequenceEngine` converts resolved ambushes into corridor danger, rumor seeds, escort bumps, and dread seeds with max-merge batching (`fear-ai encounter`).
+- **Refugee Information Arrival Bridge (Section LX):** `RefugeeInformationHarness` turns arrivals into saturating-credibility rumor and dread seeds, silent on unknown causes (`fear-ai refuge`).
+- **Movement Motive Why-Now Ranking (Section LVI):** `MovementMotiveRanker` ranks eleven motives per band snapshot with archetype priors and rest damping, answering why before destinations answer where (`fear-ai motive`).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
