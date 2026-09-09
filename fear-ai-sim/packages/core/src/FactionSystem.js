@@ -240,9 +240,12 @@ export class FactionSystem {
                 stanceTargetToSource.casusBelli = 'Direct diplomatic provocation';
                 break;
             case INCIDENT_TYPES.RAID_CONFIRMED:
+                // NOW-14: a raid is inherently a territorial violation as
+                // well as a grievance (matches BORDER_TRESPASS pressure).
                 stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.65);
                 stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear + 0.40);
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.50);
+                stanceTargetToSource.territorialPressure = clamp01(stanceTargetToSource.territorialPressure + 0.35);
                 stanceTargetToSource.casusBelli = 'Lethal border raid on assets';
                 break;
             case INCIDENT_TYPES.SKIRMISH_CASUALTY:

@@ -332,4 +332,18 @@ describe('Milestone F: Faction Escalation Matrix & Multi-Faction Diplomacy', () 
         expect(repOrig.compositePressure).toBeCloseTo(repClone.compositePressure, 6);
         expect(repOrig.reason).toBe(repClone.reason);
     });
+    test('11. NOW-14: raids exert territorial pressure and repeated raids reach SKIRMISH', () => {
+        factionSys.registerFaction({ id: 'holder', culture: FACTION_CULTURES.HONORABLE });
+        factionSys.registerFaction({ id: 'raider', culture: FACTION_CULTURES.EXPANSIONIST });
+        factionSys.recordIncident('raider', 'holder', INCIDENT_TYPES.RAID_CONFIRMED, {});
+        const stance = factionSys.getBilateralStance('holder', 'raider');
+        expect(stance.territorialPressure).toBeGreaterThan(0);
+        // Sustained campaign crosses the skirmish threshold.
+        for (let i = 0; i < 4; i++) {
+            factionSys.recordIncident('raider', 'holder', INCIDENT_TYPES.RAID_CONFIRMED, {});
+        }
+        const rep = factionSys.evaluateStance('holder', 'raider');
+        expect(rep.compositePressure).toBeGreaterThanOrEqual(0.60);
+        expect([ESCALATION_STAGES.SKIRMISH, ESCALATION_STAGES.ATTACK]).toContain(rep.toStage);
+    });
 });

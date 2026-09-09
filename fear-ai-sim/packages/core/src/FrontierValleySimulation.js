@@ -20,7 +20,7 @@
  */
 
 import { DeterministicRng } from './DeterministicRng.js';
-import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES } from './FactionSystem.js';
+import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES, INCIDENT_TYPES } from './FactionSystem.js';
 import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
 import { WorldSimulationSystem, ROAMING_PARTY_TYPES } from './WorldSimulationSystem.js';
 
@@ -274,6 +274,16 @@ export class FrontierValleySimulation {
                     this.civSystem.recordRouteIncident(FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS, 'AMBUSH', 0.25);
                     if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.35);
                     if (gB && gB.drivers) gB.drivers.threatPressure = Math.min(1.0, gB.drivers.threatPressure + 0.35);
+                    // NOW-14: bandit raids on civilized parties feed the
+                    // faction grievance machine (wildlife predation excluded:
+                    // animal hunger is not faction warfare).
+                    const fA = gA?.factionId;
+                    const fB = gB?.factionId;
+                    const bandit = fA === FRONTIER_VALLEY_FACTIONS.BANDITS ? fA : (fB === FRONTIER_VALLEY_FACTIONS.BANDITS ? fB : null);
+                    const victim = bandit === fA ? fB : fA;
+                    if (bandit && (victim === FRONTIER_VALLEY_FACTIONS.SETTLERS || victim === FRONTIER_VALLEY_FACTIONS.NOMADS)) {
+                        this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null });
+                    }
                 } else if (enc.advisoryResolution === 'EXTORTION_PAID') {
                     if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.15);
                     if (gB && gB.drivers) gB.drivers.threatPressure = Math.min(1.0, gB.drivers.threatPressure + 0.15);
@@ -282,8 +292,13 @@ export class FrontierValleySimulation {
 
             // 3. Advance Faction Escalation
             this.factionSystem.advanceTick(1);
-
-            // Check if route danger triggers reroutes
+            // NOW-14: run the escalation state machine every tick. Before
+            // this, stages were initialized once and never re-derived, so
+            // wars could never break out no matter how many raids occurred.
+            this.factionSystem.evaluateStance(FRONTIER_VALLEY_FACTIONS.SETTLERS, FRONTIER_VALLEY_FACTIONS.BANDITS);
+            this.factionSystem.evaluateStance(FRONTIER_VALLEY_FACTIONS.BANDITS, FRONTIER_VALLEY_FACTIONS.SETTLERS);
+            this.factionSystem.evaluateStance(FRONTIER_VALLEY_FACTIONS.SETTLERS, FRONTIER_VALLEY_FACTIONS.NOMADS);
+            this.factionSystem.evaluateStance(FRONTIER_VALLEY_FACTIONS.NOMADS, FRONTIER_VALLEY_FACTIONS.SETTLERS);
             for (const route of this.civSystem.routes.values()) {
                 if (route.perceivedDanger >= 0.60) {
                     this.macroMetrics.routeFailures++;

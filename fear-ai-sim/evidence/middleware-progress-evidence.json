@@ -4406,6 +4406,31 @@
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
       "next_action": "LIVE_WARS_NOW14"
+    },
+    {
+      "milestone": "LIVE_WARS_NOW14",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/FrontierValleySimulation.js records RAID_CONFIRMED for bandit-vs-civilized combat and evaluates the four directed settler stances every tick (stages were previously initialized once and never re-derived)",
+        "packages/core/src/FactionSystem.js RAID_CONFIRMED now exerts territorial pressure (+0.35, matching BORDER_TRESPASS): a raid is inherently a territorial violation",
+        "NOW-7 ranking tests updated to the live-war base rate (provocation ties at 0/0 instead of scoring -1 against a peaceful base)"
+      ],
+      "test_evidence": [
+        "Escalation plus ranking 24/24; full matrix 340/340 suites (2455 tests); heavy gate 10/10; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Natural outbreak on seeds 4242/7/77 inside 200 ticks (wars=1), then de-escalation to THREATEN as raids stop: war and peace phases, deterministically",
+        "Fear, panic, and route-failure metrics bit-identical to pre-change values (0.599/600/200): the incident wiring perturbs only faction dynamics",
+        "Host game authority invariant strictly preserved (advisory stance evolution only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Escalation plus ranking suites about 1 s; matrix about 32 s; heavy gate about 91 s"
+      ],
+      "known_gaps": [
+        "Sticky warsDeclared flags still cannot track war end: de-escalation ranking needs non-sticky war-phase tracking (NEXT-19)",
+        "No raids after tick ~115 on seed 4242 (encounter generation lull, unexamined); EXTORTION_PAID feeds no grievance"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -167,8 +167,10 @@ describe('LXVII NOW-7: wars and alliances outcome ranking', () => {
     expect(r.recommendation.mutation).toEqual(befriend);
     expect(r.recommendation.score).toBe(1);
   });
-
-  it('provocation ranks last on the wars outcome with a negative score', () => {
+  it('live-war base: natural outbreak makes provocation tie instead of stand out', () => {
+    // NOW-14 changed the base rate: the factual branch now reaches war on
+    // its own, so forced provocation (counterfactual 1) ties the base (1)
+    // at score 0 instead of scoring -1 against a peaceful base.
     const r = WorldCounterfactualEngine.rankInterventions({
       createSimulation: () => new FrontierValleySimulation({ seed: SEED }),
       ...HORIZON,
@@ -176,20 +178,16 @@ describe('LXVII NOW-7: wars and alliances outcome ranking', () => {
       candidates: [provoke, NULL],
     });
     const entry = r.ranking.find((e) => e.mutation.type === COUNTERFACTUAL_MUTATIONS.MODIFY_FACTION_STANCE);
+    expect(entry.factual).toBe(1);
     expect(entry.counterfactual).toBe(1);
-    expect(entry.factual).toBe(0);
-    expect(entry.score).toBe(-1);
-    expect(r.ranking[r.ranking.length - 1].mutation).toEqual(provoke);
+    expect(entry.score).toBe(0);
   });
 
-  it('war-only forks now report a first-divergence tick', () => {
-    const r = WorldCounterfactualEngine.runExperiment({
-      simulation: new FrontierValleySimulation({ seed: SEED }),
-      ...HORIZON,
-      mutation: provoke,
-    });
-    expect(r.counterfactualSummary.warsDeclared).toBe(1);
-    expect(r.factualSummary.warsDeclared).toBe(0);
-    expect(r.firstDivergenceTick).not.toBeNull();
+  it('natural outbreak reaches war inside 200 ticks, deterministically', () => {
+    const a = new FrontierValleySimulation({ seed: SEED });
+    const b = new FrontierValleySimulation({ seed: SEED });
+    expect(a.advance(200).warsDeclared).toBe(1);
+    expect(b.advance(200).warsDeclared).toBe(1);
+    expect(a.getMacroSummary()).toEqual(b.getMacroSummary());
   });
 });
