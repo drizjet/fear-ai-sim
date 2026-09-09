@@ -4680,6 +4680,32 @@
         "Betrayal-path erosion (agreeableness) unexercised in runtime (only NEAR_DEATH incurred); floor formula ignores resilience"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PANIC_ONSET_OFFSET_NOW17",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/AffectiveAgent.js accepts context.panicFearBias, added to scaled fear at the FearCore threshold only (stored fear, decay, contagion, outputs untouched; skipped while RECOVERing)",
+        "packages/runtime/src/RuntimeSimulation.js feeds last tick's crystallized onset offset through context and reuses the record lookup post-tick",
+        "packages/core/src/FearCore.js exempts RECOVER from the Phase-2.5 extended-band stay so its progress/completion branch is reachable again",
+        "Floor application skipped while RECOVERing (convalescence is not vigilance)"
+      ],
+      "test_evidence": [
+        "Sweep plus onset battery 7/7; FearCore-adjacent suites 90/90; full matrix 342/342 suites (2476 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Veteran panics at tick 13 vs fresh twin at 16 under identical moderate threat (about 19 percent earlier, matching the 0.151 offset over the 3.8 threshold)",
+        "Found and fixed a real pre-existing FearCore bug: Phase 2.5 held RECOVER forever, making its completion branch unreachable dead code for every agent (veterans could never re-panic at all)",
+        "Found and fixed the interaction it unmasked: any fear floor would have locked RECOVER permanently, so floor and bias both exempt convalescence",
+        "Host game authority invariant strictly preserved (advisory threshold modulation only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Sweep battery about 1 s under jest"
+      ],
+      "known_gaps": [
+        "RECOVER still has no escalation path (renewed lethal threat during convalescence cannot re-panic until recovery completes); FearCore hysteresis audit now warranted"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

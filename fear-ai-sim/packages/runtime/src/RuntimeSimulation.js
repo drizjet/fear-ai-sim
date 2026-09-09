@@ -184,23 +184,30 @@ export class RuntimeSimulation {
                 ? this.trauma.getTraumaAt(agent.x, agent.y, agent.z)
                 : 0.0;
 
+            // NOW-17: crystallized panic-onset offset from last tick's
+            // record (no extra evaluation cost; Map lookup only).
+            const coreRec = this.enableCoreTrauma
+                ? this.coreTrauma.agentRecords.get(agent.id)
+                : undefined;
             const context = {
                 contagionFear: contagionResult.contagionFear,
                 leaderCalm: contagionResult.leaderCalm,
                 traumaDread,
                 pacingIntensity,
+                panicFearBias: (this.enableTraumaFeedback && coreRec) ? coreRec.panicOnsetOffset : 0,
                 rng: () => this.rng.random()
             };
 
             const output = agent.tick(dt, obs, context);
             outputs.push(output);
-            // NOW-13: observe-only trauma recording. A fresh panic episode
-            // incurs one acute trauma; the engine lifecycle runs below.
-            // Nothing here alters agent behavior (no feedback path). Panic
-            // read from post-tick agent state, same as the peer survey above.
+            // NOW-13: trauma recording. A fresh panic episode incurs one
+            // acute trauma; the engine lifecycle runs below. Panic read from
+            // post-tick agent state, same as the peer survey above.
             const agentPanicking = agent.fearCore.state === 'PANIC' || agent.currentFear > 0.8;
             if (this.enableCoreTrauma && agentPanicking) {
-                const rec = this.coreTrauma.agentRecords.get(agent.id);
+                // coreRec is the pre-tick record (incur auto-registers, so a
+                // missing record here means the engine is disabled mid-run).
+                const rec = coreRec ?? this.coreTrauma.agentRecords.get(agent.id);
                 if (rec && rec.activeTraumas.length === 0) {
                     this.coreTrauma.incurTrauma(agent.id, {
                         traumaType: TRAUMA_TYPES.NEAR_DEATH_SURVIVAL,
@@ -230,7 +237,10 @@ export class RuntimeSimulation {
                 for (const k of ['neuroticism', 'resilience', 'agreeableness']) {
                     if (Number.isFinite(state.traits[k])) agent.traits[k] = state.traits[k];
                 }
-                if (state.effectiveRestingFear > 0) {
+                // Quiescent floor skipped while RECOVERing: recovery
+                // completion needs near-zero fear, and any floor would lock
+                // RECOVER permanently (convalescence is not vigilance).
+                if (state.effectiveRestingFear > 0 && agent.fearCore.state !== 'RECOVER') {
                     agent.currentFear = Math.max(agent.currentFear, state.effectiveRestingFear);
                 }
                 if (rec.activeTraumas.length > 0 && agent.currentFear < 0.2) {

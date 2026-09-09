@@ -177,8 +177,10 @@ export class FearCore {
             return this._result(previous, fear, extendedTransition);
         }
 
-        // Phase 2.5: Stay in extended band if still active
-        if (EXTENDED_BANDS.includes(this.state)) {
+        // Phase 2.5: Stay in extended band if still active. RECOVER is
+        // exempt: its progress/completion branch lives in Phase 3, and
+        // holding it here made recovery uncompletable (dead exit branch).
+        if (this.state !== 'RECOVER' && EXTENDED_BANDS.includes(this.state)) {
             return this._result(previous, fear, {
                 from: previous,
                 to: previous,

@@ -305,7 +305,15 @@ export class AffectiveAgent {
             rng
         };
 
-        const coreResult = this.fearCore.update(this._fearScale(this.currentFear), fearContext);
+        // NOW-17: optional panic-threshold bias (for example crystallized
+        // trauma onset offset). Added to the SCALED fear at the threshold
+        // only: stored currentFear, decay, contagion, and outputs are
+        // untouched. Zero by default; negative values are ignored. Skipped
+        // while RECOVERing: recovery completion needs near-zero scaled fear,
+        // and any floor or bias would lock RECOVER permanently.
+        const recovering = this.fearCore.state === 'RECOVER';
+        const panicBias = recovering ? 0 : Math.max(0, Number(context.panicFearBias ?? 0));
+        const coreResult = this.fearCore.update(this._fearScale(this.currentFear) + panicBias * 4.2, fearContext);
 
         // 10. Resolve Action Intent & Audio Hints
         const actionIntent = IntentResolver.resolveIntent(this, observations);
