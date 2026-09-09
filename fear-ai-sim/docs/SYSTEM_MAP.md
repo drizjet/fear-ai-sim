@@ -183,6 +183,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **RECOVER x Betrayal NEXT-25:** betrayal during convalescence disturbs neither layer (RECOVER completes, wound still crystallizes); lethal-threat override fires with betrayal active. Judged coherent, no source change.
 - **Tribute Quantity NEXT-28:** extortion encounters carry advisory `suggestedTribute` (35% victim wealth, doctrine-mirrored); null elsewhere. Host moves no goods.
 - **Frontier Audit CCI-11:** 25 ranked candidates (3 NOW, 18 NEXT, 4 LATER); all CCI-10 NOW items plus NEXT-16/25/28 closed. Next: WebSocket social message type (NOW-28).
+- **Social WS NOW-28:** `SOCIAL_EVENT` over WebSocket twins the HTTP route (validated dispatch, ack with trauma_id, error mapping). Example clients need no changes (generic raw-payload helpers).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

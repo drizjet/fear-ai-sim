@@ -52,6 +52,9 @@ export class ProtocolValidator {
             case MESSAGE_TYPES.UNREGISTER_AGENT:
                 result = ProtocolValidator.validateUnregisterAgent(raw);
                 break;
+            case MESSAGE_TYPES.SOCIAL_EVENT:
+                result = ProtocolValidator.validateSocialEvent(raw);
+                break;
             case MESSAGE_TYPES.OBSERVATION_DISPATCH:
                 result = ProtocolValidator.validateObservation(raw);
                 break;
@@ -183,6 +186,7 @@ export class ProtocolValidator {
         return {
             valid: true,
             value: {
+                type: MESSAGE_TYPES.SOCIAL_EVENT,
                 event: raw.event,
                 actor_id: String(raw.actor_id).trim().slice(0, 256),
                 target_id: String(raw.target_id).trim().slice(0, 256),

@@ -5056,7 +5056,26 @@
       "known_gaps": [
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
-      "next_action": "SOCIAL_WS_NOW28"
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SOCIAL_WS_NOW28",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Protocol types gain SOCIAL_EVENT (client to server) and SOCIAL_EVENT_ACK (server to client); validateIncomingMessage dispatches the former to the existing validateSocialEvent",
+        "validateSocialEvent value now carries the type passthrough fellow validators include; without it the WS switch would silently drop validated payloads (caught during audit, not in production)",
+        "FearServer WS case mirrors the HTTP route exactly (validate, try reportSocialEvent, map throws and disabled-social to ERROR_RESPONSE, ack with trauma_id plus relationship updates)",
+        "Mid-build repair: a types.js edit ate the ERROR_RESPONSE line; caught on diff read-back and restored (diff purely additive since)"
+      ],
+      "test_evidence": [
+        "New WS conformance test: BETRAYAL over the socket acks APPLIED with a trauma_id string; unknown actor yields ERROR_RESPONSE matching UNKNOWN_SOCIAL_AGENT",
+        "Mutation check: the WS test fails with the three source files stashed (server falls through to Unhandled-message-type; ack never arrives)",
+        "Full matrix 343/343 (2509 tests); guardian:check CLEAN"
+      ],
+      "known_gaps": [
+        "Example clients (Python neutral-horror demo, Unity/C# scene) use a generic raw-payload post helper, so no client changes were needed; none of them demonstrates the social path yet"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

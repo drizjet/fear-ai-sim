@@ -573,6 +573,38 @@ export class FearServer {
                 break;
             }
 
+            case MESSAGE_TYPES.SOCIAL_EVENT: {
+                // NOW-28: WebSocket twin of POST /api/v1/social/event.
+                let result;
+                try {
+                    result = this.simulation.reportSocialEvent({
+                        event: payload.event,
+                        actorId: payload.actor_id,
+                        targetId: payload.target_id,
+                        weight: payload.weight,
+                        witnesses: payload.witnesses,
+                        exposed: payload.exposed,
+                        severity: payload.severity
+                    });
+                } catch (err) {
+                    return this._sendWsError(ws, err.message, ERROR_CODES.VALIDATION_FAILED);
+                }
+                if (result === null) {
+                    return this._sendWsError(ws, 'Social reporting is disabled on this server', ERROR_CODES.VALIDATION_FAILED);
+                }
+                this._sendWs(ws, {
+                    type: MESSAGE_TYPES.SOCIAL_EVENT_ACK,
+                    status: 'APPLIED',
+                    event: payload.event,
+                    actor_id: payload.actor_id,
+                    target_id: payload.target_id,
+                    trauma_id: result.traumaId,
+                    direct: result.direct,
+                    witness_updates: result.witnessUpdates
+                }, correlationId);
+                break;
+            }
+
             case MESSAGE_TYPES.OBSERVATION_DISPATCH: {
                 this.simulation.queueObservation(payload.agent_id, payload);
                 break;

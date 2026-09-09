@@ -250,4 +250,34 @@ describe('FearServer Integration Tests (WebSocket & HTTP REST)', () => {
 
         ws.close();
     });
+
+    it('handles SOCIAL_EVENT over WebSocket with ack and error paths', async () => {
+        // NOW-28: WebSocket twin of the HTTP social endpoint.
+        for (const id of ['ws_victim', 'ws_actor']) {
+            const reg = await httpPost(`${httpBase}/api/v1/register`, { agent_id: id });
+            expect(reg.status).toBe(200);
+        }
+        const ws = new WebSocket(wsUrl);
+        await new Promise((resolve) => ws.on('open', resolve));
+        const nextOf = (type) => new Promise((resolve) => {
+            ws.on('message', (raw) => {
+                const msg = JSON.parse(raw.toString());
+                if (msg.type === type) resolve(msg);
+            });
+        });
+        ws.send(JSON.stringify({
+            type: 'SOCIAL_EVENT',
+            event: 'BETRAYAL', actor_id: 'ws_actor', target_id: 'ws_victim', weight: 1.5
+        }));
+        const ack = await nextOf('SOCIAL_EVENT_ACK');
+        expect(ack.status).toBe('APPLIED');
+        expect(typeof ack.trauma_id).toBe('string');
+        ws.send(JSON.stringify({
+            type: 'SOCIAL_EVENT',
+            event: 'BETRAYAL', actor_id: 'nobody', target_id: 'ws_victim'
+        }));
+        const err = await nextOf('ERROR_RESPONSE');
+        expect(err.error).toMatch(/UNKNOWN_SOCIAL_AGENT/);
+        ws.close();
+    });
 });
