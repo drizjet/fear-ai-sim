@@ -145,7 +145,10 @@ import {
     SocialBehaviorEffects,
     SocialEventEngine,
     CollectiveCourageHarness,
-    RelationshipTensorSystem
+    RelationshipTensorSystem,
+    SuccessionEngine,
+    RetaliationModel,
+    SecurityDilemmaHarness
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -285,6 +288,12 @@ function printHelp() {
     console.log(`  event              Apply a social event: rescue, betrayal, deception with witnesses (Section XXIV)`);
     console.log(`  morale             Run casualty sequence: morale vs fear with and without a leader (Sections XXXI–XXXIII)`);
     console.log(`                     Options: --members <n> --losses <n> --json`);
+    console.log(`  succession         Resolve leader loss: heir selection, cohesion cost, splinter risk (Section XXXVII)`);
+    console.log(`                     Options: --cause <CAUSE> --json`);
+    console.log(`  retaliate          Answer provocations proportionally with memory and exhaustion brake (Sections XLII–XLIV)`);
+    console.log(`                     Options: --provoke <KIND> --json`);
+    console.log(`  dilemma            Run security dilemma: defensive mobilization misread as aggression (Section XLVI)`);
+    console.log(`                     Options: --fear <0..1> --trust <0..1> --signals --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1732,6 +1741,69 @@ function handleCourage(options) {
     console.log(`Verdict:                    ${exp.verdict}`);
     console.log(`\nHost Authority Check:         ✓ Simulated squad only (0 host physics/inventory mutations)\n`);
 }
+function handleSuccession(options) {
+    const eng = new SuccessionEngine();
+    const cause = (options.cause || 'ASSASSINATION').toUpperCase();
+    const heirs = [
+        { id: 'crown_prince', legitimacy: 0.9, competence: 0.3, popularity: 0.6, continuity: 0.8 },
+        { id: 'warlord', legitimacy: 0.45, competence: 0.9, popularity: 0.5, continuity: 0.3 },
+        { id: 'populist', legitimacy: 0.4, competence: 0.4, popularity: 0.95, continuity: 0.5 }
+    ];
+    const autocrat = eng.resolve({ factionId: 'iron_hold', cause, archetype: 'AUTOCRATIC_DESPOT', candidates: heirs });
+    const junta = eng.resolve({ factionId: 'iron_hold', cause, archetype: 'MILITARY_JUNTA', candidates: heirs });
+    const payload = { cause, autocrat, junta, audit: eng.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== LEADERSHIP SUCCESSION (Section XXXVII) ===\n`);
+    console.log(`Cause:                      ${cause}`);
+    console.log(`Autocracy crowns:           ${autocrat.successorId} (margin ${autocrat.margin})`);
+    console.log(`Junta crowns:               ${junta.successorId} (margin ${junta.margin})`);
+    console.log(`Splinter risk:              ${autocrat.splinterRisk} / policy shift ${autocrat.policyShift}`);
+    console.log(`\nHost Authority Check:         ✓ Advisory outcome only (0 host physics/inventory mutations)\n`);
+}
+
+function handleRetaliate(options) {
+    const model = new RetaliationModel();
+    const first = (options.provoke || 'RAID').toUpperCase();
+    const r1 = model.provoke('red_clan', 'blue_hold', first);
+    const r2 = model.provoke('red_clan', 'blue_hold', 'MASSACRE');
+    model.advanceTick(60, true);
+    const spent = model.recommend('red_clan', 'blue_hold');
+    const payload = { first: r1, afterMassacre: r2, afterLongWar: spent, audit: model.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== PROPORTIONAL RETALIATION (Sections XLII–XLIV) ===\n`);
+    console.log(`${first} answers:              ${r1.intent} (level ${r1.level})`);
+    console.log(`After massacre:             ${r2.intent} (level ${r2.level})`);
+    console.log(`After 60 war ticks:         ${spent.intent} (exhaustion ${spent.exhaustion}) — fatigue prices peace.`);
+    console.log(`\nHost Authority Check:         ✓ Advisory intent only (0 host physics/inventory mutations)\n`);
+}
+
+function handleDilemma(options) {
+    const harness = new SecurityDilemmaHarness();
+    const fear = options.fear !== undefined ? parseFloat(options.fear) : 0.7;
+    const trust = options.trust !== undefined ? parseFloat(options.trust) : 0.1;
+    const base = { fearA: fear, fearB: fear, misperceptionA: 0.6, misperceptionB: 0.6, trustAB: trust };
+    const blind = harness.run(base);
+    const withSignals = harness.run({ ...base, signals: [true, true, true] });
+    const payload = { blind, withSignals, audit: harness.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== SECURITY DILEMMA (Section XLVI) ===\n`);
+    console.log(`Blind mobilization:         ${blind.seriesA[blind.seriesA.length - 1]} / ${blind.seriesB[blind.seriesB.length - 1]} → ${blind.verdict}`);
+    console.log(`With costly signals:        ${withSignals.seriesA[withSignals.seriesA.length - 1]} / ${withSignals.seriesB[withSignals.seriesB.length - 1]} → ${withSignals.verdict}`);
+    console.log(`Neither side wanted war. Misperception ${blind.finalMisperception} did the work.`);
+    console.log(`\nHost Authority Check:         ✓ Simulated dyad only (0 host physics/inventory mutations)\n`);
+}
 
 function handleDiffReplay(options) {
     if (!options.fileA || !options.fileB) {
@@ -3147,6 +3219,21 @@ async function main() {
         case 'casualties':
         case 'collective-courage':
             handleCourage(options);
+            break;
+        case 'succession':
+        case 'heir':
+        case 'leader-loss':
+            handleSuccession(options);
+            break;
+        case 'retaliate':
+        case 'retaliation':
+        case 'proportional':
+            handleRetaliate(options);
+            break;
+        case 'dilemma':
+        case 'security-dilemma':
+        case 'spiral':
+            handleDilemma(options);
             break;
         case 'perceive':
         case 'perception':

@@ -94,6 +94,9 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Social Behavior Effects from Relationships (Section XXV):** `SocialBehaviorEffects` maps directed relationship vectors to eight willingness scores plus a contagion gate, so trust, grievance, and pressure visibly move helping, warning, following, trade, and desertion (`fear-ai social`).
 - **Social Events with Witness Reputation (Section XXIV):** `SocialEventEngine` translates ten semantic events onto tensor storage with credibility-scaled witness broadcast and a deception lifecycle where exposure strikes as betrayal (`fear-ai event`).
 - **Collective Courage under Casualties (Sections XXXI–XXXIII):** `CollectiveCourageHarness` folds host-reported losses into morale-vs-fear dynamics with leader/leaderless two-arm verdicts proving terrified-yet-dutiful squads (`fear-ai morale`).
+- **Leadership Succession with Splinter Risk (Section XXXVII):** `SuccessionEngine` scores host-provided heirs under archetype weights, wounds cohesion for violent causes and contests, and routes heirless loss into interregnum with splinter advisories (`fear-ai succession`).
+- **Proportional Retaliation with Exhaustion (Sections XLII–XLIV):** `RetaliationModel` answers provocations on a diminishing-returns ladder with long grievance memory, war-exhaustion braking into ceasefire preference, and settleable accounts (`fear-ai retaliate`).
+- **Security Dilemma Spiral and Signaling (Section XLVI):** `SecurityDilemmaHarness` proves defensive mobilization spirals to war under misperception and that costly signals hold the same dyad in deterrence (`fear-ai dilemma`).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

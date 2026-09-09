@@ -23,6 +23,9 @@ const clamp01 = (v) => {
 
 const round4 = (v) => Math.round(clamp01(v) * 10000) / 10000;
 
+/** Signed 4-decimal rounding for pressure values (round4 clamps to [0,1]). */
+const round4s = (v) => (typeof v !== 'number' || !Number.isFinite(v) ? 0 : Math.round(v * 10000) / 10000);
+
 export const DEFAULT_COURAGE_CONFIG = Object.freeze({
     members: 8,
     casualtyOrder: [],
@@ -60,7 +63,7 @@ export class CollectiveCourageHarness {
         let fear = baseFear;
         moraleSeries.push(morale);
         fearSeries.push(round4(fear));
-        retreatSeries.push(round4(fear * 0.3 - morale * 0.5));
+        retreatSeries.push(round4s(fear * 0.3 - morale * 0.5));
         for (const fallen of order) {
             if (!alive.has(fallen)) continue;
             alive.delete(fallen);
@@ -70,7 +73,7 @@ export class CollectiveCourageHarness {
             morale = round4(clamp01(morale - casualtyFraction * 0.35 * (1 - buffer)));
             moraleSeries.push(morale);
             fearSeries.push(round4(fear));
-            retreatSeries.push(round4(fear * (0.3 + casualtyFraction * 0.5) - morale * 0.5));
+            retreatSeries.push(round4s(fear * (0.3 + casualtyFraction * 0.5) - morale * 0.5));
         }
         const finalMorale = moraleSeries[moraleSeries.length - 1];
         const finalFear = fearSeries[fearSeries.length - 1];

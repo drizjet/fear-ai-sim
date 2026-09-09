@@ -786,6 +786,60 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.leaderArm.holdsDuty).toBe(false);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "succession" and crowns different heirs per archetype', async () => {
+        const res = await runCli(['succession']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('LEADERSHIP SUCCESSION');
+        expect(res.stdout).toContain('Autocracy crowns:           crown_prince');
+        expect(res.stdout).toContain('Junta crowns:               warlord');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "succession --json" and returns succession payload', async () => {
+        const res = await runCli(['succession', '--cause', 'NATURAL_DEATH', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.cause).toBe('NATURAL_DEATH');
+        expect(parsed.autocrat.successorId).toBe('crown_prince');
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "retaliate" and prices provocation proportionally', async () => {
+        const res = await runCli(['retaliate']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('PROPORTIONAL RETALIATION');
+        expect(res.stdout).toContain('After massacre:             STRIKE_BACK');
+        expect(res.stdout).toContain('CEASEFIRE');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "retaliate --json" and returns retaliation payload', async () => {
+        const res = await runCli(['retaliate', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.afterMassacre.intent).toBe('STRIKE_BACK');
+        expect(parsed.afterLongWar.intent).toBe('CEASEFIRE');
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "dilemma" and contrasts spiral with signaling', async () => {
+        const res = await runCli(['dilemma']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('SECURITY DILEMMA');
+        expect(res.stdout).toContain('SPIRAL');
+        expect(res.stdout).toContain('STABLE_DETERRENCE');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "dilemma --json" and returns dilemma payload', async () => {
+        const res = await runCli(['dilemma', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.blind.verdict).toBe('SPIRAL');
+        expect(parsed.withSignals.peakA).toBeLessThanOrEqual(parsed.blind.peakA);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

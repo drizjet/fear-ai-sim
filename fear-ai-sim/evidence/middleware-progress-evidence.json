@@ -2562,6 +2562,82 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "LEADERSHIP_SUCCESSION_WITH_SPLINTER_RISK",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/SuccessionEngine.js (archetype-weighted heir scoring, violent-cause wounds, contest penalty, interregnum path, splinter-risk advisory)",
+        "packages/core/index.js (Exports for SuccessionEngine, causes, weights)",
+        "bin/fear-ai.js (Added 'succession', 'heir', 'leader-loss' CLI subcommands with --cause, --json)",
+        "tests/succession.test.js (archetype crowns, violent wounds, contest risk, interregnum, loud failures)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/succession.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai succession, fear-ai succession --json"
+      ],
+      "runtime_evidence": [
+        "Autocracy crowns the prince, junta the warlord from identical heirs; assassination wounds deeper than natural death",
+        "Twin-heir contests spike splinter risk; heirless assassination yields interregnum at 0.85 splinter risk",
+        "Host game authority invariant strictly preserved (advisory outcome only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Succession resolution latency: < 0.01 ms per succession"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PROPORTIONAL_RETALIATION_WITH_EXHAUSTION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/RetaliationModel.js (diminishing-returns grievance, 500-tick memory half-life, exhaustion brake, ceasefire preference, settle API)",
+        "packages/core/index.js (Exports for RetaliationModel, severities, intents, config)",
+        "bin/fear-ai.js (Added 'retaliate', 'retaliation', 'proportional' CLI subcommands with --provoke, --json)",
+        "tests/retaliation.test.js (proportion ladder, compounding bounds, settling, exhaustion brake, memory fade)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/retaliation.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai retaliate, fear-ai retaliate --json"
+      ],
+      "runtime_evidence": [
+        "Insult warns, massacre strikes back; 10 raids compound below scale ceiling",
+        "60 war ticks drive exhaustion to 1.0 and flip strikes into ceasefire preference; peace recovers slowly",
+        "Host game authority invariant strictly preserved (advisory intent only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Retaliation query latency: < 0.005 ms per pair"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SECURITY_DILEMMA_SPIRAL_AND_SIGNALING",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/SecurityDilemmaHarness.js (misperception filter, mirror dynamics, costly signaling, four-verdict outcome space)",
+        "packages/core/index.js (Exports for SecurityDilemmaHarness and dilemma config)",
+        "bin/fear-ai.js (Added 'dilemma', 'security-dilemma', 'spiral' CLI subcommands with --fear, --trust, --signals, --json)",
+        "tests/security-dilemma.test.js (unintended spiral, signal arrest, trust damping, calm de-escalation, determinism)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/security-dilemma.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai dilemma, fear-ai dilemma --json",
+        "Full regression: 302 suites / 2171 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Mutual 0.7 fear at 0.6 misperception spirals to 0.85/0.85 with neither side intending war",
+        "Three costly signals hold the same dyad at 0.77 STABLE_DETERRENCE; high trust damps below war threshold",
+        "Host game authority invariant strictly preserved (simulated dyad only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Dilemma run latency: < 1 ms per 8-round dyad"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

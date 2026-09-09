@@ -339,6 +339,21 @@ export {
  CollectiveCourageHarness,
  DEFAULT_COURAGE_CONFIG
 } from './src/CollectiveCourageHarness.js';
+export {
+ SuccessionEngine,
+ SUCCESSION_CAUSES,
+ SUCCESSION_WEIGHTS
+} from './src/SuccessionEngine.js';
+export {
+ RetaliationModel,
+ PROVOCATION_SEVERITY,
+ RETALIATION_INTENTS,
+ DEFAULT_RETALIATION_CONFIG
+} from './src/RetaliationModel.js';
+export {
+ SecurityDilemmaHarness,
+ DEFAULT_DILEMMA_CONFIG
+} from './src/SecurityDilemmaHarness.js';
 
 
 
