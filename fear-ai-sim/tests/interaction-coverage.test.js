@@ -37,14 +37,14 @@ describe('Sections CCIV-CCV: InteractionCoverageGraph', () => {
         expect(build()).toEqual(build());
     });
 
-    it('4. Debt pairs are genuinely untested (no tested edge for the pair)', () => {
+    it('4. Debt pairs (if any) are genuinely untested and coherent', () => {
         const r = build();
         const testedKeys = new Set(r.testedEdges.map((e) => e.pair.join(' ')));
-        expect(r.debt.length).toBeGreaterThan(0);
         for (const d of r.debt) {
             expect(testedKeys.has(d.pair.join(' '))).toBe(false);
             expect(d.composedIn).toMatch(/\.m?js$/);
         }
+        expect(r.testedEdges.length + r.debt.length).toBeGreaterThan(0);
     });
 
     it('5. Isolated list honest: named modules exist on disk', () => {

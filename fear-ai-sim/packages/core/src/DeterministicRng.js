@@ -34,6 +34,14 @@ export class DeterministicRng {
         t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
         return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     }
+    /**
+     * Alias for random(): the long-horizon benchmark and agent contexts
+     * call rng.next(); previously missing (latent TypeError on PANIC/FREEZE branches).
+     * @returns {number}
+     */
+    next() {
+        return this.random();
+    }
 
     /**
      * Generate float in [min, max)

@@ -3246,8 +3246,38 @@
         "Debt tests complete in under 1 s"
       ],
       "known_gaps": [
-        "5 thin debt pairs remain; TraumaZoneSystem x DeterministicRng and Civ x Relationship are the only substantive ones left",
-        "6 isolated modules unchanged (ContagionGraph now tested; isolation list needs re-check)"
+        "5 thin debt pairs at prior paydown; retired below (see DEBT_ZERO_PLUS_RNG_FIX)",
+        "6 isolated modules unchanged (naming-limitation artifacts under review)"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "DEBT_ZERO_PLUS_RNG_FIX",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/debt-thin-pairs.test.js (8 joint tests: zone dread amplification, zone decay, seeded agent-zone-rng loop, rng stream, PANIC-branch survival, seeded contagion, grievance-aware routing x2)",
+        "packages/core/src/DeterministicRng.js (added next() alias for random())",
+        "benchmarks/behavioral-evaluation/construct_validity_sweeps.mjs (removed dead DeterministicRng import — the only mention in that file)",
+        "tests/interaction-coverage.test.js (debt assertion accepts zero: full retirement is a valid terminal state)"
+      ],
+      "test_evidence": [
+        "tests/debt-thin-pairs.test.js (8/8 tests green)",
+        "Full regression: 325 suites / 2329 tests green in a single pass; guardian:check CLEAN",
+        "Coverage debt measured with fear-ai coverage: 5 to 0 pairs; tested edges 95 to 98"
+      ],
+      "runtime_evidence": [
+        "Real bug found and fixed: DeterministicRng lacked next() while the long-horizon benchmark calls rng.next() inside agent contexts — latent TypeError on PANIC/FREEZE branches. Fixed with alias; regression test drives 60 max-threat ticks through those branches",
+        "Zone dread strictly amplifies fear; 40 ticks of decay strictly reduce dread; seeded loop bit-deterministic",
+        "Dead import removal is honest debt paydown: a phantom composition must not count as integration",
+        "Zero debt broke the coverage test that asserted debt non-empty; updated to accept retirement as terminal state",
+        "Host game authority invariant strictly preserved (advisory composition only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Debt tests complete in under 1 s"
+      ],
+      "known_gaps": [
+        "6 isolated modules remain (ComparativeBaselines, DeclarativeScenarioEngine, IntentResolver, PacingDirector, PsychoacousticSynthesizer, SocialBehaviorEffects) — partly naming-limitation artifacts, partly genuinely unreferenced; audit open",
+        "FRONTIER AUDIT (CCI, 2026-09-09): debt instrument has served its purpose (22 to 0). Next ranked frontiers: (1) isolated-module audit, (2) absent rumor/social/route memory classes, (3) Godot living-world lab expansion, (4) second external host (gated), (5) LOD/massive-population scale work"
       ],
       "next_action": "MAINTAIN"
     }

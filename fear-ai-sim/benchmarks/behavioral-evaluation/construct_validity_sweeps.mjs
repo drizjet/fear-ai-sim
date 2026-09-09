@@ -19,7 +19,7 @@
  */
 
 import { fileURLToPath } from 'node:url';
-import { AffectiveAgent, ContagionGraph, DeterministicRng } from '../../packages/core/index.js';
+import { AffectiveAgent, ContagionGraph } from '../../packages/core/index.js';
 
 // Deterministic seed inventory
 export const FROZEN_SEEDS = Object.freeze([1337, 2026, 3141, 4096, 5555, 6789, 7777, 8888, 9123, 9999]);
