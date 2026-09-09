@@ -4045,6 +4045,30 @@
         "36 percent savings is modest (middle tier kept wholesale); deeper tiers need semantic summarization beyond bookkeeping"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "METRIC_GAMING_NEXT12",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/metric-gaming.test.js (3 gamers with paired guards: statue chatter vs responsiveness, panic-lock identifiability vs tuning validity, composure vs rally leadership)"
+      ],
+      "test_evidence": [
+        "Gaming battery 3/3 green in about 1 s (default matrix); full matrix 338/338 suites (2428 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Statue scores perfect chatter 0 while answering zero emergencies; healthy answers every strobe",
+        "Panic-lock caricature out-distances all healthy peers yet fails tuning (INSTANT_PANIC_LOCK)",
+        "Composure gamer beats the leader on contagion yet loses on rally (composure without duty)",
+        "Model finding: extraversion dominates resilience in contagion susceptibility (midpoint shift beats steepness); gamer design had to be re-derived numerically",
+        "Host game authority invariant strictly preserved (analytical battery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Battery about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Only three metric pairs pinned; recovery, investigation, and trade-risk axes have no demonstrated gamers yet"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
