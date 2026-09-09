@@ -1482,9 +1482,11 @@ export function runClosedWorldScenario({ perceivedDanger = 0.8, world: preBuilt 
  * state outside the existing factions / bandits / merchants collections. The
  * only additive fields are `world.tickHistory` (a per-tick audit snapshot)
  * and defensive defaults for `world.events` if the caller passed an object
- * that had none.
+ * that had none. The optional `hooks` sink (CVII) receives read-only
+ * derived metrics after all mutations; attaching or detaching it never
+ * changes `world` (proven by the observability-optionality metamorphic test).
  */
-export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memoryDecayPerTick = 0.05, fearDecayPerTick = 0.10, griefDecayPerTick = 0.03, raidCooldown = 5, relationshipGate = true, encounterRng = null, pinBanditRoadId = null, attackRoadId = null } = {}) {
+export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memoryDecayPerTick = 0.05, fearDecayPerTick = 0.10, griefDecayPerTick = 0.03, raidCooldown = 5, relationshipGate = true, encounterRng = null, pinBanditRoadId = null, attackRoadId = null, hooks = null } = {}) {
     if (!world || typeof world !== 'object') {
         throw new TypeError('tickClosedWorld requires a world object');
     }
@@ -5874,6 +5876,20 @@ export function tickClosedWorld(world, { tick = 1, perceivedDanger = 0.5, memory
     });
 
     finalizeWorldEventLedger(world);
+    // CVII observability sink: strictly read-only, post-mutation, optional.
+    // Duck-typed (no core import) so legacy saves and minimal hosts never
+    // pay for telemetry. Values are derived fresh; nothing is stored back.
+    if (hooks && typeof hooks.emit === 'function') {
+        try {
+            let population = 0;
+            for (const town of world.towns.values()) population += Number(town.population) || 0;
+            hooks.emit('world_tick', tick, { tick });
+            hooks.emit('world_population', population, { tick });
+            hooks.emit('world_events', world.events.length, { tick });
+        } catch {
+            // A broken sink must never break the tick (CVII isolation).
+        }
+    }
     return world;
 }
 

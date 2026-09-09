@@ -3969,6 +3969,30 @@
         "Deeply nested JSON parse bombs are a server-transport concern above the validator (out of scope here)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "OBSERVABILITY_OPTIONALITY_NEXT11",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "closed-world.js tickClosedWorld optional duck-typed hooks sink (read-only derived metrics, post-mutation, fault-isolated)",
+        "tests/observability-optionality.test.js (5 tests: ON-vs-OFF identity, metric flow, hostile subscribers, throwing sink, overhead budget)"
+      ],
+      "test_evidence": [
+        "Optionality tests 5/5 green in about 3 s (default matrix); full matrix 335/335 suites (2409 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Hooked and unhooked 500-tick worlds are event-and-history identical (metamorphic identity proven, not assumed)",
+        "Saboteur subscribers (throw plus mutate events) and a throwing sink object both leave the trajectory untouched",
+        "Prior state found: telemetry was sidecar-only with zero production emission points; the sink is the first real coupling and it is proven non-interfering",
+        "Host game authority invariant strictly preserved (read-only sink, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Hooked 500-tick soak within 5x of bare (informational budget, observed far below)"
+      ],
+      "known_gaps": [
+        "Only the closed-world tick carries a sink; FrontierValley and runtime batch paths remain uninstrumented"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
