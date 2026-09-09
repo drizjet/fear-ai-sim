@@ -5010,6 +5010,53 @@
         "RoamingBandSystem computes its own extortionAmount internally (absolute wealth scale) without emitting it; the two scales (0..1 vs absolute) share the 35% doctrine but no cross-system consistency check exists"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_11",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 5 milestones since CCI-10 (SOCIAL_TRANSPORT_NOW25, BETRAYAL_TUNING_NOW26_NOW27, TRADE_DEPENDENCY_RESTRAINT_NEXT16, RECOVER_BETRAYAL_INTERACTION_NEXT25, TRIBUTE_QUANTITY_NEXT28), CCI-10 candidate status review, live-caller grep for restraint paths",
+        "5 commits since CCI-10; all CCI-10 NOW items (25, 26, 27) plus NEXT-16/25/28 closed and verified",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 343/343 suites (2508 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-28 WebSocket SOCIAL_EVENT message type (HTTP exists; validateIncomingMessage defensively accepts unknown types so the wire path is ready).",
+        "NOW-29 restraint callers for non-banditry incidents (verified gap: CoalitionDiplomacyEngine records TREATY_BROKEN and BORDER_TRESPASS without restraint; FactionSystem accepts it).",
+        "NOW-30 cross-system extortion-amount consistency check (both wealth scales share the 35% doctrine with no joint pin).",
+        "NEXT-7 merchant belief-formation dynamics (carried).",
+        "NEXT-8 near-neighbor persona discrimination under noise (carried).",
+        "NEXT-9 compaction-wired 100k soak (carried).",
+        "NEXT-10 nested-JSON transport guard (carried).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+        "NEXT-12 handshake determinism review (carried).",
+        "NEXT-13 constructor-only over-credit audit (carried).",
+        "NEXT-14 infinite-loop containment research (carried).",
+        "NEXT-15 FearServer fixed-port production review (carried).",
+        "NEXT-17 richer rally dynamics for specificity guards (carried).",
+        "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+        "NEXT-21 numeric-field histograms in middle summaries (carried).",
+        "NEXT-22 long-horizon war degeneracy soak beyond 2000 ticks (carried).",
+        "NEXT-29 floor-slope sensitivity exploration (carried).",
+        "NEXT-30 minimum-severity crystallization floor exploration (lightest betrayal still scars).",
+        "NEXT-31 graded defusal exploration (repair cliff is all-or-nothing).",
+        "NEXT-32 acute fear spike for social wounds exploration (betrayal carries no fear of its own).",
+        "NEXT-33 autonomous valley trade flow design (needs waypoint faction semantics first).",
+        "LATER-20 second external host architecture (gated on external project availability).",
+        "LATER-21 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-28 (WebSocket social completes the transport story symmetrically with the HTTP work)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "SOCIAL_WS_NOW28"
     }
   ]
 }
