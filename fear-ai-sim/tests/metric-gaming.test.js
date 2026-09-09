@@ -112,3 +112,39 @@ describe('CLVI NEXT-12: metric-gaming battery', () => {
     expect(onset(gamer.curves.retreatPower)).toBeGreaterThan(onset(healthy.curves.retreatPower));
   });
 });
+
+describe('CLVI NOW-9: social gaming axes (helpfulness, rally, contagion)', () => {
+  it('Martyr helper maximizes helping but aids at lethal risk (self-preservation guard)', () => {
+    const sig = new FunctionalPersonaSignatures();
+    const gamer = sig.signatureFor({ ...HEALTHY_TRAITS, agreeableness: 1.0 });
+    const healthy = sig.signatureFor(HEALTHY_TRAITS);
+    // Gamed axis: highest helping AUC.
+    expect(gamer.auc.helpRisk).toBeGreaterThan(healthy.auc.helpRisk);
+    // Guard axis: helps 3x more at near-certain death — altruism without survival.
+    expect(gamer.curves.helpRisk[8]).toBeGreaterThan(healthy.curves.helpRisk[8] * 2);
+  });
+
+  it('Cry-wolf rallier maximizes rally but alarms a calm group (specificity guard)', () => {
+    const sig = new FunctionalPersonaSignatures();
+    const gamer = sig.signatureFor({ ...HEALTHY_TRAITS, leadership: 1.0, extraversion: 0.0 });
+    const healthy = sig.signatureFor(HEALTHY_TRAITS);
+    // Gamed axis: highest rally AUC.
+    expect(gamer.auc.rallyGroupFear).toBeGreaterThan(healthy.auc.rallyGroupFear);
+    // Guard axis: double the false rally when nobody panics.
+    expect(gamer.curves.rallyGroupFear[0]).toBeGreaterThan(healthy.curves.rallyGroupFear[0] * 1.5);
+  });
+
+  it('Fearless gamer damps extreme contagion but answers personal danger late (onset guard)', () => {
+    const sig = new FunctionalPersonaSignatures();
+    const gamer = sig.signatureFor({ ...HEALTHY_TRAITS, neuroticism: 0.0, resilience: 1.0 });
+    const healthy = sig.signatureFor(HEALTHY_TRAITS);
+    const onset = (curve) => {
+      const i = curve.findIndex((v) => v >= 0.5);
+      return i < 0 ? 1 : [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1][i];
+    };
+    // Gamed axis: least contagion at full peer panic.
+    expect(gamer.curves.contagionPeerFear[8]).toBeLessThan(healthy.curves.contagionPeerFear[8]);
+    // Guard axis: the same damping delays its own threat response.
+    expect(onset(gamer.curves.panicThreat)).toBeGreaterThan(onset(healthy.curves.panicThreat));
+  });
+});

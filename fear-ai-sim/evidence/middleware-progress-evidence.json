@@ -4320,6 +4320,27 @@
         "Natural valley wars never occur: de-escalation interventions cannot be ranked until faction escalation dynamics produce wars on their own"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SOCIAL_GAMING_NOW9",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/metric-gaming.test.js gains NOW-9 describe: martyr helper, cry-wolf rallier, and fearless contagion-damper with paired guards"
+      ],
+      "test_evidence": [
+        "Gaming battery 9/9 in about 1 s; full matrix 339/339 suites (2450 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Max agreeableness buys top helping AUC but helps 3x more at lethal risk; max leadership buys top rally AUC but doubles false rally on calm groups; zero neuroticism damps extreme contagion but delays own panic onset",
+        "Host game authority invariant strictly preserved (analytical battery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Gaming battery about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Rally cry-wolf contrast is modest (2x at zero fear); stronger specificity guards await richer rally dynamics"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
