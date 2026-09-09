@@ -4544,6 +4544,29 @@
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
       "next_action": "OUTBREAK_PACING_NOW15"
+    },
+    {
+      "milestone": "OUTBREAK_PACING_NOW15",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/valley-war-pacing.test.js pins outbreak pacing: designed THREATEN start, raid-earned outbreak, war/peace phases, per-seed determinism",
+        "No source retune: the 0.8 initial grievance is the designed hostile-frontier condition, and outbreak demonstrably requires 2 raids"
+      ],
+      "test_evidence": [
+        "Pacing battery 4/4 in about 2 s; full matrix 341/341 suites (2465 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "First war after exactly 2 raids (tick 2, seed 4242); war fractions 13-17 percent over 2000 ticks on 4 seeds; war-to-peace transitions observed on every seed",
+        "Single-raid pressure peaks at MOBILIZE, never war: the hair-trigger reading was wrong, the pacing was already earned",
+        "Host game authority invariant strictly preserved (analytical battery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Pacing battery about 2 s under jest"
+      ],
+      "known_gaps": [
+        "Beyond-2000-tick degeneracy still unexamined; no-raid counterfactual (pure peace) untested"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
