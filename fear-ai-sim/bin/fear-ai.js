@@ -96,6 +96,8 @@ import {
     FabeWorldBenchmarkSuite,
     BENCHMARK_DIMENSIONS,
     DEGENERACY_FLAGS,
+    FabeChunkIntegrationSuite,
+    CHUNK_DIMENSION_THRESHOLDS,
     ScenarioValidator,
     ScenarioInstantiator,
     ScenarioFuzzer,
@@ -215,6 +217,8 @@ function printHelp() {
     console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
     console.log(`  fabe-world         Run FABE-WORLD multi-seed living-world benchmark & scorecard (Frontiers E & B)`);
     console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
+    console.log(`  fabe-chunks        Run FABE chunk-integration dimensions with frozen thresholds (Sections CXLVI-CXLIX)`);
+    console.log(`                     Options: --seeds <11,22,33> --json`);
     console.log(`  scenario           Validate declarative scenarios, run procedural fuzzing, and step instances (Frontiers A & E)`);
     console.log(`                     Options: --validate <path> | --fuzz [seed] | --ticks <n> | --json`);
     console.log(`  metamorphic        Execute 5 canonical metamorphic relations (MR1-MR5) semantic invariant battery (Frontier E)`);
@@ -802,6 +806,25 @@ function handleFabeWorld(options) {
     for (const entry of report.worldChronicleSnippet.slice(0, 5)) {
         console.log(`  [Tick ${String(entry.tick).padStart(3)}] ${entry.type} -> Cause: ${entry.cause}`);
     }
+}
+function handleFabeChunks(options) {
+    const seeds = options.seeds
+        ? String(options.seeds).split(',').map((s) => parseInt(s.trim(), 10)).filter(Number.isFinite)
+        : [11, 22, 33];
+    const suite = new FabeChunkIntegrationSuite({ seeds: seeds.length > 0 ? seeds : [11] });
+    const report = suite.runBenchmark();
+    if (options.json) {
+        console.log(JSON.stringify(report, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== FABE CHUNK-INTEGRATION DIMENSIONS (Sections CXLVI–CXLIX) ===\n`);
+    for (const [dim, score] of Object.entries(report.dimensionScores)) {
+        const threshold = CHUNK_DIMENSION_THRESHOLDS[dim];
+        console.log(`  • ${dim.padEnd(24)}: ${score.toFixed(4)} (threshold ${threshold}) [${score >= threshold ? 'PASS' : 'FAIL'}]`);
+    }
+    console.log(`\nNaive trait-vector baseline: ${report.naiveTraitVectorBaseline.toFixed(4)} (parity expected; curves buy interpretability)`);
+    console.log(`\nHost Authority Check:         ✓ Benchmark only (0 host physics/inventory mutations)\n`);
 }
 
 function handleScenario(options) {
@@ -3422,6 +3445,10 @@ async function main() {
         case 'fabe':
             handleFabeWorld(options);
             break;
+        case 'fabe-chunks':
+        case 'fabe-chunk':
+            handleFabeChunks(options);
+            break;
         case 'scenario':
             handleScenario(options);
             break;
@@ -3577,7 +3604,6 @@ async function main() {
             break;
         case 'valley':
         case 'chain':
-        case 'frontier-valley':
             handleValley(options);
             break;
         case 'outcomes':

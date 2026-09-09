@@ -403,6 +403,11 @@ export {
 export {
  ExplanationFidelityHarness
 } from './src/ExplanationFidelityHarness.js';
+export {
+ FabeChunkIntegrationSuite,
+ CHUNK_BENCHMARK_DIMENSIONS,
+ CHUNK_DIMENSION_THRESHOLDS
+} from './src/FabeChunkIntegrationSuite.js';
 
 
 

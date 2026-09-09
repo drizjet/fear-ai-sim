@@ -1063,6 +1063,23 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.forgedVerdict.faithful).toBe(false);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "fabe-chunks" and passes frozen thresholds', async () => {
+        const res = await runCli(['fabe-chunks', '--seeds', '11,22']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('FABE CHUNK-INTEGRATION DIMENSIONS');
+        expect(res.stdout).toContain('[PASS]');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "fabe-chunks --json" and returns dimension payload', async () => {
+        const res = await runCli(['fabe-chunks', '--seeds', '11,22', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.allPass).toBe(true);
+        expect(parsed.dimensionScores.FIDELITY_ROBUSTNESS).toBe(1);
+        expect(typeof parsed.naiveTraitVectorBaseline).toBe('number');
+    });
 });
 
 

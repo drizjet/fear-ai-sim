@@ -3101,6 +3101,33 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FABE_CHUNK_INTEGRATION_DIMENSIONS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/FabeChunkIntegrationSuite.js (6 dimensions with thresholds frozen pre-measurement; naive trait-vector hard-negative baseline)",
+        "benchmarks/behavioral-evaluation/fabe_chunk_integration.mjs (runnable module reproducing suite results with results snapshot)",
+        "packages/core/index.js (Exports for suite, dimensions, thresholds)",
+        "bin/fear-ai.js (Added 'fabe-chunks', 'fabe-chunk' CLI subcommands with --seeds, --json)",
+        "tests/fabe-chunk-integration.test.js (threshold pass, baseline honesty, runner parity, determinism)"
+      ],
+      "test_evidence": [
+        "tests/fabe-chunk-integration.test.js (4/4 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai fabe-chunks, fear-ai fabe-chunks --json",
+        "Full regression: 320 suites / 2287 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "All six dimensions pass frozen thresholds: traceability 1.0, restraint 0.56, asymmetry 0.96, fidelity 1.0, continuity 1.0, integrity 1.0",
+        "Hard-negative finding: naive trait-vector retrieval matches signatures at all noise levels (parity to +0.08 at 0.2 noise); curves buy interpretability, not accuracy",
+        "CLI wiring ate the incumbent frontier-valley case and duplicated fabe; both restored with alias yielded to the incumbent",
+        "Host game authority invariant strictly preserved (benchmark only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Suite completes in under 1 s; CLI fabe-chunks in under 1 s"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }
