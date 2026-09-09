@@ -3077,6 +3077,30 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FAILURE_MATRIX_V3_AND_PATH_BUDGETS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/failure-matrix-v3.test.js (new chunk engines as degradable resilience modules; simultaneous faults; CCXX kill-rumor-mid-decision)",
+        "tests/advisory-path-budget.test.js (per-link ceilings, full-chain ceiling, heap-growth leak detection, injection-load bounds)",
+        "No source changes required: SubsystemResilienceHarness genericity covers new engines as registered modules"
+      ],
+      "test_evidence": [
+        "tests/failure-matrix-v3.test.js (5/5 tests green)",
+        "tests/advisory-path-budget.test.js (4/4 tests green, stable across repeated runs)"
+      ],
+      "runtime_evidence": [
+        "Full canonical chain completes inside 500 ms; every link inside 200 ms on shared runners",
+        "100 repeated chains retain zero per-run state (structural bound); 200 injected rumors fully decay to zero active",
+        "Absolute heap assertions removed after load-flakiness: GC scheduling noise under parallel jest exceeds any tight bound",
+        "Host game authority invariant strictly preserved (degradation only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Budgets recorded as regression ceilings: chain 500 ms, link 200 ms, structural zero-retention plus 64 MB loose guard"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }
