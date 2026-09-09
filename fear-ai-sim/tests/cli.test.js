@@ -840,6 +840,57 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.withSignals.peakA).toBeLessThanOrEqual(parsed.blind.peakA);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "depend" and prices restraint by dependence', async () => {
+        const res = await runCli(['depend']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('TRADE DEPENDENCY RESTRAINT');
+        expect(res.stdout).toContain('AVOID_CONFLICT');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "depend --json" and returns restraint payload', async () => {
+        const res = await runCli(['depend', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.grain.advisory).toBe('AVOID_CONFLICT');
+        expect(parsed.grain.dampedLevel).toBeLessThan(parsed.timber.dampedLevel);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "blockade" and throttles without touching corridors', async () => {
+        const res = await runCli(['blockade']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('BLOCKADE AS STRATEGY');
+        expect(res.stdout).toContain('STRANGLEHOLD');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "blockade --json" and returns blockade payload', async () => {
+        const res = await runCli(['blockade', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.throttles.north_road).toBeLessThan(1);
+        expect(parsed.restored.deprivation).toBeGreaterThan(parsed.midWar.deprivation);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "scarcity" and ranks hungry above rich', async () => {
+        const res = await runCli(['scarcity']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('SCARCITY PRESSURE');
+        expect(res.stdout).toContain('CRITICAL_MIGRATE_OR_AID');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "scarcity --json" and returns pressure payload', async () => {
+        const res = await runCli(['scarcity', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.ranked[0].settlementId).toBe('hungry_hold');
+        expect(parsed.ranked[0].deprivation).toBeGreaterThan(0.3);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

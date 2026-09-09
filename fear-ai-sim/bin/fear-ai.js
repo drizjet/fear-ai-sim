@@ -148,7 +148,10 @@ import {
     RelationshipTensorSystem,
     SuccessionEngine,
     RetaliationModel,
-    SecurityDilemmaHarness
+    SecurityDilemmaHarness,
+    TradeDependencyEngine,
+    BlockadeEngine,
+    ScarcityPressureHarness
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -294,6 +297,12 @@ function printHelp() {
     console.log(`                     Options: --provoke <KIND> --json`);
     console.log(`  dilemma            Run security dilemma: defensive mobilization misread as aggression (Section XLVI)`);
     console.log(`                     Options: --fear <0..1> --trust <0..1> --signals --json`);
+    console.log(`  depend             Price trade dependence into conflict restraint (Section LII)`);
+    console.log(`                     Options: --json`);
+    console.log(`  blockade           Deny corridors as strategy, priced for both sides (Section LIII)`);
+    console.log(`                     Options: --commitment <0..1> --json`);
+    console.log(`  scarcity           Score famine pressure into migration, raids, morale (Section XLIX)`);
+    console.log(`                     Options: --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1804,6 +1813,68 @@ function handleDilemma(options) {
     console.log(`Neither side wanted war. Misperception ${blind.finalMisperception} did the work.`);
     console.log(`\nHost Authority Check:         ✓ Simulated dyad only (0 host physics/inventory mutations)\n`);
 }
+function handleDepend(options) {
+    const eng = new TradeDependencyEngine();
+    const ledger = [
+        { sourceId: 'granary', destId: 'mill_town', commodity: 'food', amount: 70, tick: 10 },
+        { sourceId: 'granary', destId: 'mill_town', commodity: 'food', amount: 30, tick: 20 },
+        { sourceId: 'forest', destId: 'mill_town', commodity: 'timber', amount: 20, tick: 15 }
+    ];
+    const grain = eng.advise(ledger, 'mill_town', 'granary', 0.8, 100);
+    const timber = eng.advise(ledger, 'mill_town', 'forest', 0.8, 100);
+    const payload = { grain, timber, audit: eng.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== TRADE DEPENDENCY RESTRAINT (Section LII) ===\n`);
+    console.log(`Grain dependence ${(grain.dependency.ratio * 100).toFixed(0)}%:  strike ${(0.8).toFixed(1)} → ${grain.dampedLevel} (${grain.advisory})`);
+    console.log(`Timber dependence ${(timber.dependency.ratio * 100).toFixed(0)}%: strike ${(0.8).toFixed(1)} → ${timber.dampedLevel} (${timber.advisory})`);
+    console.log(`Cutting your own bread supply to answer an insult is malpractice.`);
+    console.log(`\nHost Authority Check:         ✓ Advisory restraint only (0 host physics/inventory mutations)\n`);
+}
+
+function handleBlockade(options) {
+    const eng = new BlockadeEngine();
+    const commitment = options.commitment !== undefined ? parseFloat(options.commitment) : 0.8;
+    const id = eng.declare('red_clan', 'blue_hold', ['north_road', 'east_pass'], { commitment });
+    eng.advanceTick(20);
+    const mid = eng.assess(id);
+    eng.recommit(id, 0.9);
+    const restored = eng.assess(id);
+    const payload = { throttles: eng.throttleTable(), midWar: mid, restored, audit: eng.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== BLOCKADE AS STRATEGY (Section LIII) ===\n`);
+    console.log(`Throttles:                  ${Object.entries(payload.throttles).map(([c, a]) => `${c}=${a}`).join(', ')} allowed`);
+    console.log(`After 20 ticks of runners:  ${mid.advisory} (deprivation ${mid.deprivation}, cost ${mid.blockaderCost})`);
+    console.log(`Recommitted:                ${restored.advisory} (deprivation ${restored.deprivation})`);
+    console.log(`\nHost Authority Check:         ✓ Advisory table only (0 host physics/inventory mutations)\n`);
+}
+
+function handleScarcity(options) {
+    const econ = new EconomicFeedbackSystem();
+    econ.registerSettlementMarket('hungry_hold', { population: 60, production: { food: 0.5 }, initialStockpiles: { food: 5 } });
+    econ.registerSettlementMarket('rich_hold', { population: 40 });
+    for (let t = 0; t < 30; t++) econ.tick(1);
+    const harness = new ScarcityPressureHarness();
+    const ranked = harness.scoreAll(econ);
+    const payload = { ranked, audit: harness.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== SCARCITY PRESSURE (Section XLIX) ===\n`);
+    for (const r of ranked) {
+        console.log(`${r.settlementId.padEnd(14)} deprivation ${r.deprivation} push ${r.migrationPush} morale ${r.unrestMorale} → ${r.advisory}`);
+    }
+    console.log(`\nHost Authority Check:         ✓ Advisory scores only (0 host physics/inventory mutations)\n`);
+}
 
 function handleDiffReplay(options) {
     if (!options.fileA || !options.fileB) {
@@ -3234,6 +3305,21 @@ async function main() {
         case 'security-dilemma':
         case 'spiral':
             handleDilemma(options);
+            break;
+        case 'depend':
+        case 'dependency':
+        case 'restraint':
+            handleDepend(options);
+            break;
+        case 'blockade':
+        case 'embargo':
+        case 'denial':
+            handleBlockade(options);
+            break;
+        case 'scarcity':
+        case 'famine':
+        case 'deprivation':
+            handleScarcity(options);
             break;
         case 'perceive':
         case 'perception':

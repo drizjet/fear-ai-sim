@@ -354,6 +354,17 @@ export {
  SecurityDilemmaHarness,
  DEFAULT_DILEMMA_CONFIG
 } from './src/SecurityDilemmaHarness.js';
+export {
+ TradeDependencyEngine,
+ DEFAULT_DEPENDENCY_CONFIG
+} from './src/TradeDependencyEngine.js';
+export {
+ BlockadeEngine,
+ DEFAULT_BLOCKADE_CONFIG
+} from './src/BlockadeEngine.js';
+export {
+ ScarcityPressureHarness
+} from './src/ScarcityPressureHarness.js';
 
 
 

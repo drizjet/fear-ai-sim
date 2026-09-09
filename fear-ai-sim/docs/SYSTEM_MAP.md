@@ -97,6 +97,9 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Leadership Succession with Splinter Risk (Section XXXVII):** `SuccessionEngine` scores host-provided heirs under archetype weights, wounds cohesion for violent causes and contests, and routes heirless loss into interregnum with splinter advisories (`fear-ai succession`).
 - **Proportional Retaliation with Exhaustion (Sections XLII–XLIV):** `RetaliationModel` answers provocations on a diminishing-returns ladder with long grievance memory, war-exhaustion braking into ceasefire preference, and settleable accounts (`fear-ai retaliate`).
 - **Security Dilemma Spiral and Signaling (Section XLVI):** `SecurityDilemmaHarness` proves defensive mobilization spirals to war under misperception and that costly signals hold the same dyad in deterrence (`fear-ai dilemma`).
+- **Trade Dependency Conflict Restraint (Section LII):** `TradeDependencyEngine` converts ledger-window import shares into retaliation dampening with banded advisories up to AVOID_CONFLICT (`fear-ai depend`).
+- **Blockade as Economic Warfare (Section LIII):** `BlockadeEngine` publishes advisory corridor throttles with dilution, runner leakage, recommitment, upkeep accounting, and lift analysis (`fear-ai blockade`).
+- **Scarcity Pressure into Migration and Morale (Section XLIX):** `ScarcityPressureHarness` reads the live economy untouched and converts deprivation into migration push, raid temptation, and morale advisories (`fear-ai scarcity`).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

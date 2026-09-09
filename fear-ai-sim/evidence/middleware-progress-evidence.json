@@ -2638,6 +2638,82 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TRADE_DEPENDENCY_CONFLICT_RESTRAINT",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/TradeDependencyEngine.js (ledger-window dependency ratios, retaliation dampening, banded advisories up to AVOID_CONFLICT)",
+        "packages/core/index.js (Exports for TradeDependencyEngine and dependency config)",
+        "bin/fear-ai.js (Added 'depend', 'dependency', 'restraint' CLI subcommands with --json)",
+        "tests/trade-dependency.test.js (ledger ratios, dampening curve, advisory bands, window expiry, clean audits)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/trade-dependency.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai depend, fear-ai depend --json"
+      ],
+      "runtime_evidence": [
+        "83% grain dependence damps 0.8 strike to 0.33 (AVOID_CONFLICT); 17% timber damps to 0.71 (MILD_RESTRAINT)",
+        "Stale ledger rows expire outside the 200-tick window; empty ledgers advise NO_RESTRAINT",
+        "Host game authority invariant strictly preserved (advisory restraint only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Dependency query latency: < 0.01 ms per pair over 1k-row ledgers"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "BLOCKADE_AS_ECONOMIC_WARFARE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/BlockadeEngine.js (advisory throttle tables, corridor-count dilution, runner leakage, recommitment, upkeep accounting, lift analysis)",
+        "packages/core/index.js (Exports for BlockadeEngine and blockade config)",
+        "bin/fear-ai.js (Added 'blockade', 'embargo', 'denial' CLI subcommands with --commitment, --json)",
+        "tests/blockade.test.js (throttles, dilution, erosion-vs-recommit, cost collapse, clean audits)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/blockade.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai blockade, fear-ai blockade --json"
+      ],
+      "runtime_evidence": [
+        "Two-corridor 0.8-commitment blockade seals to 0.05 allowed flow; eight corridors dilute below stranglehold",
+        "20 ticks of runners erode 0.95 to 0.75; recommitment restores; costly weak blockades advise LIFT_NOT_WORTH_IT",
+        "Host game authority invariant strictly preserved (advisory table only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Blockade tick latency: < 0.005 ms per active blockade"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SCARCITY_PRESSURE_MIGRATION_AND_MORALE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ScarcityPressureHarness.js (duck-typed live-economy reader; deprivation, migration push, raid temptation, unrest morale, worst-first ranking)",
+        "packages/core/index.js (Exports for ScarcityPressureHarness)",
+        "bin/fear-ai.js (Added 'scarcity', 'famine', 'deprivation' CLI subcommands with --json)",
+        "tests/scarcity-pressure.test.js (live-economy famine, fed stability, worst-first ranking, loud failures, clean audits)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/scarcity-pressure.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai scarcity, fear-ai scarcity --json",
+        "Full regression: 305 suites / 2192 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "30-tick starved market scores deprivation 1.0 with CRITICAL_MIGRATE_OR_AID; fed market stays STABLE at morale 1.0",
+        "Zero duplicate simulation: harness reads the live EconomicFeedbackSystem untouched",
+        "Host game authority invariant strictly preserved (advisory scores only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Scarcity scoring latency: < 0.01 ms per settlement"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }
