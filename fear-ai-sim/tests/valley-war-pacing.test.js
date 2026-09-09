@@ -56,3 +56,53 @@ describe('NOW-15: outbreak pacing budgets', () => {
     expect(a).toEqual(b);
   });
 });
+
+describe('NOW-16: extortion provocation mapping', () => {
+  function grievanceOf(sim) {
+    return sim.factionSystem.getBilateralStance(
+      FRONTIER_VALLEY_FACTIONS.SETTLERS,
+      FRONTIER_VALLEY_FACTIONS.BANDITS,
+    ).grievance;
+  }
+  function synthetic(resolution, partyA, partyB) {
+    return [{ encounterId: 'syn-1', partyAId: partyA, partyBId: partyB, advisoryResolution: resolution }];
+  }
+
+  it('bandit extortion of settlers records provocation (smaller than a raid)', () => {
+    const sim = new FrontierValleySimulation({ seed: 4242 });
+    // Reset the designed initial grievance to isolate the mapping.
+    const st = sim.factionSystem.getBilateralStance(
+      FRONTIER_VALLEY_FACTIONS.SETTLERS,
+      FRONTIER_VALLEY_FACTIONS.BANDITS,
+    );
+    st.grievance = 0.0;
+    sim._recordEncounterConsequences(synthetic(
+      'EXTORTION_PAID', 'bandit_warband_1', 'caravan_merchant_1',
+    ));
+    const afterExtortion = grievanceOf(sim);
+    expect(afterExtortion).toBeGreaterThan(0);
+    expect(afterExtortion).toBeLessThan(0.65);
+    sim._recordEncounterConsequences(synthetic(
+      'COMBAT_ENGAGEMENT', 'bandit_warband_1', 'caravan_merchant_1',
+    ));
+    expect(grievanceOf(sim)).toBeGreaterThan(afterExtortion);
+  });
+
+  it('wildlife predation records no faction incident on either path', () => {
+    const sim = new FrontierValleySimulation({ seed: 4242 });
+    const before = sim.factionSystem.getBilateralStance(
+      FRONTIER_VALLEY_FACTIONS.SETTLERS,
+      FRONTIER_VALLEY_FACTIONS.WILDLIFE,
+    ).incidents.length;
+    sim._recordEncounterConsequences(synthetic(
+      'EXTORTION_PAID', 'wolf_pack_1', 'caravan_merchant_1',
+    ));
+    sim._recordEncounterConsequences(synthetic(
+      'COMBAT_ENGAGEMENT', 'wolf_pack_1', 'caravan_merchant_1',
+    ));
+    expect(sim.factionSystem.getBilateralStance(
+      FRONTIER_VALLEY_FACTIONS.SETTLERS,
+      FRONTIER_VALLEY_FACTIONS.WILDLIFE,
+    ).incidents.length).toBe(before);
+  });
+});

@@ -4567,6 +4567,29 @@
         "Beyond-2000-tick degeneracy still unexamined; no-raid counterfactual (pure peace) untested"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "EXTORTION_GRIEVANCE_NOW16",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/FrontierValleySimulation.js extracts _recordEncounterConsequences (pure move, 46 valley suites green) and records PROVOCATION for bandit-vs-civilized extortion",
+        "tests/valley-war-pacing.test.js gains NOW-16 describe: provocation-smaller-than-raid plus wildlife exclusion on both paths"
+      ],
+      "test_evidence": [
+        "Pacing battery 6/6; full matrix 341/341 suites (2467 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Verified-absent finding: zero EXTORTION_PAID encounters in 500 ticks across 5 seeds (caravan power ratio never exceeds the tribute threshold), so the wiring is latent until encounter dynamics produce extortion",
+        "Wildlife exclusion holds on both combat and extortion paths",
+        "Host game authority invariant strictly preserved (advisory incident mapping only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Pacing battery about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Extortion trigger thresholds unexamined: tribute path may be unreachable by design or by accident"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

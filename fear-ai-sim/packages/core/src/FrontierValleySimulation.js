@@ -238,6 +238,42 @@ export class FrontierValleySimulation {
             waypoints: [{ x: 80, y: 0, z: 220 }, { x: 100, y: 0, z: 240 }]
         });
     }
+    /**
+     * Maps live encounters to route danger, group threat pressure, and
+     * faction incidents. Extracted (NOW-16) so the mapping is unit-testable
+     * with synthetic encounters; advance() calls it once per tick.
+     * Wildlife predation never feeds faction grievances: animal hunger is
+     * not faction warfare.
+     * @param {Array<object>} encounters
+     */
+    _recordEncounterConsequences(encounters) {
+        for (const enc of encounters) {
+            const gA = this.worldSystem.groups.get(enc.partyAId);
+            const gB = this.worldSystem.groups.get(enc.partyBId);
+            const fA = gA?.factionId;
+            const fB = gB?.factionId;
+            const bandit = fA === FRONTIER_VALLEY_FACTIONS.BANDITS ? fA : (fB === FRONTIER_VALLEY_FACTIONS.BANDITS ? fB : null);
+            const victim = bandit === fA ? fB : fA;
+            const civilized = victim === FRONTIER_VALLEY_FACTIONS.SETTLERS || victim === FRONTIER_VALLEY_FACTIONS.NOMADS;
+            if (enc.advisoryResolution === 'COMBAT_ENGAGEMENT') {
+                // Combat raises regional danger and increases tension
+                this.civSystem.recordRouteIncident(FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS, 'AMBUSH', 0.25);
+                if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.35);
+                if (gB && gB.drivers) gB.drivers.threatPressure = Math.min(1.0, gB.drivers.threatPressure + 0.35);
+                if (bandit && civilized) {
+                    this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null });
+                }
+            } else if (enc.advisoryResolution === 'EXTORTION_PAID') {
+                if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.15);
+                if (gB && gB.drivers) gB.drivers.threatPressure = Math.min(1.0, gB.drivers.threatPressure + 0.15);
+                // NOW-16: paid tribute still provokes: the victim pays but
+                // remembers who demanded it (smaller than a raid).
+                if (bandit && civilized) {
+                    this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.PROVOCATION, { encounter: enc.encounterId ?? null });
+                }
+            }
+        }
+    }
 
     /**
      * Advances the canonical simulation by a specified number of ticks.
@@ -272,29 +308,7 @@ export class FrontierValleySimulation {
             this.worldSystem.tick(1.0, { factionSystem: this.factionSystem });
             const encounters = this.worldSystem.activeEncounters || [];
             this.macroMetrics.totalEncounters += encounters.length;
-            for (const enc of encounters) {
-                const gA = this.worldSystem.groups.get(enc.partyAId);
-                const gB = this.worldSystem.groups.get(enc.partyBId);
-                if (enc.advisoryResolution === 'COMBAT_ENGAGEMENT') {
-                    // Combat raises regional danger and increases tension
-                    this.civSystem.recordRouteIncident(FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS, 'AMBUSH', 0.25);
-                    if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.35);
-                    if (gB && gB.drivers) gB.drivers.threatPressure = Math.min(1.0, gB.drivers.threatPressure + 0.35);
-                    // NOW-14: bandit raids on civilized parties feed the
-                    // faction grievance machine (wildlife predation excluded:
-                    // animal hunger is not faction warfare).
-                    const fA = gA?.factionId;
-                    const fB = gB?.factionId;
-                    const bandit = fA === FRONTIER_VALLEY_FACTIONS.BANDITS ? fA : (fB === FRONTIER_VALLEY_FACTIONS.BANDITS ? fB : null);
-                    const victim = bandit === fA ? fB : fA;
-                    if (bandit && (victim === FRONTIER_VALLEY_FACTIONS.SETTLERS || victim === FRONTIER_VALLEY_FACTIONS.NOMADS)) {
-                        this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null });
-                    }
-                } else if (enc.advisoryResolution === 'EXTORTION_PAID') {
-                    if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.15);
-                    if (gB && gB.drivers) gB.drivers.threatPressure = Math.min(1.0, gB.drivers.threatPressure + 0.15);
-                }
-            }
+            this._recordEncounterConsequences(encounters);
 
             // 3. Advance Faction Escalation
             this.factionSystem.advanceTick(1);
