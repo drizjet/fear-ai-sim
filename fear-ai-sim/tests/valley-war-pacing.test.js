@@ -205,6 +205,45 @@ describe('NEXT-24: deliberate tribute-scenario fixture', () => {
   });
 });
 
+describe('NEXT-28: advisory tribute quantity', () => {
+  // EXTORTION_PAID carries a suggested tribute: 35% of victim wealth,
+  // mirroring the RoamingBandSystem doctrine for the same situation.
+  // Advisory only — the host moves no goods.
+  function stage(banditStr, victimStr, victimWealth, seed = 4242) {
+    const sim = new FrontierValleySimulation({ seed });
+    const at = { x: 1000, y: 0, z: 1000 };
+    sim.worldSystem.registerGroup('q_raiders', {
+      type: 'BANDITS', factionId: FRONTIER_VALLEY_FACTIONS.BANDITS,
+      memberCount: 12, position: { ...at }, militaryStrength: banditStr, wealth: 0.1
+    });
+    sim.worldSystem.registerGroup('q_convoy', {
+      type: 'CARAVAN', factionId: FRONTIER_VALLEY_FACTIONS.SETTLERS,
+      memberCount: 4, position: { ...at }, militaryStrength: victimStr, wealth: victimWealth
+    });
+    const encounters = sim.worldSystem.evaluateEncounters({ factionSystem: sim.factionSystem });
+    return encounters.find((e) => {
+      const ids = [e.partyAId, e.partyBId];
+      return ids.includes('q_raiders') && ids.includes('q_convoy');
+    });
+  }
+
+  it('extortion suggests 35% of victim wealth', () => {
+    expect(stage(1.0, 0.2, 0.9).suggestedTribute).toBeCloseTo(0.315, 10);
+    expect(stage(1.0, 0.2, 0.8).suggestedTribute).toBeCloseTo(0.28, 10);
+  });
+
+  it('non-extortion resolutions carry no suggested tribute', () => {
+    // Overwhelming but poor victim: combat, not tribute (wealth bar).
+    const combat = stage(1.0, 0.2, 0.2);
+    expect(combat.advisoryResolution).toBe('COMBAT_ENGAGEMENT');
+    expect(combat.suggestedTribute).toBeNull();
+    // Weak bandits vs strong escort: avoidance.
+    const avoided = stage(0.2, 1.0, 0.9);
+    expect(avoided.advisoryResolution).toBe('MUTUAL_AVOIDANCE');
+    expect(avoided.suggestedTribute).toBeNull();
+  });
+});
+
 describe('NEXT-16: trade-dependency conflict restraint', () => {
   // A faction that depends on the provocateur treats the same incident
   // differently: grievance cools, facts (trust/fear/pressure) stand.

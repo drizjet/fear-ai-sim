@@ -4990,6 +4990,26 @@
         "Betrayal injects no fear/arousal of its own; a betrayed agent's fear trajectory is identical to an unbetrayed twin until traits drift. Whether social wounds should carry an acute fear spike is unexplored"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TRIBUTE_QUANTITY_NEXT28",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "WorldSimulationSystem extortion branch emits suggestedTribute (35% of victim wealth, 4-decimal rounding) on generated encounters; null on every other resolution. Share mirrors the RoamingBandSystem pay-to-avoid-slaughter doctrine for the same situation; advisory only, host moves no goods",
+        "Mid-build repair: a boundary auto-repair dropped five return-object fields (partyBId, encounterType, advisoryResolution, urgency, distance); caught on read-back and restored, verified via parses plus zero-deletion diff"
+      ],
+      "test_evidence": [
+        "NEXT-28 battery 2/2 in valley-war-pacing.test.js (battery 15/15): 0.315 at wealth 0.9 and 0.28 at 0.8; null on combat-path (poor victim) and avoidance-path encounters",
+        "Mutation check: both new tests fail with the source change stashed",
+        "Full matrix 343/343 (2508 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "One multiplication on the extortion path; pacing battery ~1 s; matrix ~40 s"
+      ],
+      "known_gaps": [
+        "RoamingBandSystem computes its own extortionAmount internally (absolute wealth scale) without emitting it; the two scales (0..1 vs absolute) share the 35% doctrine but no cross-system consistency check exists"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

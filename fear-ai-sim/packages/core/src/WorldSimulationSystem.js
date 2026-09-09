@@ -399,6 +399,9 @@ export class WorldSimulationSystem {
         let advisoryResolution = ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE;
         let urgency = 0.2;
         let diagnosticRationale = '';
+        // NEXT-28: advisory suggested tribute (victim-wealth share), set on
+        // the extortion path only; null everywhere else.
+        let suggestedTribute = null;
 
         // Context 1: Predatory Bandits vs Caravan or Refugees
         if (gA.type === ROAMING_PARTY_TYPES.BANDITS || gB.type === ROAMING_PARTY_TYPES.BANDITS) {
@@ -412,6 +415,10 @@ export class WorldSimulationSystem {
             if (powerRatio > 1.4 && victim.wealth > 0.3) {
                 advisoryResolution = ENCOUNTER_RESOLUTIONS.EXTORTION_PAID;
                 urgency = 0.85;
+                // 35% victim-wealth share mirrors the RoamingBandSystem
+                // doctrine for the same situation (pay to avoid slaughter);
+                // advisory only — the host moves no goods.
+                suggestedTribute = Math.round(victim.wealth * 0.35 * 10000) / 10000;
                 diagnosticRationale = `Bandits (${bandit.id}) intercept wealthy group (${victim.id}); demand tribute under power imbalance (${powerRatio.toFixed(2)}x).`;
             } else if (powerRatio > 0.9) {
                 advisoryResolution = ENCOUNTER_RESOLUTIONS.COMBAT_ENGAGEMENT;
@@ -489,6 +496,7 @@ export class WorldSimulationSystem {
             urgency,
             distance,
             diagnosticRationale,
+            suggestedTribute,
             historyEventId: historyEvent.id
         };
     }
