@@ -157,6 +157,46 @@ export class TradeCaravanSupplyChainSystem {
             banditPresence: Math.max(0.0, Math.min(1.0, options.banditPresence ?? 0.10))
         });
     }
+    /**
+     * Apply a blockade throttle table (BlockadeEngine.throttleTable()) to
+     * corridor hazard. Pressure is tracked separately per corridor so a
+     * lifted blockade releases exactly what it added — base hazard from
+     * ambush history is never destroyed. Unknown corridor ids are ignored
+     * and reported. Deterministic; host decides enforcement.
+     * @param {object} [table={}] corridorId -> allowed fraction [0,1]
+     * @returns {{ applied: number, released: number, unknown: string[] }}
+     */
+    applyBlockadeThrottles(table = {}) {
+        let applied = 0;
+        let released = 0;
+        const unknown = [];
+        const seen = new Set();
+        for (const [corridorId, allowed] of Object.entries(table)) {
+            const corridor = this.corridors.get(String(corridorId));
+            if (!corridor) {
+                unknown.push(String(corridorId));
+                continue;
+            }
+            seen.add(String(corridorId));
+            const pressure = Math.max(0, Math.min(1, 1 - Number(allowed)));
+            // Remove the previous contribution first, then add the new one
+            // and record the ACTUAL delta (post-cap) so release is exact
+            // even when hazard hits the [0,1] ceiling.
+            const unpressured = corridor.hazardRating - (corridor.blockadeHazard ?? 0);
+            corridor.hazardRating = Math.max(0, Math.min(1, unpressured + pressure));
+            corridor.blockadeHazard = Math.max(0, corridor.hazardRating - unpressured);
+            applied += 1;
+        }
+        for (const corridor of this.corridors.values()) {
+            const prev = corridor.blockadeHazard ?? 0;
+            if (prev > 0 && !seen.has(corridor.id)) {
+                corridor.hazardRating = Math.max(0, corridor.hazardRating - prev);
+                corridor.blockadeHazard = 0;
+                released += 1;
+            }
+        }
+        return { applied, released, unknown };
+    }
 
     /**
      * Scan the network for profitable inter-settlement commodity arbitrage opportunities.

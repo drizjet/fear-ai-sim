@@ -215,12 +215,22 @@ export class RoamingBandSystem {
      * @param {string} bandId
      * @returns {Array<{ destinationId: string, utility: number, breakdown: Object }>}
      */
-    evaluateDestinationUtilities(bandId) {
+    evaluateDestinationUtilities(bandId, options = {}) {
         const band = this.bands.get(bandId);
         if (!band) throw new Error(`Band ${bandId} not found.`);
 
         const utilities = [];
-        const weights = this._getArchetypeWeights(band.archetype);
+        const base = this._getArchetypeWeights(band.archetype);
+        // NOW-2 wiring: live motive pressure (from MovementMotiveRanker)
+        // bends archetype weights. Absent bias the output is unchanged.
+        const bias = options.weightBias || {};
+        const weights = {
+            need: base.need * (bias.need ?? 1),
+            profit: base.profit * (bias.profit ?? 1),
+            safety: base.safety * (bias.safety ?? 1),
+            distance: base.distance * (bias.distance ?? 1),
+            home: base.home * (bias.home ?? 1)
+        };
 
         for (const [destId, dest] of this.destinations.entries()) {
             // 1. Need Satisfaction S(d)

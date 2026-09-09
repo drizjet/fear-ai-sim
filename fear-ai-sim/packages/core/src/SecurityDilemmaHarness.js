@@ -40,6 +40,24 @@ export const DEFAULT_DILEMMA_CONFIG = Object.freeze({
 
 export class SecurityDilemmaHarness {
     /**
+     * Build a dilemma config from two FactionSystem bilateral stances
+     * (NOW-3 wiring). Fear/grievance drive defensive need; trust discounts
+     * misperception; low information confidence raises it. Pure function of
+     * stance snapshots — the harness never touches the faction system.
+     */
+    static configFromStances(stanceAB = {}, stanceBA = {}) {
+        const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : 0);
+        return {
+            fearA: num(stanceAB.fear),
+            fearB: num(stanceBA.fear),
+            trustAB: (num(stanceAB.trust) + num(stanceBA.trust)) / 2,
+            misperceptionA: 0.2 + 0.6 * (1 - num(stanceAB.informationConfidence)),
+            misperceptionB: 0.2 + 0.6 * (1 - num(stanceBA.informationConfidence)),
+            mobilizationA: num(stanceAB.grievance) * 0.5,
+            mobilizationB: num(stanceBA.grievance) * 0.5
+        };
+    }
+    /**
      * Run one dilemma.
      * @param {object} [config={}] { rounds, warThreshold, mirrorFraction,
      *   misperceptionA, misperceptionB, fearA, fearB, trustAB, signals: boolean[] }

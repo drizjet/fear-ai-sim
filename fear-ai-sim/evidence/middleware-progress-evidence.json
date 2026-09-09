@@ -3606,9 +3606,41 @@
         "Audit completes in minutes; no benchmark impact"
       ],
       "known_gaps": [
-        "Audit is point-in-time; adjacency gaps may close or open as modules evolve — miner re-checks each run"
+        "Audit is point-in-time; adjacency gaps closed below (see UNWIRED_ADJACENCY_NOW1_4)"
       ],
       "next_action": "UNWIRED_ADJACENCY_CHUNK"
+    },
+    {
+      "milestone": "UNWIRED_ADJACENCY_NOW1_4",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "TradeCaravanSupplyChainSystem.applyBlockadeThrottles (reversible source-tagged pressure with post-cap exact release)",
+        "MovementMotiveRanker.destinationWeightBias plus RoamingBandSystem weightBias option (motive pressure bends archetype weights, identity default)",
+        "SecurityDilemmaHarness.configFromStances (stance fear/trust/confidence/grievance to dilemma params, pure function)",
+        "FactionSystem cohesion/morale fields plus applySuccession (schema v2 deferred as unnecessary: two scalar fields sufficed)",
+        "tests/unwired-adjacency.test.js (10 joint tests across all four seams)"
+      ],
+      "test_evidence": [
+        "tests/unwired-adjacency.test.js (10/10 tests green)",
+        "Full regression: 334 suites / 2381 tests green in a single pass; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Blockade at 0.8 commitment drives corridor hazard until escorts reprice; lift restores the base value exactly",
+        "Starving nomads rerank far-rich over near-poor only with motive bias; absent bias output is bit-identical (backwards compatible)",
+        "Mutual-raid stances spiral; trusting stances hold; one-sided raids stay asymmetric (correct, not a failure)",
+        "Assassination plus contested heirs wounds cohesion far more than natural smooth succession; interregnum craters within bounds",
+        "Three genuine mid-build findings: file-local round4 clamps to [0,1] (pinned multipliers at 1 until fixed with documented roundBias); hazard ceiling destroys release exactness (fixed by recording post-cap delta); one-sided raids correctly stay asymmetric",
+        "Five range-edit file damages; repaired and verified",
+        "Host game authority invariant strictly preserved (advisory wiring only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Adjacency tests complete in under 2 s"
+      ],
+      "known_gaps": [
+        "NOW-5 lesion-feed expansion still open (perception noise, belief contradiction, succession shock)",
+        "Godot-spawn parallel flake still without quarantine"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

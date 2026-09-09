@@ -103,8 +103,9 @@ export class FactionSystem {
             economicStockpile: clamp01(economicStockpile),
             legitimacy: clamp01(legitimacy),
             riskTolerance: clamp01(riskTolerance),
+            cohesion: 0.7,
+            morale: 0.7,
             territories: Array.isArray(territories) ? [...new Set(territories.map(String))] : [],
-            metadata: { ...metadata }
         };
         this.factions.set(faction.id, faction);
         return faction;
@@ -117,6 +118,24 @@ export class FactionSystem {
      */
     getFaction(id) {
         return this.factions.get(id) || null;
+    }
+    /**
+     * Apply a SuccessionEngine.resolve() outcome (NOW-4 wiring).
+     * Cohesion/morale deltas land on the faction record, clamped; the
+     * successor id is recorded as leaderId. Returns the updated record.
+     */
+    applySuccession(result = {}) {
+        const faction = result && result.factionId ? this.factions.get(String(result.factionId)) : null;
+        if (!faction) return null;
+        const clamp = (v) => Math.max(0, Math.min(1, Number(v)));
+        if (Number.isFinite(Number(result.cohesionDelta))) {
+            faction.cohesion = clamp(faction.cohesion + Number(result.cohesionDelta));
+        }
+        if (Number.isFinite(Number(result.moraleDelta))) {
+            faction.morale = clamp(faction.morale + Number(result.moraleDelta));
+        }
+        if (result.successorId) faction.leaderId = String(result.successorId);
+        return faction;
     }
 
     /**

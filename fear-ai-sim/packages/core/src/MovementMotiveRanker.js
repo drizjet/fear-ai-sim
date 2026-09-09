@@ -88,6 +88,33 @@ export class MovementMotiveRanker {
             ranked
         };
     }
+    /**
+     * Translate a ranked motive list into destination-utility weight
+     * multipliers (NOW-2 wiring). Starving bands upweight need, fearful
+     * bands upweight safety, mercantile bands upweight profit, migrating
+     * bands tolerate distance. Multipliers in [0.5, 1.5]; identity when
+     * motives are flat. Pure function of the ranking.
+     * @param {Array<{motive, weight}>} ranked - from rank()
+     * @returns {{ need, profit, safety, distance, home }}
+     */
+    destinationWeightBias(ranked = []) {
+        const w = {};
+        for (const r of Array.isArray(ranked) ? ranked : []) {
+            if (r && r.motive) w[r.motive] = clamp01(r.weight ?? 0);
+        }
+        const bias = {
+            need: 1 + 0.5 * ((w.FOOD || 0) + (w.WATER || 0)) / 2,
+            profit: 1 + 0.5 * ((w.TRADE || 0) + (w.RAIDING || 0) + (w.MISSION || 0)) / 3,
+            safety: 1 + 0.5 * ((w.SAFETY || 0) + (w.ENEMY_AVOIDANCE || 0) + (w.RUMOR || 0)) / 3,
+            distance: 1 - 0.3 * ((w.MIGRATION || 0) + (w.SEASON || 0)) / 2,
+            home: 1
+        };
+        // NOTE: file-local round4() clamps into [0,1] for weights — never
+        // use it here; multipliers live in [0.5, 1.5].
+        const roundBias = (v) => Math.round(v * 10000) / 10000;
+        for (const k of Object.keys(bias)) bias[k] = Math.max(0.5, Math.min(1.5, roundBias(bias[k])));
+        return bias;
+    }
 
     auditImmutability() {
         return {
