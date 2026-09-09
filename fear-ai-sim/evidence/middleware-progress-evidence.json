@@ -2129,6 +2129,41 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SEMANTIC_GOAL_ARBITRATION_AND_COURAGE_MODEL",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/GoalArbitrationEngine.js (GoalArbitrationEngine, GOAL_TYPES, ROLE_CONSTRAINTS, fear-gated relevance, constraint vetoes, courage vs calm-compliance distinction)",
+        "packages/core/index.js (Exports for GoalArbitrationEngine and goal enums)",
+        "bin/fear-ai.js (Added 'goals', 'arbitrate', 'courage' CLI subcommands with --agent, --fear, --duty, --goal, --constraint, --json)",
+        "tests/goal-arbitration.test.js (survival default, courageous override, calm compliance, post veto, loyalty tradeoff, determinism, authority)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/goal-arbitration.test.js (7/7 tests green):",
+        "1. High fear with no duty defaults to survival flight",
+        "2. Strong hold-post duty overrides flight and marks courage",
+        "3. Calm compliance is not mislabeled as courage",
+        "4. NEVER_ABANDON_POST vetoes flight intents",
+        "5. Loyalty priority decides fear-vs-protect tradeoffs",
+        "6. Goal ranking is deterministic under ties",
+        "7. Authority invariant holds with zero host mutation",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai goals, fear-ai goals --json",
+        "Full regression: 285 suites / 2051 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Guard with HOLD_POST 0.8 at fear 0.75 holds IDLE_VIGILANT with courageous:true and fearOverridden:true",
+        "Same post at fear 0.1 reports calmCompliance:true and courageous:false",
+        "NEVER_ABANDON_POST and MUST_PROTECT_ALLY veto flight with named fallbacks",
+        "Host game authority invariant strictly preserved (advisory ranking only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Arbitration latency: < 0.02 ms per agent decision",
+        "CLI goals --json roundtrip: ~135 ms process spawn inclusive"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

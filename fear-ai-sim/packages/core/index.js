@@ -262,6 +262,13 @@ export {
     MODULE_STATUS,
     CANONICAL_OPTIONAL_MODULES
 } from './src/SubsystemResilienceHarness.js';
+export {
+    GoalArbitrationEngine,
+    GOAL_TYPES,
+    ROLE_CONSTRAINTS,
+    COURAGE_FEAR_THRESHOLD,
+    CALM_FEAR_CEILING
+} from './src/GoalArbitrationEngine.js';
 
 
 

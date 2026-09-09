@@ -512,6 +512,24 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.degraded.advisoryIntent).toBeDefined();
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "goals" and reports courageous duty stand', async () => {
+        const res = await runCli(['goals']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('SEMANTIC GOAL ARBITRATION & COURAGE MODEL');
+        expect(res.stdout).toContain('Winning goal:               HOLD_POST');
+        expect(res.stdout).toContain('Courageous stand:           YES');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "goals --json" and returns arbitration payload', async () => {
+        const res = await runCli(['goals', '--fear', '0.75', '--duty', '0.8', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.winningGoal).toBe('HOLD_POST');
+        expect(parsed.courageous).toBe(true);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

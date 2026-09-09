@@ -125,7 +125,10 @@ import {
     INTENT_OUTCOMES,
     FAILURE_REASONS,
     SubsystemResilienceHarness,
-    MODULE_STATUS
+    MODULE_STATUS,
+    GoalArbitrationEngine,
+    GOAL_TYPES,
+    ROLE_CONSTRAINTS
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -237,6 +240,8 @@ function printHelp() {
     console.log(`                     Options: --agent <id> --intent <TYPE> --outcome <GOAL_COMPLETED|INTENT_REJECTED|EXECUTION_FAILED|ACTION_INTERRUPTED> --reason <NO_PATH|BLOCKED|UNSUPPORTED|HOST_BUSY|STALE_INTENT> --json`);
     console.log(`  resilience         Inject partial subsystem failures and verify graceful degradation (Sections 138–139, 197, 199)`);
     console.log(`                     Options: --fail <memory,economy> --disable <world> --json`);
+    console.log(`  goals              Arbitrate fear vs duty/loyalty goals with role constraints and courage detection (Sections 212–214, 216)`);
+    console.log(`                     Options: --agent <id> --fear <0..1> --duty <0..1> --goal <HOLD_POST|PROTECT_ALLY|ESCORT_CARAVAN> --constraint <NEVER_ABANDON_POST|MUST_PROTECT_ALLY> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1323,6 +1328,35 @@ function handleResilience(options) {
     console.log(`Degraded intent:            ${degraded.advisoryIntent ? `${degraded.advisoryIntent.type} (adjusted fear ${degraded.advisoryIntent.adjustedFear})` : 'NONE (core failure)'}`);
     console.log(`Failed modules:             ${degraded.failedModules.join(', ') || 'none'} | Skipped: ${degraded.skippedModules.join(', ') || 'none'}`);
     console.log(`\nHost Authority Check:         ✓ Isolated advisory fallbacks (0 host physics/inventory mutations)\n`);
+}
+function handleGoals(options) {
+    const agentId = options.agent || 'guard_01';
+    const fear = options.fear !== undefined ? Math.max(0, Math.min(1, parseFloat(options.fear))) : 0.75;
+    const duty = options.duty !== undefined ? Math.max(0, Math.min(1, parseFloat(options.duty))) : 0.8;
+    const goalKey = options.goal ? String(options.goal).toUpperCase().replace(/-/g, '_') : 'HOLD_POST';
+    const goalType = GOAL_TYPES[goalKey] || GOAL_TYPES.HOLD_POST;
+    const engine = new GoalArbitrationEngine();
+    engine.registerGoal(agentId, { type: GOAL_TYPES.SURVIVE, priority: 0.55 });
+    engine.registerGoal(agentId, { type: goalType, priority: duty });
+    if (options.constraint) {
+        const cKey = String(options.constraint).toUpperCase().replace(/-/g, '_');
+        if (ROLE_CONSTRAINTS[cKey]) engine.setRoleConstraints(agentId, [ROLE_CONSTRAINTS[cKey]]);
+    }
+    const result = engine.arbitrate(agentId, { fear });
+    const audit = engine.auditImmutability();
+    const payload = { ...result, audit };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== SEMANTIC GOAL ARBITRATION & COURAGE MODEL (Sections 212–214, 216) ===\n`);
+    console.log(`Agent:                      ${agentId} (fear ${fear}, duty ${duty}, goal ${goalType})`);
+    console.log(`Winning goal:               ${result.winningGoal} → ${result.winningIntent}`);
+    console.log(`Courageous stand:           ${result.courageous ? 'YES (duty held despite fear)' : 'no'}`);
+    console.log(`Fear overridden:            ${result.fearOverridden ? 'YES' : 'no'}`);
+    console.log(`Vetoed intents:             ${result.vetoedIntents.map((v) => `${v.goal}:${v.vetoReason}`).join(', ') || 'none'}`);
+    console.log(`\nHost Authority Check:         ✓ Advisory goal ranking only (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2669,6 +2703,11 @@ async function main() {
         case 'degrade':
         case 'failover':
             handleResilience(options);
+            break;
+        case 'goals':
+        case 'arbitrate':
+        case 'courage':
+            handleGoals(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);
