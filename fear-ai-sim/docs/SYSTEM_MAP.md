@@ -140,6 +140,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Coverage Miner Fix NOW-1/2:** alias collisions no longer fabricate debt (0 debt, 0 isolated); harness-encapsulated compositions count via one-hop expansion (356 tested edges) — the batch×valley debt was a phantom, correctly dissolved rather than tested.
 - **Retention + 10k Soak NOW-3/4:** verdict snapshot untracked (record lives in ledger); 10k-tick soak green in the serialized gate — zero flags, agency every tick, population equilibrated.
 - **Tripwire Adjudication NOW-5:** all synthetic-only flags probed for endogenous triggers and found structurally unreachable (flat raid heat, linear commerce, decelerating log) — pinned as loud tripwires, not live detections.
+- **Civ Scale Budgets NEXT-6:** 200-group/100-hub worlds tick ~1.3 ms with linear scaling to 400 groups; caravans negligible — meso-layer overhead pinned in the default matrix.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

@@ -3896,6 +3896,29 @@
         "A future raid-heat rebalance or capital-feedback economy could arm these tripwires; the tests will catch it"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "CIV_SCALE_OVERHEAD_NEXT6",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/world-scale-overhead.test.js (meso-layer budget plus linearity pins: 200 groups with 100 hubs, doubling-ratio guard)"
+      ],
+      "test_evidence": [
+        "Scale tests 2/2 green in about 0.5 s (default matrix); full matrix 332/332 suites (2385 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Combined 200-group plus 100-hub plus 1000-entity world ticks at about 1.3 ms per tick plain node",
+        "Group cost scales linearly to 400 groups (0.35 to 2.70 ms per tick); no O(N-squared) encounter blowup",
+        "294 caravans on 294 corridors cost about 0.02 ms per tick (negligible next to group drivers)",
+        "Host game authority invariant strictly preserved (advisory scaling probes only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Scale budget file under 1 s under jest; per-subsystem costs reported separately per LXXIX (groups dominant, trade negligible)"
+      ],
+      "known_gaps": [
+        "Faction-count and relationship-density scaling unmeasured (factions few by design; dense N-squared relations untested)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
