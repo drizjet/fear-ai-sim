@@ -121,9 +121,19 @@ def main():
     print(f"   Diaz: Band={rA.get('fear_band')} Fear={rA.get('affective_state', {}).get('raw_fear')} Intent={rA.get('action_intent', {}).get('type')} Heartbeat={rA.get('audio_hints', {}).get('heartbeat_bpm')} BPM")
     print(f"   Chen: Band={rB.get('fear_band')} Fear={rB.get('affective_state', {}).get('raw_fear')} Intent={rB.get('action_intent', {}).get('type')} Heartbeat={rB.get('audio_hints', {}).get('heartbeat_bpm')} BPM")
 
+    # 7. Simulate Phase 5: Fracture & Repair (host-reported social events)
+    print("\n>>> PHASE 5: Fracture & Repair (Social Path)")
+    ab = http_post("/api/v1/social/event", {
+        "event": "ABANDONMENT", "actor_id": "chen_novice", "target_id": "diaz_veteran", "weight": 1.5
+    })
+    print(f"   Chen abandons Diaz -> {ab.get('status')} (trauma {ab.get('trauma_id')})")
+    aid = http_post("/api/v1/social/event", {
+        "event": "AID", "actor_id": "chen_novice", "target_id": "diaz_veteran"
+    })
+    print(f"   Chen returns with aid -> {aid.get('status')} (trauma {aid.get('trauma_id')})")
+
     print("\n================================================================================")
     print("VERDICT: Python Reference Demo executed successfully with exact canonical parity.")
     print("================================================================================")
-
 if __name__ == "__main__":
     main()

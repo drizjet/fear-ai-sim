@@ -5188,6 +5188,27 @@
         "NaN basis now silently means unbounded; a loud rejection might serve caller-bug detection better, but every current caller passes finite ticks so this path is unreachable today"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SOCIAL_DEMO_NOW32",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "FearAIClient.report_social_event mirrors add_trauma_zone style (raw dicts, generic post helper); demo stays stdlib-only and posts raw payloads",
+        "neutral_horror_demo gains Phase 5 Fracture and Repair: Chen ABANDONMENT of Diaz (shows APPLIED plus trauma id) followed by AID (shows APPLIED with null trauma)",
+        "Mid-build repairs: an eaten def line in the client and a lost VERDICT print plus doubled divider in the demo; all restored and verified via parses plus zero-deletion diffs"
+      ],
+      "test_evidence": [
+        "Live verification against a real FearServer on loopback (throwaway port 8771; site 8765 was held by an unrelated process and left untouched): full demo runs to VERDICT with Phase 5 printing APPLIED/trauma ids as designed",
+        "Adapter method verified live through the same server (BETRAYAL yields trauma id, AID yields null)",
+        "Full matrix 343/343 (2515 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Two extra HTTP round trips in the demo; full demo under 1 s against local server; matrix ~50 s"
+      ],
+      "known_gaps": [
+        "Demo Phase 5 runs two social posts without asserting anything (demos print, tests assert); the endpoint itself is pinned by the NOW-25 conformance battery"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -95,6 +95,19 @@ class FearAIClient:
         }
         return self._post("/api/v1/trauma", payload)
 
+    def report_social_event(self, event, actor_id, target_id, weight=1.0, witnesses=None, exposed=False, severity=None):
+        """Report a host-observed semantic social event (betrayal, aid, ...)"""
+        payload = {
+            "event": event,
+            "actor_id": actor_id,
+            "target_id": target_id,
+            "weight": weight,
+            "witnesses": witnesses or [],
+            "exposed": exposed,
+            "severity": severity
+        }
+        return self._post("/api/v1/social/event", payload)
+
     def set_pacing_override(self, intensity=None):
         """Manually override narrative tension pacing multiplier"""
         payload = {"intensity": intensity}
