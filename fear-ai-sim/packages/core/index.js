@@ -408,6 +408,15 @@ export {
  CHUNK_BENCHMARK_DIMENSIONS,
  CHUNK_DIMENSION_THRESHOLDS
 } from './src/FabeChunkIntegrationSuite.js';
+export {
+ MemoryRelevanceScorer,
+ RELEVANCE_WEIGHTS,
+ RELEVANCE_HALF_LIFE_TICKS
+} from './src/MemoryRelevanceScorer.js';
+export {
+ MemoryPathologyBattery,
+ MEMORY_PATHOLOGY_PROBES
+} from './src/MemoryPathologyBattery.js';
 
 
 

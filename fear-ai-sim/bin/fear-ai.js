@@ -98,6 +98,8 @@ import {
     DEGENERACY_FLAGS,
     FabeChunkIntegrationSuite,
     CHUNK_DIMENSION_THRESHOLDS,
+    MemoryRelevanceScorer,
+    MemoryPathologyBattery,
     ScenarioValidator,
     ScenarioInstantiator,
     ScenarioFuzzer,
@@ -215,10 +217,10 @@ function printHelp() {
     console.log(`                     Options: --preset <preset_id>`);
     console.log(`  frontier-valley    Run the Frontier Valley multi-seed simulation + degeneracy check (Front C)`);
     console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
-    console.log(`  fabe-world         Run FABE-WORLD multi-seed living-world benchmark & scorecard (Frontiers E & B)`);
-    console.log(`                     Options: --ticks <100> --seeds <101,202,303> --json`);
     console.log(`  fabe-chunks        Run FABE chunk-integration dimensions with frozen thresholds (Sections CXLVI-CXLIX)`);
     console.log(`                     Options: --seeds <11,22,33> --json`);
+    console.log(`  memory-relevance   Run memory relevance ranking demo + pathology battery (Sections XV-XVII)`);
+    console.log(`                     Options: --top <5> --json`);
     console.log(`  scenario           Validate declarative scenarios, run procedural fuzzing, and step instances (Frontiers A & E)`);
     console.log(`                     Options: --validate <path> | --fuzz [seed] | --ticks <n> | --json`);
     console.log(`  metamorphic        Execute 5 canonical metamorphic relations (MR1-MR5) semantic invariant battery (Frontier E)`);
@@ -825,6 +827,34 @@ function handleFabeChunks(options) {
     }
     console.log(`\nNaive trait-vector baseline: ${report.naiveTraitVectorBaseline.toFixed(4)} (parity expected; curves buy interpretability)`);
     console.log(`\nHost Authority Check:         ✓ Benchmark only (0 host physics/inventory mutations)\n`);
+}
+function handleMemory(options) {
+    const topK = Math.max(1, Math.min(50, parseInt(options.top || '5', 10) || 5));
+    const sys = new LayeredMemorySystem();
+    sys.recordEpisodic({ type: 'SURVIVED_AMBUSH', valence: -0.9, arousal: 0.9, salience: 0.85, participants: ['orc-7'], location: { x: 10, y: 0, z: 0 }, tick: 90 });
+    sys.recordEpisodic({ type: 'ABANDONED_BY_PEER', valence: -0.6, arousal: 0.6, salience: 0.6, participants: ['guard-3'], location: { x: 40, y: 0, z: 0 }, tick: 70 });
+    sys.recordEpisodic({ type: 'RESOURCE_DISCOVERED', valence: 0.5, arousal: 0.2, salience: 0.35, participants: ['elf-2'], location: { x: 500, y: 0, z: 0 }, tick: 10 });
+    sys.recordSemantic('glen', 'SANCTUARY', { x: 12, y: 0, z: 0 }, 0.85, {}, 95);
+    sys.recordSemantic('far-quarry', 'RESOURCE', { x: 900, y: 0, z: 0 }, 0.7, {}, 20);
+    sys.tickCount = 100;
+    const ctx = { nowTick: 100, entityIds: ['orc-7'], position: { x: 12, y: 0, z: 0 }, locationRadius: 50, goalTags: ['ambush', 'hazard'] };
+    const ranking = new MemoryRelevanceScorer().rank(sys, ctx, topK);
+    const battery = new MemoryPathologyBattery().runAll();
+    if (options.json) {
+        console.log(JSON.stringify({ ranking, pathology: battery }, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== MEMORY RELEVANCE + PATHOLOGY (Sections XV-XVII) ===\n`);
+    console.log(`Top-${ranking.topK} of ${ranking.evaluated} memories for orc-7 ambush context:`);
+    for (const r of ranking.ranked) {
+        console.log(`  • [${r.layer}] ${String(r.type).padEnd(22)} score=${r.score.toFixed(4)}`);
+    }
+    console.log(`\nPathology battery: ${battery.passCount}/${battery.probeCount} [${battery.allPass ? 'PASS' : 'FAIL'}]`);
+    for (const p of battery.probes) {
+        console.log(`  • ${p.probe.padEnd(26)} [${p.pass ? 'PASS' : 'FAIL'}] ${p.observed}`);
+    }
+    console.log(`\nHost Authority Check: ✓ Advisory memory only (0 host physics/inventory mutations)\n`);
 }
 
 function handleScenario(options) {
@@ -3448,6 +3478,10 @@ async function main() {
         case 'fabe-chunks':
         case 'fabe-chunk':
             handleFabeChunks(options);
+            break;
+        case 'memory-relevance':
+        case 'relevance':
+            handleMemory(options);
             break;
         case 'scenario':
             handleScenario(options);

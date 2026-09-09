@@ -1080,6 +1080,23 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.dimensionScores.FIDELITY_ROBUSTNESS).toBe(1);
         expect(typeof parsed.naiveTraitVectorBaseline).toBe('number');
     });
+
+    it('executes "memory-relevance" and ranks ambush memory with pathology pass', async () => {
+        const res = await runCli(['memory-relevance']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('MEMORY RELEVANCE + PATHOLOGY');
+        expect(res.stdout).toContain('SURVIVED_AMBUSH');
+        expect(res.stdout).toContain('Pathology battery: 8/8 [PASS]');
+    });
+
+    it('executes "memory-relevance --json" and returns ranking plus pathology payload', async () => {
+        const res = await runCli(['memory-relevance', '--top', '3', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.ranking.evaluated).toBe(5);
+        expect(parsed.ranking.ranked.length).toBe(3);
+        expect(parsed.pathology.allPass).toBe(true);
+    });
 });
 
 

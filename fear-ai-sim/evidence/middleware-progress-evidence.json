@@ -3128,6 +3128,38 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "MEMORY_RELEVANCE_AND_PATHOLOGY",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/MemoryRelevanceScorer.js (6-factor deterministic ranking: recency/importance/emotional-salience/entity/location/goal; top-K bounded 1..50; per-factor breakdowns; read-only over memory stores)",
+        "packages/core/src/MemoryPathologyBattery.js (8 deterministic adversarial probes against LayeredMemorySystem)",
+        "benchmarks/behavioral-evaluation/memory_relevance_pathology.mjs (runnable relevance demo + battery with results snapshot)",
+        "packages/core/index.js (Exports for scorer, weights, half-life, battery, probe list)",
+        "bin/fear-ai.js (Added 'memory-relevance', 'relevance' CLI subcommands with --top, --json)",
+        "tests/memory-relevance-pathology.test.js (ranking, breakdown reconstruction, empty-context, determinism, non-mutation, battery pass/determinism/scope)"
+      ],
+      "test_evidence": [
+        "tests/memory-relevance-pathology.test.js (8/8 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai memory-relevance, fear-ai memory-relevance --json",
+        "Full regression: 321 suites / 2297 tests green across two consecutive runs; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Relevance demo ranks SURVIVED_AMBUSH (0.9215) above distant RESOURCE_DISCOVERED (0.2855) for orc-7 ambush context",
+        "Pathology battery 8/8: duplicate-storm dedups to 1 entry capped at salience 1; reinforcement saturates at 1; trauma caps then decays away; 500 inserts bounded to 50; rename purges stale ids; semantic flips resolve to latest confident claim; flashbulb retained at 1000 ticks; trivia forgotten",
+        "CLI wiring shadowed the incumbent 'memory' consolidation command via duplicate switch case (first-match wins); renamed to 'memory-relevance'. Second CLI shadowing incident in two chunks: dispatch edits need a duplicate-case lint",
+        "One transient single-test failure observed in a full-suite run (failing suite not captured); two subsequent consecutive runs fully green 321/321. Treated as unconfirmed flake, not as verified stability",
+        "Host game authority invariant strictly preserved (advisory memory only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Memory tests complete in under 1 s; CLI memory-relevance in under 1 s"
+      ],
+      "known_gaps": [
+        "Memory classes still absent: social, relationship, place, route, rumor, faction (deferred to CHUNK 2/3 territory)",
+        "Duplicate switch-case CLI shadowing has bitten twice; no automated guard yet"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
