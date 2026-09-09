@@ -3217,8 +3217,37 @@
         "Debt tests complete in under 1 s"
       ],
       "known_gaps": [
-        "19 debt pairs remain; world-simulation cluster is next",
+        "19 debt pairs remain at prior paydown; world-simulation cluster addressed below",
         "leaderCalm-from-trust mapping lives only in the test, not in a reusable advisory helper — candidate for a small composition module if a second consumer appears"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "DEBT_PAYDOWN_WORLD_GROUP_CONTAGION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/debt-world-group-contagion.test.js (8 joint tests over pre-existing public APIs; zero engine source changes)",
+        "Seams exercised: agent panic states into group directives and rally; peer panic through ContagionGraph into live agent fear; faction escalation stage into systemic encounters; world history into semantic memory; route incidents into trade ranking"
+      ],
+      "test_evidence": [
+        "tests/debt-world-group-contagion.test.js (8/8 tests green)",
+        "Full regression: 324 suites / 2321 tests green in a single pass; guardian:check CLEAN",
+        "Coverage debt measured before/after with fear-ai coverage: 19 to 5 pairs; tested edges 63 to 87"
+      ],
+      "runtime_evidence": [
+        "All-panicking leaderless squad scatters while calm squad holds; calm high-leadership leader rallies 2 of 2 panicking members in a 4-agent squad",
+        "Hostile (raids plus territorial pressure, militaristic) factions turn patrol proximity into BORDER_SKIRMISH with COMBAT_ENGAGEMENT; identical groups without factions stay peaceful",
+        "Route AMBUSH incident strictly demotes trade utility; history events persist and seed hazard memory",
+        "Remaining 5 debt pairs are thin: DeterministicRng co-mentions (3), TraumaZoneSystem co-mentions (2), CivilizationSimulationSystem x RelationshipTensorSystem",
+        "Four test-authoring errors on my side, zero engine bugs: flat (not nested) group evaluation return; cascade threshold arithmetic (0.645 vs 2/3 panic ratio) requiring 4-member squad for the rally window; evaluateStance mutates rather than returns; rankTradeRoutes requires registered nodes",
+        "Host game authority invariant strictly preserved (advisory composition only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Debt tests complete in under 1 s"
+      ],
+      "known_gaps": [
+        "5 thin debt pairs remain; TraumaZoneSystem x DeterministicRng and Civ x Relationship are the only substantive ones left",
+        "6 isolated modules unchanged (ContagionGraph now tested; isolation list needs re-check)"
       ],
       "next_action": "MAINTAIN"
     }

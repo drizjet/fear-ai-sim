@@ -117,6 +117,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Memory Relevance and Pathology (Sections XV–XVII):** `MemoryRelevanceScorer` ranks episodic/semantic recall by recency, importance, emotional salience, entity/location/goal match with bounded top-K; `MemoryPathologyBattery` proves eight adversarial guarantees (dedup, saturation, runaway, bounds, rename, flip, flashbulb, trivia decay) (`fear-ai memory-relevance`).
 - **Interaction Coverage Tooling (Sections CCIV–CCV, CLXXXIII):** `InteractionCoverageGraph` mines tested vs benchmark-composed edges across 85 modules and ranks 22 integration-debt pairs; `scripts/cli-dispatch-lint.mjs` fails on duplicate switch labels (`fear-ai coverage`).
 - **Debt Paydown: Affect-Memory-Faction (CCV):** joint tests prove trauma-dread amplification, trust-scaled calming, raid-to-memory persistence, and loop determinism over pre-existing APIs; measured debt 22 → 19 pairs with zero engine source changes.
+- **Debt Paydown: World-Group-Contagion (CCV):** joint tests prove panic scatter vs rally, graph-to-agent contagion loop, faction-driven skirmish encounters, history-to-memory writes, and route demotion; measured debt 19 → 5 pairs with zero engine source changes.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
