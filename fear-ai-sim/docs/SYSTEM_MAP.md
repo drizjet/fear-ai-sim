@@ -128,6 +128,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Interaction Mutations (CCXXXI–CCXXXII):** lesion battery proves benchmarks detect breakage — leader-calming cut collapses rallies 3→0, danger-feed cut blinds trade demotion, dread zeroing drops fear 0.872→0.380 (black-box lesions, zero engine changes).
 - **Memory Taxonomy Complete (Section XV):** all 10 classes resolve to stores — 9 already covered by adjacent systems, only personal place-attachment was inexpressible so only `PlaceMemory` was built; executable verdict test pins the mapping.
 - **LOD Memory Restoration (Section LXXVII):** `IdentityVault` seal/restore now carries layered/rumor/route/place snapshots with double-clone isolation; restored agents recall sealed memory through the scorer while post-seal live mutations stay out.
+- **Store-Size Scaling (Section LXXVIII):** relevance rank over 1000 entries ~0.8ms, 5000-insert rumor flood single-digit ms, battery ~2ms — measured, no optimization needed, pinned by regression tests.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

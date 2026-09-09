@@ -9,6 +9,9 @@
 
 import { describe, it, expect } from '@jest/globals';
 import { SubsystemOverheadHarness, OVERHEAD_BUDGETS_US } from '../packages/core/src/SubsystemOverheadHarness.js';
+import { LayeredMemorySystem } from '../packages/core/src/LayeredMemorySystem.js';
+import { MemoryRelevanceScorer } from '../packages/core/src/MemoryRelevanceScorer.js';
+import { RumorMemory } from '../packages/core/src/RumorMemory.js';
 
 const EXPECTED_SUBSYSTEMS = [
     'affect.tick', 'memory.episodic', 'memory.relevance', 'memory.rumor',
@@ -53,5 +56,31 @@ describe('Sections LXXIX/CCXXI: SubsystemOverheadHarness', () => {
         for (const key of ['memory.relevance', 'memory.rumor', 'memory.route']) {
             expect(OVERHEAD_BUDGETS_US[key]).toBeDefined();
         }
+    });
+    it('5. Relevance over 1000-entry store stays within budget', () => {
+        const sys = new LayeredMemorySystem({ maxEpisodicEntries: 1000 });
+        for (let i = 0; i < 1000; i++) {
+            sys.recordEpisodic({ type: 'RESOURCE_DISCOVERED', salience: 0.1 + (i % 10) / 20, participants: [`npc-${i % 50}`], tick: i });
+        }
+        sys.tickCount = 1000;
+        const scorer = new MemoryRelevanceScorer();
+        const ctx = { nowTick: 1000, entityIds: ['npc-3'], position: { x: 10, y: 0, z: 0 }, goalTags: ['ambush'] };
+        const t0 = performance.now();
+        for (let k = 0; k < 10; k++) scorer.rank(sys, ctx, 5);
+        const meanMs = (performance.now() - t0) / 10;
+        // Generous: 1000-entry rank must complete in under 50 ms (measured ~1 ms).
+        expect(meanMs).toBeLessThan(50);
+    });
+
+    it('6. Rumor flood respects bound in linear time', () => {
+        const rm = new RumorMemory({ maxEntries: 50 });
+        const t0 = performance.now();
+        for (let i = 0; i < 5000; i++) {
+            rm.hear({ id: `q${i}`, topic: 'T', claim: 'c', confidence: 0.9 }, 0.9, i);
+        }
+        const ms = performance.now() - t0;
+        expect(rm.size).toBeLessThanOrEqual(50);
+        // Generous: 5000 flood inserts in under 5 s (measured single-digit ms).
+        expect(ms).toBeLessThan(5000);
     });
 });

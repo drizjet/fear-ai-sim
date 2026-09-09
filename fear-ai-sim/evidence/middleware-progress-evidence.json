@@ -3537,7 +3537,33 @@
         "LOD tests complete in under 2 s"
       ],
       "known_gaps": [
-        "Second external host still gated; overhead-vs-store-size unmeasured; lesion feed coverage still 3 of many"
+        "Overhead-vs-store-size unmeasured at that time; measured below",
+        "Second external host still gated; lesion feed coverage still 3 of many"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "STORE_SIZE_SCALING_LXXVIII",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/subsystem-overhead.test.js (tests 5-6: 1000-entry relevance rank, 5000-insert rumor flood)"
+      ],
+      "test_evidence": [
+        "tests/subsystem-overhead.test.js (6/6 tests green)",
+        "Full regression: 333 suites / 2371 tests green in a single pass; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Relevance rank over 1000 entries: ~0.8 ms mean (budget 50 ms, 60x headroom); roughly linear",
+        "Rumor flood of 5000 inserts against cap-50 bound: single-digit ms; bound-path scan cost negligible at shipped caps",
+        "Pathology battery: ~2 ms whole-run; store fills to 5000 entries in ~1-2 ms",
+        "No code changes required: verdict is measurement, not optimization (CCXXII benchmark-before-optimization honored)",
+        "Host game authority invariant strictly preserved (measurement only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Scaling tests complete in under 2 s"
+      ],
+      "known_gaps": [
+        "Second external host still gated on host availability; lesion feed coverage still 3 of many"
       ],
       "next_action": "MAINTAIN"
     }
