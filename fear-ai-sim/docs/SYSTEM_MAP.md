@@ -152,6 +152,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Gaming Axes NOW-3:** recovery/investigation/trade-risk gamers caught (hair-trigger onset, ambiguity deafness, late retreat); timing-sensitive scale budgets moved to the serialized gate by policy (10 suites).
 - **Ephemeral Port NOW-4:** dashboard server reports its OS-bound port and tests bind port 0 — the fixed-port collision class is structurally eliminated, not quarantined.
 - **Relation Scale NOW-6:** sparse-plus-cap tensor verified (50/agent, grudge-protected pruning, complete purge); 20k edges build in ~5 ms, tick sub-ms.
+- **Frontier Audit CCI-5:** 20 ranked candidates across NOW/NEXT/LATER tiers; all CCI-4 NOW items closed except NOW-5. Next: middle-tier semantic summarization for event compaction.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

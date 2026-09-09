@@ -4208,6 +4208,48 @@
         "Faction-count scaling (dozens of factions) unmeasured; purgeAgent inbound pass is O(agent count) and unbudgeted at large N"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_5",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 4 milestones since CCI-4 (RANK_SINK_NOW1_2, GAMING_AXES_NOW3, EPHEMERAL_PORT_NOW4, RELATION_SCALE_NOW6), CCI-4 candidate status review, gate-state rerun",
+        "4 commits since CCI-4; CCI-4 NOW-1/2/3/4/6 closed and verified; NOW-5 still open",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 339/339 suites (2438 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-5 middle-tier semantic summarization for event compaction (carried; 36 percent is bookkeeping-only).",
+        "NOW-7 wars and alliances outcome intervention ranking (extends rank chunk; outcome coverage still fear/panic/route only).",
+        "NOW-8 trauma plus pacing runtime telemetry sinks (extends sink pattern to the two subsystems the rank chunk left uninstrumented).",
+        "NOW-9 helpfulness, rally-depth, and contagion-resilience gaming axes (extends battery pattern to the three unpinned axes).",
+        "NOW-10 faction-count scaling measurement (remainder of NOW-6; dozens of factions unmeasured).",
+        "NOW-11 purgeAgent inbound O(agent count) budget or reverse index (RELATION_SCALE gap).",
+        "NEXT-7 merchant belief-formation dynamics (carried from CCI-4).",
+        "NEXT-8 near-neighbor persona discrimination under noise (carried from CCI-4).",
+        "NEXT-9 compaction-wired 100k soak (carried from CCI-4).",
+        "NEXT-10 nested-JSON transport guard (carried from CCI-4).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried from CCI-4).",
+        "NEXT-12 handshake determinism review (carried from CCI-4).",
+        "NEXT-13 constructor-only over-credit audit (carried from CCI-4).",
+        "NEXT-14 infinite-loop containment research (carried from CCI-4).",
+        "NEXT-15 FearServer fixed-port production review (from NOW-4 gap; test risk retired, production paths still fixed).",
+        "NEXT-16 trade-dependency conflict behavior (faction-economy interaction edge: dependent factions should treat conflict differently, untested).",
+        "LATER-17 second external host architecture (gated on external project availability).",
+        "LATER-18 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-19 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-20 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-5 (last open CCI-4 NOW item; completes the compaction chain before deeper horizons)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "SUMMARIZE_NOW5"
     }
   ]
 }
