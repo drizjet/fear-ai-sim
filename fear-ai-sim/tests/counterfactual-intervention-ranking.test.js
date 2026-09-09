@@ -139,3 +139,57 @@ describe('LXVII: counterfactual intervention ranking', () => {
     })).toThrow('inapplicable here');
   });
 });
+
+describe('LXVII NOW-7: wars and alliances outcome ranking', () => {
+  const F = {
+    SETTLERS: 'SettlersAlliance',
+    BANDITS: 'ShadowfangBandits',
+    NOMADS: 'WildernessNomads',
+  };
+  const STAGE = { ATTACK: 'ATTACK', ALLY: 'ALLY' };
+  const NULL = { type: COUNTERFACTUAL_MUTATIONS.CUSTOM_MUTATION, params: { description: 'Null' }, customFn: () => {} };
+  const provoke = {
+    type: COUNTERFACTUAL_MUTATIONS.MODIFY_FACTION_STANCE,
+    params: { sourceFaction: F.SETTLERS, targetFaction: F.BANDITS, stage: STAGE.ATTACK, grievance: 1.0, trust: 0.0 },
+  };
+  const befriend = {
+    type: COUNTERFACTUAL_MUTATIONS.MODIFY_FACTION_STANCE,
+    params: { sourceFaction: F.SETTLERS, targetFaction: F.NOMADS, stage: STAGE.ALLY, grievance: 0.0, trust: 1.0 },
+  };
+
+  it('alliance-seeking wins the alliances outcome (higher)', () => {
+    const r = WorldCounterfactualEngine.rankInterventions({
+      createSimulation: () => new FrontierValleySimulation({ seed: SEED }),
+      ...HORIZON,
+      outcome: { metric: 'alliancesFormed', direction: 'higher' },
+      candidates: [befriend, provoke, NULL],
+    });
+    expect(r.recommendation.mutation).toEqual(befriend);
+    expect(r.recommendation.score).toBe(1);
+  });
+
+  it('provocation ranks last on the wars outcome with a negative score', () => {
+    const r = WorldCounterfactualEngine.rankInterventions({
+      createSimulation: () => new FrontierValleySimulation({ seed: SEED }),
+      ...HORIZON,
+      outcome: { metric: 'warsDeclared', direction: 'lower' },
+      candidates: [provoke, NULL],
+    });
+    const entry = r.ranking.find((e) => e.mutation.type === COUNTERFACTUAL_MUTATIONS.MODIFY_FACTION_STANCE);
+    expect(entry.counterfactual).toBe(1);
+    expect(entry.factual).toBe(0);
+    expect(entry.score).toBe(-1);
+    expect(r.ranking[r.ranking.length - 1].mutation).toEqual(provoke);
+  });
+
+  it('war-only forks now report a first-divergence tick', () => {
+    const r = WorldCounterfactualEngine.runExperiment({
+      simulation: new FrontierValleySimulation({ seed: SEED }),
+      ...HORIZON,
+      mutation: provoke,
+    });
+    expect(r.counterfactualSummary.warsDeclared).toBe(1);
+    expect(r.factualSummary.warsDeclared).toBe(0);
+    expect(r.firstDivergenceTick).not.toBeNull();
+  });
+});

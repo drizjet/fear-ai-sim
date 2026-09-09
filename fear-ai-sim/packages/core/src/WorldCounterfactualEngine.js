@@ -80,19 +80,22 @@ export class WorldCounterfactualEngine {
             factualTrajectory.push({ tick: currentSimTick, ...factSummary });
             counterfactualTrajectory.push({ tick: currentSimTick, ...counterSummary });
 
-            // Check for first divergence
+            // Check for first divergence (NOW-7: wars/alliances included;
+            // a war-only fork previously reported no divergence at all).
             if (firstDivergenceTick === null) {
                 const diffFear = Math.abs(factSummary.meanPopulationFear - counterSummary.meanPopulationFear);
                 const diffEncounters = Math.abs(factSummary.totalEncounters - counterSummary.totalEncounters);
                 const diffFailures = Math.abs(factSummary.routeFailures - counterSummary.routeFailures);
                 const diffPanics = Math.abs(factSummary.panicIncidents - counterSummary.panicIncidents);
+                const diffWars = Math.abs((factSummary.warsDeclared ?? 0) - (counterSummary.warsDeclared ?? 0));
+                const diffAlliances = Math.abs((factSummary.alliancesFormed ?? 0) - (counterSummary.alliancesFormed ?? 0));
 
-                if (diffFear > 0.001 || diffEncounters > 0 || diffFailures > 0 || diffPanics > 0) {
+                if (diffFear > 0.001 || diffEncounters > 0 || diffFailures > 0 || diffPanics > 0 || diffWars > 0 || diffAlliances > 0) {
                     firstDivergenceTick = currentSimTick;
                     causalEvents.push({
                         tick: currentSimTick,
                         type: 'FIRST_DIVERGENCE',
-                        description: `First macro divergence detected: ΔFear=${(counterSummary.meanPopulationFear - factSummary.meanPopulationFear).toFixed(3)}, ΔFailures=${counterSummary.routeFailures - factSummary.routeFailures}`
+                        description: `First macro divergence detected: ΔFear=${(counterSummary.meanPopulationFear - factSummary.meanPopulationFear).toFixed(3)}, ΔFailures=${counterSummary.routeFailures - factSummary.routeFailures}, ΔWars=${counterSummary.warsDeclared - factSummary.warsDeclared}, ΔAlliances=${counterSummary.alliancesFormed - factSummary.alliancesFormed}`
                     });
                 }
             }
