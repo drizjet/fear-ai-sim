@@ -3371,6 +3371,35 @@
         "Second external host still gated on host availability"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RED_TEAM_CROSS_PROCESS_DETERMINISM",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/AffectiveAgent.js (per-agent fallbackSeed from id plus construction counter; prebuilt default rng fn; seed passed into FearCore)",
+        "packages/core/src/FearCore.js (seeded fallback RNG with reseed on reset; caller rng still overrides)",
+        "tests/cross-process-determinism.test.js (separate-process trajectory equality, seed option, reset restore, override; helper tests/helpers/determinism-probe.mjs)"
+      ],
+      "test_evidence": [
+        "tests/cross-process-determinism.test.js (4/4 tests green)",
+        "Falsification record: pre-fix sweep diverged on all 4 personas cross-process (FREEZE vs PANIC at tick 29 for the median persona); post-fix all 4 bit-identical",
+        "Full regression: 328 suites / 2348 tests green in a single pass; guardian:check CLEAN — no existing test depended on Math.random draws"
+      ],
+      "runtime_evidence": [
+        "Attack target (CCIII): the determinism claim. Same-process equality held and masked the leak; cross-process comparison exposed it",
+        "Root cause: AffectiveAgent and FearCore defaulted to Math.random; extended-band branches (HIDE/FREEZE) draw on it, so identical inputs diverged across processes",
+        "Remaining nondeterminism scoped, not behavioral: performance.now/Date.now used for reported timings only; Math.random/Date.now IDs in Pareto/intervention/stepper are labels, never transition inputs",
+        "Overhead: one closure per agent construction, zero per-tick allocation (prebuilt fn)",
+        "Host game authority invariant strictly preserved (advisory path only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Determinism tests complete in under 3 s including 8 spawned processes"
+      ],
+      "known_gaps": [
+        "Scenario/intervention live-ID labels still embed wall-clock/randomness; first-divergence comparisons must exclude label fields (unverified whether they do)",
+        "Next ranked frontiers: CXV in-engine overhead; social/faction/place memory; second external host (gated); LOD/scale work"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

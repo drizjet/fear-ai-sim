@@ -122,6 +122,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Isolated-Module Verdicts (CCIV):** all 6 isolates were miner-scope artifacts (alias imports, subdir tests, source composition); miner v2 adds recursive scans, export aliases, consumer roots; isolated empty, 1 tolerated debt pair documented (`fear-ai coverage`).
 - **Rumor and Route Memory (Section XV):** `RumorMemory` holds heard rumors with trust-scaled reinforcement, sticky corrections, decay, and forgetting audit; `RouteMemory` learns per-agent familiarity and danger; both compete in relevance ranking (`fear-ai memory-relevance`, 7 candidates).
 - **Godot Failure Drill (Section CXIV):** kill/restart coverage proves client-observed close, refused reconnect with held advisory, bit-identical restart determinism, and a real-engine absent-server failsafe exiting 0 (all 10 stations plus loopback re-verified green).
+- **Red Team: Cross-Process Determinism (CCIII):** falsified the determinism claim cross-process (Math.random fallback diverged FREEZE vs PANIC at tick 29); per-agent seeded fallback RNGs now make separate processes bit-identical, pinned by a spawn-based regression gate.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

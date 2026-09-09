@@ -8,7 +8,9 @@ import { FearCore } from './FearCore.js';
 import { HabituationSystem } from './HabituationSystem.js';
 import { IntentResolver } from './IntentResolver.js';
 import { PsychoacousticSynthesizer } from './PsychoacousticSynthesizer.js';
+import { DeterministicRng } from './DeterministicRng.js';
 
+let AGENT_FALLBACK_RNG_COUNTER = 0;
 export const DEFAULT_TRAITS = Object.freeze({
     openness: 0.5,
     conscientiousness: 0.5,
@@ -30,6 +32,13 @@ export class AffectiveAgent {
     constructor(id, traits = {}, options = {}) {
         this.id = String(id || 'agent_0');
         this.name = options.name || this.id;
+        // Deterministic fallback RNG (CCIII red-team fix): Math.random as a
+        // default made identical cross-process runs diverge on PANIC/FREEZE
+        // branches. Seed derives from id plus construction order, so replay
+        // with the same construction sequence is bit-identical.
+        this.fallbackSeed = options.seed ?? `${this.id}#${AGENT_FALLBACK_RNG_COUNTER++}`;
+        this._defaultRng = new DeterministicRng(this.fallbackSeed);
+        this._defaultRngFn = () => this._defaultRng.random();
 
         // Personality profile with defensive numeric clamping
         const sanitizeTrait = (val, fallback) => {
@@ -92,6 +101,7 @@ export class AffectiveAgent {
         }
 
         const fearCoreConfig = { ...(options.fearCoreConfig || {}) };
+        if (fearCoreConfig.seed === undefined) fearCoreConfig.seed = this.fallbackSeed;
         if (!this.enableHysteresis) {
             fearCoreConfig.panicLockTicks = 0;
             fearCoreConfig.exit = {
@@ -129,7 +139,7 @@ export class AffectiveAgent {
         this.tickCount++;
         const safeDt = (typeof dt === 'number' && Number.isFinite(dt) && dt >= 0) ? Math.min(dt, 1.0) : 0.016;
 
-        const rng = typeof context.rng === 'function' ? context.rng : Math.random;
+        const rng = typeof context.rng === 'function' ? context.rng : this._defaultRngFn;
         const pacingIntensity = context.pacingIntensity ?? 1.0;
         const contagionFear = context.contagionFear ?? 0.0;
         const leaderCalm = context.leaderCalm ?? 0.0;

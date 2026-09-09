@@ -3,6 +3,8 @@
  * Zero external dependencies. Fully deterministic.
  */
 
+import { DeterministicRng } from './DeterministicRng.js';
+
 export const FEAR_BANDS = Object.freeze([
     'CALM',
     'ALERT',
@@ -75,6 +77,7 @@ const finite = (val, fallback) => (Number.isFinite(val) ? val : fallback);
 export class FearCore {
     /**
      * @param {object} [config={}]
+     * @param {string|number} [config.seed] - fallback RNG seed (CCIII fix)
      */
     constructor(config = {}) {
         const userExtended = config.extended || {};
@@ -101,8 +104,12 @@ export class FearCore {
         this.stateTimer = 0;
         this.decisionTrace = [];
         this.maxTraceLength = Math.max(1, Math.floor(finite(config.maxTraceLength, 100)));
+        // Deterministic fallback RNG (CCIII red-team fix): Math.random default
+        // made cross-process replays diverge on extended-band branches.
+        this._rngSeed = config.seed ?? 'fearcore-default';
+        this._defaultRng = new DeterministicRng(this._rngSeed);
+        this._defaultRngFn = () => this._defaultRng.random();
     }
-
     /**
      * Reset state
      * @param {string} [state='CALM']
@@ -117,6 +124,7 @@ export class FearCore {
         this.recoveryProgress = 0;
         this.stateTimer = 0;
         this.decisionTrace = [];
+        this._defaultRng = new DeterministicRng(this._rngSeed);
         return this.state;
     }
 
@@ -132,7 +140,7 @@ export class FearCore {
         this.tickCount++;
         this.stateTimer++;
 
-        const rng = typeof context.rng === 'function' ? context.rng : Math.random;
+        const rng = typeof context.rng === 'function' ? context.rng : this._defaultRngFn;
 
         // Phase 0: PRESENCE_BREAK bypass
         if (
