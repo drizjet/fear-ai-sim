@@ -130,4 +130,21 @@ describe('Sections 81-82 / Front E: Replay Workbench & First-Divergence Debugger
         const res = ReplayWorkbench.compareReplays(replayA, replayB, { floatTolerance: 1e-5 });
         expect(res.diverged).toBe(false);
     });
+    it('6. Volatile label fields never count as divergence; real changes still caught', () => {
+        const frame = (grievance, ts) => ({
+            tick: 0,
+            factions: { highguard: { grievance, recordedAt: ts } },
+            groups: {}
+        });
+        const A = { ticks: [frame(0.5, 100)] };
+        const B = { ticks: [frame(0.5, 999)] };
+        // Timestamp-only difference false-diverges without exclusions.
+        expect(ReplayWorkbench.compareReplays(A, B).diverged).toBe(true);
+        expect(ReplayWorkbench.compareReplays(A, B, { volatileKeys: ['recordedAt'] }).diverged).toBe(false);
+        // A genuine behavioral change is still caught with exclusions active.
+        const C = { ticks: [frame(0.9, 100)] };
+        const res = ReplayWorkbench.compareReplays(A, C, { volatileKeys: ['recordedAt'] });
+        expect(res.diverged).toBe(true);
+        expect(res.firstDivergence.property).toBe('grievance');
+    });
 });

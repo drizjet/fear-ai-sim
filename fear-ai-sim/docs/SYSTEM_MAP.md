@@ -124,6 +124,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Godot Failure Drill (Section CXIV):** kill/restart coverage proves client-observed close, refused reconnect with held advisory, bit-identical restart determinism, and a real-engine absent-server failsafe exiting 0 (all 10 stations plus loopback re-verified green).
 - **Red Team: Cross-Process Determinism (CCIII):** falsified the determinism claim cross-process (Math.random fallback diverged FREEZE vs PANIC at tick 29); per-agent seeded fallback RNGs now make separate processes bit-identical, pinned by a spawn-based regression gate.
 - **Subsystem Overhead and Roundtrip (LXXIX/CXV/CCXXI):** measured per-call medians for 13 subsystems (slowest 37.9us, all under half their ceilings); JS loopback p50 0.94ms and Godot engine-measured 6.77ms under 500ms ceilings — same-machine IPC scope, not frame claims.
+- **Divergence Volatile Keys (CIX/CX):** first-divergence comparator accepts caller-supplied volatile-key exclusions; timestamp-only replays compare equal while genuine grievance changes still diverge (entity allowlist was already label-blind).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

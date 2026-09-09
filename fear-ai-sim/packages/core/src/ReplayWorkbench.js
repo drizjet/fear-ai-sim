@@ -36,6 +36,10 @@ export class ReplayWorkbench {
      */
     static compareReplays(replayA, replayB, options = {}) {
         const floatTolerance = options.floatTolerance ?? 1e-5;
+        // Label fields (wall-clock timestamps, run ids, live-generated ids)
+        // must never count as behavioral divergence. Caller-supplied so the
+        // exclusion set stays visible at each call site.
+        const volatileKeys = new Set(Array.isArray(options.volatileKeys) ? options.volatileKeys : []);
 
         if (!replayA || !replayB) {
             return {
@@ -96,7 +100,7 @@ export class ReplayWorkbench {
             }
 
             // 2. Compare Factions Subsystem
-            const divFactions = this._compareKeyedObjects(frameA.factions, frameB.factions, tickNum, 'factions', floatTolerance);
+            const divFactions = this._compareKeyedObjects(frameA.factions, frameB.factions, tickNum, 'factions', floatTolerance, volatileKeys);
             if (divFactions) {
                 return {
                     diverged: true,
@@ -107,7 +111,7 @@ export class ReplayWorkbench {
             }
 
             // 3. Compare Groups Subsystem
-            const divGroups = this._compareKeyedObjects(frameA.groups, frameB.groups, tickNum, 'groups', floatTolerance);
+            const divGroups = this._compareKeyedObjects(frameA.groups, frameB.groups, tickNum, 'groups', floatTolerance, volatileKeys);
             if (divGroups) {
                 return {
                     diverged: true,
@@ -236,7 +240,7 @@ export class ReplayWorkbench {
         return null;
     }
 
-    static _compareKeyedObjects(objA, objB, tick, subsystem, tolerance) {
+    static _compareKeyedObjects(objA, objB, tick, subsystem, tolerance, volatileKeys = new Set()) {
         if (!objA && !objB) return null;
         if (!objA || !objB) {
             return {
@@ -269,6 +273,7 @@ export class ReplayWorkbench {
             const valB = mapB.get(key);
             if (typeof valA === 'object' && typeof valB === 'object') {
                 for (const subKey of Object.keys(valA)) {
+                    if (volatileKeys.has(subKey)) continue;
                     if (this._areValuesDifferent(valA[subKey], valB[subKey], tolerance)) {
                         return {
                             tick,

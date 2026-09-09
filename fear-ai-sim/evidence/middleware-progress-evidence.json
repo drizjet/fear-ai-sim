@@ -3426,6 +3426,32 @@
       ],
       "known_gaps": [
         "Overhead scaling with memory/store size (100s-1000s of entries) unmeasured",
+        "First-divergence label-field audit open at that time; closed below"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "DIVERGENCE_VOLATILE_KEYS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ReplayWorkbench.js (compareReplays accepts volatileKeys; _compareKeyedObjects skips them; entity allowlist unchanged)",
+        "tests/replay-first-divergence.test.js (test 6: timestamp-only false-diverges unexcluded, equal excluded, real grievance change still caught)"
+      ],
+      "test_evidence": [
+        "tests/replay-first-divergence.test.js (6/6 tests green)",
+        "Full regression: 330 suites / 2355 tests green in a single pass; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Audit verdict: entity comparison was already label-blind (5-field allowlist); faction/group keyed comparison compared every subKey with no exclusion — latent false-divergence on the first volatile field added",
+        "Faction getState carries tick-counted fields only, no wall-clock today; the gap was latent, closed before it bit",
+        "Exclusion set is caller-supplied and visible per call site, not a hidden global default",
+        "Five mid-build range-edit file damages during comparator surgery; repaired via brace-balance check against HEAD plus targeted test",
+        "Host game authority invariant strictly preserved (comparison only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Divergence tests complete in under 2 s"
+      ],
+      "known_gaps": [
         "Social/faction/place memory still absent; second external host still gated; LOD/scale work still open"
       ],
       "next_action": "MAINTAIN"
