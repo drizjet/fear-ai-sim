@@ -67,12 +67,20 @@ export function compactEventLog(events, options = {}) {
     middleMinRepeat = 50,
     middleWindowTicks = null,
     middleMaxActors = 8,
+    // NOW-12: per-value distributions over caller-named primitive fields
+    // (for example allowed true/false splits). Empty by default (off);
+    // distinct values per field cap at middleMaxDistinct, overflow counted.
+    middleValueFields = [],
+    middleMaxDistinct = 8,
   } = options || {};
   const anchorSet = new Set(anchorTypes);
   const bulkSet = new Set(bulkTypes);
   const dropSet = new Set(dropTypes);
   const list = Array.isArray(events) ? events : [];
   const byId = new Map();
+  // Sorted once for deterministic field iteration order.
+  const valueFields = [...new Set((Array.isArray(middleValueFields) ? middleValueFields : []).filter((f) => typeof f === 'string'))].sort();
+  const maxDistinct = Math.max(1, middleMaxDistinct);
   list.forEach((e, i) => byId.set(eventIdOf(e, i), i));
   const firstIdx = new Map();
   const lastIdx = new Map();
@@ -162,7 +170,7 @@ export function compactEventLog(events, options = {}) {
     const key = `${t}::${w}`;
     let s = perMiddleWindow.get(key);
     if (!s) {
-      s = { kind: 'middle-summary', type: t, windowStart: w * mWindow, windowEnd: w * mWindow + mWindow - 1, count: 0, firstTick: tick, lastTick: tick, actors: [], actorOverflow: 0, exampleEventId: eventIdOf(e, i) };
+      s = { kind: 'middle-summary', type: t, windowStart: w * mWindow, windowEnd: w * mWindow + mWindow - 1, count: 0, firstTick: tick, lastTick: tick, actors: [], actorOverflow: 0, values: {}, valuesOverflow: {}, exampleEventId: eventIdOf(e, i) };
       perMiddleWindow.set(key, s);
     }
     s.count += 1;
@@ -177,6 +185,18 @@ export function compactEventLog(events, options = {}) {
       if (s.actors.length < Math.max(1, middleMaxActors)) s.actors.push(v);
       else s.actorOverflow += 1;
     }
+    // NOW-12: per-value distributions over caller-named primitive fields.
+    // Non-primitives skipped (unbounded); distinct values capped.
+    for (const f of valueFields) {
+      const v = e[f];
+      if (v === undefined || v === null) continue;
+      if (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'boolean') continue;
+      const k = String(v);
+      const bucket = (s.values[f] ??= {});
+      if (bucket[k] !== undefined) bucket[k] += 1;
+      else if (Object.keys(bucket).length < maxDistinct) bucket[k] = 1;
+      else s.valuesOverflow[f] = (s.valuesOverflow[f] ?? 0) + 1;
+    }
   });
   const middleIdx = new Set();
   list.forEach((e, i) => {
@@ -184,6 +204,13 @@ export function compactEventLog(events, options = {}) {
     if (reason.get(i) === 'kept' && typeof t === 'string' && middleTypes.has(t)) { middleIdx.add(i); keep.delete(i); }
   });
   for (const s of [...perMiddleWindow.values()].sort((a, b) => (a.windowStart - b.windowStart) || (a.type < b.type ? -1 : 1))) {
+    // Stable key order inside each distribution (insertion order is already
+    // deterministic, but sorted output survives readers that re-serialize).
+    for (const f of Object.keys(s.values)) {
+      const sorted = {};
+      for (const k of Object.keys(s.values[f]).sort()) sorted[k] = s.values[f][k];
+      s.values[f] = sorted;
+    }
     middleSummaries.push(s);
   }
 

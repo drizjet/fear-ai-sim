@@ -4455,6 +4455,28 @@
         "Trauma-to-behavior feedback unwired (crystallized traits do not alter live agents); no solace path in runtime; unregistration leaves core records behind"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "VALUE_DISTRIBUTIONS_NOW12",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/EventLogCompactor.js accepts middleValueFields plus middleMaxDistinct: per-window counts over caller-named primitive fields with sorted keys, object skipping, and counted overflow; off by default",
+        "tests/event-log-compaction.test.js gains NOW-12 describe: synthetic bound/overflow/skip/sort plus real-log allowed-split reconciliation"
+      ],
+      "test_evidence": [
+        "Compaction suite 14/14 (about 16 s); full matrix 340/340 suites (2460 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Every distribution reconciles to its window count exactly; output deterministic across runs; savings hold at about 56 percent",
+        "Host game authority invariant strictly preserved (advisory log surgery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Compaction suite about 16 s (real-log fixtures)"
+      ],
+      "known_gaps": [
+        "Numeric-field histograms unbuilt (counts only, no min/max/mean); cross-window distribution rollups left to readers"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

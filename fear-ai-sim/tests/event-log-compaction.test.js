@@ -183,3 +183,56 @@ describe('LXXI NOW-5: middle-tier semantic summarization', () => {
     expect(r.stats.dropped).toBe(0);
   }, 180000);
 });
+
+describe('LXXI NOW-12: middle-summary value distributions', () => {
+  function voteFixture() {
+    const evs = [];
+    for (let i = 0; i < 60; i++) {
+      evs.push({
+        eventId: `v-${i}`, type: 'FACTION_ACTION_GATE', tick: i + 1,
+        factionId: 'f1', allowed: i % 3 === 0, note: { nested: true },
+        tag: `unique-${i}`, parentEventIds: [],
+      });
+    }
+    return evs;
+  }
+
+  it('counts primitives per window, skips objects, caps distinct with overflow', () => {
+    const r = compactEventLog(voteFixture(), {
+      middleMinRepeat: 10, middleWindowTicks: 1000,
+      middleValueFields: ['allowed', 'note', 'tag', 'missing'],
+      middleMaxDistinct: 5,
+    });
+    expect(r.stats.middleSummarized).toBeGreaterThan(0);
+    const s = r.middleSummaries.find((x) => x.type === 'FACTION_ACTION_GATE');
+    // 60 votes: 20 true, 40 false (boundary first/last stay whole).
+    const total = Object.values(s.values.allowed).reduce((a, b) => a + b, 0);
+    expect(total).toBe(s.count);
+    expect(s.values.allowed['true'] + s.values.allowed['false']).toBe(s.count);
+    // Objects never enter distributions; missing fields leave no bucket.
+    expect(s.values.note).toBeUndefined();
+    expect(s.values.missing).toBeUndefined();
+    // 60 unique tags capped at 5 distinct plus overflow.
+    expect(Object.keys(s.values.tag)).toHaveLength(5);
+    const tagSum = Object.values(s.values.tag).reduce((a, b) => a + b, 0) + s.valuesOverflow.tag;
+    expect(tagSum).toBe(s.count);
+    // Sorted keys for stable output.
+    expect(Object.keys(s.values.tag)).toEqual([...Object.keys(s.values.tag)].sort());
+  });
+
+  it('real log: allowed splits sum to window counts, deterministically', () => {
+    const world = contactWorld();
+    const opts = { middleValueFields: ['allowed', 'decision'] };
+    const a = compactEventLog(world.events, opts);
+    const b = compactEventLog(world.events, opts);
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    for (const s of a.middleSummaries) {
+      for (const f of Object.keys(s.values)) {
+        const sum = Object.values(s.values[f]).reduce((x, y) => x + y, 0) + (s.valuesOverflow[f] ?? 0);
+        expect(sum).toBe(s.count);
+      }
+    }
+    const gate = a.middleSummaries.find((s) => s.type === 'FACTION_ACTION_GATE' && s.values.allowed);
+    expect(gate).toBeDefined();
+  }, 180000);
+});
