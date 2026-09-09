@@ -4341,6 +4341,29 @@
         "Rally cry-wolf contrast is modest (2x at zero fear); stronger specificity guards await richer rally dynamics"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FACTION_SCALE_NOW10_11",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/faction-count-scaling.test.js pins NOW-10 (40-faction pair evaluation, determinism, disband completeness) and NOW-11 (hub purge with 2000 inbound edges)"
+      ],
+      "test_evidence": [
+        "Faction battery 4/4 in about 1 s; full matrix 340/340 suites (2454 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Probed: 40 factions evaluate 1560 directed pairs in about 1 ms; purging a hub with 8000 inbound edges takes under 1 ms",
+        "NOW-11 resolved without new machinery: reverse index rejected (linear Map iteration already sub-millisecond; index would add mutation surface to every record path)",
+        "Caught mid-build: evaluateStance returns toStage, not stage (test-only confusion, no source bug)",
+        "Host game authority invariant strictly preserved (analytical battery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Faction battery about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Hundreds-of-factions scale unmeasured; stance evaluation is per-pair lazy with no pair cache"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

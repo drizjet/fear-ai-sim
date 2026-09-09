@@ -157,6 +157,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Trauma/Pacing Sinks NOW-8:** runtime tick emits zone count, pacing intensity, and session progress on the fault-isolated block; hooked outputs proven identical, hostile sinks safe.
 - **War/Alliance Rank NOW-7:** wars and alliances are rankable outcomes (alliance-seeking wins, provocation loses); war-only forks now stamp divergence. Valley natural war rate is zero — de-escalation ranking awaits live escalation dynamics.
 - **Social Gaming NOW-9:** martyr-helper, cry-wolf-rallier, and fearless-damper gamers each caught by a paired guard (lethal-risk helping, false rally, late onset).
+- **Faction Scale NOW-10/11:** 40 factions evaluate 1560 pairs in ~1 ms; hub purge with 8000 inbound edges sub-ms — reverse index rejected as needless machinery.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
