@@ -4502,6 +4502,48 @@
         "War breaks out by tick 2 on seed 4242 (initial 0.8 grievance now live ammunition): outbreak timing untuned, permanent-war degeneracy unexamined at longer horizons"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_7",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 4 milestones since CCI-6 (LIVE_WARS_NOW14, CORE_TRAUMA_SINK_NOW13, VALUE_DISTRIBUTIONS_NOW12, WAR_PHASE_TRACKING_NEXT19), CCI-6 candidate status review, gate-state rerun",
+        "4 commits since CCI-6; all CCI-6 NOW items (12/13/14) plus NEXT-19 closed and verified",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 340/340 suites (2461 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-15 outbreak-timing tuning (tick-2 wars; war/peace pacing and long-horizon degeneracy).",
+        "NOW-16 extortion grievance (EXTORTION_PAID feeds nothing; same raid pattern).",
+        "NEXT-7 merchant belief-formation dynamics (carried).",
+        "NEXT-8 near-neighbor persona discrimination under noise (carried).",
+        "NEXT-9 compaction-wired 100k soak (carried).",
+        "NEXT-10 nested-JSON transport guard (carried).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+        "NEXT-12 handshake determinism review (carried).",
+        "NEXT-13 constructor-only over-credit audit (carried).",
+        "NEXT-14 infinite-loop containment research (carried).",
+        "NEXT-15 FearServer fixed-port production review (carried).",
+        "NEXT-16 trade-dependency conflict behavior (carried).",
+        "NEXT-17 richer rally dynamics for specificity guards (carried).",
+        "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+        "NEXT-20 runtime trauma completion: trauma-to-behavior feedback plus solace path plus unregister purge (three small gaps, one frontier).",
+        "NEXT-21 numeric-field histograms in middle summaries (counts only today).",
+        "LATER-20 second external host architecture (gated on external project availability).",
+        "LATER-21 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-15 (outbreak pacing decides whether live wars are believable dynamics or a degenerate hair-trigger)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "OUTBREAK_PACING_NOW15"
     }
   ]
 }
