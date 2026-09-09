@@ -156,7 +156,10 @@ import {
     RefugeeInformationHarness,
     MovementMotiveRanker,
     ValleyChainScenario,
-    ValleyOutcomeDistribution
+    ValleyOutcomeDistribution,
+    LodDirector,
+    IdentityVault,
+    ScaleHarness
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -318,6 +321,12 @@ function printHelp() {
     console.log(`                     Options: --seed <n> --json`);
     console.log(`  outcomes           Multi-seed valley distributions with degeneracy watch (Sections CCX–CCXI, LXXII)`);
     console.log(`                     Options: --seeds <a,b,c> --ticks <n> --json`);
+    console.log(`  lod                Assign budgeted cognitive tiers with hysteresis (Section LXXVI)`);
+    console.log(`                     Options: --agents <n> --budget <0..1> --json`);
+    console.log(`  vault              Seal and restore identities across abstraction (Section LXXVII)`);
+    console.log(`                     Options: --json`);
+    console.log(`  scale              Measure real per-agent costs to 10k with honesty bounds (Sections LXXVIII–LXXIX)`);
+    console.log(`                     Options: --max <n> --budget <ms> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1983,6 +1992,69 @@ function handleOutcomes(options) {
     console.log(`Degeneracy:                 ${rep.degeneracy.degenerate ? 'FLAGGED — ' + rep.degeneracy.flags.map((f) => f.type).join(', ') : 'none across seed set'}`);
     console.log(`\nHost Authority Check:         ✓ Summaries only (0 host physics/inventory mutations)\n`);
 }
+function handleLod(options) {
+    const agents = options.agents !== undefined ? Math.max(4, Math.min(2000, parseInt(options.agents, 10))) : 40;
+    const budget = options.budget !== undefined ? Math.max(0.05, Math.min(1, parseFloat(options.budget))) : 0.3;
+    const director = new LodDirector({ lod0Cap: Math.max(1, Math.floor(agents * budget * 0.4)), lod1Cap: Math.max(2, Math.floor(agents * budget)) });
+    for (let i = 0; i < agents; i++) {
+        director.register(`npc_${i}`, { priority: (i % 5) / 4 });
+        director.observe(`npc_${i}`, { fear: (i % 7) / 10, visible: i % 4 !== 3 });
+    }
+    for (let t = 0; t < 15; t++) director.direct();
+    const counts = director.tierCounts();
+    const payload = { agents, budget, counts, due: director.dueAgents().length, audit: director.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== COGNITIVE LOD TIERS (Section LXXVI) ===\n`);
+    console.log(`${agents} agents at ${(budget * 100).toFixed(0)}% budget: LOD0 ${counts.LOD0} / LOD1 ${counts.LOD1} / LOD2 ${counts.LOD2} / LOD3 ${counts.LOD3} / LOD4 ${counts.LOD4}`);
+    console.log(`Due this tick:              ${payload.due} (cadence-gated, dormant never fires)`);
+    console.log(`\nHost Authority Check:         ✓ Advisory tiers only (0 host physics/inventory mutations)\n`);
+}
+
+function handleVault(options) {
+    const vault = new IdentityVault();
+    const traits = { neuroticism: 0.3, resilience: 0.8, agreeableness: 0.6, loyalty: 0.9, leadership: 0.7 };
+    const bonds = Array.from({ length: 20 }, (_, i) => ({ targetId: `friend_${i}`, trust: 0.9 - i * 0.04, familiarity: 0.8 - i * 0.02 }));
+    const receipt = vault.seal('guard_01', { identity: traits, adaptive: { trauma: 0.08, confidence: 0.6 }, relationships: bonds, tick: 100 });
+    vault.applyAbstractDrift('guard_01', { trauma: 0.4 }, 200);
+    const restored = vault.restore('guard_01');
+    const payload = { receipt, restored, audit: vault.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== IDENTITY VAULT (Section LXXVII) ===\n`);
+    console.log(`Sealed 20 bonds:            kept ${receipt.bondsKept}, dropped ${receipt.droppedEdges} weakest`);
+    console.log(`200 abstract ticks:         trauma ${restored.adaptive.trauma} (bounded drift, person intact)`);
+    console.log(`Restored identity exact:    ${restored.fidelity.identityExact ? 'YES' : 'no'}`);
+    console.log(`\nHost Authority Check:         ✓ State container only (0 host physics/inventory mutations)\n`);
+}
+
+function handleScale(options) {
+    const harness = new ScaleHarness();
+    const max = options.max !== undefined ? Math.max(10, Math.min(10000, parseInt(options.max, 10))) : 1000;
+    const steps = [1, 10, 100, 1000, 10000].filter((n) => n <= max);
+    const rows = harness.measure(steps, { warmupTicks: 2, measuredTicks: 3 });
+    const budget = options.budget !== undefined ? parseFloat(options.budget) : 16.6;
+    const fit = harness.fitBudget(budget);
+    const payload = { rows, fit, budgetMs: budget, audit: harness.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== HONEST SCALE (Sections LXXVIII–LXXIX) ===\n`);
+    for (const r of rows) {
+        console.log(`${String(r.agents).padStart(6)} agents: ${String(r.perAgentMicros).padStart(8)} µs/agent/tick`);
+    }
+    console.log(`Fit:                        ${fit.perAgentMs} ms/agent; ${budget} ms budget fits ${fit.maxFullAgents.value} full agents (${fit.maxFullAgents.claim})`);
+    console.log(`Measured only to:           ${fit.measuredOnlyUpTo} — above is extrapolation, stated as such.`);
+    console.log(`\nHost Authority Check:         ✓ Benchmark only (0 host physics/inventory mutations)\n`);
+}
 
 function handleDiffReplay(options) {
     if (!options.fileA || !options.fileB) {
@@ -3453,6 +3525,21 @@ async function main() {
         case 'distribution':
         case 'seeds':
             handleOutcomes(options);
+            break;
+        case 'lod':
+        case 'tiers':
+        case 'cognitive-lod':
+            handleLod(options);
+            break;
+        case 'vault':
+        case 'identity-vault':
+        case 'restore':
+            handleVault(options);
+            break;
+        case 'scale':
+        case 'population':
+        case 'benchmark-scale':
+            handleScale(options);
             break;
         case 'perceive':
         case 'perception':

@@ -106,6 +106,9 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Frontier Valley Canonical Chain (Sections CCVII–CCIX):** `ValleyChainScenario` runs the 7-link ambush-to-retaliation advisory pipeline across six live chunk engines with per-link unbroken checks (`fear-ai valley`).
 - **Valley Outcome Distribution and Soak (Sections CCX–CCXI, LXXII):** `ValleyOutcomeDistribution` runs multi-seed live-valley analyses with batch degeneracy watches and fork-replay determinism (`fear-ai outcomes`).
 - **Backlog Edge Wiring: Bonded Rally and Refugee History (CCV):** rally calming scales by lived-in relationship susceptibility with legacy damping intact, and refugee arrivals voice migration history with host-provided causes.
+- **Cognitive LOD Budgeted Tiers (Section LXXVI):** `LodDirector` assigns LOD0–LOD4 under host caps with hysteresis-gated transitions and cadence due-lists (`fear-ai lod`).
+- **Identity Vault Abstraction Restoration (Section LXXVII):** `IdentityVault` seals identity exactly with top-12 bonds and bounded abstract drift, restoring identical decisions (`fear-ai vault`).
+- **Honest Population Scale Measurement (Sections LXXVIII–LXXIX):** `ScaleHarness` times live engine load to 10k agents with extrapolation flagged in code, never footnotes (`fear-ai scale`).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

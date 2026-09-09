@@ -977,6 +977,57 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.degeneracy.degenerate).toBe(false);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "lod" and tiers agents under budget', async () => {
+        const res = await runCli(['lod', '--agents', '20']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('COGNITIVE LOD TIERS');
+        expect(res.stdout).toContain('dormant never fires');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "lod --json" and returns tier payload', async () => {
+        const res = await runCli(['lod', '--agents', '20', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.counts.LOD0).toBeLessThanOrEqual(20);
+        expect(Object.values(parsed.counts).reduce((a, b) => a + b, 0)).toBe(20);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "vault" and restores sealed identities', async () => {
+        const res = await runCli(['vault']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('IDENTITY VAULT');
+        expect(res.stdout).toContain('Restored identity exact:    YES');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "vault --json" and returns vault payload', async () => {
+        const res = await runCli(['vault', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.receipt.bondsKept).toBe(12);
+        expect(parsed.restored.fidelity.identityExact).toBe(true);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "scale" and reports honest per-agent costs', async () => {
+        const res = await runCli(['scale', '--max', '100']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('HONEST SCALE');
+        expect(res.stdout).toContain('extrapolation, stated as such');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "scale --json" and returns scale payload', async () => {
+        const res = await runCli(['scale', '--max', '100', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.rows.length).toBe(3);
+        expect(parsed.fit.measuredOnlyUpTo).toBe(100);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

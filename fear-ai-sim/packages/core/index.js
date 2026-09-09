@@ -384,6 +384,19 @@ export {
 export {
  ValleyOutcomeDistribution
 } from './src/ValleyOutcomeDistribution.js';
+export {
+ LodDirector,
+ LOD_TIERS,
+ LOD_CADENCE,
+ DEFAULT_LOD_CONFIG
+} from './src/LodDirector.js';
+export {
+ IdentityVault
+} from './src/IdentityVault.js';
+export {
+ ScaleHarness,
+ SCALE_STEPS
+} from './src/ScaleHarness.js';
 
 
 

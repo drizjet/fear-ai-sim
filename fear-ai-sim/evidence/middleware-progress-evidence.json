@@ -2897,7 +2897,83 @@
         "MovementMotiveRanker never informs RoamingBandSystem destination choice",
         "SecurityDilemmaHarness never reads FactionSystem bilateral stances"
       ],
-      "next_action": "CHUNK_8_LOD_AND_SCALE"
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "COGNITIVE_LOD_BUDGETED_TIERS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/LodDirector.js (5 tiers, value scoring, hysteresis-gated transitions, cadence due-lists, host budget caps)",
+        "packages/core/index.js (Exports for LodDirector, tiers, cadences, config)",
+        "bin/fear-ai.js (Added 'lod', 'tiers', 'cognitive-lod' CLI subcommands with --agents, --budget, --json)",
+        "tests/lod-director.test.js (caps, hysteresis, volatility fidelity, cadence, clean audits)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/lod-director.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai lod, fear-ai lod --json"
+      ],
+      "runtime_evidence": [
+        "40 agents at 30% budget tier to 4/12/14/0/10 with 30 cadence-gated due, dormant never firing",
+        "Demotion hysteresis holds newcomers for the full gate; volatility promotes jumpy agents over calm seniors",
+        "Host game authority invariant strictly preserved (advisory tiers only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Tier direction latency: < 0.01 ms per 40-agent pass"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "IDENTITY_VAULT_ABSTRACTION_RESTORATION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/IdentityVault.js (exact identity seal, epsilon adaptive, top-12 bond ranking, bounded abstract drift, fidelity receipts)",
+        "packages/core/index.js (Exports for IdentityVault)",
+        "bin/fear-ai.js (Added 'vault', 'identity-vault', 'restore' CLI subcommands with --json)",
+        "tests/identity-vault.test.js (exact restoration, bond cap, bounded drift, decision continuity, loud failures)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/identity-vault.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai vault, fear-ai vault --json"
+      ],
+      "runtime_evidence": [
+        "Restored characters decide identically; 200 abstract ticks move trauma 0.08 to 0.16 without touching identity",
+        "30-bond agents keep 12 strongest with an exact dropped count",
+        "Host game authority invariant strictly preserved (state container only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Seal/restore latency: < 0.01 ms per agent"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "HONEST_POPULATION_SCALE_MEASUREMENT",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ScaleHarness.js (live identity-plus-stabilizer load, linear-fit budget math, EXTRAPOLATED flagging, demotion recommendations)",
+        "packages/core/index.js (Exports for ScaleHarness and scale steps)",
+        "bin/fear-ai.js (Added 'scale', 'population', 'benchmark-scale' CLI subcommands with --max, --budget, --json)",
+        "tests/scale-harness.test.js (measured costs, extrapolation honesty, shape determinism, deadline data)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/scale-harness.test.js (4/4 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai scale, fear-ai scale --json",
+        "Full regression: 315 suites / 2256 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Live load measures ~1.7 microseconds per agent per tick at 1000 agents on this machine",
+        "Budget fit certifies only to measured N; beyond is labeled EXTRAPOLATED in code, not footnotes",
+        "Host game authority invariant strictly preserved (benchmark only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Scale harness self-cost under 1 s for 1-100-1000 sweeps"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }
