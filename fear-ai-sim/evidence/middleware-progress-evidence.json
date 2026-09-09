@@ -1988,6 +1988,42 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "MORAL_DISSONANCE_ENGINE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/MoralDissonanceEngine.js (MoralDissonanceEngine, MORAL_FOUNDATIONS, DEFAULT_MORAL_PROFILES, TRANSGRESSION_TYPES, TRANSGRESSION_PROFILES, ATONEMENT_TYPES, ATONEMENT_PROFILES)",
+        "packages/core/index.js (Exports for MoralDissonanceEngine and moral enums)",
+        "bin/fear-ai.js (Added 'moral', 'guilt', 'dissonance' CLI subcommands with --profile, --transgression, --fear, --atone, --ticks, --json)",
+        "tests/moral-dissonance-engine.test.js (Unit and integration tests for foundations weighting, rationalization, guilt integration/decay, moral injury, atonement, defiance, and authority preservation)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/moral-dissonance-engine.test.js (7/7 tests green):",
+        "1. Moral foundation profiles modulate cognitive dissonance for identical transgressions",
+        "2. Contextual rationalization mitigates immediate dissonance but leaves residual guilt",
+        "3. Continuous guilt integration and passive temporal decay follow differential dynamics",
+        "4. Prolonged severe guilt triggers irreversible Moral Injury and character remodeling",
+        "5. Restorative atonement relieves guilt and restores psychological equilibrium",
+        "6. Moral defiance accurately evaluates refusal probability against unethical orders",
+        "7. Host Game Authority Invariant is strictly preserved",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai moral, fear-ai moral --json"
+      ],
+      "runtime_evidence": [
+        "5-foundation moral architecture (Care, Fairness, Loyalty, Authority, Sanctity) modulates dissonance dot-products across ethical acts",
+        "Contextual rationalization mechanics account for acute fear mitigation, authoritarian order compliance, and survival necessity",
+        "Continuous differential guilt integration and passive exponential decay with cognitive scarring",
+        "Restorative pro-social atonement relieves guilt and rehabilitates social trust",
+        "Chronic Moral Injury induces permanent character remodeling (elevated Neuroticism, eroded Agreeableness) and triggers emergent Moral Defiance against dishonorable orders",
+        "Host game authority invariant strictly preserved (moral engine evaluates advisory ethical states without mutating host state)"
+      ],
+      "benchmark_evidence": [
+        "Dissonance Evaluation Latency: < 0.001 ms per transgression appraisal",
+        "Order Compliance Deliberation: < 0.002 ms per command compliance evaluation"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

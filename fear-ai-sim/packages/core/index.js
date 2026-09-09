@@ -238,6 +238,16 @@ export {
     ScenarioStepper,
     BREAKPOINT_TYPES
 } from './src/ScenarioStepper.js';
+export {
+    MoralDissonanceEngine,
+    MORAL_FOUNDATIONS,
+    DEFAULT_MORAL_PROFILES,
+    TRANSGRESSION_TYPES,
+    TRANSGRESSION_PROFILES,
+    ATONEMENT_TYPES,
+    ATONEMENT_PROFILES
+} from './src/MoralDissonanceEngine.js';
+
 
 
 

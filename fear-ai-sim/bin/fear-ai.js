@@ -113,7 +113,12 @@ import {
     SharedMemoryEntityBuffer,
     INTENT_NAMES,
     ScenarioStepper,
-    BREAKPOINT_TYPES
+    BREAKPOINT_TYPES,
+    MoralDissonanceEngine,
+    MORAL_FOUNDATIONS,
+    DEFAULT_MORAL_PROFILES,
+    TRANSGRESSION_TYPES,
+    ATONEMENT_TYPES
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -177,6 +182,8 @@ function printHelp() {
     console.log(`                     Options: --entities <100000> --workers <4> --benchmark --json`);
     console.log(`  stepper            Interactive scenario stepping, semantic breakpoints & live interventions (Frontiers A & E / Sec 124–128)`);
     console.log(`                     Options: --scenario <path> --step <n> --until-breakpoint <fear|escalation|scarcity|event> --rewind <tick> --diff <tA,tB> --timeline --json`);
+    console.log(`  moral              Simulate moral cognitive dissonance, guilt accumulation & moral injury (Frontier B / Sec 141–145)`);
+    console.log(`                     Options: --profile <guardian|crusader|mercenary|rebel|utilitarian> --transgression <type> --fear <0..1> --atone <type> --ticks <n> --json`);
     console.log(`  counterfactual-world Run causal world fork experiment (Factual vs Counterfactual) (Front E/C)`);
     console.log(`                     Options: --seed <88888> --fork <15> --horizon <40> --mutation <pacify-bandits|pacify-route|scarcity> --json`);
     console.log(`  economy            Run systemic commodity production, famine fear, and pathology check (Front C)`);
@@ -1068,6 +1075,123 @@ function handleStepper(options) {
     }
 
     console.log(`\nHost Authority Check:         ✓ Strictly advisory stepping & diagnostics (0 host geometry/physics mutations)\n`);
+}
+
+function handleMoral(options) {
+    const seed = parseInt(options.seed || '4242', 10);
+    const engine = new MoralDissonanceEngine({ seed });
+
+    // Profile selection
+    const profileKey = (options.profile || 'guardian').toLowerCase();
+    let profile = DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN;
+    let profileName = 'HONORABLE_GUARDIAN';
+    if (profileKey.includes('crusader') || profileKey.includes('zeal')) {
+        profile = DEFAULT_MORAL_PROFILES.ZEALOUS_CRUSADER;
+        profileName = 'ZEALOUS_CRUSADER';
+    } else if (profileKey.includes('mercenary') || profileKey.includes('pragmatist')) {
+        profile = DEFAULT_MORAL_PROFILES.MERCENARY_PRAGMATIST;
+        profileName = 'MERCENARY_PRAGMATIST';
+    } else if (profileKey.includes('rebel') || profileKey.includes('free')) {
+        profile = DEFAULT_MORAL_PROFILES.REBEL_FREE_SPIRIT;
+        profileName = 'REBEL_FREE_SPIRIT';
+    } else if (profileKey.includes('utilitarian') || profileKey.includes('cold')) {
+        profile = DEFAULT_MORAL_PROFILES.COLD_UTILITARIAN;
+        profileName = 'COLD_UTILITARIAN';
+    }
+
+    const agentId = options.agent || 'agent_moral_subject';
+    engine.registerAgentMoralProfile(agentId, profile);
+
+    // Initial / custom guilt if specified
+    if (options.guilt) {
+        const customGuilt = parseFloat(options.guilt);
+        engine.agents.get(agentId).guilt = Math.max(0, Math.min(1.0, customGuilt));
+    }
+
+    // Transgression execution
+    let transgressionReport = null;
+    const transTypeStr = options.transgression || options.act || 'LOOT_SETTLEMENT';
+    const matchedTrans = Object.keys(TRANSGRESSION_TYPES).find(t => t.toLowerCase() === transTypeStr.toLowerCase().replace(/-/g, '_')) || TRANSGRESSION_TYPES.LOOT_SETTLEMENT;
+
+    const fearVal = options.fear ? parseFloat(options.fear) : 0.25;
+    const isDirectOrder = options['direct-order'] !== undefined ? Boolean(options['direct-order']) : true;
+
+    transgressionReport = engine.recordTransgression(agentId, matchedTrans, {
+        fear: fearVal,
+        isDirectOrder,
+        necessity: options.necessity ? parseFloat(options.necessity) : 0.1
+    });
+
+    // Optional ticks
+    let tickSummary = null;
+    if (options.ticks) {
+        const deltaTicks = parseInt(options.ticks, 10);
+        tickSummary = engine.tick(deltaTicks);
+    }
+
+    // Optional atonement
+    let atonementReport = null;
+    if (options.atone) {
+        const atoneStr = typeof options.atone === 'string' ? options.atone : 'DEFEND_THE_HELPLESS';
+        const matchedAtone = Object.keys(ATONEMENT_TYPES).find(a => a.toLowerCase() === atoneStr.toLowerCase().replace(/-/g, '_')) || ATONEMENT_TYPES.DEFEND_THE_HELPLESS;
+        atonementReport = engine.recordAtonement(agentId, matchedAtone);
+    }
+
+    // Order compliance evaluation
+    const orderEvaluation = engine.evaluateOrderCompliance(agentId, matchedTrans);
+
+    const moralState = engine.getAgentMoralState(agentId);
+    const audit = engine.auditImmutability();
+
+    const outputPayload = {
+        agentId,
+        profileName,
+        moralState,
+        transgressionReport,
+        atonementReport,
+        tickSummary,
+        orderEvaluation,
+        audit
+    };
+
+    if (options.json) {
+        console.log(JSON.stringify(outputPayload, null, 2));
+        return;
+    }
+
+    console.log(`\n=== Fear AI: Moral Alignment, Cognitive Dissonance & Guilt Engine (Frontier B / Sections 141–145) ===\n`);
+    console.log(`Agent ID:                     ${agentId} (Profile: ${profileName})`);
+    console.log(`Moral Foundations:            Care: ${(moralState.foundations[MORAL_FOUNDATIONS.CARE] * 100).toFixed(0)}% | Fairness: ${(moralState.foundations[MORAL_FOUNDATIONS.FAIRNESS] * 100).toFixed(0)}% | Loyalty: ${(moralState.foundations[MORAL_FOUNDATIONS.LOYALTY] * 100).toFixed(0)}% | Authority: ${(moralState.foundations[MORAL_FOUNDATIONS.AUTHORITY] * 100).toFixed(0)}% | Sanctity: ${(moralState.foundations[MORAL_FOUNDATIONS.SANCTITY] * 100).toFixed(0)}%`);
+    console.log(`Current Guilt Level:          ${(moralState.guilt * 100).toFixed(1)}% (${moralState.guilt >= engine.severeGuiltThreshold ? 'CRITICAL SEVERE GUILT' : 'TOLERABLE'})`);
+    console.log(`Cumulative Dissonance:        ${moralState.cumulativeDissonance.toFixed(4)}`);
+    console.log(`Moral Injury Status:          ${moralState.moralInjury ? '⚠️ CHRONIC MORAL INJURY (Personality Remodeled)' : '✓ Resilient / Intact Conscience'}`);
+
+    if (moralState.moralInjury) {
+        console.log(`  • Neuroticism Drift:        +${moralState.personalityDeltas.neuroticism.toFixed(2)}`);
+        console.log(`  • Agreeableness Erosion:    ${moralState.personalityDeltas.agreeableness.toFixed(2)} (Cynicism / Detachment)`);
+        console.log(`  • Dominance Suppression:    ${moralState.personalityDeltas.dominance.toFixed(2)}`);
+    }
+
+    if (transgressionReport) {
+        const d = transgressionReport.dissonanceCalc;
+        console.log(`\nCommitted Transgression:      ${transgressionReport.transgressionType}`);
+        console.log(`  • Raw Dissonance:           ${d.rawDissonance.toFixed(4)}`);
+        console.log(`  • Rationalization:          ${(d.rationalization.total * 100).toFixed(1)}% (Fear: ${(d.rationalization.fearRationalization * 100).toFixed(1)}%, Order: ${(d.rationalization.orderRationalization * 100).toFixed(1)}%)`);
+        console.log(`  • Net Dissonance:           ${d.netDissonance.toFixed(4)} -> Added Guilt: +${transgressionReport.addedGuilt.toFixed(4)}`);
+    }
+
+    if (atonementReport) {
+        console.log(`\nRestorative Atonement:        ${atonementReport.atonementType}`);
+        console.log(`  • Guilt Relief:             -${atonementReport.reliefAmount.toFixed(4)} (New Guilt: ${atonementReport.currentGuilt.toFixed(4)})`);
+    }
+
+    console.log(`\nCommand Compliance Deliberation:`);
+    console.log(`  • Proposed Order:           ${orderEvaluation.proposedTransgression}`);
+    console.log(`  • Refusal Probability:      ${(orderEvaluation.refusalProbability * 100).toFixed(1)}%`);
+    console.log(`  • Determination:            ${orderEvaluation.willComply ? '✓ COMPLY WITH DIRECTIVE' : '✗ REFUSE (MORAL DEFIANCE)'}`);
+    console.log(`  • Rationale:                ${orderEvaluation.rationale}`);
+
+    console.log(`\nHost Authority Check:         ✓ Strictly advisory moral evaluations (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2394,6 +2518,11 @@ async function main() {
         case 'stepper':
         case 'step':
             handleStepper(options);
+            break;
+        case 'moral':
+        case 'guilt':
+        case 'dissonance':
+            handleMoral(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

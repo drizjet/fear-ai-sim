@@ -432,6 +432,28 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.timelineSummary.keyframesRetained).toBeGreaterThanOrEqual(1);
         expect(parsed.hostAuthorityPreserved).toBe(true);
     });
+
+    it('executes "moral" and outputs moral cognitive dissonance deliberation', async () => {
+        const res = await runCli(['moral', '--profile', 'guardian', '--transgression', 'LOOT_SETTLEMENT']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('Moral Alignment, Cognitive Dissonance & Guilt Engine');
+        expect(res.stdout).toContain('HONORABLE_GUARDIAN');
+        expect(res.stdout).toContain('Moral Foundations:');
+        expect(res.stdout).toContain('Current Guilt Level:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "moral --json" and returns structured moral state and atonement report', async () => {
+        const res = await runCli(['moral', '--profile', 'utilitarian', '--transgression', 'EXECUTE_DEFENSELESS', '--atone', 'AID_VICTIMS', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.profileName).toBe('COLD_UTILITARIAN');
+        expect(parsed.moralState).toBeDefined();
+        expect(parsed.transgressionReport).toBeDefined();
+        expect(parsed.atonementReport).toBeDefined();
+        expect(parsed.atonementReport.guiltRelieved).toBe(0.25);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 
