@@ -3696,6 +3696,36 @@
         "CI still runs heavy suites inside the parallel matrix; wiring test:heavy as the CI path for these suites remains open"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "WORLD_SOAK_PHASE_NOW7",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "world-soak-monitor.js (seeded runSoak, five-mode detectDegeneration, mapPhaseTransition interior-crossing mapper)",
+        "tests/world-soak-degeneration.test.js (8 tests: healthy silence, determinism, stagnation lesion, famine trajectory, 4 synthetic flag proofs)",
+        "tests/world-phase-transitions.test.js (3 tests: trade reroute, faction flip, sweep determinism)"
+      ],
+      "test_evidence": [
+        "New tests 11/11 green; full regression 337 suites / 2397 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Healthy 2000-tick world trips zero flags with 1000+ route decisions",
+        "Merchant removal trips AGENCY_STAGNATION end to end (0 decisions vs 12k events)",
+        "Trade S-curve: road-c share 1.0 below believed-danger 0.2, 0.0 above 0.4, crossing in (0.2, 0.3)",
+        "Faction flips HOLD to RAID inside the enemy-weakness ladder at maximal shortage",
+        "x30 famine for 2000 ticks drives 200 toward 7 but never extincts: famine alone cannot kill this world (refugee recirculation plus birth floor)",
+        "Merchant profit is structurally linear (buyAmount capped at 20, no capital feedback): exponential wealth is architecturally unreachable, INFINITE_WEALTH stands as a synthetic-proven tripwire",
+        "Merchant ignores ground-truth actualDanger (no omniscience): reroute fires only on witnessed-attack beliefs, confirming the closed-world-trade-reroute design",
+        "Host game authority invariant strictly preserved (advisory sampling only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "2000-tick soak with sampling completes in about 1.5 s; full phase ladder in under 1 s"
+      ],
+      "known_gaps": [
+        "Three of five degeneration flags proven on synthetic series only (no endogenous trigger exists in the current economy/demography)",
+        "Calm-settlement to panic and cohesive-faction to split transitions not yet mapped (no settlement-panic or faction-split control identified)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

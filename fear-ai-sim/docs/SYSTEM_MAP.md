@@ -133,6 +133,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Unwired Adjacency NOW-1–4:** blockade throttles reversibly price corridor hazard; motive pressure bends destination choice (identity default); dilemma scenarios run from live stances; succession lands on cohesion/morale — 10 joint tests, no schema v2 needed.
 - **Lesion Expansion NOW-5:** perception-noise, belief-contradiction, and misinformation-trust lesions join the battery (6/6 detected); pixel-pets Rust host re-verified green directly with host authority intact.
 - **Heavy-Suite Quarantine NOW-6:** `npm run test:heavy` runs the 7 engine-spawn suites serialized with one retry and PASS/FLAKY-PASS/FAIL verdicts — parallel-load flakes no longer masquerade as regressions.
+- **World Soak + Phases NOW-7:** five-mode degeneration monitor silent on healthy 2000-tick runs, fires on agency-removal lesions; trade reroute and HOLD→RAID flip mapped to interior thresholds; famine equilibrates instead of extincting.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
