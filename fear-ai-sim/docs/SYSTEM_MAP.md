@@ -166,6 +166,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Frontier Audit CCI-7:** 20 ranked candidates across NOW/NEXT/LATER tiers; all CCI-6 NOW items plus NEXT-19 closed. Next: outbreak-timing tuning (tick-2 wars).
 - **Outbreak Pacing NOW-15:** valley wars earned by raids (first war after 2 raids), phasing at 13-17% over 2000 ticks with peace transitions on every seed — no retune needed.
 - **Extortion Grievance NOW-16:** encounter mapping extracted and unit-testable; bandit extortion records provocation (wildlife excluded). Zero extortions observed in 2500 ticks — wiring latent until dynamics produce tribute events.
+- **Trauma Feedback NEXT-20:** crystallized drift syncs onto live agents (traits plus fear floor) with sanctuary solace and unregister purge — traumatized recovery plateaus at 0.20 while unaffected agents decay to ~0.00.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

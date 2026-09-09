@@ -114,11 +114,53 @@ describe('CVII NOW-13: core per-agent trauma memory sinks', () => {
     expect(hooks.summarize('sim_core_traumas_crystallized').last).toBeGreaterThanOrEqual(1);
   });
 
-  it('observe-only wiring leaves agent outputs identical (no feedback path)', () => {
-    const hooks = new ObservabilityHooks();
-    const { outs: on } = panicSim(77, 20, hooks);
-    const { outs: off } = panicSim(77, 20, null, { enableCoreTrauma: false });
-    expect(on).toEqual(off);
+  it('NEXT-20: feedback changes traumatized recovery but never calm agents', () => {
+    // Threat phase crystallizes; safety phase reveals the floor.
+    function recover(opts) {
+      const sim = new RuntimeSimulation({ seed: 77, ...opts });
+      sim.registerAgent('a1', { neuroticism: 0.6, resilience: 0.4 });
+      for (let t = 0; t < 150; t++) sim.batchTick(THREAT, 0.0166);
+      const fears = [];
+      for (let t = 0; t < 120; t++) {
+        sim.batchTick([{ agent_id: 'a1' }], 0.0166);
+        fears.push(sim.agents.get('a1').currentFear);
+      }
+      return { sim, fears };
+    }
+    const on = recover({});
+    const off = recover({ enableTraumaFeedback: false });
+    // Traumatized agent plateaus at the hyper-vigilance floor in safety.
+    expect(on.fears[119]).toBeGreaterThan(0.1);
+    expect(off.fears[119]).toBeLessThan(0.05);
+    expect(on.fears).not.toEqual(off.fears);
+    // Never-panicked agents are untouched by the feedback path.
+    function calm(opts) {
+      const sim = new RuntimeSimulation({ seed: 77, ...opts });
+      sim.registerAgent('c1', { neuroticism: 0.2, resilience: 0.8 });
+      const outs = [];
+      for (let t = 0; t < 30; t++) outs.push(sim.batchTick([{ agent_id: 'c1' }], 0.0166));
+      return outs;
+    }
+    expect(calm({})).toEqual(calm({ enableTraumaFeedback: false }));
+  });
+
+  it('NEXT-20: sanctuary solace defuses trauma before locking', () => {
+    const sim = new RuntimeSimulation({ seed: 77 });
+    sim.registerAgent('a1', { neuroticism: 0.9, resilience: 0.1 });
+    for (let t = 0; t < 5; t++) sim.batchTick(THREAT, 0.0166);
+    const rec = sim.coreTrauma.agentRecords.get('a1');
+    expect(rec.activeTraumas.length).toBe(1);
+    for (let t = 0; t < 150; t++) sim.batchTick([{ agent_id: 'a1' }], 0.0166);
+    expect(rec.activeTraumas.length).toBe(0);
+    expect(rec.crystallizedTraumas.length).toBe(0);
+  });
+
+  it('NEXT-20: unregister purges the core trauma record', () => {
+    const sim = new RuntimeSimulation({ seed: 77 });
+    sim.registerAgent('x1', {});
+    sim.batchTick([{ agent_id: 'x1', threats: [{ type: 'PREDATOR', distance: 2, intensity: 1.0 }] }], 0.0166);
+    sim.unregisterAgent('x1');
+    expect(sim.coreTrauma.agentRecords.has('x1')).toBe(false);
   });
 
   it('core trauma state is deterministic across identical runs', () => {

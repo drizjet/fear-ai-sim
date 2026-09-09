@@ -4590,6 +4590,31 @@
         "Extortion trigger thresholds unexamined: tribute path may be unreachable by design or by accident"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TRAUMA_FEEDBACK_NEXT20",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/runtime/src/RuntimeSimulation.js syncs crystallized trait drift onto live agents, applies the hyper-vigilance floor, accrues sanctuary solace while calm, and purges core records on unregister; all behind enableTraumaFeedback (default on, opt-out preserves observe-only)",
+        "Panic-onset offset deliberately not wired (would require reaching into FearCore thresholds per tick)",
+        "NOW-13 identity test revised to the feedback invariant: traumatized recovery diverges, calm agents identical"
+      ],
+      "test_evidence": [
+        "Sink suite 10/10 in about 1 s; full matrix 341/341 suites (2469 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "After 150 threat ticks plus 120 calm ticks, the traumatized agent plateaus at 0.202 fear while observe-only decays to 0.005: hyper-vigilance is behaviorally real",
+        "Calm-agent outputs identical under both flags; state deterministic across seeds; solace defuses before locking with zero crystallizations",
+        "Caught mid-build: constructor repairs dropped the pacing and agents initializations (restored and verified); guessed output.panicking field never existed",
+        "Host game authority invariant strictly preserved (advisory trait modulation only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Sink suite about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Panic-onset offset unwired; feedback strength untuned across persona archetypes (one probe persona only)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

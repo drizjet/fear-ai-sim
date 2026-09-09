@@ -23,14 +23,16 @@ export class RuntimeSimulation {
         this.agents = new Map(); // agentId -> AffectiveAgent
         this.pendingObservations = new Map(); // agentId -> observation
         this.trauma = new TraumaZoneSystem(options.traumaConfig || {});
-        // NOW-13: core per-agent trauma memory, observe-only. The engine
-        // records and crystallizes; nothing feeds back into agent behavior
-        // yet (feedback is a separate frontier).
+        // NOW-13: core per-agent trauma memory. NEXT-20 feeds crystallized
+        // drift back into live agents behind enableTraumaFeedback.
         this.coreTrauma = new TraumaCrystallizationEngine(options.coreTraumaConfig || {});
         this.contagion = new ContagionGraph(options.contagionConfig || {});
         this.pacing = new PacingDirector(options.pacingConfig || {});
         this.enableTrauma = options.enableTrauma ?? true;
         this.enableCoreTrauma = options.enableCoreTrauma ?? true;
+        // NEXT-20: crystallized trauma feeds back into live agent traits
+        // and resting fear. Opt-out preserves the observe-only behavior.
+        this.enableTraumaFeedback = options.enableTraumaFeedback ?? true;
         this.enableContagion = options.enableContagion ?? true;
         this.enablePacing = options.enablePacing ?? true;
         this.tickCount = 0;
@@ -82,6 +84,9 @@ export class RuntimeSimulation {
     unregisterAgent(agentId) {
         const id = String(agentId);
         this.pendingObservations.delete(id);
+        // NEXT-20: core trauma records are keyed by agent; drop them with
+        // the agent so long worlds cannot accumulate the dead.
+        this.coreTrauma.agentRecords.delete(id);
         return this.agents.delete(id);
     }
 
@@ -205,14 +210,32 @@ export class RuntimeSimulation {
                 }
             }
         }
-        // NOW-13: advance the core trauma lifecycle (observe-only).
+        // NEXT-20: trauma-to-behavior feedback. The engine lifecycle runs
+        // first; then crystallized trait drift syncs back onto live agents
+        // (their own fear machinery responds: higher N, lower R), the
+        // hyper-vigilance floor applies, and calm agents accrue solace that
+        // can defuse traumas inside the sensitization window.
         let coreActive = 0;
         let coreCrystallized = 0;
         if (this.enableCoreTrauma) {
             this.coreTrauma.tick(1);
-            for (const rec of this.coreTrauma.agentRecords.values()) {
+            for (const agent of this.agents.values()) {
+                const rec = this.coreTrauma.agentRecords.get(agent.id);
+                if (!rec) continue;
                 coreActive += rec.activeTraumas.length;
                 coreCrystallized += rec.crystallizedTraumas.length;
+                if (!this.enableTraumaFeedback) continue;
+                const state = this.coreTrauma.evaluateAgentState(agent.id);
+                if (!state.isTraumatized) continue;
+                for (const k of ['neuroticism', 'resilience', 'agreeableness']) {
+                    if (Number.isFinite(state.traits[k])) agent.traits[k] = state.traits[k];
+                }
+                if (state.effectiveRestingFear > 0) {
+                    agent.currentFear = Math.max(agent.currentFear, state.effectiveRestingFear);
+                }
+                if (rec.activeTraumas.length > 0 && agent.currentFear < 0.2) {
+                    this.coreTrauma.administerSolace(agent.id, 0.30, 'SANCTUARY');
+                }
             }
         }
 
