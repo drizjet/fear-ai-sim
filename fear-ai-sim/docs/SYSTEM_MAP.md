@@ -136,6 +136,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **World Soak + Phases NOW-7:** five-mode degeneration monitor silent on healthy 2000-tick runs, fires on agency-removal lesions; trade reroute and HOLD→RAID flip mapped to interior thresholds; famine equilibrates instead of extincting.
 - **Panic + Split Phases NOW-8:** crowd bifurcates at 3 seeded panickers of 10 with full calm→alert→cascade→stampede anatomy; towns secede after 3 brutalization days — all four LXXIII transitions mapped to interior thresholds.
 - **CI Gate Split NOW-9:** `npm test` runs the 331-suite parallel matrix; `npm run test:heavy` runs the 7 engine-spawn suites serialized (`test:full` chains both, CI runs both) — parallel starvation can no longer flake the heavy gate.
+- **Frontier Audit CCI-3:** 20 ranked candidates across NOW/NEXT/LATER tiers; all CCI-2 NOW items closed. Next chunk: ParallelBatchEvaluator×ValleyChain debt joint test plus coverage-miner harness blind-spot fix.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

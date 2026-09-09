@@ -3776,6 +3776,49 @@
         "Two historic heavy-suite verdict logs (evidence/heavy-suites.json) refresh on every heavy run; retention policy undecided"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_3",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: coverage miner (90 modules, 195 tested edges, 1 composed-only debt, 0 isolated), evidence gap aggregation across 125 milestones, miner rule reads (InteractionCoverageGraph.js), gate-state rerun",
+        "6 commits since CCI-2; all CCI-2 NOW items (1-6) plus NEXT-8/9 closed and verified"
+      ],
+      "test_evidence": [
+        "No new tests: audit is analysis",
+        "Full regression at audit time: 331 suites / 2379 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external).",
+        "NOW-1 ParallelBatchEvaluator x ValleyChainScenario joint test: the single composed-only debt pair (FearServer co-use, no joint test).",
+        "NOW-2 coverage-miner harness blind spot: InteractionMutationHarness, MisinformationCascadeHarness, PerceptionRobustnessEngine show 0 tested edges despite real joint tests, because compositions live one import hop inside the harness and test text names only the harness. Miner fix or recorded-composition evidence.",
+        "NOW-3 heavy verdict-log retention: evidence/heavy-suites.json refreshes every heavy run; decide keep-latest vs history vs gitignore.",
+        "NOW-4 10k-tick soak: LXXII ladders 10k/100k/1m; current ceiling is 5k (crash-only) and 2k (degeneration-monitored).",
+        "NOW-5 endogenous triggers for the 3 synthetic-only degeneration flags (wealth, collapse, explosion) or formally accept them as tripwires.",
+        "NEXT-6 overhead vs large civilization: 100s of groups and routes (stores measured, world not).",
+        "NEXT-7 counterfactual intervention ranking end-to-end on the Valley chain (LXVII).",
+        "NEXT-8 history compaction with causal-anchor preservation proof (LXXI).",
+        "NEXT-9 protocol fuzzing battery (CXXX; never built).",
+        "NEXT-10 plugin resource budgets and timeouts (CIII; enforcement proof missing).",
+        "NEXT-11 observability optionality metamorphic test (CVII; telemetry ON vs OFF identity).",
+        "NEXT-12 metric-gaming battery: deliberately bad agents scoring well (CLVI).",
+        "NEXT-13 merchant belief-formation dynamics: convergence speed after witnessed attacks (beliefs drive reroutes; formation unmapped).",
+        "NEXT-14 near-neighbor persona discrimination under noise (X; partial).",
+        "LATER-15 second external host (pixel-pets on disk; needs owner approval per project rules).",
+        "LATER-16 Unity Editor verification (no Editor installed; stays IMPLEMENTED_NOT_VERIFIED).",
+        "LATER-17 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-18 100k/1m-tick soak with memory-leak detection (LXXII+CXLI; scale-gated).",
+        "LATER-19 research watch ingestion (CLXVII; no literature access this session).",
+        "LATER-20 war-exhaustion and peace-dynamics modeling (XLIII-XLIV; no module found in registry).",
+        "Selected next: NOW-1 plus NOW-2 as one interaction-coverage chunk (debt joint test plus miner blind-spot fix; the fix validates the test and vice versa)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "COVERAGE_CHUNK"
     }
   ]
 }
