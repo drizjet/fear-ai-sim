@@ -224,23 +224,34 @@ export class FearCore {
             this.state = 'ANXIOUS';
             this.panicLockedUntil = null;
         } else if (this.state === 'RECOVER') {
-            this.recoveryProgress = Math.min(1, this.recoveryProgress + 0.1);
-            if (
-                fear < this.config.extended.RECOVER.exitFear &&
-                this.recoveryProgress >= this.config.extended.RECOVER.exitRecovery
-            ) {
-                reason = 'RECOVER_COMPLETE';
-                threshold = this.config.extended.RECOVER.exitFear;
-                this.state = 'CALM';
+            // NOW-20: renewed lethal threat overrides convalescence (mirrors
+            // the FORCE_PANIC sibling pattern below; previously RECOVER was
+            // the only extended band with no escalation path at all).
+            if (fear >= this.config.enter.PANIC) {
+                this.state = 'PANIC';
+                this.panicLockedUntil = this.tickCount + this.config.panicLockTicks;
                 this.recoveryProgress = 0;
+                reason = 'RECOVER_PANIC_OVERRIDE';
+                threshold = this.config.enter.PANIC;
             } else {
-                return this._result(previous, fear, {
-                    from: previous,
-                    to: previous,
-                    reason: 'RECOVER_PROGRESS',
-                    threshold: this.config.extended.RECOVER.exitFear,
-                    recoveryProgress: this.recoveryProgress
-                });
+                this.recoveryProgress = Math.min(1, this.recoveryProgress + 0.1);
+                if (
+                    fear < this.config.extended.RECOVER.exitFear &&
+                    this.recoveryProgress >= this.config.extended.RECOVER.exitRecovery
+                ) {
+                    reason = 'RECOVER_COMPLETE';
+                    threshold = this.config.extended.RECOVER.exitFear;
+                    this.state = 'CALM';
+                    this.recoveryProgress = 0;
+                } else {
+                    return this._result(previous, fear, {
+                        from: previous,
+                        to: previous,
+                        reason: 'RECOVER_PROGRESS',
+                        threshold: this.config.extended.RECOVER.exitFear,
+                        recoveryProgress: this.recoveryProgress
+                    });
+                }
             }
         } else if (EXTENDED_BANDS.includes(this.state)) {
             if (fear >= this.config.enter.PANIC) {

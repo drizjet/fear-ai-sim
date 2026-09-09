@@ -4772,7 +4772,28 @@
       "known_gaps": [
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
-      "next_action": "RECOVER_ESCALATION_NOW20"
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RECOVER_ESCALATION_NOW20",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "FearCore RECOVER branch gains lethal-threat override: fear >= enter.PANIC forces PANIC with panic lock and recoveryProgress reset (reason RECOVER_PANIC_OVERRIDE), mirroring the FORCE_PANIC sibling pattern; RECOVER was the only extended band with no escalation path",
+        "Sub-PANIC fear during RECOVER keeps the existing progress/completion path unchanged"
+      ],
+      "test_evidence": [
+        "tests/trauma-feedback-sweep.test.js NOW-20: sustained lethal threat drives RECOVER straight to PANIC without completing recovery first (sawCalm false); safety keeps RECOVER with progress advancing",
+        "Mutation check: re-panics test fails with FearCore fix stashed, passes with it applied",
+        "Sweep battery 9/9; full matrix 342/342 (2479 tests); guardian:check CLEAN",
+        "Conformance server suite flaked once under full-matrix port contention (6 failures) then passed in isolation and on matrix re-run 342/342"
+      ],
+      "benchmark_evidence": [
+        "Escalation check is one comparison on the RECOVER path; matrix ~47 s"
+      ],
+      "known_gaps": [
+        "Intermediate forcing (ANXIOUS/ALERT) during RECOVER deliberately left out: moderate fear keeps decaying through progress rather than churning bands"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -122,3 +122,33 @@ describe('NOW-17: crystallized panic-onset offset', () => {
     expect(a.currentFear).toBe(b.currentFear);
   });
 });
+
+describe('NOW-20: RECOVER escalation under renewed lethal threat', () => {
+  const LETHAL = { threats: [{ type: 'PREDATOR', distance: 2, intensity: 1.0 }] };
+  const SAFE = { threats: [] };
+  function convalescing() {
+    const a = new AffectiveAgent('r', { neuroticism: 0.5, resilience: 0.5 });
+    a.fearCore.state = 'RECOVER';
+    a.fearCore.recoveryProgress = 0.3;
+    return a;
+  }
+
+  it('renewed lethal threat re-panics a convalescing agent', () => {
+    const a = convalescing();
+    let sawCalm = false;
+    for (let t = 0; t < 400 && a.fearCore.state !== 'PANIC'; t++) {
+      a.tick(0.016, LETHAL, {});
+      if (a.fearCore.state === 'CALM') sawCalm = true;
+    }
+    expect(a.fearCore.state).toBe('PANIC');
+    // Override path: RECOVER -> PANIC directly, never completing recovery first.
+    expect(sawCalm).toBe(false);
+  });
+
+  it('safety during convalescence keeps recovering, never panics', () => {
+    const a = convalescing();
+    a.tick(0.016, SAFE, {});
+    expect(a.fearCore.state).toBe('RECOVER');
+    expect(a.fearCore.recoveryProgress).toBeGreaterThan(0.3);
+  });
+});

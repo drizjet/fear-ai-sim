@@ -172,6 +172,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Onset Offset NOW-17:** crystallized panic-onset bias shifts veteran panic ~19% earlier without touching stored fear; fixed a real FearCore bug (RECOVER exit was unreachable dead code) plus the floor-lock interaction.
 - **Tribute Verdict NOW-19:** extortion path unreachable by stats consistent with doctrine (max ratio 1.20 vs 1.4 bar over 1560 encounters) — no tuning performed; tripwire guards future stat changes.
 - **Frontier Audit CCI-9:** 22 ranked candidates across NOW/NEXT/LATER tiers; all CCI-8 NOW items closed. Next: RECOVER escalation path (renewed threat during convalescence).
+- **RECOVER Escalation NOW-20:** renewed lethal threat (fear >= enter.PANIC) forces RECOVER straight back to PANIC with panic lock; RECOVER was the only extended band with no escalation path. Sub-PANIC fear keeps the progress/completion path.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
