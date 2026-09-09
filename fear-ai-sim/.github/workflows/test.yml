@@ -29,6 +29,9 @@ jobs:
     - name: Run tests
       run: npm test
       
+    - name: Run heavy engine suites (serialized)
+      run: npm run test:heavy
+      
     - name: Run coverage
       run: npm run test:coverage
       

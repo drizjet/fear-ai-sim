@@ -3750,6 +3750,32 @@
         "CI still runs heavy suites inside the parallel matrix; rewiring the default gate to exclude-then-run test:heavy remains open and is now the top reliability frontier"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "CI_GATE_SPLIT_NOW9",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "jest.config.js imports HEAVY_IGNORE_PATTERNS with FEAR_AI_HEAVY_RUN=1 bypass (single source in tools/heavy-suites.mjs)",
+        "tools/heavy-suites.mjs runner re-opens the gate via environment (CLI array-flag override proven unusable: it gobbles the suite positional)",
+        "tests/heavy-suites-runner.test.js gate-split test proves exclusion by default and inclusion with the bypass, via --listTests both ways",
+        "package.json test:full script; .github/workflows/test.yml runs the serialized heavy gate after the matrix"
+      ],
+      "test_evidence": [
+        "Gate tests 3/3 green; default matrix 331/331 suites (2379 tests); heavy gate 7/7; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Default matrix no longer starves engine-spawn suites: three historical parallel flakes structurally eliminated from this gate",
+        "Full coverage preserved across two gates (331 plus 7 suites, 2402 tests total)",
+        "Mid-build finding: jest --testPathIgnorePatterns consumes the suite positional as a second pattern and silently runs the whole matrix (two full-matrix accidents during verification); documented in runner and config comments",
+        "Host game authority invariant strictly preserved (test orchestration only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Default matrix about 40 s; heavy gate about 55 s serialized"
+      ],
+      "known_gaps": [
+        "Two historic heavy-suite verdict logs (evidence/heavy-suites.json) refresh on every heavy run; retention policy undecided"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

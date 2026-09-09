@@ -3,6 +3,8 @@
  * Phase 1: Testing Infrastructure (T1.1)
  */
 
+import { HEAVY_IGNORE_PATTERNS } from './tools/heavy-suites.mjs';
+
 export default {
     // Use jsdom environment for browser APIs (Canvas, etc.)
     testEnvironment: 'jsdom',
@@ -11,6 +13,11 @@ export default {
     testMatch: [
         '**/tests/**/*.test.js'
     ],
+    // Gate split (NOW-9): engine-spawn suites run serialized via
+    // `npm run test:heavy`, never inside the parallel matrix. The runner
+    // re-opens the gate with FEAR_AI_HEAVY_RUN=1 (a CLI override is
+    // unusable: the array option gobbles the suite positional).
+    testPathIgnorePatterns: process.env.FEAR_AI_HEAVY_RUN ? [] : HEAVY_IGNORE_PATTERNS,
     
     // Module file extensions
     moduleFileExtensions: ['js', 'json'],
