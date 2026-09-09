@@ -1,4 +1,5 @@
 import { FrontierValleySimulation, FRONTIER_VALLEY_FACTIONS } from '../packages/core/src/FrontierValleySimulation.js';
+import { RoamingBandSystem, BAND_ARCHETYPES } from '../packages/core/src/RoamingBandSystem.js';
 import { ESCALATION_STAGES } from '../packages/core/src/FactionSystem.js';
 
 // Section NOW-15: outbreak-pacing budgets. The valley starts at THREATEN by
@@ -241,6 +242,41 @@ describe('NEXT-28: advisory tribute quantity', () => {
     const avoided = stage(0.2, 1.0, 0.9);
     expect(avoided.advisoryResolution).toBe('MUTUAL_AVOIDANCE');
     expect(avoided.suggestedTribute).toBeNull();
+  });
+});
+
+describe('NOW-30: cross-system extortion-share consistency', () => {
+  // Two wealth scales (0..1 world groups, absolute band holdings) share
+  // one doctrine: victims pay 35% to avoid slaughter. This pins the share
+  // on both, plus the band absolute-scale cap as documented behavior.
+  function bandShare(caravanWealth) {
+    const sys = new RoamingBandSystem({ encounterRadius: 10 });
+    sys.registerBand({ id: 'bnd', archetype: BAND_ARCHETYPES.BANDIT_RAIDERS, position: { x: 0, y: 0, z: 0 }, power: 100, wealth: 20, fear: 0 });
+    sys.registerBand({ id: 'crv', archetype: BAND_ARCHETYPES.TRADE_CARAVAN, position: { x: 0, y: 0, z: 0 }, power: 100, wealth: caravanWealth, fear: 0.9 });
+    const amb = sys.evaluateSystemicEncounters().find((e) => e.resolution === 'EXTORTION_PAID');
+    expect(amb).toBeDefined();
+    return (caravanWealth - sys.bands.get('crv').wealth) / caravanWealth;
+  }
+  it('both systems take a 35% share below the absolute cap', () => {
+    expect(bandShare(100)).toBeCloseTo(0.35, 10);
+    const sim = new FrontierValleySimulation({ seed: 4242 });
+    const at = { x: 1000, y: 0, z: 1000 };
+    sim.worldSystem.registerGroup('c_raiders', {
+      type: 'BANDITS', factionId: FRONTIER_VALLEY_FACTIONS.BANDITS,
+      memberCount: 12, position: { ...at }, militaryStrength: 1.0, wealth: 0.1
+    });
+    sim.worldSystem.registerGroup('c_convoy', {
+      type: 'CARAVAN', factionId: FRONTIER_VALLEY_FACTIONS.SETTLERS,
+      memberCount: 4, position: { ...at }, militaryStrength: 0.2, wealth: 0.9
+    });
+    const enc = sim.worldSystem.evaluateEncounters({ factionSystem: sim.factionSystem })
+      .find((e) => [e.partyAId, e.partyBId].includes('c_raiders') && [e.partyAId, e.partyBId].includes('c_convoy'));
+    expect(enc.advisoryResolution).toBe('EXTORTION_PAID');
+    expect(enc.suggestedTribute / 0.9).toBeCloseTo(0.35, 10);
+  });
+
+  it('band absolute cap binds above ~143 wealth as documented', () => {
+    expect(bandShare(200)).toBeCloseTo(0.25, 10);
   });
 });
 

@@ -185,6 +185,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Frontier Audit CCI-11:** 25 ranked candidates (3 NOW, 18 NEXT, 4 LATER); all CCI-10 NOW items plus NEXT-16/25/28 closed. Next: WebSocket social message type (NOW-28).
 - **Social WS NOW-28:** `SOCIAL_EVENT` over WebSocket twins the HTTP route (validated dispatch, ack with trauma_id, error mapping). Example clients need no changes (generic raw-payload helpers).
 - **Coalition Restraint NEXT-29:** treaty-breach, false-flag, and espionage-blowback incidents cool dependent grudges via optional ledger (absent ledger: zero restraint). Treaty 0.75 to 0.28 at 0.9 dependence.
+- **Extortion Consistency NOW-30:** both wealth scales pinned to the 35% doctrine (band absolute below cap; world share); band 50-cap documented. Test-only chunk.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

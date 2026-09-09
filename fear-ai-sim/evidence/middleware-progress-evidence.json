@@ -5098,6 +5098,25 @@
         "DesignerDashboardServer records BORDER_TRESPASS without restraint (dashboard tool path, not a live sim)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "EXTORTION_CONSISTENCY_NOW30",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "No source change: joint pin only. Both wealth scales share the 35% pay-to-avoid-slaughter doctrine (band absolute holdings below the 50-cap; world 0..1 victim shares); the band cap binds above ~143 wealth as documented absolute-scale behavior, not a doctrine violation"
+      ],
+      "test_evidence": [
+        "NOW-30 battery 2/2 in valley-war-pacing.test.js (battery 17/17): live band extortion (wealth 100, paid 35) beside live world tribute (wealth 0.9, suggested 0.315) share exactly 0.35; band wealth-200 case pins the capped 0.25 share",
+        "Exact-value pins discriminate against either constant drifting; no stash mutation applies (test-only chunk)",
+        "Full matrix 343/343 (2514 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Two staged encounters, no valley advance; pacing battery ~1 s; matrix ~46 s"
+      ],
+      "known_gaps": [
+        "Trigger gates differ by design (band: fear plus near-peer power; world: overwhelming ratio plus wealth bar) and are pinned separately; no unified extortion-gate theory exists"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
