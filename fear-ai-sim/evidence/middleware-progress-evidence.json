@@ -2790,6 +2790,57 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_VALLEY_CANONICAL_CHAIN",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ValleyChainScenario.js (7-link ambush-to-retaliation pipeline across six live chunk engines with per-link checks)",
+        "packages/core/index.js (Exports for ValleyChainScenario and chain links)",
+        "bin/fear-ai.js (Added 'valley', 'chain', 'frontier-valley' CLI subcommands with --seed, --json)",
+        "tests/valley-chain.test.js (unbroken run, determinism, rumor reach, chain closure, clean audits)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/valley-chain.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai valley, fear-ai valley --json"
+      ],
+      "runtime_evidence": [
+        "Seed 424242: ambush 0.5 danger, rumor reach 5/5, dread 0.17 reranks low road first, scarcity CRITICAL, retaliation THREATEN",
+        "Mild dread reranks without closing the pass — proportionate, not binary",
+        "Host game authority invariant strictly preserved (advisory pipeline only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Full 7-link chain completes in < 5 ms single-threaded"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "VALLEY_OUTCOME_DISTRIBUTION_AND_SOAK",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ValleyOutcomeDistribution.js (multi-seed live-valley runner with batch degeneracy analysis via WorldDegeneracyDetector)",
+        "packages/core/index.js (Exports for ValleyOutcomeDistribution)",
+        "bin/fear-ai.js (Added 'outcomes', 'distribution', 'seeds' CLI subcommands with --seeds, --ticks, --json)",
+        "tests/valley-outcomes.test.js (distribution determinism, fork replay, degeneracy coverage, 500-tick soak, clean audits)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/valley-outcomes.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai outcomes, fear-ai outcomes --json",
+        "Full regression: 310 suites / 2227 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Forked valleys replay bit-identically; 5-seed set shows no degeneracy flags",
+        "500-tick soak stays bounded with finite fear; short horizons converge (1 distinct shape at 60 ticks)",
+        "Host game authority invariant strictly preserved (summaries only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "5-seed 200-tick analysis completes in < 2 s single-threaded"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

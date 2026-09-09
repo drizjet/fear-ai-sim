@@ -377,6 +377,13 @@ export {
  MOVEMENT_MOTIVES,
  ARCHETYPE_MOTIVE_PRIORS
 } from './src/MovementMotiveRanker.js';
+export {
+ ValleyChainScenario,
+ CHAIN_LINKS
+} from './src/ValleyChainScenario.js';
+export {
+ ValleyOutcomeDistribution
+} from './src/ValleyOutcomeDistribution.js';
 
 
 

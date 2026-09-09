@@ -154,7 +154,9 @@ import {
     ScarcityPressureHarness,
     EncounterConsequenceEngine,
     RefugeeInformationHarness,
-    MovementMotiveRanker
+    MovementMotiveRanker,
+    ValleyChainScenario,
+    ValleyOutcomeDistribution
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -312,6 +314,10 @@ function printHelp() {
     console.log(`                     Options: --survivors <n> --cause <CAUSE> --json`);
     console.log(`  motive             Rank why a band moves: food, safety, trade, rumor (Section LVI)`);
     console.log(`                     Options: --json`);
+    console.log(`  valley             Run the canonical ambush-to-retaliation advisory chain (Sections CCVII–CCIX)`);
+    console.log(`                     Options: --seed <n> --json`);
+    console.log(`  outcomes           Multi-seed valley distributions with degeneracy watch (Sections CCX–CCXI, LXXII)`);
+    console.log(`                     Options: --seeds <a,b,c> --ticks <n> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1941,6 +1947,42 @@ function handleMotive(options) {
     console.log(`Where is the destination score. Why-now is this ranking.`);
     console.log(`\nHost Authority Check:         ✓ Advisory ranking only (0 host physics/inventory mutations)\n`);
 }
+function handleValley(options) {
+    const scenario = new ValleyChainScenario();
+    const seed = options.seed !== undefined ? parseInt(options.seed, 10) : 424242;
+    const rep = scenario.run({ seed });
+    const payload = { ...rep, audit: scenario.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== FRONTIER VALLEY CANONICAL CHAIN (Sections CCVII–CCIX) ===\n`);
+    console.log(`Seed ${seed}: ambush → danger ${rep.links.ROUTE_DANGER.danger} → rumor reach ${rep.links.RUMOR.reach} → dread ${rep.links.DREAD.highlandDread}`);
+    console.log(`Avoidance:                  ${rep.links.AVOIDANCE.ranked.map((r) => `${r.id}=${r.advisory}`).join(', ')}`);
+    console.log(`Scarcity:                   ${rep.links.SCARCITY.advisory} (deprivation ${rep.links.SCARCITY.deprivation})`);
+    console.log(`Retaliation:                ${rep.links.RETALIATION.intent} (grievance ${rep.links.RETALIATION.grievance})`);
+    console.log(`Chain:                      ${rep.unbroken ? 'UNBROKEN' : 'BROKEN — ' + rep.summary}`);
+    console.log(`\nHost Authority Check:         ✓ Advisory pipeline only (0 host physics/inventory mutations)\n`);
+}
+
+function handleOutcomes(options) {
+    const analyzer = new ValleyOutcomeDistribution();
+    const seeds = options.seeds ? String(options.seeds).split(',').map((s) => parseInt(s.trim(), 10)).filter(Number.isFinite).slice(0, 12) : [11, 22, 33, 44, 55];
+    const ticks = options.ticks !== undefined ? Math.max(10, Math.min(2000, parseInt(options.ticks, 10))) : 200;
+    const rep = analyzer.analyze({ seeds: seeds.length > 0 ? seeds : [11], ticks });
+    const payload = { ...rep, audit: analyzer.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== VALLEY OUTCOME DISTRIBUTION (Sections CCX–CCXI, LXXII) ===\n`);
+    console.log(`${seeds.length} seeds × ${ticks} ticks: wars ${rep.wars.mean} [${rep.wars.min}–${rep.wars.max}], alliances ${rep.alliances.mean}, route failures ${rep.routeFailures.mean}`);
+    console.log(`Distinct outcome shapes:    ${rep.distinctOutcomes} (no universal optimum when > 1)`);
+    console.log(`Degeneracy:                 ${rep.degeneracy.degenerate ? 'FLAGGED — ' + rep.degeneracy.flags.map((f) => f.type).join(', ') : 'none across seed set'}`);
+    console.log(`\nHost Authority Check:         ✓ Summaries only (0 host physics/inventory mutations)\n`);
+}
 
 function handleDiffReplay(options) {
     if (!options.fileA || !options.fileB) {
@@ -3401,6 +3443,16 @@ async function main() {
         case 'why-move':
         case 'motives':
             handleMotive(options);
+            break;
+        case 'valley':
+        case 'chain':
+        case 'frontier-valley':
+            handleValley(options);
+            break;
+        case 'outcomes':
+        case 'distribution':
+        case 'seeds':
+            handleOutcomes(options);
             break;
         case 'perceive':
         case 'perception':

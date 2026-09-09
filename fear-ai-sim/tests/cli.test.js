@@ -943,6 +943,40 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.refugees.motive).toBe('SAFETY');
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "valley" and runs the canonical chain unbroken', async () => {
+        const res = await runCli(['valley']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('FRONTIER VALLEY CANONICAL CHAIN');
+        expect(res.stdout).toContain('Chain:                      UNBROKEN');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "valley --json" and returns chain payload', async () => {
+        const res = await runCli(['valley', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.unbroken).toBe(true);
+        expect(parsed.links.RUMOR.reach).toBeGreaterThanOrEqual(3);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "outcomes" and reports seed distributions', async () => {
+        const res = await runCli(['outcomes', '--ticks', '30']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('VALLEY OUTCOME DISTRIBUTION');
+        expect(res.stdout).toContain('Degeneracy:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "outcomes --json" and returns distribution payload', async () => {
+        const res = await runCli(['outcomes', '--seeds', '11,22', '--ticks', '30', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.seeds).toEqual([11, 22]);
+        expect(parsed.degeneracy.degenerate).toBe(false);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 
