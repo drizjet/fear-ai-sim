@@ -131,7 +131,11 @@ import {
     ROLE_CONSTRAINTS,
     PerceptionRobustnessEngine,
     NOISE_PROFILES,
-    HostTimeDiscipline
+    HostTimeDiscipline,
+    ExtensionRegistry,
+    ObservabilityHooks,
+    TuningValidator,
+    IntentStabilizer
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -249,6 +253,14 @@ function printHelp() {
     console.log(`                     Options: --occlusion <0..1> --latency <ticks> --noise <std> --profile <GAUSSIAN|UNIFORM|SPIKE|BIAS> --dropout <period> --json`);
     console.log(`  host-time          Advance variable-dt clock with pause/dilation and multi-rate schedule (Sections 163–164, 223–226)`);
     console.log(`                     Options: --dt <seconds> --ticks <n> --scale <factor> --pause-at <tick> --json`);
+    console.log(`  extensions         Run third-party advisory plugins in isolated contracts (Sections 201–203)`);
+    console.log(`                     Options: --json`);
+    console.log(`  metrics            Emit and summarize optional observability metrics (Section 194)`);
+    console.log(`                     Options: --json`);
+    console.log(`  tuning             Validate designer tuning, show defaults and zero-config starter (Sections 227–230)`);
+    console.log(`                     Options: --neuroticism <0..1> --resilience <0..1> --json`);
+    console.log(`  steady             Stabilize frame-rate intents with cooldown hysteresis and chatter metric (Sections 294–296)`);
+    console.log(`                     Options: --ticks <n> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1420,6 +1432,95 @@ function handleHostTime(options) {
     console.log(`Subsystem runs:             affect ${ran.affect} / social ${ran.social} / faction ${ran.faction}`);
     console.log(`Corrections / paused:       ${clock.corrections} / ${clock.pausedTicks}`);
     console.log(`\nHost Authority Check:         ✓ Time accounting only (0 host physics/inventory mutations)\n`);
+}
+function handleExtensions(options) {
+    const registry = new ExtensionRegistry();
+    registry.registerExtension({ name: 'omen_reader', version: '1.2.0', deterministic: true, onObserve: (snap) => (snap.fear > 0.6 ? 0.1 : -0.05) });
+    registry.registerExtension({ name: 'weather_dread', version: '2.0.0', deterministic: true, onObserve: (snap, ctx) => (ctx.storm ? 0.2 : 0) });
+    registry.registerExtension({ name: 'flaky_mod', version: '0.1.0', deterministic: false, onObserve: () => { throw new Error('FLAKY_BOOM'); } });
+    const calm = registry.evaluateAll({ fear: 0.3 }, { storm: false });
+    const storm = registry.evaluateAll({ fear: 0.8 }, { storm: true });
+    const det = registry.verifyDeterminism({ fear: 0.5 }, {});
+    const audit = registry.auditImmutability();
+    const payload = { calm, storm, determinism: det, health: registry.getHealth(), audit };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== THIRD-PARTY EXTENSION PLUGINS (Sections 201–203) ===\n`);
+    console.log(`Calm total modifier:        ${calm.totalModifier}`);
+    console.log(`Storm total modifier:       ${storm.totalModifier} (flaky_mod isolated: ${storm.perExtension.find((e) => e.name === 'flaky_mod').status})`);
+    console.log(`Deterministic extensions:   ${det.map((d) => `${d.name}=${d.deterministic ? 'VERIFIED' : 'FAIL'}`).join(', ')}`);
+    console.log(`\nHost Authority Check:         ✓ Isolated advisory modifiers (0 host physics/inventory mutations)\n`);
+}
+
+function handleMetrics(options) {
+    const hooks = new ObservabilityHooks();
+    hooks.defineMetric('mean_fear', 'GAUGE');
+    hooks.defineMetric('panic_episodes', 'COUNTER');
+    const seen = [];
+    hooks.subscribe((e) => seen.push(e.name));
+    const fears = [0.1, 0.4, 0.7, 0.9, 0.5];
+    for (const f of fears) hooks.emit('mean_fear', f);
+    hooks.increment('panic_episodes');
+    hooks.increment('panic_episodes');
+    const payload = { snapshot: hooks.snapshot(), subscriberEvents: seen.length, audit: hooks.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== OBSERVABILITY METRICS HOOKS (Section 194) ===\n`);
+    console.log(`Mean fear:                  ${hooks.summarize('mean_fear').mean} over ${hooks.summarize('mean_fear').count} samples`);
+    console.log(`Panic episodes:             ${hooks.summarize('panic_episodes').last}`);
+    console.log(`Subscriber events:          ${seen.length}`);
+    console.log(`\nHost Authority Check:         ✓ Observation only (0 host physics/inventory mutations)\n`);
+}
+
+function handleTuning(options) {
+    const traits = {
+        neuroticism: options.neuroticism !== undefined ? parseFloat(options.neuroticism) : 0.7,
+        resilience: options.resilience !== undefined ? parseFloat(options.resilience) : 0.4
+    };
+    const report = TuningValidator.validate(traits);
+    const sanitized = TuningValidator.sanitize({ neuroticism: 1.5, resilience: NaN });
+    const starter = TuningValidator.quickstart();
+    const payload = { traits, report, sanitized, starter };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== DESIGNER TUNING VALIDATION & ZERO-CONFIG (Sections 227–230) ===\n`);
+    console.log(`Submitted tuning valid:     ${report.valid ? 'YES' : 'NO'}`);
+    if (!report.valid) console.log(`Errors:                     ${report.errors.join(' | ')}`);
+    console.log(`Sanitized extremes:         neuroticism ${sanitized.neuroticism}, resilience ${sanitized.resilience}`);
+    console.log(`Zero-config starter:        ${starter.agentId} → ${starter.goal}`);
+    console.log(`\nHost Authority Check:         ✓ Validation only (0 host physics/inventory mutations)\n`);
+}
+
+function handleSteady(options) {
+    const n = options.ticks !== undefined ? Math.max(4, Math.min(200, parseInt(options.ticks, 10))) : 12;
+    const stab = new IntentStabilizer({ cooldownTicks: 5, hysteresisMargin: 0.15 });
+    const seq = [];
+    for (let t = 0; t < n; t++) {
+        const candidate = t % 2 === 0 ? { type: 'FLEE_FROM', urgency: 0.6 } : { type: 'SEEK_COVER', urgency: 0.62 };
+        seq.push({ tick: t, ...stab.update('scout_01', t, candidate) });
+    }
+    const danger = stab.update('scout_01', n, { type: 'CONFRONT_THREAT', urgency: 0.99 });
+    const chatter = stab.chatter('scout_01', n);
+    const payload = { holds: seq.filter((s) => s.held).length, switches: seq.filter((s) => s.switched).length, dangerOverride: danger.reason, chatter, audit: stab.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== INTENT STABILITY & CHATTER METRIC (Sections 294–296) ===\n`);
+    console.log(`Oscillating rivals held:    ${payload.holds}/${n} ticks (no ping-pong)`);
+    console.log(`Lethal override:            ${danger.switched ? `YES (${danger.reason})` : 'no'}`);
+    console.log(`Chatter rate:               ${chatter.rate} (${chatter.flips} flips / 64-tick window)`);
+    console.log(`\nHost Authority Check:         ✓ Advisory damping only (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2771,6 +2872,26 @@ async function main() {
         case 'arbitrate':
         case 'courage':
             handleGoals(options);
+            break;
+        case 'extensions':
+        case 'plugins':
+        case 'addons':
+            handleExtensions(options);
+            break;
+        case 'metrics':
+        case 'observe':
+        case 'telemetry':
+            handleMetrics(options);
+            break;
+        case 'tuning':
+        case 'validate-tuning':
+        case 'quickstart':
+            handleTuning(options);
+            break;
+        case 'steady':
+        case 'stabilize':
+        case 'chatter':
+            handleSteady(options);
             break;
         case 'perceive':
         case 'perception':

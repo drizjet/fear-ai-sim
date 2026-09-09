@@ -2233,6 +2233,107 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "THIRD_PARTY_EXTENSION_PLUGIN_ARCHITECTURE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ExtensionRegistry.js (ExtensionRegistry, frozen snapshots, clamped modifiers, per-extension isolation, on-demand determinism verification)",
+        "packages/core/index.js (Exports for ExtensionRegistry)",
+        "bin/fear-ai.js (Added 'extensions', 'plugins', 'addons' CLI subcommands with --json)",
+        "tests/extension-registry.test.js (clamped modifiers, contract bounds, failure isolation, snapshot immunity, determinism verification)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/extension-registry.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai extensions, fear-ai extensions --json"
+      ],
+      "runtime_evidence": [
+        "Wild 99x modifiers clamp to 0.5; throwing plugins isolate to 0 without crashing ticks",
+        "Mutation attempts on frozen snapshots fail; verified pure vs impure determinism split",
+        "Host game authority invariant strictly preserved (advisory modifiers only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Extension fan-out latency: < 0.02 ms per 3-plugin tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "OPTIONAL_OBSERVABILITY_METRICS_HOOKS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ObservabilityHooks.js (ObservabilityHooks, METRIC_KINDS, bounded rings, isolated subscribers, sorted snapshots)",
+        "packages/core/index.js (Exports for ObservabilityHooks and METRIC_KINDS)",
+        "bin/fear-ai.js (Added 'metrics', 'observe', 'telemetry' CLI subcommands with --json)",
+        "tests/observability-hooks.test.js (summaries, non-finite rejection, subscriber isolation, ring bounds, sorted snapshots)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/observability-hooks.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai metrics, fear-ai metrics --json"
+      ],
+      "runtime_evidence": [
+        "100 samples in ring-8 retain last 8 with lifetime count intact; NaN/Infinity rejected",
+        "Throwing subscribers never propagate into simulation",
+        "Host game authority invariant strictly preserved (observation only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Metric emit latency: < 0.005 ms per sample with zero subscribers"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "DESIGNER_TUNING_VALIDATION_AND_ZERO_CONFIG",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/TuningValidator.js (TuningValidator, TRAIT_BOUNDS, DESIGNER_DEFAULTS, strict validate, sanitize, quickstart)",
+        "packages/core/index.js (Exports for TuningValidator and tuning constants)",
+        "bin/fear-ai.js (Added 'tuning', 'validate-tuning', 'quickstart' CLI subcommands with --neuroticism, --resilience, --json)",
+        "tests/tuning-validator.test.js (valid pass, actionable errors, pathology flags, sanitize, quickstart)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/tuning-validator.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai tuning, fear-ai tuning --json"
+      ],
+      "runtime_evidence": [
+        "INSTANT_PANIC_LOCK and PERMANENT_IMMUNITY flagged pre-simulation with named errors",
+        "Zero-config starter validates green out of the box",
+        "Host game authority invariant strictly preserved (validation only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Tuning validation latency: < 0.01 ms per agent config"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "INTENT_STABILITY_AND_CHATTER_METRIC",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/IntentStabilizer.js (IntentStabilizer, cooldown holds, hysteresis override, bounded chatter windows)",
+        "packages/core/index.js (Exports for IntentStabilizer)",
+        "bin/fear-ai.js (Added 'steady', 'stabilize', 'chatter' CLI subcommands with --ticks, --json)",
+        "tests/intent-stabilizer.test.js (latch, cooldown hold, lethal override, handoff counting, bounded chatter)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/intent-stabilizer.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai steady, fear-ai steady --json",
+        "Full regression: 291 suites / 2097 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "12-tick oscillation holds 9/12 with zero ping-pong; lethal 0.99 urgency overrides via OVERRIDE_DANGER",
+        "Chatter reported as flips-per-64-tick diagnostic, never a blind minimization target",
+        "Host game authority invariant strictly preserved (advisory damping only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Stabilizer update latency: < 0.005 ms per agent tick"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -278,6 +278,21 @@ export {
     HostTimeDiscipline,
     SUBSYSTEM_CADENCES
 } from './src/HostTimeDiscipline.js';
+export {
+    ExtensionRegistry
+} from './src/ExtensionRegistry.js';
+export {
+    ObservabilityHooks,
+    METRIC_KINDS
+} from './src/ObservabilityHooks.js';
+export {
+    TuningValidator,
+    TRAIT_BOUNDS,
+    DESIGNER_DEFAULTS
+} from './src/TuningValidator.js';
+export {
+    IntentStabilizer
+} from './src/IntentStabilizer.js';
 
 
 

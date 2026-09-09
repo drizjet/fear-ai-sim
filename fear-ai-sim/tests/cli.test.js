@@ -565,6 +565,73 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.ran.faction).toBe(6);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "extensions" and isolates third-party plugins', async () => {
+        const res = await runCli(['extensions']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('THIRD-PARTY EXTENSION PLUGINS');
+        expect(res.stdout).toContain('flaky_mod isolated: FAILED');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "extensions --json" and returns plugin report', async () => {
+        const res = await runCli(['extensions', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.storm.totalModifier).toBeGreaterThan(parsed.calm.totalModifier);
+        expect(parsed.determinism.find((d) => d.name === 'omen_reader').deterministic).toBe(true);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "metrics" and summarizes observability hooks', async () => {
+        const res = await runCli(['metrics']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('OBSERVABILITY METRICS HOOKS');
+        expect(res.stdout).toContain('Panic episodes:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "metrics --json" and returns metric snapshot', async () => {
+        const res = await runCli(['metrics', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.snapshot.find((m) => m.name === 'mean_fear').mean).toBeCloseTo(0.52, 2);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "tuning" and validates designer config', async () => {
+        const res = await runCli(['tuning']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('DESIGNER TUNING VALIDATION & ZERO-CONFIG');
+        expect(res.stdout).toContain('Zero-config starter:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "tuning --json" and returns validation payload', async () => {
+        const res = await runCli(['tuning', '--neuroticism', '0.95', '--resilience', '0.02', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.report.valid).toBe(false);
+        expect(parsed.report.errors.join(' ')).toContain('INSTANT_PANIC_LOCK');
+        expect(parsed.starter.agentId).toBe('npc_first_steps');
+    });
+
+    it('executes "steady" and damps intent oscillation', async () => {
+        const res = await runCli(['steady']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('INTENT STABILITY & CHATTER METRIC');
+        expect(res.stdout).toContain('Lethal override:            YES (OVERRIDE_DANGER)');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "steady --json" and returns stabilization payload', async () => {
+        const res = await runCli(['steady', '--ticks', '12', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.holds).toBeGreaterThan(parsed.switches);
+        expect(parsed.dangerOverride).toBe('OVERRIDE_DANGER');
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 
