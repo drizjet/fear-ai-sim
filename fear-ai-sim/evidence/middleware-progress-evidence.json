@@ -4817,6 +4817,26 @@
         "No dedicated social-repair tuning (repair potency fixed at 0.30 per event); threshold interplay with solaceThreshold unmeasured"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RESILIENCE_WEIGHTED_FLOOR_NEXT23",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "TraumaCrystallizationEngine hyper-vigilance floor now scales with baseline resilience: floorShift = 0.25 * sev * (1 + (0.5 - R) / 4), pivoted so R = 0.5 is unchanged; uses baseline (not post-erosion current) resilience for same-tick identity semantics matching sibling formulas",
+        "Slope chosen under legacy-pin constraint: steeper damping breaks the pinned floor inequalities for high-resilience engine fixtures (veteran R=0.9/sev=0.85 must stay above 0.15; patient R=0.8/sev=0.9 must stay above 0.20)"
+      ],
+      "test_evidence": [
+        "NEXT-23 battery 2/2 in trauma-feedback-sweep.test.js: engine-level pivot pin (R=0.1/0.5/0.9 floors exactly 0.25*sev*{1.1,1.0,0.9}) plus runtime identity separation (fragile 0.2620 > average 0.2102 > stoic 0.1739 under identical threat)",
+        "Mutation check: engine pivot test fails with engine change stashed; runtime ordering test passes both ways (severity ordering already separated floors pre-change) so the pivot pin is the discriminating test",
+        "Full matrix 343/343 (2488 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Floor damping is two arithmetic ops on the crystallization path; sweep battery ~1 s; matrix ~43 s"
+      ],
+      "known_gaps": [
+        "Damping slope (1/4) set by legacy-pin compatibility, not by fitted data; steeper or nonlinear shapes unexplored"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

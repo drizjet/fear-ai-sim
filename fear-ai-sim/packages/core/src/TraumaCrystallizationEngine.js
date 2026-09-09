@@ -445,7 +445,17 @@ export class TraumaCrystallizationEngine {
         }
 
         // Chronic Hyper-Vigilance Floor: F_quiescent ∈ [0.10, 0.35]
-        const floorShift = 0.25 * sev;
+        // NEXT-23: the floor scales with baseline resilience — hardy agents
+        // settle lower, fragile agents higher — pivoted so the reference
+        // agent (R = 0.5) is unchanged. Sibling mutations above all scale
+        // with identity; the floor was the only trait-blind term. Slope is
+        // gentle by constraint: steeper damping breaks the pinned floor
+        // inequalities for high-resilience engine fixtures. Baseline (not
+        // post-erosion current) resilience keeps same-tick identity
+        // semantics consistent with the sibling formulas.
+        const baseR = Number.isFinite(record.baselineTraits.resilience)
+            ? record.baselineTraits.resilience : 0.5;
+        const floorShift = 0.25 * sev * (1 + (0.5 - baseR) / 4);
         record.quiescentFearFloor = Math.min(0.40, Math.max(record.quiescentFearFloor, floorShift));
 
         // Recovery Half-Life Multiplier (2x - 4x recovery elongation)

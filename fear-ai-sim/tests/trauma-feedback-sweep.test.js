@@ -1,4 +1,5 @@
 import { RuntimeSimulation } from '../packages/runtime/src/RuntimeSimulation.js';
+import { TraumaCrystallizationEngine, TRAUMA_TYPES } from '../packages/core/src/TraumaCrystallizationEngine.js';
 import { AffectiveAgent } from '../packages/core/src/AffectiveAgent.js';
 
 // Section NOW-18: trauma feedback strength sweep. Feedback is default-on, so
@@ -72,6 +73,40 @@ describe('NOW-18: trauma feedback strength sweep', () => {
     const a = recover('average');
     const b = recover('average');
     expect(a).toEqual(b);
+  });
+});
+
+describe('NEXT-23: resilience-weighted hyper-vigilance floor', () => {
+  // Engine-level pin of the documented pivot: floor = 0.25 * sev * (1 + (0.5 - R) / 4).
+  function engineFloor(resilience, severity = 0.8) {
+    const engine = new TraumaCrystallizationEngine();
+    engine.registerAgent('s', { neuroticism: 0.5, resilience, agreeableness: 0.5 });
+    engine.incurTrauma('s', { traumaType: TRAUMA_TYPES.NEAR_DEATH_SURVIVAL, severity });
+    engine.tick(150);
+    return engine.agentRecords.get('s').quiescentFearFloor;
+  }
+
+  it('floor damps with resilience around an unchanged reference', () => {
+    expect(engineFloor(0.5)).toBeCloseTo(0.25 * 0.8, 10);
+    expect(engineFloor(0.1)).toBeCloseTo(0.25 * 0.8 * 1.1, 10);
+    expect(engineFloor(0.9)).toBeCloseTo(0.25 * 0.8 * 0.9, 10);
+  });
+
+  it('runtime floors separate by identity under identical threat', () => {
+    const floorOf = (name) => {
+      const sim = new RuntimeSimulation({ seed: 77 });
+      sim.registerAgent('a1', ARCHETYPES[name]);
+      for (let t = 0; t < 150; t++) sim.batchTick(THREAT, 0.0166);
+      for (let t = 0; t < 120; t++) sim.batchTick(CALM, 0.0166);
+      return sim.coreTrauma.agentRecords.get('a1').quiescentFearFloor;
+    };
+    const fragile = floorOf('fragile');
+    const average = floorOf('average');
+    const stoic = floorOf('stoic');
+    expect(fragile).toBeGreaterThan(average);
+    expect(average).toBeGreaterThan(stoic);
+    expect(stoic).toBeGreaterThan(0.05);
+    expect(fragile).toBeLessThan(0.4);
   });
 });
 
