@@ -2863,14 +2863,41 @@
         "Restrained recommendation latency: < 0.01 ms per composed query"
       ],
       "known_gaps": [
-        "SocialBehaviorEffects.contagionGate never feeds GroupContagionSystem panic math",
         "BlockadeEngine throttles never reach TradeCaravanSupplyChainSystem corridors",
-        "SuccessionEngine deltas never apply to FactionSystem cohesion state",
+        "SuccessionEngine deltas never apply to FactionSystem cohesion state (deferred: needs faction state schema v2)",
         "MovementMotiveRanker never informs RoamingBandSystem destination choice",
-        "RefugeeInformationHarness never consumes SettlementMigrationSystem arrivals",
         "SecurityDilemmaHarness never reads FactionSystem bilateral stances"
       ],
-      "next_action": "WIRE_PRIORITY_EDGES_THEN_CHUNK_8_LOD"
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "BACKLOG_EDGE_WIRING_RALLY_AND_REFUGEE",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "GroupContagionSystem rally damping scales by lived-in relationship susceptibility (duck-typed, legacy path intact without tensor)",
+        "RefugeeInformationHarness.processMigrationHistory consumes settlement migration ARRIVAL entries with host-provided causes",
+        "tests/backlog-edge-wiring.test.js (bonded calming split, legacy damping exactness, history voicing, empty silence)"
+      ],
+      "test_evidence": [
+        "tests/backlog-edge-wiring.test.js (4/4 tests green)",
+        "Full regression: 312 suites / 2236 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Trusted members absorb measurably more rally calming than distrustful ones; strangers keep legacy damping to four decimals",
+        "War-caused migration arrivals seed army rumors; unlisted causes stay silent",
+        "First wiring attempt broke 3 legacy rally assertions by flooring neutral bonds; lived-in gate restored them",
+        "Host game authority invariant strictly preserved (advisory scaling only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Bond scaling adds < 0.001 ms per rallied member"
+      ],
+      "known_gaps": [
+        "BlockadeEngine throttles never reach TradeCaravanSupplyChainSystem corridors",
+        "SuccessionEngine deltas never apply to FactionSystem cohesion state (deferred: needs faction state schema v2, not a quiet field graft)",
+        "MovementMotiveRanker never informs RoamingBandSystem destination choice",
+        "SecurityDilemmaHarness never reads FactionSystem bilateral stances"
+      ],
+      "next_action": "CHUNK_8_LOD_AND_SCALE"
     }
   ]
 }

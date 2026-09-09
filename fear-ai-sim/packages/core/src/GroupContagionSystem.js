@@ -263,8 +263,9 @@ export class GroupContagionSystem {
                     // Check respect & relationship toward leader
                     let respect = 0.5;
                     let grievance = 0.0;
+                    let rel = null;
                     if (relationshipSystem) {
-                        const rel = relationshipSystem.getRelationship(memberId, leaderState.id);
+                        rel = relationshipSystem.getRelationship(memberId, leaderState.id);
                         if (rel) {
                             respect = rel.respect;
                             grievance = rel.grievance;
@@ -272,10 +273,18 @@ export class GroupContagionSystem {
                     }
 
                     if (respect >= 0.30 && grievance <= 0.40) {
-                        // Rally succeeds for this agent
+                        // Rally succeeds for this agent; calming lands harder
+                        // through established bonds (CCV edge). Auto-created
+                        // neutral vectors keep legacy damping exactly — only
+                        // lived-in relationships modulate.
+                        let bond = 1.0;
+                        const livedIn = Boolean(rel && (rel.interactionCount > 0 || rel.familiarity > 0 || rel.trust !== 0));
+                        if (livedIn && relationshipSystem && typeof relationshipSystem.getContagionSusceptibility === 'function') {
+                            bond = 0.5 + 0.5 * relationshipSystem.getContagionSusceptibility(memberId, leaderState.id, 1.0);
+                        }
                         rallied.push({
                             agentId: memberId,
-                            fearDamping: this.config.rallyMoraleBoost * (0.5 + 0.5 * leaderState.leadership)
+                            fearDamping: this.config.rallyMoraleBoost * (0.5 + 0.5 * leaderState.leadership) * bond
                         });
                     }
                 }

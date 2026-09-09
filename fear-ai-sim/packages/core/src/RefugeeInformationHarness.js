@@ -73,6 +73,25 @@ export class RefugeeInformationHarness {
         };
     }
 
+    /**
+     * Consume SettlementMigrationSystem history ARRIVAL entries directly
+     * (CCV edge). Flight causes come from the host via causesByParty
+     * ({ partyId: FLIGHT_CAUSES }); unlisted parties default to UNKNOWN
+     * and stay silent rather than inventing atrocities.
+     */
+    processMigrationHistory(history, causesByParty = {}) {
+        if (!Array.isArray(history)) throw new Error('HISTORY_MUST_BE_ARRAY');
+        const arrivals = history
+            .filter((h) => h && h.event === 'ARRIVAL')
+            .map((h) => ({
+                survivors: h.survivors ?? 0,
+                dest: h.dest,
+                originId: h.originId || h.sourceId || null,
+                cause: (causesByParty && causesByParty[h.partyId]) || 'UNKNOWN'
+            }));
+        return this.processBatch(arrivals.filter((a) => a.survivors > 0));
+    }
+
     /** Batch arrivals; rumor seeds merge by topic keeping max confidence. */
     processBatch(arrivals) {
         if (!Array.isArray(arrivals)) throw new Error('ARRIVALS_MUST_BE_ARRAY');
