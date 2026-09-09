@@ -3002,6 +3002,30 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "EXTERNAL_INTEGRATION_REVERIFIED_SECOND_HOST_GATED",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "examples/external-game-proof/PIXEL_PETS_INTEGRATION_REPORT.md (0 host core files touched, 118-line Rust adapter, public protocol only)",
+        "examples/external-game-proof/EXTERNAL_INTEGRATION_RECORD.md (honest PARTIAL label on in-repo Outpost Omega demo)",
+        "tests/external-pixel-pets-integration.test.js re-run green against the live Pixel Pets engine"
+      ],
+      "test_evidence": [
+        "tests/external-pixel-pets-integration.test.js (4/4 green, executes the external engine suite in-repo-cross, ~23 s)"
+      ],
+      "runtime_evidence": [
+        "Host authority preserved across the integration adapter with zero core mutations, re-confirmed this session",
+        "Second-host scout: no other pre-existing game codebase on this machine (sibling trees are tooling, docs, and adapters, not games)",
+        "New POST /api/v1/advisory/chain endpoint available to future HTTP hosts including a second game"
+      ],
+      "benchmark_evidence": [
+        "External proof suite completes in ~23 s wall time (external engine spawn inclusive)"
+      ],
+      "known_gaps": [
+        "CXX second external game: BLOCKED_EXTERNAL_DEPENDENCY — no suitable second pre-existing game host on this machine"
+      ],
+      "next_action": "MAINTAIN_UNTIL_SECOND_HOST_APPEARS"
     }
   ]
 }
