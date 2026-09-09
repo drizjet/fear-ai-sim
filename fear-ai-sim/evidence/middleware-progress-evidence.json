@@ -3993,6 +3993,32 @@
         "Only the closed-world tick carries a sink; FrontierValley and runtime batch paths remain uninstrumented"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PLUGIN_BUDGETS_NEXT10",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ExtensionRegistry.js (opt-in latencyBudgetMs and maxConsecutiveFailures, per-extension latency ledger, detect-report-disable, reentrancy guard, explicit re-enable)",
+        "tests/extension-resource-budgets.test.js (8 tests: latency ledger, hog disable, chronic-thrower disable, re-enable recovery, defaults-off legacy, reentrancy, snapshot mutation, garbage returns)"
+      ],
+      "test_evidence": [
+        "Budget tests 8/8 plus legacy registry tests green; full matrix 336/336 suites (2417 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "30 ms hog with 5 ms budget contributes once flagged OVER_BUDGET then skips (contributions frozen at 1)",
+        "Chronic thrower disabled after exactly 3 consecutive failures; healed extension resumes after explicit re-enable",
+        "Reentrant evaluation self-neutralizes to FAILED via the per-extension boundary (no unbounded recursion)",
+        "Frozen-snapshot mutators fail without corrupting caller state; garbage returns clamp to contract bounds",
+        "Budgets off by default: zero behavior change for existing hosts",
+        "Host game authority invariant strictly preserved (advisory modifiers only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Budget file about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Synchronous infinite loops cannot be preempted single-threaded (documented limit; budgets detect and disable after the fact, they do not interrupt)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

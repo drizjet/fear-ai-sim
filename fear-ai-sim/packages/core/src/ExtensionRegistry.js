@@ -35,6 +35,12 @@ function freezeSnapshot(obj) {
 export class ExtensionRegistry {
     constructor(options = {}) {
         this.maxModifier = options.maxModifier ?? 0.5;
+        // CIII resource budgets (opt-in; null disables). Single-threaded
+        // honesty: a synchronous over-budget call cannot be preempted, so
+        // enforcement is detect-report-disable: the offending tick still
+        // pays, later ticks skip the disabled extension.
+        this.latencyBudgetMs = options.latencyBudgetMs ?? null;
+        this.maxConsecutiveFailures = options.maxConsecutiveFailures ?? null;
         this.extensions = new Map();
         this.totalTicks = 0;
     }
@@ -50,9 +56,20 @@ export class ExtensionRegistry {
             deterministic: deterministic === true,
             onObserve,
             failures: 0,
-            contributions: 0
+            consecutiveFailures: 0,
+            contributions: 0,
+            disabled: false,
+            latencyMs: { last: 0, max: 0, total: 0, count: 0 }
         });
         return this.extensions.get(name);
+    }
+
+    setDisabled(name, disabled = true) {
+        const ext = this.extensions.get(name);
+        if (!ext) return false;
+        ext.disabled = Boolean(disabled);
+        if (!ext.disabled) ext.consecutiveFailures = 0;
+        return true;
     }
 
     unregisterExtension(name) {
@@ -60,24 +77,59 @@ export class ExtensionRegistry {
     }
 
     evaluateAll(agentSnapshot, ctx = {}) {
+        // Reentrant calls (an extension invoking evaluateAll from inside
+        // onObserve) would recurse without bound: fail the tick loudly.
+        if (this.evaluating) throw new Error('ExtensionRegistry.evaluateAll is not reentrant.');
+        this.evaluating = true;
+        try {
+            return this.evaluateAllInner(agentSnapshot, ctx);
+        } finally {
+            this.evaluating = false;
+        }
+    }
+
+    evaluateAllInner(agentSnapshot, ctx = {}) {
         const frozen = freezeSnapshot({ ...(agentSnapshot || {}) });
         const frozenCtx = freezeSnapshot({ ...(ctx || {}) });
         const modifiers = {};
         const perExtension = [];
         for (const [name, ext] of this.extensions) {
+            if (ext.disabled) {
+                modifiers[name] = 0;
+                perExtension.push({ name, status: 'DISABLED', modifier: 0, deterministic: ext.deterministic });
+                continue;
+            }
+            const start = performance.now();
             try {
                 const raw = ext.onObserve(frozen, frozenCtx);
                 const num = Number(raw);
                 const clamped = !Number.isFinite(num) ? 0 : Math.max(-this.maxModifier, Math.min(this.maxModifier, num));
                 modifiers[name] = round4(clamped);
                 ext.contributions += 1;
+                ext.consecutiveFailures = 0;
                 perExtension.push({ name, status: 'OK', modifier: modifiers[name], deterministic: ext.deterministic });
             } catch (err) {
                 ext.failures += 1;
+                ext.consecutiveFailures += 1;
                 modifiers[name] = 0;
                 perExtension.push({ name, status: 'FAILED', modifier: 0, error: String(err && err.message ? err.message : err), deterministic: ext.deterministic });
+                if (this.maxConsecutiveFailures !== null && ext.consecutiveFailures >= this.maxConsecutiveFailures) {
+                    ext.disabled = true;
+                    perExtension[perExtension.length - 1].status = 'DISABLED';
+                }
+            } finally {
+                const elapsed = performance.now() - start;
+                ext.latencyMs.last = round4(elapsed);
+                ext.latencyMs.max = round4(Math.max(ext.latencyMs.max, elapsed));
+                ext.latencyMs.total = round4(ext.latencyMs.total + elapsed);
+                ext.latencyMs.count += 1;
+            }
+            if (!ext.disabled && this.latencyBudgetMs !== null && ext.latencyMs.last > this.latencyBudgetMs) {
+                ext.disabled = true;
+                perExtension[perExtension.length - 1].status = 'OVER_BUDGET';
             }
         }
+
         perExtension.sort((a, b) => (a.name < b.name ? -1 : 1));
         this.totalTicks += 1;
         const total = round4(Object.values(modifiers).reduce((s, v) => s + v, 0));
@@ -114,7 +166,11 @@ export class ExtensionRegistry {
 
     getHealth() {
         return Array.from(this.extensions.values())
-            .map((e) => ({ name: e.name, version: e.version, deterministic: e.deterministic, failures: e.failures, contributions: e.contributions }))
+            .map((e) => ({
+                name: e.name, version: e.version, deterministic: e.deterministic,
+                failures: e.failures, consecutiveFailures: e.consecutiveFailures,
+                contributions: e.contributions, disabled: e.disabled, latencyMs: { ...e.latencyMs }
+            }))
             .sort((a, b) => (a.name < b.name ? -1 : 1));
     }
 

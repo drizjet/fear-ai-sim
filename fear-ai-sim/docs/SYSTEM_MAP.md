@@ -144,6 +144,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Intervention Ranking NEXT-7:** counterfactual engine now orders candidate fixes by measured effect — Valley route pacification wins (50→48) over bandit/surplus/null, from provably identical fork bases.
 - **Protocol Fuzz NEXT-9:** 11-test hostile-input battery over JSON and binary paths; fixed a real null-member crash plus NaN/Infinity leaks — adversarial shapes now sanitize or reject, never throw.
 - **Observability Optionality NEXT-11:** closed-world tick carries an optional read-only telemetry sink proven non-interfering — hooked and unhooked 500-tick worlds are identical, saboteur subscribers included.
+- **Plugin Budgets NEXT-10:** extensions carry latency ledgers with opt-in detect-report-disable (hog skipped after one flagged tick, chronic throwers auto-disabled) plus reentrancy guard — pathological plugins degrade to zero, never the tick.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
