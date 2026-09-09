@@ -4140,6 +4140,29 @@
         "Wars and alliances outcomes unranked; trauma and pacing runtime subsystems uninstrumented"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "GAMING_AXES_NOW3",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/metric-gaming.test.js extended to 6 (bounce-back onset guard, decisive resolver guard, prudent-trader retreat guard)",
+        "tools/heavy-suites.mjs gate extended to 10 suites (world-scale-overhead moved to serialized gate after a parallel timing flake)"
+      ],
+      "test_evidence": [
+        "Gaming battery 6/6 green in about 1 s (default matrix); full matrix 338/338 suites (2434 tests); heavy gate 10/10; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Instant recoverer pays with hair-trigger panic onset (0.5 vs 0.625 threat); zero-investigation decisiveness goes deaf to genuine cues (IDLE_VIGILANT vs INVESTIGATE_SOUND); max prudence holds lethal ground too long (retreat onset 0.75 vs 0.625)",
+        "Scale budget test flaked once in the parallel matrix (timing-sensitive ratio) and passed alone plus serialized: timing-sensitive budgets now live in the serialized gate by policy",
+        "Host game authority invariant strictly preserved (analytical battery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Gaming battery about 1 s under jest"
+      ],
+      "known_gaps": [
+        "Helpfulness, rally-depth, and contagion-resilience axes still lack demonstrated gamers"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

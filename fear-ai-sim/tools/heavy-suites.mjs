@@ -37,6 +37,7 @@ export const HEAVY_SUITES = [
   'tests/external-reference-game.test.js',
   'tests/world-soak-10k.test.js',
   'tests/world-degeneration-tripwires.test.js',
+  'tests/world-scale-overhead.test.js',
 ];
 
 // Single source of truth for the default-gate split: jest.config.js imports

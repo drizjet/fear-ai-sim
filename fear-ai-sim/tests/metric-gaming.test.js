@@ -2,6 +2,7 @@ import { describe, it, expect } from '@jest/globals';
 import { IntentStabilizer } from '../packages/core/src/IntentStabilizer.js';
 import { FunctionalPersonaSignatures } from '../packages/core/src/FunctionalPersonaSignatures.js';
 import { TuningValidator } from '../packages/core/src/TuningValidator.js';
+import { IntentResolver } from '../packages/core/src/IntentResolver.js';
 
 // Section CLVI (NEXT-12): metric-gaming battery. Each test builds a
 // deliberately bad agent that scores BEST on one naive metric, then proves
@@ -66,5 +67,48 @@ describe('CLVI NEXT-12: metric-gaming battery', () => {
     expect(gamerAuc.contagionPeerFear).toBeLessThan(leaderAuc.contagionPeerFear);
     // Guard axis: the gamer also rallies nobody — composure without duty.
     expect(gamerAuc.rallyGroupFear).toBeLessThan(leaderAuc.rallyGroupFear);
+  });
+  it('Bounce-back gamer recovers fastest but panics earliest (onset guard)', () => {
+    const sig = new FunctionalPersonaSignatures();
+    const gamer = sig.signatureFor({ ...HEALTHY_TRAITS, resilience: 1.0 });
+    const healthy = sig.signatureFor(HEALTHY_TRAITS);
+    const onset = (curve) => {
+      const i = curve.findIndex((v) => v >= 0.5);
+      return i < 0 ? 1 : [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1][i];
+    };
+    // Gamed axis: fastest recovery (lowest AUC).
+    expect(gamer.auc.recoveryTime).toBeLessThan(healthy.auc.recoveryTime);
+    // Guard axis: hair-trigger panic onset pays for the fast rebound.
+    expect(onset(gamer.curves.panicThreat)).toBeLessThan(onset(healthy.curves.panicThreat));
+  });
+
+  it('Decisive gamer never investigates but goes deaf to ambiguity (resolver guard)', () => {
+    const alertAgent = (openness) => ({
+      traits: { ...HEALTHY_TRAITS, openness },
+      fearCore: { state: 'ALERT' },
+      currentFear: 0.3, currentDominance: 0.5, currentAnger: 0, energy: 1.0,
+      x: 0, y: 0, z: 0,
+    });
+    const sounds = [{ id: 's1', x: 10, y: 0, z: 0 }];
+    // Gamed axis: zero investigation overhead, always vigilant.
+    const deaf = IntentResolver.resolveIntent(alertAgent(0.0), { sounds });
+    expect(deaf.type).toBe('IDLE_VIGILANT');
+    // Guard axis: the open agent investigates the genuine cue.
+    const curious = IntentResolver.resolveIntent(alertAgent(1.0), { sounds });
+    expect(curious.type).toBe('INVESTIGATE_SOUND');
+  });
+
+  it('Prudent trader minimizes risk but holds lethal ground too long (retreat guard)', () => {
+    const sig = new FunctionalPersonaSignatures();
+    const gamer = sig.signatureFor({ ...HEALTHY_TRAITS, riskTolerance: 1.0, conscientiousness: 0.0 });
+    const healthy = sig.signatureFor(HEALTHY_TRAITS);
+    const onset = (curve) => {
+      const i = curve.findIndex((v) => v >= 0.5);
+      return i < 0 ? 1 : [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1][i];
+    };
+    // Gamed axis: lowest trade-risk AUC (maximally "prudent").
+    expect(gamer.auc.tradeRisk).toBeLessThan(healthy.auc.tradeRisk);
+    // Guard axis: retreat onset dangerously late — holds into lethal odds.
+    expect(onset(gamer.curves.retreatPower)).toBeGreaterThan(onset(healthy.curves.retreatPower));
   });
 });
