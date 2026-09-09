@@ -118,7 +118,9 @@ import {
     MORAL_FOUNDATIONS,
     DEFAULT_MORAL_PROFILES,
     TRANSGRESSION_TYPES,
-    ATONEMENT_TYPES
+    ATONEMENT_TYPES,
+    CausalEventGraph,
+    CAUSAL_DOMAINS
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -224,6 +226,8 @@ function printHelp() {
     console.log(`                     Options: --ticks <number> --json`);
     console.log(`  diff-replay        Debug tick-by-tick first divergence between two replay JSON files (Front E)`);
     console.log(`                     Options: --fileA <path> --fileB <path>`);
+    console.log(`  causal-graph       Build causal event DAG and explain systemic outcome root causes (Frontier E/Sections 156–160)`);
+    console.log(`                     Options: --outcome <id> --depth <n> --threshold <0..1> --narrative --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1192,6 +1196,53 @@ function handleMoral(options) {
     console.log(`  • Rationale:                ${orderEvaluation.rationale}`);
 
     console.log(`\nHost Authority Check:         ✓ Strictly advisory moral evaluations (0 host physics/inventory mutations)\n`);
+}
+function handleCausalGraph(options) {
+    const threshold = options.threshold !== undefined ? Math.max(0, Math.min(1, parseFloat(options.threshold))) : 0.20;
+    const depth = options.depth !== undefined ? Math.max(1, parseInt(options.depth, 10)) : 64;
+    const outcomeOverride = options.outcome || null;
+
+    const graph = new CausalEventGraph({ defaultThreshold: threshold });
+    graph.recordEvent({ id: 'raid_north_road', tick: 24, domain: CAUSAL_DOMAINS.ROAMING, type: 'BANDIT_RAID', entityId: 'caravan_3', severity: 0.85, description: 'Bandit Raid on North Road', payload: { lootedFood: 65.0 } });
+    graph.recordEvent({ id: 'solaria_scarcity', tick: 38, domain: CAUSAL_DOMAINS.ECONOMIC, type: 'STOCKPILE_SCARCITY', entityId: 'solaria', severity: 0.78, description: 'Solaria Food Reserve dropped below 20.0 units', payload: { reserve: 18.5 } });
+    graph.recordEvent({ id: 'rationing_fear', tick: 50, domain: CAUSAL_DOMAINS.AFFECTIVE, type: 'RATIONING_FEAR_SURGE', entityId: 'solaria_civilians', severity: 0.65, description: 'Rationing Directive enacted; Civilian Fear surged to 0.62', payload: { meanFear: 0.62 } });
+    graph.recordEvent({ id: 'famine_emergency', tick: 82, domain: CAUSAL_DOMAINS.DEMOGRAPHIC, type: 'FAMINE_EMERGENCY', entityId: 'solaria', severity: 0.92, description: 'Famine Emergency declared; 42 Citizens migrated south', payload: { migrants: 42 } });
+    graph.linkCausalEdge('raid_north_road', 'solaria_scarcity', 0.85, 'CARGO_LOOTED_STARVES_RESERVE');
+    graph.linkCausalEdge('solaria_scarcity', 'rationing_fear', 0.78, 'SCARCITY_DRIVES_DESPERATION_FEAR');
+    graph.linkCausalEdge('rationing_fear', 'famine_emergency', 0.92, 'DESPERATION_TRIGGERS_MIGRATION_WAVE');
+
+    const outcomeId = outcomeOverride || 'famine_emergency';
+    if (!graph.nodes.has(outcomeId)) {
+        console.error(`Unknown outcome event "${outcomeId}". Available: ${Array.from(graph.nodes.keys()).join(', ')}`);
+        process.exit(1);
+    }
+    const analysis = graph.findRootCauses(outcomeId, { threshold, depth });
+    const intervention = graph.isolateMinimalInterventionSet(outcomeId, threshold);
+    const narrative = graph.generateNarrativeExplanation(outcomeId, { threshold, depth });
+    const audit = graph.auditImmutability();
+
+    const payload = {
+        outcomeEventId: outcomeId,
+        threshold,
+        depth,
+        totalAncestors: analysis.totalAncestors,
+        totalPathsFound: analysis.totalPathsFound,
+        criticalCompoundWeight: analysis.criticalCompoundWeight,
+        criticalPath: analysis.criticalPath.map((s) => ({ id: s.node.id, tick: s.node.tick, domain: s.node.domain, type: s.node.type, severity: s.node.severity, weight: s.edge ? s.edge.weight : null, mechanism: s.edge ? s.edge.mechanism : null })),
+        rankedRootCauses: analysis.rankedRootCauses.map((r) => ({ rootId: r.rootId, tick: r.rootNode.tick, domain: r.rootNode.domain, maxCompoundWeight: r.maxCompoundWeight, pathCount: r.pathCount })),
+        minimalInterventionNodes: intervention.minimalInterventionNodes.map((n) => ({ id: n.id, tick: n.tick, description: n.description })),
+        estimatedPreventionConfidence: intervention.estimatedPreventionConfidence,
+        narrative,
+        audit
+    };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== CAUSAL EVENT GRAPH & ROOT-CAUSE EXPLAINER (Frontier E/Sections 156–160) ===\n`);
+    console.log(narrative);
+    console.log(`\nHost Authority Check:         ✓ Strictly advisory causal explanations (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2523,6 +2574,11 @@ async function main() {
         case 'guilt':
         case 'dissonance':
             handleMoral(options);
+            break;
+        case 'causal-graph':
+        case 'causal':
+        case 'root-cause':
+            handleCausalGraph(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

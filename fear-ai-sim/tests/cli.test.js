@@ -454,6 +454,26 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.atonementReport.guiltRelieved).toBe(0.25);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "causal-graph" and outputs root-cause chronicle', async () => {
+        const res = await runCli(['causal-graph']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('CAUSAL EVENT GRAPH & ROOT-CAUSE EXPLAINER');
+        expect(res.stdout).toContain('PRIMARY ROOT CAUSE: [Tick 24]');
+        expect(res.stdout).toContain('Bandit Raid on North Road');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "causal-graph --json" and returns structured causal analysis', async () => {
+        const res = await runCli(['causal-graph', '--outcome', 'famine_emergency', '--threshold', '0.2', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.outcomeEventId).toBe('famine_emergency');
+        expect(parsed.rankedRootCauses[0].rootId).toBe('raid_north_road');
+        expect(parsed.minimalInterventionNodes[0].id).toBe('raid_north_road');
+        expect(parsed.narrative).toContain('PRIMARY ROOT CAUSE');
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 

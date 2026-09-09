@@ -247,6 +247,10 @@ export {
     ATONEMENT_TYPES,
     ATONEMENT_PROFILES
 } from './src/MoralDissonanceEngine.js';
+export {
+    CausalEventGraph,
+    CAUSAL_DOMAINS
+} from './src/CausalEventGraph.js';
 
 
 
