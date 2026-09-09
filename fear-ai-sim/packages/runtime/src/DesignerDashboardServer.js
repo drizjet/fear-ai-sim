@@ -59,6 +59,10 @@ export class DesignerDashboardServer {
 
             this.httpServer.listen(this.port, this.host, () => {
                 this.isRunning = true;
+                // Report the OS-bound port so port 0 (ephemeral) resolves
+                // to the actual listening port for clients and tests.
+                const bound = this.httpServer.address();
+                if (bound && typeof bound.port === 'number') this.port = bound.port;
                 const url = `http://${this.host}:${this.port}`;
                 resolve({ host: this.host, port: this.port, url });
             });

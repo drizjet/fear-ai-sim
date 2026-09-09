@@ -4163,6 +4163,29 @@
         "Helpfulness, rally-depth, and contagion-resilience axes still lack demonstrated gamers"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "EPHEMERAL_PORT_NOW4",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/runtime/src/DesignerDashboardServer.js start() reports the OS-bound port (port 0 resolves to the actual listener)",
+        "tests/designer-dashboard.test.js binds port 0 and derives the test port from start() (no fixed 8789)"
+      ],
+      "test_evidence": [
+        "Dashboard tests 8/8 green; full matrix 338/338 suites (2434 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Fixed-port collision class eliminated structurally (OS-assigned ports cannot collide) rather than quarantined",
+        "Production improvement: real hosts can also request port 0 and learn the bound port from start()",
+        "Host game authority invariant strictly preserved (test plus server plumbing only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Dashboard suite about 1 s; matrix about 27 s"
+      ],
+      "known_gaps": [
+        "Other servers (FearServer 8765, dashboard default) still bind fixed ports in production paths; test-only risk retired"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -14,12 +14,15 @@ import { DesignerDashboardServer } from '../packages/runtime/index.js';
 describe('Sections XXXI & XXXII: Designer Diagnostic & Replay Dashboard', () => {
     let server;
     let baseUrl;
-    const testPort = 8789;
+    let testPort;
 
     beforeAll(async () => {
-        server = new DesignerDashboardServer({ host: '127.0.0.1', port: testPort });
+        // Ephemeral port: parallel matrix workers can never collide on a
+        // fixed port (the observed NOW-4 flake class).
+        server = new DesignerDashboardServer({ host: '127.0.0.1', port: 0 });
         const res = await server.start();
         baseUrl = res.url;
+        testPort = res.port;
     });
 
     afterAll(async () => {
