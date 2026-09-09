@@ -3919,6 +3919,30 @@
         "Faction-count and relationship-density scaling unmeasured (factions few by design; dense N-squared relations untested)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "INTERVENTION_RANKING_NEXT7",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/WorldCounterfactualEngine.js rankInterventions (identical-base factory discipline, scored ranking with margin, fail-loud on inapplicable mutations)",
+        "tests/counterfactual-intervention-ranking.test.js (8 tests: valley ranking, identical bases, determinism, validation, factory discipline, harmful-irrelevant, direction flip, sabotage)"
+      ],
+      "test_evidence": [
+        "Ranking tests 8/8 green in about 1 s (default matrix); full matrix 333/333 suites (2393 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Valley route-failure ranking: route pacification wins (50 to 48, margin 2); bandit pacify, surplus, and null score 0 with null diverging never",
+        "All candidates share one factual (50 failures): identical-base discipline proven, not assumed",
+        "Direction flip dethrones the fix; harmful scarcity shock never outranks; throwing mutations propagate instead of ranking silently",
+        "Host game authority invariant strictly preserved (advisory forks only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Four-candidate ranking completes in about 9 ms"
+      ],
+      "known_gaps": [
+        "Ranking proven on one outcome (routeFailures) in one scenario family; fear and panic outcomes unranked"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

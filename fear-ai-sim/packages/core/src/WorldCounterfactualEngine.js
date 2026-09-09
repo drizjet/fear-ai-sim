@@ -134,6 +134,56 @@ export class WorldCounterfactualEngine {
     }
 
     /**
+     * Ranks candidate interventions by their causal effect on one outcome
+     * (Section LXVII: intervention analysis). Each candidate forks from an
+     * IDENTICAL base — the caller supplies a factory returning a fresh
+     * simulation because runExperiment advances the instance it receives.
+     * Advisory only: recommends, never applies.
+     * @param {object} [options={}]
+     * @param {Function} options.createSimulation - () => fresh simulation (same seed for identical bases)
+     * @param {number} [options.forkTick=10]
+     * @param {number} [options.horizonTicks=40]
+     * @param {Array<object>} [options.candidates=[]] - mutation specs ({ type, params, customFn })
+     * @param {object} [options.outcome={ metric: 'routeFailures', direction: 'lower' }]
+     * @returns {{ outcome, ranking, recommendation }} ranking sorted best-first with score (improvement over factual)
+     */
+    static rankInterventions({ createSimulation, forkTick = 10, horizonTicks = 40, candidates = [], outcome = { metric: 'routeFailures', direction: 'lower' } } = {}) {
+        if (typeof createSimulation !== 'function') {
+            throw new Error('rankInterventions requires a createSimulation factory for identical fork bases.');
+        }
+        const { metric = 'routeFailures', direction = 'lower' } = outcome || {};
+        const sign = direction === 'higher' ? -1 : 1;
+        const ranking = candidates.map((mutation) => {
+            const result = this.runExperiment({ simulation: createSimulation(), forkTick, horizonTicks, mutation });
+            const factual = Number(result.factualSummary?.[metric]);
+            const counter = Number(result.counterfactualSummary?.[metric]);
+            if (!Number.isFinite(factual) || !Number.isFinite(counter)) {
+                throw new Error(`Outcome metric '${metric}' missing from experiment summaries.`);
+            }
+            return {
+                mutation,
+                score: Number(((factual - counter) * sign).toFixed(4)),
+                factual,
+                counterfactual: counter,
+                firstDivergenceTick: result.firstDivergenceTick,
+            };
+        });
+        ranking.sort((a, b) => b.score - a.score);
+        const best = ranking[0] || null;
+        const runnerUp = ranking[1] || null;
+        return {
+            outcome: { metric, direction },
+            ranking,
+            recommendation: best ? {
+                mutation: best.mutation,
+                score: best.score,
+                margin: runnerUp ? Number((best.score - runnerUp.score).toFixed(4)) : null,
+                firstDivergenceTick: best.firstDivergenceTick,
+            } : null,
+        };
+    }
+
+    /**
      * Applies an atomic mutation to the target simulation.
      * @private
      */
