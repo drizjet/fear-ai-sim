@@ -4069,6 +4069,49 @@
         "Only three metric pairs pinned; recovery, investigation, and trade-risk axes have no demonstrated gamers yet"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_4",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: coverage miner (91 modules, 361 tested edges, 0 debt, 0 isolated, 333 expanded, 2 ambiguous), known-gap aggregation across 10 milestones since CCI-3, gate-state rerun",
+        "10 commits since CCI-3; all CCI-3 NOW items (1-5) plus NEXT-6/7/9/11/10/8/12 closed and verified"
+      ],
+      "test_evidence": [
+        "No new tests: audit is analysis",
+        "Full regression at audit time: 338 suites / 2428 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external).",
+        "NOW-1 fear and panic outcome intervention ranking (extends NEXT-7; routeFailures proven, two outcomes open).",
+        "NOW-2 telemetry sinks for FrontierValley and runtime batch paths (extends NEXT-11 metamorphic pattern to uninstrumented paths).",
+        "NOW-3 gaming battery for recovery, investigation, and trade-risk axes (extends NEXT-12 pattern to the three unpinned axes).",
+        "NOW-4 fixed-port dashboard quarantine (observed parallel flake once; serialized gate or retry).",
+        "NOW-5 middle-tier semantic summarization for event compaction (36 percent is bookkeeping-only; extends NEXT-8).",
+        "NOW-6 faction-count and dense-relation scaling measurement (extends NEXT-6; N-squared relations untested).",
+        "NEXT-7 merchant belief-formation dynamics (carried from CCI-3 NEXT-13).",
+        "NEXT-8 near-neighbor persona discrimination under noise (carried from CCI-3 NEXT-14).",
+        "NEXT-9 compaction-wired 100k soak (log memory blocks deep horizons; compactor exists, soak loop unwired).",
+        "NEXT-10 nested-JSON transport guard (server body-size and depth limits; validator cannot see parse bombs).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (fuzz findings awaiting designer decisions).",
+        "NEXT-12 handshake determinism review (Date.now default mint vs explicit-required).",
+        "NEXT-13 constructor-only over-credit audit (verify harness tests execute compositions, not just constructors).",
+        "NEXT-14 infinite-loop containment research (worker isolation for untrusted plugins; budgets cannot preempt).",
+        "LATER-15 second external host (pixel-pets on disk; needs owner approval per project rules).",
+        "LATER-16 Unity Editor verification (no Editor installed; stays IMPLEMENTED_NOT_VERIFIED).",
+        "LATER-17 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-18 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-19 research watch ingestion (no literature access this session).",
+        "LATER-20 war-exhaustion and peace-dynamics modeling (XLIII-XLIV; no module in registry).",
+        "Selected next: NOW-1 plus NOW-2 (ranking new outcomes plus sinks on new paths; world-decision and observability machinery already proven)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "RANK_SINK_CHUNK"
     }
   ]
 }
