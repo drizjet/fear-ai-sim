@@ -45,6 +45,22 @@ describe('Section LII: Trade Dependency', () => {
         expect(dep.ratio).toBe(0);
     });
 
+    test('NOW-31. Non-finite basis counts the whole ledger instead of staling it', () => {
+        const eng = new TradeDependencyEngine();
+        // Omitted basis (the Infinity default).
+        const def = eng.dependencyOf(LEDGER, 'mill_town', 'granary');
+        expect(def.ratio).toBeCloseTo(100 / 120, 4);
+        expect(def.critical).toBe(true);
+        // Explicit Infinity matches the default.
+        expect(eng.dependencyOf(LEDGER, 'mill_town', 'granary', Infinity).ratio)
+            .toBeCloseTo(100 / 120, 4);
+        // NaN basis is a caller bug; unbounded beats silent zero.
+        expect(eng.dependencyOf(LEDGER, 'mill_town', 'granary', NaN).ratio)
+            .toBeCloseTo(100 / 120, 4);
+        // Advise inherits the semantics (restraint flows without a tick).
+        const adv = eng.advise(LEDGER, 'mill_town', 'granary', 1.0);
+        expect(adv.restraint).toBeCloseTo((100 / 120) * 0.7, 4);
+    });
     test('5. Audits stay clean', () => {
         const eng = new TradeDependencyEngine();
         expect(eng.auditImmutability().isClean).toBe(true);

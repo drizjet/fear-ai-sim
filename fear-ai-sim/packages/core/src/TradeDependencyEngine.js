@@ -44,14 +44,18 @@ export class TradeDependencyEngine {
      * @param {Array} ledger trade rows { sourceId, destId, commodity, amount, tick }
      * @param {string} importerId
      * @param {string} exporterId
-     * @param {number} [nowTick=Infinity] ledger rows above nowTick-window count
+     * @param {number} [nowTick=Infinity] ledger rows above nowTick-window count; non-finite means the whole ledger counts
      * @returns {{ ratio, imports, totalImports, critical }}
      */
     dependencyOf(ledger, importerId, exporterId, nowTick = Infinity) {
         if (!Array.isArray(ledger)) throw new Error('LEDGER_MUST_BE_ARRAY');
         const imp = String(importerId);
         const exp = String(exporterId);
-        const cutoff = nowTick - this.config.windowTicks;
+        // NOW-31: a non-finite basis (the Infinity default, NaN) means the
+        // whole ledger is in window. The old cutoff arithmetic
+        // (Infinity - window = Infinity) silently staled every ticked row
+        // and reported zero dependence on non-empty ledgers.
+        const cutoff = Number.isFinite(nowTick) ? nowTick - this.config.windowTicks : -Infinity;
         let imports = 0;
         let total = 0;
         for (const row of ledger) {

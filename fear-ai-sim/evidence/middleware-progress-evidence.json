@@ -5166,7 +5166,28 @@
       "known_gaps": [
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
-      "next_action": "INFINITY_BASIS_NOW31"
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "INFINITY_BASIS_NOW31",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "TradeDependencyEngine.dependencyOf: non-finite nowTick (the Infinity default, NaN) now means the whole ledger counts (cutoff -Infinity) instead of staling every ticked row; finite bases behave exactly as before",
+        "Safe by audit: every existing caller (valley, coalition, Fabe suite, CLI demo, all tests) passes an explicit numeric tick, so no live path changes behavior; only the previously-wrong default path changes",
+        "Mid-build correction: first assertion draft inverted restraint with dampedLevel and over-pinned round4 precision; both caught on first battery run and corrected"
+      ],
+      "test_evidence": [
+        "NOW-31 test in trade-dependency.test.js: omitted, explicit-Infinity, and NaN bases all report the full-ledger ratio; advise inherits restraint without a tick",
+        "Mutation check: the NOW-31 test fails with the engine fix stashed",
+        "Full matrix 343/343 (2515 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "One finite-check per dependencyOf call; dependency batteries ~1 s; matrix ~47 s"
+      ],
+      "known_gaps": [
+        "NaN basis now silently means unbounded; a loud rejection might serve caller-bug detection better, but every current caller passes finite ticks so this path is unreachable today"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
