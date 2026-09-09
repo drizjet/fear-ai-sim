@@ -25,6 +25,7 @@
 
 import { DeterministicRng } from './DeterministicRng.js';
 import { ESCALATION_STAGES, FACTION_CULTURES, INCIDENT_TYPES } from './FactionSystem.js';
+import { TradeDependencyEngine } from './TradeDependencyEngine.js';
 
 export const TREATY_TYPES = Object.freeze({
     MUTUAL_DEFENSE_PACT: 'MUTUAL_DEFENSE_PACT',
@@ -71,8 +72,26 @@ export class CoalitionDiplomacyEngine {
         this.factionHonor = new Map(); // Map<factionId, number [0..1]>
         this.espionageLog = [];        // Array of executed covert operations
         this.violationsLog = [];       // Array of treaty betrayals
+        // NEXT-29: trade-dependency restraint shares the valley curve.
+        this.dependency = new TradeDependencyEngine();
     }
 
+    /**
+     * Restraint fraction for a grudge-holder toward a provocateur from an
+     * optional host-reported trade ledger (context.tradeLedger, rows
+     * {sourceId, destId, commodity, amount, tick}). Absent ledger means
+     * independence means zero restraint: existing callers are untouched.
+     */
+    _restraintFromLedger(grudgeHolder, provocateur, context = {}) {
+        const ledger = context.tradeLedger;
+        if (!Array.isArray(ledger) || ledger.length === 0 || !grudgeHolder || !provocateur) return 0;
+        // Tick basis defaults to this engine's clock; callers bridging a
+        // foreign ledger (e.g. valley rows) pass context.currentTick.
+        // NOTE: Infinity would stale every ticked row (cutoff arithmetic),
+        // so it must never be the default here.
+        const nowTick = typeof context.currentTick === 'number' ? context.currentTick : this.currentTick;
+        return this.dependency.advise(ledger, grudgeHolder, provocateur, 1, nowTick).restraint;
+    }
     /**
      * Set or initialize diplomatic honor rating for a faction.
      * @param {string} factionId
@@ -298,9 +317,12 @@ export class CoalitionDiplomacyEngine {
         const factionSystem = context.factionSystem;
         if (factionSystem) {
             for (const victim of victims) {
+                // NEXT-29: a victim dependent on the violator cools its grudge.
+                const restraint = this._restraintFromLedger(victim, violator, context);
                 factionSystem.recordIncident(violator, victim, INCIDENT_TYPES.TREATY_BROKEN, {
                     severity: 0.85,
-                    description: `Treaty ${treaty.id} broken by ${violator}: ${reason}`
+                    description: `Treaty ${treaty.id} broken by ${violator}: ${reason}`,
+                    restraint
                 });
             }
         }
@@ -379,9 +401,13 @@ export class CoalitionDiplomacyEngine {
                 payload = { resourceDepletion: 0.20, targetSector: 'FOOD_AND_ORDNANCE' };
             } else if (op === ESPIONAGE_OPERATIONS.PROVOKE_BORDER_INCIDENT) {
                 if (factionSystem) {
+                    // NEXT-29: the framed grudge-holder is `source`; its
+                    // dependence on the apparent provocateur `target` cools it.
+                    const restraint = this._restraintFromLedger(source, target, context);
                     factionSystem.recordIncident(target, source, INCIDENT_TYPES.BORDER_TRESPASS, {
                         severity: 0.70,
-                        description: 'False-flag border incident staged by covert operative.'
+                        description: 'False-flag border incident staged by covert operative.',
+                        restraint
                     });
                 }
                 payload = { incidentStaged: true, escalatedStage: 'MOBILIZE' };
@@ -395,13 +421,17 @@ export class CoalitionDiplomacyEngine {
             this.setFactionHonor(source, honor - 0.20);
 
             if (factionSystem) {
+                // NEXT-29: same restraint cools both the recorded provocation
+                // and the direct blowback line below (one incident, one grudge).
+                const restraint = this._restraintFromLedger(target, source, context);
                 factionSystem.recordIncident(source, target, INCIDENT_TYPES.PROVOCATION, {
                     severity: 0.80,
-                    description: `Hostile espionage operative from ${source} caught during ${op}.`
+                    description: `Hostile espionage operative from ${source} caught during ${op}.`,
+                    restraint
                 });
                 const stanceTS = factionSystem.getBilateralStance(target, source);
                 if (stanceTS) {
-                    stanceTS.grievance = Math.min(1.0, stanceTS.grievance + 0.40);
+                    stanceTS.grievance = Math.min(1.0, stanceTS.grievance + 0.40 * (1 - restraint));
                     stanceTS.trust = Math.max(0, stanceTS.trust - 0.40);
                     if (stanceTS.stage === 'TRADE' || stanceTS.stage === 'NEGOTIATE') {
                         stanceTS.stage = 'THREATEN';

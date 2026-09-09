@@ -5076,6 +5076,28 @@
         "Example clients (Python neutral-horror demo, Unity/C# scene) use a generic raw-payload post helper, so no client changes were needed; none of them demonstrates the social path yet"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "COALITION_RESTRAINT_NEXT29",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "CoalitionDiplomacyEngine owns a TradeDependencyEngine and accepts optional context.tradeLedger on all three incident recorders (treaty breach, false-flag border staging, discovered-espionage blowback); absent ledger means zero restraint, so existing callers are untouched",
+        "The blowback's direct grievance line (+0.40 outside recordIncident) scales with the same restraint (one incident, one grudge); trust/stage/honor effects untouched",
+        "Mid-build repairs: a helper insertion dropped its closing brace and a doc opener (repaired), and a later edit ate the blowback honor-penalty lines (restored from the pre-edit read); final diff verified via parses plus targeted deletion review"
+      ],
+      "test_evidence": [
+        "NEXT-29 battery 3/3 in coalition-diplomacy.test.js (battery 8/8): treaty 0.75 to 0.2775, false-flag 0.20 to 0.074 with corrected grudge-holder direction, blowback 0.75 to 0.2775 with trust identical",
+        "Mutation check: all 3 fail with the coalition file stashed",
+        "Full matrix 343/343 (2512 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Restraint is one bounded ledger scan per coalition incident; coalition battery ~1 s; matrix ~42 s"
+      ],
+      "known_gaps": [
+        "Tick-basis bridging: ledger rows from a foreign clock need context.currentTick aligned with row ticks; default is the coalition engine clock. A stale-basis call silently under-counts dependence (found during probing: Infinity basis stales every row)",
+        "DesignerDashboardServer records BORDER_TRESPASS without restraint (dashboard tool path, not a live sim)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -213,3 +213,72 @@ describe('Frontier C: Coalition Diplomacy, Treaties & Espionage (Sections 130-13
         expect(engine2.getState()).toEqual(snapshot);
     });
 });
+
+describe('NEXT-29: trade-dependency restraint in coalition incidents', () => {
+    // The valley banditry paths already cool dependent grudges; the three
+    // coalition incident recorders (treaty breach, false-flag border,
+    // discovered-espionage blowback) take an optional context.tradeLedger
+    // and apply the same curve. Absent ledger means zero restraint.
+    function setup() {
+        const engine = new CoalitionDiplomacyEngine({ seed: 4242 });
+        const factionSystem = new FactionSystem();
+        for (const id of ['faction_A', 'faction_B', 'faction_C']) {
+            factionSystem.registerFaction({ id, culture: FACTION_CULTURES.HONORABLE });
+        }
+        return { engine, factionSystem };
+    }
+    // importer depends ~90% on exporter (0.9 ratio -> 0.63 restraint).
+    function ledger(importer, exporter) {
+        const rows = [];
+        for (let i = 0; i < 9; i++) {
+            rows.push({ tick: 0, sourceId: exporter, destId: importer, commodity: 'grain', amount: 10 });
+        }
+        rows.push({ tick: 0, sourceId: 'faction_C', destId: importer, commodity: 'grain', amount: 10 });
+        return rows;
+    }
+
+    it('treaty breach cools when the victim depends on the violator', () => {
+        const run = (withLedger) => {
+            const { engine, factionSystem } = setup();
+            engine.proposeTreaty('nap_AB', 'faction_A', 'faction_B', TREATY_TYPES.NON_AGGRESSION_PACT, { durationTicks: 100 });
+            engine.recordTreatyViolation('nap_AB', 'faction_A', 'X', {
+                factionSystem, ...(withLedger ? { tradeLedger: ledger('faction_B', 'faction_A') } : {})
+            });
+            return factionSystem.getBilateralStance('faction_B', 'faction_A').grievance;
+        };
+        expect(run(false)).toBeCloseTo(0.75, 10);
+        expect(run(true)).toBeCloseTo(0.75 * (1 - 0.9 * 0.7), 10);
+    });
+
+    it('false-flag border grudge cools with the framed holder dependence', () => {
+        const run = (withLedger) => {
+            const { engine, factionSystem } = setup();
+            const op = engine.executeEspionageOperation('faction_A', 'faction_B',
+                ESPIONAGE_OPERATIONS.PROVOKE_BORDER_INCIDENT,
+                { operativeSkill: 0.95, counterVigilance: 0.05 },
+                { factionSystem, ...(withLedger ? { tradeLedger: ledger('faction_A', 'faction_B') } : {}) });
+            expect(op.success).toBe(true);
+            return factionSystem.getBilateralStance('faction_A', 'faction_B').grievance;
+        };
+        expect(run(false)).toBeCloseTo(0.20, 10);
+        expect(run(true)).toBeCloseTo(0.20 * (1 - 0.9 * 0.7), 10);
+    });
+
+    it('discovered blowback cools both the recorded and direct grudge lines', () => {
+        const run = (withLedger) => {
+            const { engine, factionSystem } = setup();
+            const op = engine.executeEspionageOperation('faction_A', 'faction_B',
+                ESPIONAGE_OPERATIONS.PROVOKE_BORDER_INCIDENT,
+                { operativeSkill: 0.10, counterVigilance: 0.95 },
+                { factionSystem, ...(withLedger ? { tradeLedger: ledger('faction_B', 'faction_A') } : {}) });
+            expect(op.discovered).toBe(true);
+            return factionSystem.getBilateralStance('faction_B', 'faction_A');
+        };
+        const plain = run(false);
+        expect(plain.grievance).toBeCloseTo(0.35 + 0.40, 10);
+        const cooled = run(true);
+        expect(cooled.grievance).toBeCloseTo((0.35 + 0.40) * (1 - 0.9 * 0.7), 10);
+        // Facts stand: trust loss identical with and without restraint.
+        expect(cooled.trust).toBe(plain.trust);
+    });
+});
