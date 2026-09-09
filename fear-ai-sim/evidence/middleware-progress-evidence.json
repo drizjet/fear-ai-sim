@@ -3509,7 +3509,35 @@
         "Place-memory tests complete in under 2 s"
       ],
       "known_gaps": [
-        "Second external host still gated on host availability; LOD/scale work still open; overhead-vs-store-size unmeasured"
+        "LOD restoration covered traits/adaptive/bonds but not memory stores; closed below",
+        "Second external host still gated on host availability; overhead-vs-store-size unmeasured"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "LOD_MEMORY_RESTORATION_LXXVII",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/IdentityVault.js (seal/restore carry opaque memory snapshots, JSON-cloned both directions, backwards compatible)",
+        "tests/lod-identity-restoration.test.js (sealed-exactness after live evolution, double isolation, scorer recall post-restore, backwards compat)"
+      ],
+      "test_evidence": [
+        "tests/lod-identity-restoration.test.js (4/4 tests green)",
+        "tests/identity-vault.test.js (5/5 still green, no contract break)",
+        "Full regression: 333 suites / 2369 tests green in a single pass; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Restored agent recalls sealed ambush episodic, r1 rumor, calm north-road danger, fond mill — none of the post-seal live mutations leak in",
+        "Vault audit finding: civ entities carry only fear/morale/wealth/cargo, so without the vault memories would not survive abstraction; vault now closes the loop",
+        "structuredClone unavailable in jsdom test sandbox; JSON clone used with documented plain-data invariant",
+        "Two mid-build file damages from range edits; repaired and verified",
+        "Host game authority invariant strictly preserved (state container only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "LOD tests complete in under 2 s"
+      ],
+      "known_gaps": [
+        "Second external host still gated; overhead-vs-store-size unmeasured; lesion feed coverage still 3 of many"
       ],
       "next_action": "MAINTAIN"
     }

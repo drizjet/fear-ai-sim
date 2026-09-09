@@ -32,6 +32,13 @@ function freezeTraits(traits) {
     return Object.freeze(out);
 }
 
+// Memory snapshots are plain JSON-safe data by construction (all getState
+// outputs convert Maps to arrays). JSON clone keeps the vault working in
+// jsdom test sandboxes where structuredClone is unavailable.
+function deepCloneJson(value) {
+    return value === null || value === undefined ? value : JSON.parse(JSON.stringify(value));
+}
+
 export class IdentityVault {
     constructor() {
         /** agentId -> sealed record */
@@ -56,17 +63,24 @@ export class IdentityVault {
             .map((e) => ({ ...e, targetId: String(e.targetId) }))
             .sort((a, b) =>
                 (Math.abs(b.trust || 0) + (b.familiarity || 0)) - (Math.abs(a.trust || 0) + (a.familiarity || 0)));
+        // Memory snapshots (Layered/Rumor/Route/Place getState blobs) ride
+        // along so abstraction preserves recall, not just traits. Cloned on
+        // the way in AND out: live mutation never touches the sealed copy.
+        const memory = snapshot.memory && typeof snapshot.memory === 'object'
+            ? deepCloneJson(snapshot.memory)
+            : null;
         const rec = {
             agentId: id,
             identity: freezeTraits(snapshot.identity),
             adaptive: Object.freeze({ ...(snapshot.adaptive || {}) }),
             bonds: Object.freeze(ranked.slice(0, IMPORTANT_EDGE_K)),
             droppedEdges: ranked.length - Math.min(ranked.length, IMPORTANT_EDGE_K),
+            memory,
             sealedTick: snapshot.tick ?? 0,
             abstractTicks: 0
         };
         this.sealed.set(id, rec);
-        return { agentId: id, bondsKept: rec.bonds.length, droppedEdges: rec.droppedEdges };
+        return { agentId: id, bondsKept: rec.bonds.length, droppedEdges: rec.droppedEdges, memorySealed: memory !== null };
     }
 
     /**
@@ -98,9 +112,10 @@ export class IdentityVault {
             identity: { ...rec.identity },
             adaptive: { ...rec.adaptive },
             bonds: rec.bonds.map((b) => ({ ...b })),
+            memory: rec.memory ? deepCloneJson(rec.memory) : null,
             abstractTicks: rec.abstractTicks,
             droppedEdges: rec.droppedEdges,
-            fidelity: { identityExact: true, adaptiveEpsilon: 1e-9, bondsKept: rec.bonds.length }
+            fidelity: { identityExact: true, adaptiveEpsilon: 1e-9, bondsKept: rec.bonds.length, memoryExact: rec.memory !== null }
         };
     }
 
