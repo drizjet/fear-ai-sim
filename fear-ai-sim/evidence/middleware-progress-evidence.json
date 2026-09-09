@@ -3276,8 +3276,37 @@
         "Debt tests complete in under 1 s"
       ],
       "known_gaps": [
-        "6 isolated modules remain (ComparativeBaselines, DeclarativeScenarioEngine, IntentResolver, PacingDirector, PsychoacousticSynthesizer, SocialBehaviorEffects) — partly naming-limitation artifacts, partly genuinely unreferenced; audit open",
+        "6 isolated modules audited; all resolved as miner-scope artifacts below (see ISOLATED_MODULE_VERDICTS)",
         "FRONTIER AUDIT (CCI, 2026-09-09): debt instrument has served its purpose (22 to 0). Next ranked frontiers: (1) isolated-module audit, (2) absent rumor/social/route memory classes, (3) Godot living-world lab expansion, (4) second external host (gated), (5) LOD/massive-population scale work"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "ISOLATED_MODULE_VERDICTS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/InteractionCoverageGraph.js (v2: recursive tests scan, export-symbol aliases, runtime/protocol/example/runtime-host composed roots, core-source touch-only, repo-relative evidence paths)",
+        "tests/interaction-coverage.test.js (former false positives asserted absent from isolated list with per-module reason)"
+      ],
+      "test_evidence": [
+        "tests/interaction-coverage.test.js (6/6 tests green)",
+        "Full regression: 325 suites / 2329 tests green in a single pass; guardian:check CLEAN",
+        "fear-ai coverage: 85 modules, 129 tested edges, isolated empty, 1 debt pair (ParallelBatchEvaluator x ValleyChainScenario via FearServer wiring)"
+      ],
+      "runtime_evidence": [
+        "All six isolated verdicts are miner artifacts, zero engine changes: ComparativeBaselines (tests use class names, not module name), SocialBehaviorEffects (tests use function exports), IntentResolver and PsychoacousticSynthesizer (AffectiveAgent source composition), PacingDirector (runtime plus conformance subdir the miner never scanned), DeclarativeScenarioEngine (ScenarioStepper source composition)",
+        "Miner v1 undercounted three ways: top-level tests dir only, module-name substrings only, benchmarks only. All three fixed and regression-pinned",
+        "Source-import edges deliberately touch-only: compile-time coupling is not integration debt (v1/no-roots run spiked phantom debt to 133 pairs; documented in code, not shipped)",
+        "Last debt pair accepted as tolerated: FearServer wires a batch evaluator and a chain scenario independently with no behavioral interaction; a joint test would assert plumbing, which policy forbids",
+        "Two mid-build file damages from range edits (class skeleton eaten twice); repaired and verified via node import plus full suite",
+        "Host game authority invariant strictly preserved (read-only miner, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Coverage tests complete in under 2 s; CLI coverage in under 1 s"
+      ],
+      "known_gaps": [
+        "Consumer scan covers js/mjs only; Python/C#/Godot adapter references to core modules are invisible to the miner",
+        "Next ranked frontiers: absent rumor/social/route memory classes; Godot living-world lab expansion; second external host (gated); LOD/massive-population scale work"
       ],
       "next_action": "MAINTAIN"
     }

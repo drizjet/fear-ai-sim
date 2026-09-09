@@ -3,39 +3,96 @@
  * interaction coverage.
  *
  * Nodes are packages/core/src modules. An edge between A and B exists when
- * one scanning root references both module base names:
- * - tested edge: a tests/ file names both (joint test coverage).
- * - composed edge: a benchmarks/ or bin/ file names both (runtime co-use
- *   without a joint test) — integration debt when no tested edge exists.
+ * one scanning root references both modules — by module base name OR by any
+ * exported symbol alias (PascalCase / UPPER_SNAKE export names, so tests
+ * that import { scoreSocialDecisions } still count for SocialBehaviorEffects):
+ * - tested edge: a tests/ file (recursive) names both (joint test coverage).
+ * - composed edge: a benchmarks/, runtime, protocol, example-host, or
+ *   core-source file names both (runtime co-use without a joint test) —
+ *   integration debt when no tested edge exists.
+ * - bin/ excluded: the CLI imports every module, which would mark all
+ *   pairs "composed" and drown real co-use signal in noise.
  *
  * Fully deterministic: directory scans sorted, pairs canonicalized,
  * rankings by (debt rank, name). Read-only; never executes scanned code.
  */
 
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
+import { join, basename, relative } from 'node:path';
 
-function listJs(dir) {
-    if (!existsSync(dir)) return [];
-    return readdirSync(dir)
-        .filter((f) => f.endsWith('.js') || f.endsWith('.mjs'))
-        .map((f) => join(dir, f))
-        .sort();
+function listJsRecursive(dir) {
+    const out = [];
+    if (!existsSync(dir)) return out;
+    const walk = (d) => {
+        let entries = [];
+        try {
+            entries = readdirSync(d).sort();
+        } catch {
+            return;
+        }
+        for (const e of entries) {
+            const full = join(d, e);
+            let st = null;
+            try {
+                st = statSync(full);
+            } catch {
+                continue;
+            }
+            if (st.isDirectory()) {
+                if (e === 'node_modules' || e === '.git') continue;
+                walk(full);
+            } else if (e.endsWith('.js') || e.endsWith('.mjs')) {
+                out.push(full);
+            }
+        }
+    };
+    walk(dir);
+    return out.sort();
 }
+
 function baseNameNoExt(path) {
     return basename(path, '.js').replace(/\.mjs$/, '');
 }
 
-function referencedModules(text, moduleNames) {
-    const found = new Set();
-    for (const name of moduleNames) {
-        if (text.includes(name)) found.add(name);
-    }
-    return [...found].sort();
-}
-
 function pairKey(a, b) {
     return a < b ? `${a} ${b}` : `${b} ${a}`;
+}
+
+function escapeRegExp(s) {
+    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Collect export symbol aliases per module: PascalCase and UPPER_SNAKE
+ * exported names (classes, constants, enums). Short/generic identifiers
+ * are excluded to avoid substring noise.
+ */
+function collectAliases(coreDir, moduleNames) {
+    const aliasToModule = new Map(); // symbol -> module
+    const declRe = /export\s+(?:const|class|function|async\s+function)\s+([A-Za-z0-9_]+)/g;
+    const listRe = /export\s*\{([^}]*)\}/g;
+    const isAlias = (s) => s.length >= 6 && (/[A-Z]/.test(s) || /_/.test(s));
+    for (const name of moduleNames) {
+        const file = join(coreDir, `${name}.js`);
+        let text = '';
+        try {
+            text = readFileSync(file, 'utf8');
+        } catch {
+            continue;
+        }
+        const add = (sym) => {
+            const clean = sym.trim().split(/\s+as\s+/).pop().trim();
+            if (isAlias(clean) && !aliasToModule.has(clean)) {
+                aliasToModule.set(clean, name);
+            }
+        };
+        let m;
+        while ((m = declRe.exec(text)) !== null) add(m[1]);
+        while ((m = listRe.exec(text)) !== null) {
+            for (const part of m[1].split(',')) add(part);
+        }
+    }
+    return aliasToModule;
 }
 
 export class InteractionCoverageGraph {
@@ -45,9 +102,23 @@ export class InteractionCoverageGraph {
     constructor(repoRoot) {
         this.repoRoot = repoRoot;
         this.coreDir = join(repoRoot, 'packages', 'core', 'src');
-        this.moduleNames = listJs(this.coreDir)
+        this.moduleNames = listJsRecursive(this.coreDir)
             .map(baseNameNoExt)
             .filter((n) => n !== 'batch_evaluator_worker');
+        this.aliasToModule = collectAliases(this.coreDir, this.moduleNames);
+    }
+
+    referencedModules(text) {
+        const found = new Set();
+        for (const name of this.moduleNames) {
+            if (text.includes(name)) found.add(name);
+        }
+        for (const [sym, mod] of this.aliasToModule) {
+            if (found.has(mod)) continue;
+            const re = new RegExp(`\\b${escapeRegExp(sym)}\\b`);
+            if (re.test(text)) found.add(mod);
+        }
+        return [...found].sort();
     }
 
     /**
@@ -59,17 +130,20 @@ export class InteractionCoverageGraph {
         const composed = new Map();
         const touched = new Set();
 
-        const shortName = (file) => file.replace(/\\/g, '/').split('/').slice(-2).join('/');
-        const scan = (dir, store) => {
-            for (const file of listJs(dir)) {
+        const shortName = (file) => relative(this.repoRoot, file).replace(/\\/g, '/');
+        // touchOnly: count module touches without recording edges. Core-source
+        // imports are compile-time coupling, not integration debt.
+        const scanFiles = (files, store, touchOnly = false) => {
+            for (const file of files) {
                 let text = '';
                 try {
                     text = readFileSync(file, 'utf8');
                 } catch {
                     continue;
                 }
-                const refs = referencedModules(text, this.moduleNames);
+                const refs = this.referencedModules(text);
                 for (const r of refs) touched.add(r);
+                if (touchOnly) continue;
                 for (let i = 0; i < refs.length; i++) {
                     for (let j = i + 1; j < refs.length; j++) {
                         const key = pairKey(refs[i], refs[j]);
@@ -82,10 +156,13 @@ export class InteractionCoverageGraph {
             }
         };
 
-        scan(join(this.repoRoot, 'tests'), tested);
-        // NOTE: bin/ excluded — the CLI imports every module, which would
-        // mark all pairs "composed" and drown real co-use signal in noise.
-        scan(join(this.repoRoot, 'benchmarks', 'behavioral-evaluation'), composed);
+        const coreFiles = listJsRecursive(this.coreDir);
+        scanFiles(listJsRecursive(join(this.repoRoot, 'tests')), tested);
+        scanFiles(listJsRecursive(join(this.repoRoot, 'benchmarks', 'behavioral-evaluation')), composed);
+        scanFiles(coreFiles, composed, true);
+        scanFiles(listJsRecursive(join(this.repoRoot, 'packages', 'runtime', 'src')), composed);
+        scanFiles(listJsRecursive(join(this.repoRoot, 'packages', 'protocol', 'src')), composed);
+        scanFiles(listJsRecursive(join(this.repoRoot, 'examples', 'reference-game')), composed);
 
         const debt = [];
         for (const [key, evidence] of [...composed.entries()].sort()) {

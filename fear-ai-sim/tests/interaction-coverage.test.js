@@ -47,14 +47,20 @@ describe('Sections CCIV-CCV: InteractionCoverageGraph', () => {
         expect(r.testedEdges.length + r.debt.length).toBeGreaterThan(0);
     });
 
-    it('5. Isolated list honest: named modules exist on disk', () => {
+    it('5. Isolated list contains only modules with no reference anywhere', () => {
         const r = build();
-        expect(r.isolated.length).toBeGreaterThan(0);
         for (const name of r.isolated) {
             expect(r.nodes).toContain(name);
         }
-        // The graph must not count itself as foreign evidence: self excluded nowhere,
-        // but every edge cites a file that is not the graph module itself.
+        // Former false positives now resolve via export-symbol aliases and
+        // recursive consumer scans: ComparativeBaselines (baseline agent
+        // classes), SocialBehaviorEffects (scoring functions), IntentResolver
+        // and PsychoacousticSynthesizer (AffectiveAgent composition),
+        // PacingDirector (runtime + conformance), DeclarativeScenarioEngine
+        // (ScenarioStepper composition).
+        for (const name of ['ComparativeBaselines', 'SocialBehaviorEffects', 'IntentResolver', 'PsychoacousticSynthesizer', 'PacingDirector', 'DeclarativeScenarioEngine']) {
+            expect(r.isolated).not.toContain(name);
+        }
         for (const e of r.testedEdges) {
             expect(e.evidence).not.toContain('InteractionCoverageGraph');
         }
