@@ -4250,6 +4250,30 @@
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
       "next_action": "SUMMARIZE_NOW5"
+    },
+    {
+      "milestone": "SEMANTIC_MIDDLE_NOW5",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/EventLogCompactor.js tracks keep reasons (anchor/boundary/kept/closure) and collapses plain KEPT repeats at or above middleMinRepeat into per-window middle summaries with tick span, deterministic *Id actor sample, and example event id",
+        "Closure-referenced repeats are promoted to closure reason before the seen check and never summarize; explicit opt-out via middleMinRepeat Infinity reproduces legacy bulk-only behavior"
+      ],
+      "test_evidence": [
+        "Compaction suite 12/12 (4 new NOW-5 tests); full matrix 339/339 suites (2442 tests); guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Real 2000-tick log: kept 31413 to 21479, savings 29.34 to 55.85 percent, closure closed, per-type reconstruction exact, deterministic across runs",
+        "Caught mid-build: closure upgrade placed after the seen check broke anchor closure (initially-kept referrers start in seen); fixed by upgrading before the check",
+        "Caught mid-build: middle-removed indices inflated stats.dropped (9934); fixed by excluding middleIdx from the dropped count",
+        "Host game authority invariant strictly preserved (advisory log surgery only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Compaction suite about 13 s (real-log fixtures); matrix about 37 s"
+      ],
+      "known_gaps": [
+        "Middle summaries carry no per-value distributions (for example allowed true/false splits); actor sample is identity-only"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

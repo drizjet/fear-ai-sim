@@ -126,3 +126,60 @@ describe('LXXI NEXT-8: event-log compaction with anchor preservation', () => {
     expect(r.stats.dropped).toBe(1);
   });
 });
+
+describe('LXXI NOW-5: middle-tier semantic summarization', () => {
+  function repeatFixture(n = 120) {
+    const evs = [{ eventId: 'anchor-0', type: 'BANDIT_ATTACK', tick: 1, parentEventIds: [] }];
+    for (let i = 0; i < n; i++) {
+      evs.push({ eventId: `pop-${i}`, type: 'POPULATION_CHANGE', tick: i + 1, townId: i % 2 ? 'north' : 'south', parentEventIds: [] });
+    }
+    evs.push({ eventId: 'rare-0', type: 'SEASON_CHANGE', tick: 5, parentEventIds: [] });
+    return evs;
+  }
+
+  it('repeated KEPT types collapse with span plus actor sample; rare types stay whole', () => {
+    const r = compactEventLog(repeatFixture(), { middleWindowTicks: 50 });
+    // 118 interior repeats summarized (first/last kept as boundaries).
+    expect(r.stats.middleSummarized).toBe(118);
+    expect(r.events.find((e) => e.eventId === 'pop-0')).toBeDefined();
+    expect(r.events.find((e) => e.eventId === 'pop-119')).toBeDefined();
+    expect(r.events.find((e) => e.eventId === 'rare-0')).toBeDefined();
+    const s = r.middleSummaries.find((x) => x.type === 'POPULATION_CHANGE');
+    expect(s.count).toBeGreaterThan(0);
+    expect(s.firstTick).toBeLessThanOrEqual(s.lastTick);
+    expect(s.actors).toContain('north');
+    expect(s.exampleEventId).toMatch(/^pop-/);
+    expect(verifyAnchorClosure(r.events).closed).toBe(true);
+  });
+
+  it('closure-referenced repeats stay whole despite high repetition', () => {
+    const evs = repeatFixture(120);
+    evs.push({ eventId: 'anchor-1', type: 'WAR_DECLARED', tick: 130, parentEventIds: ['pop-60'] });
+    const r = compactEventLog(evs, { middleWindowTicks: 50 });
+    expect(r.events.find((e) => e.eventId === 'pop-60')).toBeDefined();
+    expect(verifyAnchorClosure(r.events).closed).toBe(true);
+  });
+
+  it('middle tier opts out exactly (legacy bulk-only behavior)', () => {
+    const evs = repeatFixture();
+    const r = compactEventLog(evs, { middleMinRepeat: Infinity });
+    expect(r.middleSummaries).toEqual([]);
+    expect(r.stats.middleSummarized).toBe(0);
+    expect(r.events.filter((e) => e.type === 'POPULATION_CHANGE')).toHaveLength(120);
+  });
+
+  it('real 2000-tick log: middle tier doubles savings with exact reconstruction', () => {
+    const world = contactWorld();
+    const r = compactEventLog(world.events);
+    expect(verifyAnchorClosure(r.events).closed).toBe(true);
+    expect(r.stats.savingsPercent).toBeGreaterThan(45);
+    // Per-type reconstruction: kept plus bulk plus middle equals original.
+    const orig = {};
+    for (const e of world.events) orig[e.type] = (orig[e.type] || 0) + 1;
+    const accounted = {};
+    for (const e of r.events) accounted[e.type] = (accounted[e.type] || 0) + 1;
+    for (const s of [...r.summaries, ...r.middleSummaries]) accounted[s.type] = (accounted[s.type] || 0) + s.count;
+    for (const t of Object.keys(orig)) expect(accounted[t] || 0).toBe(orig[t]);
+    expect(r.stats.dropped).toBe(0);
+  }, 180000);
+});
