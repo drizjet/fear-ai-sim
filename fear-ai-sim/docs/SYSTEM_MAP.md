@@ -176,6 +176,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Betrayal Path Runtime:** host-reported social events (`reportSocialEvent`) drive relationship state plus BETRAYAL_ABANDONMENT trauma; betrayal ignores passive sanctuary solace and needs social repair (AID/RESCUE/SHARED_DANGER) or it crystallizes and erodes agreeableness (~0.7 to ~0.39 at full severity).
 - **Resilience Floor NEXT-23:** hyper-vigilance floor now scales with baseline resilience (fragile settles ~0.26, stoic ~0.17 under identical threat; R=0.5 reference unchanged). Slope kept gentle to respect pinned high-resilience fixtures.
 - **Tribute Fixture NEXT-24:** staged 5x-imbalance scenario drives EXTORTION_PAID through live generation into provocation plus threat pressure; complements the NOW-19 tripwire (which guards canonical stats from opening the path accidentally).
+- **Frontier Audit CCI-10:** 26 ranked candidates (3 NOW, 19 NEXT, 4 LATER); all CCI-9 NOW items plus NEXT-23/24 closed. Next: server transport exposure for the social path (NOW-25).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

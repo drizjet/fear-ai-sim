@@ -4857,6 +4857,54 @@
         "Tribute wealth transfer itself is advisory-only rationale text (no host inventory touched, by constitution); no advise-quantity field emitted for hosts that want a suggested amount"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_10",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 4 milestones since CCI-9 (RECOVER_ESCALATION_NOW20, BETRAYAL_PATH_RUNTIME, RESILIENCE_WEIGHTED_FLOOR_NEXT23, TRIBUTE_FIXTURE_NEXT24), CCI-9 candidate status review, transport-surface grep",
+        "4 commits since CCI-9; both CCI-9 NOW items (20, 21) plus NEXT-23 and NEXT-24 closed and verified",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 343/343 suites (2491 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-25 server transport exposure for reportSocialEvent (verified gap: zero social surface in fear-ai-server.js; the betrayal path is runtime-only, unreachable by real hosts).",
+        "NOW-26 betrayal severity-from-weight mapping validation (weight/2 default unvalidated against designer intent).",
+        "NOW-27 social-repair potency vs solaceThreshold interplay measurement (0.30 per event vs 0.65 threshold; defuse boundary uncharacterized).",
+        "NEXT-7 merchant belief-formation dynamics (carried).",
+        "NEXT-8 near-neighbor persona discrimination under noise (carried).",
+        "NEXT-9 compaction-wired 100k soak (carried).",
+        "NEXT-10 nested-JSON transport guard (carried).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+        "NEXT-12 handshake determinism review (carried).",
+        "NEXT-13 constructor-only over-credit audit (carried).",
+        "NEXT-14 infinite-loop containment research (carried).",
+        "NEXT-15 FearServer fixed-port production review (carried).",
+        "NEXT-16 trade-dependency conflict behavior (carried).",
+        "NEXT-17 richer rally dynamics for specificity guards (carried).",
+        "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+        "NEXT-21 numeric-field histograms in middle summaries (carried).",
+        "NEXT-22 long-horizon war degeneracy soak beyond 2000 ticks (carried).",
+        "NEXT-25 RECOVER times betrayal interaction (trauma incurred during convalescence; override vs progress interplay untested).",
+        "NEXT-26 extinction-therapy recovery of eroded agreeableness (does prolonged calm restore betrayal-eroded traits; loop closure untested).",
+        "NEXT-27 floor-damping times social-wound consistency check (betrayal trauma sets the same resilience-damped floor; verify numerically).",
+        "NEXT-28 tribute advise-quantity field (advisory suggested amount for hosts; constitution-safe).",
+        "NEXT-29 floor-slope sensitivity exploration (steeper or nonlinear shapes; requires justified pin renegotiation, never silent re-pinning).",
+        "LATER-20 second external host architecture (gated on external project availability).",
+        "LATER-21 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-25 (server exposure completes the betrayal chunk's integration story: runtime-only social path becomes reachable by real hosts)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "SOCIAL_TRANSPORT_NOW25"
     }
   ]
 }
