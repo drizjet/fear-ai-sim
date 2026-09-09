@@ -110,6 +110,8 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Identity Vault Abstraction Restoration (Section LXXVII):** `IdentityVault` seals identity exactly with top-12 bonds and bounded abstract drift, restoring identical decisions (`fear-ai vault`).
 - **Honest Population Scale Measurement (Sections LXXVIII–LXXIX):** `ScaleHarness` times live engine load to 10k agents with extrapolation flagged in code, never footnotes (`fear-ai scale`).
 - **Godot Station 10 Valley Chain Monitor (Sections CXI–CXIV):** tenth showcase station applies `POST /api/v1/advisory/chain` payloads with link-down fail-safe hold; 10/10 conformance passes headless in-engine with zero script errors.
+- **Why-Not Explanations with Flip Conditions (Sections CLXXX–CLXXXII):** `WhyNotExplainer` answers rejected alternatives from recorded frames with margins, blocking layers, and flip conditions (`fear-ai why`).
+- **Explanation Fidelity with Forgery Rejection (Sections CLXXXI, CCXXXIII):** `ExplanationFidelityHarness` re-derives cited figures and rejects swapped winners, inflated margins, and forged layers by name (`fear-ai fidelity`).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

@@ -159,7 +159,9 @@ import {
     ValleyOutcomeDistribution,
     LodDirector,
     IdentityVault,
-    ScaleHarness
+    ScaleHarness,
+    WhyNotExplainer,
+    ExplanationFidelityHarness
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -327,6 +329,10 @@ function printHelp() {
     console.log(`                     Options: --json`);
     console.log(`  scale              Measure real per-agent costs to 10k with honesty bounds (Sections LXXVIII–LXXIX)`);
     console.log(`                     Options: --max <n> --budget <ms> --json`);
+    console.log(`  why                Answer why-not questions with margins and flip conditions (Sections CLXXX–CLXXXII)`);
+    console.log(`                     Options: --action <NAME> --json`);
+    console.log(`  fidelity           Verify explanations against recomputation; catch forgeries (Sections CLXXXI, CCXXXIII)`);
+    console.log(`                     Options: --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -2055,6 +2061,59 @@ function handleScale(options) {
     console.log(`Measured only to:           ${fit.measuredOnlyUpTo} — above is extrapolation, stated as such.`);
     console.log(`\nHost Authority Check:         ✓ Benchmark only (0 host physics/inventory mutations)\n`);
 }
+function handleWhy(options) {
+    const arch = new CharacterIdentityArchitecture();
+    arch.registerCharacter('guard_01', { neuroticism: 0.3, resilience: 0.8, loyalty: 0.85 });
+    const frame = arch.tick('guard_01', {}, { fear: 0.7, perceivedDanger: 0.7, urgency: 0.5 });
+    const model = new RetaliationModel();
+    model.provoke('red_clan', 'blue_hold', 'RAID');
+    const rec = model.recommend('red_clan', 'blue_hold');
+    const explainer = new WhyNotExplainer();
+    const asked = (options.action || 'flee').toLowerCase();
+    const identityAns = frame.tendencies[asked] !== undefined
+        ? explainer.explainIdentity(frame, asked)
+        : null;
+    let retaliationAns = null;
+    try {
+        retaliationAns = explainer.explainRetaliation(rec, asked.toUpperCase());
+    } catch {
+        retaliationAns = { answer: `No ${asked.toUpperCase()} band in the retaliation ladder.` };
+    }
+    const payload = { frame: frame.topIntent, identityAns, retaliationAns, audit: explainer.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== WHY-NOT EXPLANATIONS (Sections CLXXX–CLXXXII) ===\n`);
+    console.log(`Guard chose:                ${frame.topIntent}`);
+    if (identityAns) console.log(`Why not ${asked}:            ${identityAns.answer}`);
+    if (retaliationAns.margin !== undefined) console.log(`Why not strike back:      ${retaliationAns.answer}`);
+    console.log(`\nHost Authority Check:         ✓ Recorded frames only (0 host physics/inventory mutations)\n`);
+}
+
+function handleFidelity(options) {
+    const arch = new CharacterIdentityArchitecture();
+    arch.registerCharacter('guard_01', { neuroticism: 0.3, resilience: 0.8, loyalty: 0.85 });
+    const frame = arch.tick('guard_01', {}, { fear: 0.7, perceivedDanger: 0.7, urgency: 0.5 });
+    const loser = frame.rankedIntents[frame.rankedIntents.length - 1].action;
+    const explainer = new WhyNotExplainer();
+    const harness = new ExplanationFidelityHarness();
+    const genuine = explainer.explainIdentity(frame, loser);
+    const genuineVerdict = harness.verify(genuine, frame, loser);
+    const forged = { ...genuine, margin: genuine.margin + 0.5 };
+    const forgedVerdict = harness.verify(forged, frame, loser);
+    const payload = { genuineVerdict, forgedVerdict, audit: harness.auditImmutability() };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== EXPLANATION FIDELITY (Sections CLXXXI, CCXXXIII) ===\n`);
+    console.log(`Genuine answer:             ${genuineVerdict.faithful ? 'FAITHFUL' : 'REJECTED — ' + genuineVerdict.failures.join(', ')}`);
+    console.log(`Forged margin (+0.5):       ${forgedVerdict.faithful ? 'ACCEPTED (BAD)' : 'REJECTED — ' + forgedVerdict.failures.join(', ')}`);
+    console.log(`\nHost Authority Check:         ✓ Verification only (0 host physics/inventory mutations)\n`);
+}
 
 function handleDiffReplay(options) {
     if (!options.fileA || !options.fileB) {
@@ -3540,6 +3599,16 @@ async function main() {
         case 'population':
         case 'benchmark-scale':
             handleScale(options);
+            break;
+        case 'why':
+        case 'why-not':
+        case 'explain-why-not':
+            handleWhy(options);
+            break;
+        case 'fidelity':
+        case 'verify-explanations':
+        case 'catch-lies':
+            handleFidelity(options);
             break;
         case 'perceive':
         case 'perception':

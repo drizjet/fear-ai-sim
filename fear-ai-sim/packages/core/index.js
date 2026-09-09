@@ -397,6 +397,12 @@ export {
  ScaleHarness,
  SCALE_STEPS
 } from './src/ScaleHarness.js';
+export {
+ WhyNotExplainer
+} from './src/WhyNotExplainer.js';
+export {
+ ExplanationFidelityHarness
+} from './src/ExplanationFidelityHarness.js';
 
 
 

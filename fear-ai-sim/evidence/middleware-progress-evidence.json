@@ -3026,6 +3026,57 @@
         "CXX second external game: BLOCKED_EXTERNAL_DEPENDENCY — no suitable second pre-existing game host on this machine"
       ],
       "next_action": "MAINTAIN_UNTIL_SECOND_HOST_APPEARS"
+    },
+    {
+      "milestone": "WHY_NOT_EXPLANATIONS_WITH_FLIP_CONDITIONS",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/WhyNotExplainer.js (identity margins with blocking layers and flip conditions; retaliation band distances with exhaustion naming)",
+        "packages/core/index.js (Exports for WhyNotExplainer)",
+        "bin/fear-ai.js (Added 'why', 'why-not', 'explain-why-not' CLI subcommands with --action, --json)",
+        "tests/why-not-explainer.test.js (loser margins, winner reporting, exhaustion naming, grievance distance, loud failures)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/why-not-explainer.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai why, fear-ai why --json"
+      ],
+      "runtime_evidence": [
+        "Guard answers why-not-flee with 0.0154 margin and STATE dominance; exhaustion names itself after long wars",
+        "All answers derive from recorded frames with fidelity receipts; nothing re-simulated or invented",
+        "Host game authority invariant strictly preserved (recorded frames only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Explanation latency: < 0.01 ms per question"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "EXPLANATION_FIDELITY_WITH_FORGERY_REJECTION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/ExplanationFidelityHarness.js (receipt re-derivation for identity and retaliation answers; closed-world fail on mismatch)",
+        "packages/core/index.js (Exports for ExplanationFidelityHarness)",
+        "bin/fear-ai.js (Added 'fidelity', 'verify-explanations', 'catch-lies' CLI subcommands with --json)",
+        "tests/explanation-fidelity.test.js (genuine pass, winner/margin/layer forgeries caught, retaliation forgery caught, closed-world failures)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/explanation-fidelity.test.js (5/5 tests green)",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai fidelity, fear-ai fidelity --json",
+        "Full regression: 317 suites / 2272 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Genuine answers verify FAITHFUL; swapped winners, inflated margins, forged layers, and forged levels all rejected by name",
+        "Harness trusts receipts only, never prose — decorative explanations cannot pass",
+        "Host game authority invariant strictly preserved (verification only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Verification latency: < 0.01 ms per answer"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

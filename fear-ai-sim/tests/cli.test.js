@@ -1028,6 +1028,41 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.fit.measuredOnlyUpTo).toBe(100);
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "why" and answers rejected alternatives', async () => {
+        const res = await runCli(['why']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('WHY-NOT EXPLANATIONS');
+        expect(res.stdout).toContain('Why not flee:');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "why --json" and returns explanation payload', async () => {
+        const res = await runCli(['why', '--action', 'rally', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.identityAns.margin).toBeGreaterThan(0);
+        expect(parsed.identityAns.blockingLayer).toMatch(/STATE|IDENTITY/);
+        expect(parsed.audit.isClean).toBe(true);
+    });
+
+    it('executes "fidelity" and catches the forgery', async () => {
+        const res = await runCli(['fidelity']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('EXPLANATION FIDELITY');
+        expect(res.stdout).toContain('Genuine answer:             FAITHFUL');
+        expect(res.stdout).toContain('MARGIN_MISMATCH');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "fidelity --json" and returns verdict payload', async () => {
+        const res = await runCli(['fidelity', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.genuineVerdict.faithful).toBe(true);
+        expect(parsed.forgedVerdict.faithful).toBe(false);
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 
