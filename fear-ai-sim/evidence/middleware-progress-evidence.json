@@ -3189,7 +3189,36 @@
       ],
       "known_gaps": [
         "Name-substring matching undercounts edges where tests alias imports; debt list is an upper bound, not exact",
-        "22 debt pairs and 6 isolated modules remain open as future joint-test work"
+        "22 debt pairs and 6 isolated modules open at graph launch; first paydown below (see DEBT_PAYDOWN_AFFECT_MEMORY_FACTION)"
+      ],
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "DEBT_PAYDOWN_AFFECT_MEMORY_FACTION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "tests/debt-affect-memory-faction.test.js (8 joint tests over pre-existing public APIs; zero source changes to any engine)",
+        "Seams exercised: memory.getTraumaDread into agent tick traumaDread; relationship trust into advisory leaderCalm mapping; faction RAID_CONFIRMED stance into episodic/semantic memory writes; scorer ranking over the joint store"
+      ],
+      "test_evidence": [
+        "tests/debt-affect-memory-faction.test.js (8/8 tests green)",
+        "Full regression: 323 suites / 2313 tests green in a single pass; guardian:check CLEAN",
+        "Coverage debt measured before/after with fear-ai coverage: 22 to 19 pairs; retired AffectiveAgent x LayeredMemorySystem, AffectiveAgent x RelationshipTensorSystem, FactionSystem x LayeredMemorySystem"
+      ],
+      "runtime_evidence": [
+        "Recalled trauma dread (0.5+) strictly amplifies live fear appraisal for identical threat input",
+        "Trusted-leader calming context yields fear less-than-or-equal abandonment context",
+        "RAID_CONFIRMED raises bilateral grievance above 0.5; incident persists as retrievable episodic memory",
+        "Remaining top debt is world-simulation composition (WorldSimulationSystem, CivilizationSimulationSystem, GroupContagionSystem, ContagionGraph pairs) — next joint-test target",
+        "Three mid-build failures, all test-authoring errors on my side: wrong output accessor (raw_fear nests under affective_state), wrong incident type (RAID vs RAID_CONFIRMED), two range edits that deleted construction lines. Engine APIs behaved as documented throughout",
+        "Host game authority invariant strictly preserved (advisory composition only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Debt tests complete in under 1 s"
+      ],
+      "known_gaps": [
+        "19 debt pairs remain; world-simulation cluster is next",
+        "leaderCalm-from-trust mapping lives only in the test, not in a reusable advisory helper — candidate for a small composition module if a second consumer appears"
       ],
       "next_action": "MAINTAIN"
     }
