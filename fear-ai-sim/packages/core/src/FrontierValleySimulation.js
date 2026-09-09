@@ -23,6 +23,7 @@ import { DeterministicRng } from './DeterministicRng.js';
 import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES, INCIDENT_TYPES } from './FactionSystem.js';
 import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
 import { WorldSimulationSystem, ROAMING_PARTY_TYPES } from './WorldSimulationSystem.js';
+import { TradeDependencyEngine } from './TradeDependencyEngine.js';
 
 export const FRONTIER_VALLEY_FACTIONS = Object.freeze({
     SETTLERS: 'SettlersAlliance',
@@ -57,8 +58,12 @@ export class FrontierValleySimulation {
             encounterProximityRadius: 35.0,
             rngSeed: this.rng.intRange(1, 1000000)
         });
-
         this.currentTick = 0;
+        // NEXT-16: host-reported inter-faction trade flow. The host owns
+        // goods and movement; the valley records an advisory ledger so
+        // trade-dependent victims cool their conflict grievances below.
+        this.tradeLedger = [];
+        this.dependency = new TradeDependencyEngine();
         this.macroMetrics = {
             warsDeclared: 0,
             alliancesFormed: 0,
@@ -239,6 +244,52 @@ export class FrontierValleySimulation {
         });
     }
     /**
+     * Report host-observed inter-faction trade flow (NEXT-16). The host
+     * owns goods, wealth, and movement; Fear AI records an advisory
+     * ledger row driving dependency restraint on later conflict
+     * grievances. Unknown factions are rejected: silent ledger growth
+     * from typos would corrupt restraint math.
+     * @param {object} [flow={}]
+     * @param {string} flow.sourceFaction exporter
+     * @param {string} flow.destFaction importer
+     * @param {string} [flow.commodity='food']
+     * @param {number} [flow.amount=1.0]
+     * @returns {object} recorded ledger row
+     */
+    recordValleyTrade(flow = {}) {
+        const vals = Object.values(FRONTIER_VALLEY_FACTIONS);
+        const source = String(flow.sourceFaction ?? '');
+        const dest = String(flow.destFaction ?? '');
+        if (!vals.includes(source) || !vals.includes(dest) || source === dest) {
+            throw new Error('UNKNOWN_TRADE_FACTION');
+        }
+        const amount = typeof flow.amount === 'number' && Number.isFinite(flow.amount) && flow.amount > 0
+            ? flow.amount : 1.0;
+        const row = {
+            tick: this.currentTick,
+            sourceId: source,
+            destId: dest,
+            commodity: String(flow.commodity ?? 'food').slice(0, 64),
+            amount
+        };
+        this.tradeLedger.push(row);
+        return row;
+    }
+
+    /**
+     * Restraint fraction for a victim faction toward a provocateur from
+     * recorded trade dependence (0 when independent). Reuses the
+     * TradeDependencyEngine advisory curve, so ledger math and conflict
+     * math cannot drift apart.
+     */
+    _dependencyRestraint(victimFaction, provocateurFaction) {
+        if (!victimFaction || !provocateurFaction) return 0;
+        return this.dependency.advise(
+            this.tradeLedger, victimFaction, provocateurFaction, 1, this.currentTick
+        ).restraint;
+    }
+
+    /**
      * Maps live encounters to route danger, group threat pressure, and
      * faction incidents. Extracted (NOW-16) so the mapping is unit-testable
      * with synthetic encounters; advance() calls it once per tick.
@@ -259,9 +310,11 @@ export class FrontierValleySimulation {
                 // Combat raises regional danger and increases tension
                 this.civSystem.recordRouteIncident(FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS, 'AMBUSH', 0.25);
                 if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.35);
-                if (gB && gB.drivers) gB.drivers.threatPressure = Math.min(1.0, gB.drivers.threatPressure + 0.35);
                 if (bandit && civilized) {
-                    this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null });
+                    // NEXT-16: a victim that depends on the provocateur's
+                    // faction cools its grudge (grievance scaled, facts kept).
+                    const restraint = this._dependencyRestraint(victim, bandit);
+                    this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null, restraint });
                 }
             } else if (enc.advisoryResolution === 'EXTORTION_PAID') {
                 if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.15);
@@ -269,7 +322,8 @@ export class FrontierValleySimulation {
                 // NOW-16: paid tribute still provokes: the victim pays but
                 // remembers who demanded it (smaller than a raid).
                 if (bandit && civilized) {
-                    this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.PROVOCATION, { encounter: enc.encounterId ?? null });
+                    const restraint = this._dependencyRestraint(victim, bandit);
+                    this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.PROVOCATION, { encounter: enc.encounterId ?? null, restraint });
                 }
             }
         }

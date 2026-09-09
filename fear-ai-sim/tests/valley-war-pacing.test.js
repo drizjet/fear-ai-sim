@@ -204,3 +204,58 @@ describe('NEXT-24: deliberate tribute-scenario fixture', () => {
     expect(a.diagnosticRationale).toBe(b.diagnosticRationale);
   });
 });
+
+describe('NEXT-16: trade-dependency conflict restraint', () => {
+  // A faction that depends on the provocateur treats the same incident
+  // differently: grievance cools, facts (trust/fear/pressure) stand.
+  const S = FRONTIER_VALLEY_FACTIONS.SETTLERS;
+  const B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+  const N = FRONTIER_VALLEY_FACTIONS.NOMADS;
+  function raided(seed = 4242) {
+    const sim = new FrontierValleySimulation({ seed });
+    sim.factionSystem.getBilateralStance(S, B).grievance = 0.0;
+    return sim;
+  }
+  const RAID = [{ encounterId: 'r1', partyAId: 'bandit_warband_1', partyBId: 'caravan_merchant_1', advisoryResolution: 'COMBAT_ENGAGEMENT' }];
+  function feed(sim, source, dest, amount, n) {
+    for (let i = 0; i < n; i++) sim.recordValleyTrade({ sourceFaction: source, destFaction: dest, amount });
+  }
+
+  it('independent victim takes the full raid grievance', () => {
+    const sim = raided();
+    sim._recordEncounterConsequences(RAID);
+    expect(sim.factionSystem.getBilateralStance(S, B).grievance).toBeCloseTo(0.65, 10);
+  });
+
+  it('dependent victim cools the same raid grievance but keeps trust/fear losses', () => {
+    const sim = raided();
+    feed(sim, B, S, 10, 9);
+    feed(sim, N, S, 10, 1);
+    sim._recordEncounterConsequences(RAID);
+    const stance = sim.factionSystem.getBilateralStance(S, B);
+    expect(stance.grievance).toBeCloseTo(0.65 * (1 - 0.9 * 0.7), 10);
+    expect(stance.grievance).toBeLessThan(0.65);
+    // Facts stand: trust and fear move exactly as without restraint.
+    const plain = raided();
+    plain._recordEncounterConsequences(RAID);
+    const ref = plain.factionSystem.getBilateralStance(S, B);
+    expect(stance.trust).toBe(ref.trust);
+    expect(stance.fear).toBe(ref.fear);
+  });
+
+  it('restraint is deterministic per seed and rejects bad factions', () => {
+    const run = () => {
+      const sim = raided(77);
+      feed(sim, B, S, 10, 9);
+      feed(sim, N, S, 10, 1);
+      sim._recordEncounterConsequences(RAID);
+      return sim.factionSystem.getBilateralStance(S, B).grievance;
+    };
+    expect(run()).toBe(run());
+    const sim = raided();
+    expect(() => sim.recordValleyTrade({ sourceFaction: 'GHOST', destFaction: S }))
+      .toThrow('UNKNOWN_TRADE_FACTION');
+    expect(() => sim.recordValleyTrade({ sourceFaction: S, destFaction: S }))
+      .toThrow('UNKNOWN_TRADE_FACTION');
+  });
+});

@@ -226,30 +226,38 @@ export class FactionSystem {
             stanceTargetToSource.incidents.shift();
         }
 
+        // NEXT-16: trade-dependency restraint (details.restraint in [0,1],
+        // default 0). A victim that depends on the provocateur cools its
+        // grudge without denying the facts: grievance increments scale down,
+        // trust/fear/territorial pressure are untouched, and positive-event
+        // forgiveness below never deepens. Zero restraint is bitwise-identical
+        // to the old behavior.
+        const restraint = Math.min(1, Math.max(0, Number(details.restraint) || 0));
+        const grievanceScale = 1 - restraint;
         // Apply immediate impact on target's stance towards source
         switch (type) {
             case INCIDENT_TYPES.BORDER_TRESPASS:
                 stanceTargetToSource.territorialPressure = clamp01(stanceTargetToSource.territorialPressure + 0.35);
-                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.20);
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.20 * grievanceScale);
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.10);
                 stanceTargetToSource.casusBelli = 'Territorial sovereign encroachment';
                 break;
             case INCIDENT_TYPES.PROVOCATION:
-                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.35);
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.35 * grievanceScale);
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.20);
                 stanceTargetToSource.casusBelli = 'Direct diplomatic provocation';
                 break;
             case INCIDENT_TYPES.RAID_CONFIRMED:
                 // NOW-14: a raid is inherently a territorial violation as
                 // well as a grievance (matches BORDER_TRESPASS pressure).
-                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.65);
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.65 * grievanceScale);
                 stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear + 0.40);
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.50);
                 stanceTargetToSource.territorialPressure = clamp01(stanceTargetToSource.territorialPressure + 0.35);
                 stanceTargetToSource.casusBelli = 'Lethal border raid on assets';
                 break;
             case INCIDENT_TYPES.SKIRMISH_CASUALTY:
-                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.55);
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.55 * grievanceScale);
                 stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear + 0.30);
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.40);
                 stanceTargetToSource.casusBelli = 'Hostile skirmish engagement';
@@ -274,7 +282,7 @@ export class FactionSystem {
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust + 0.15);
                 break;
             case INCIDENT_TYPES.TREATY_BROKEN:
-                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.75);
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.75 * grievanceScale);
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.70);
                 stanceTargetToSource.casusBelli = 'Treacherous breach of signed treaty';
                 break;

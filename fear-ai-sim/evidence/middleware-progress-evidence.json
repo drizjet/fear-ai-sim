@@ -4947,6 +4947,28 @@
         "Repair cliff (2 vs 3 events is all-or-nothing) matches the existing threshold design but graded defusal is unexplored"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TRADE_DEPENDENCY_RESTRAINT_NEXT16",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "FactionSystem.recordIncident honors details.restraint (default 0, bitwise-identical when absent): the five grievance-increase lines (0.20/0.35/0.65/0.55/0.75) scale by (1-restraint); trust/fear/territorial-pressure and positive-event forgiveness untouched",
+        "FrontierValleySimulation gains host-reported recordValleyTrade (validated faction pair, ticked ledger rows) plus _dependencyRestraint reusing TradeDependencyEngine.advise with rawLevel 1, so ledger math and conflict math share one curve; RAID and PROVOCATION consequence paths pass the restraint",
+        "Mid-build repair: a test-file-equivalent edit overlap mangled the _recordEncounterConsequences head (lost signature and faction lines); reconstructed from the pre-edit read and verified via parses plus zero-deletion diff"
+      ],
+      "test_evidence": [
+        "NEXT-16 battery 3/3 in valley-war-pacing.test.js: independent victim takes full 0.65; 0.9-dependent victim takes 0.65*(1-0.63)=0.24 with trust/fear identical to baseline; determinism plus faction-contract throws",
+        "Mutation check: the 2 restraint tests fail with source stashed; the independent-baseline test passes both ways by design (pins the unchanged default)",
+        "Full matrix 343/343 (2504 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Restraint is one ledger scan per recorded incident (bounded by trade volume); pacing battery ~1 s; matrix ~49 s"
+      ],
+      "known_gaps": [
+        "Ledger is host-reported only; no autonomous valley trade flow produces rows (caravan movement exists but waypoints carry no faction-ownership semantics, so arrival-derived rows would be invented)",
+        "Restraint applies to valley banditry paths only; SKIRMISH/BORDER/TREATY incident types accept restraint in FactionSystem but no live caller passes it yet"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
