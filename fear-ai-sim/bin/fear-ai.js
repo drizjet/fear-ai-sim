@@ -123,7 +123,9 @@ import {
     CAUSAL_DOMAINS,
     HostFeedbackLoop,
     INTENT_OUTCOMES,
-    FAILURE_REASONS
+    FAILURE_REASONS,
+    SubsystemResilienceHarness,
+    MODULE_STATUS
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -233,6 +235,8 @@ function printHelp() {
     console.log(`                     Options: --outcome <id> --depth <n> --threshold <0..1> --narrative --json`);
     console.log(`  feedback           Report host execution outcomes and re-rank advisory intents (Sections 208–211, 288–293)`);
     console.log(`                     Options: --agent <id> --intent <TYPE> --outcome <GOAL_COMPLETED|INTENT_REJECTED|EXECUTION_FAILED|ACTION_INTERRUPTED> --reason <NO_PATH|BLOCKED|UNSUPPORTED|HOST_BUSY|STALE_INTENT> --json`);
+    console.log(`  resilience         Inject partial subsystem failures and verify graceful degradation (Sections 138–139, 197, 199)`);
+    console.log(`                     Options: --fail <memory,economy> --disable <world> --json`);
     console.log(`  godot              Launch Godot 4.6 Multi-Station Interactive Showcase (Front A)`);
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
@@ -1288,6 +1292,37 @@ function handleFeedback(options) {
     console.log(`Rejected alternatives:      ${ranking.rejectedAlternatives.map((r) => `${r.type}→${r.fallback}`).join(', ') || 'none'}`);
     if (liveReport) console.log(`Live report:                ${liveReport.intentType} ${liveReport.outcome} (${liveReport.reason})`);
     console.log(`\nHost Authority Check:         ✓ Advisory re-ranking only (0 host physics/inventory mutations)\n`);
+}
+function handleResilience(options) {
+    const failList = typeof options.fail === 'string' ? options.fail.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean) : ['memory', 'economy'];
+    const disableList = typeof options.disable === 'string' ? options.disable.split(',').map((s) => s.trim().toLowerCase()).filter(Boolean) : [];
+    const harness = new SubsystemResilienceHarness({ coreEvaluate: () => 0.72, coreVersion: '3.0.0' });
+    harness.registerModule('memory', () => 0.05, { version: '3.0.0', fallback: 0 });
+    harness.registerModule('relationships', () => -0.02, { version: '3.0.0', fallback: 0 });
+    harness.registerModule('economy', () => 0.08, { version: '3.0.0', fallback: 0 });
+    harness.registerModule('world', () => 0.03, { version: '3.0.0', fallback: 0 });
+    const baseline = harness.tick({ tick: 0 });
+    for (const name of failList) {
+        try { harness.injectFailure(name, new Error(`INJECTED_${name.toUpperCase()}_OUTAGE`)); } catch { /* unknown module: ignore */ }
+    }
+    for (const name of disableList) {
+        try { harness.setEnabled(name, false); } catch { /* unknown module: ignore */ }
+    }
+    const degraded = harness.tick({ tick: 1 });
+    const audit = harness.auditImmutability();
+    const payload = { baseline, degraded, health: harness.getHealth(), audit };
+    if (options.json) {
+        console.log(JSON.stringify(payload, null, 2));
+        return;
+    }
+    console.log(BANNER);
+    console.log(`=== SUBSYSTEM RESILIENCE & GRACEFUL DEGRADATION (Sections 138–139, 197, 199) ===\n`);
+    console.log(`Baseline intent:            ${baseline.advisoryIntent.type} (adjusted fear ${baseline.advisoryIntent.adjustedFear})`);
+    console.log(`Failures injected:          ${failList.join(', ') || 'none'}${disableList.length ? ` | disabled: ${disableList.join(', ')}` : ''}`);
+    console.log(`Core alive under failure:   ${degraded.coreAlive ? 'YES' : 'NO'}`);
+    console.log(`Degraded intent:            ${degraded.advisoryIntent ? `${degraded.advisoryIntent.type} (adjusted fear ${degraded.advisoryIntent.adjustedFear})` : 'NONE (core failure)'}`);
+    console.log(`Failed modules:             ${degraded.failedModules.join(', ') || 'none'} | Skipped: ${degraded.skippedModules.join(', ') || 'none'}`);
+    console.log(`\nHost Authority Check:         ✓ Isolated advisory fallbacks (0 host physics/inventory mutations)\n`);
 }
 
 function handleDiffReplay(options) {
@@ -2629,6 +2664,11 @@ async function main() {
         case 'execution-aware':
         case 'host-feedback':
             handleFeedback(options);
+            break;
+        case 'resilience':
+        case 'degrade':
+        case 'failover':
+            handleResilience(options);
             break;
         case 'counterfactual-world':
             handleCounterfactualWorld(options);

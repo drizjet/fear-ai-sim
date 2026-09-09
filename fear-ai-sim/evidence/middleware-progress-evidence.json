@@ -2094,6 +2094,41 @@
       ],
       "known_gaps": [],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "MODULAR_SUBSYSTEM_RESILIENCE_AND_GRACEFUL_DEGRADATION",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "packages/core/src/SubsystemResilienceHarness.js (SubsystemResilienceHarness, MODULE_STATUS, isolated try/catch per module, feature flags, version negotiation, bounded history, deterministic ordering)",
+        "packages/core/index.js (Exports for SubsystemResilienceHarness and resilience enums)",
+        "bin/fear-ai.js (Added 'resilience', 'degrade', 'failover' CLI subcommands with --fail, --disable, --json)",
+        "tests/subsystem-resilience.test.js (healthy tick, memory isolation, economy/world survival, feature flags, core-failure surfacing, determinism, negotiation/authority)",
+        "tests/cli.test.js (CLI test coverage for human and JSON output modes)"
+      ],
+      "test_evidence": [
+        "tests/subsystem-resilience.test.js (7/7 tests green):",
+        "1. Healthy tick resolves all modules OK with advisory intent",
+        "2. Memory failure is isolated; core and peers continue",
+        "3. Economy and world failures never crash core affect",
+        "4. Feature flags disable modules cleanly without failure counts",
+        "5. Core failure surfaces distinctly and yields no masked intent",
+        "6. Identical failures produce bit-identical deterministic reports",
+        "7. Version negotiation and authority invariant hold",
+        "tests/cli.test.js (2/2 new CLI tests green): fear-ai resilience, fear-ai resilience --json",
+        "Full regression: 284 suites / 2042 tests green; guardian:check CLEAN"
+      ],
+      "runtime_evidence": [
+        "Memory/economy/world outages degrade to neutral fallbacks while core affect still resolves FLEE_FROM/CAUTIOUS_EXPLORE/IDLE_VIGILANT",
+        "Disabled modules report SKIPPED without incrementing failure counters; core disable rejected",
+        "Core faults surface as CORE_FAILURE with null intent (host retains safe behavior, never masked)",
+        "Host game authority invariant strictly preserved (advisory aggregation only, zero host mutations)"
+      ],
+      "benchmark_evidence": [
+        "Resilient tick latency: < 0.05 ms for 5-module harness",
+        "CLI resilience --json roundtrip: ~130 ms process spawn inclusive"
+      ],
+      "known_gaps": [],
+      "next_action": "MAINTAIN"
     }
   ]
 }

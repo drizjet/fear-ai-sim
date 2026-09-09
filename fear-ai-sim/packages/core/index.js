@@ -257,6 +257,11 @@ export {
     FAILURE_REASONS,
     DEFAULT_EXECUTION_FALLBACKS
 } from './src/HostFeedbackLoop.js';
+export {
+    SubsystemResilienceHarness,
+    MODULE_STATUS,
+    CANONICAL_OPTIONAL_MODULES
+} from './src/SubsystemResilienceHarness.js';
 
 
 

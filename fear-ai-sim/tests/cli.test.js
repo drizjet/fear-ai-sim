@@ -494,6 +494,24 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(parsed.liveReport.outcome).toBe('EXECUTION_FAILED');
         expect(parsed.audit.isClean).toBe(true);
     });
+
+    it('executes "resilience" and proves core survives injected failures', async () => {
+        const res = await runCli(['resilience']);
+        expect(res.code).toBe(0);
+        expect(res.stdout).toContain('SUBSYSTEM RESILIENCE & GRACEFUL DEGRADATION');
+        expect(res.stdout).toContain('Core alive under failure:   YES');
+        expect(res.stdout).toContain('Host Authority Check:');
+    });
+
+    it('executes "resilience --json" and returns degraded advisory report', async () => {
+        const res = await runCli(['resilience', '--fail', 'memory,economy', '--json']);
+        expect(res.code).toBe(0);
+        const parsed = JSON.parse(res.stdout.trim());
+        expect(parsed.degraded.coreAlive).toBe(true);
+        expect(parsed.degraded.failedModules.sort()).toEqual(['economy', 'memory']);
+        expect(parsed.degraded.advisoryIntent).toBeDefined();
+        expect(parsed.audit.isClean).toBe(true);
+    });
 });
 
 
