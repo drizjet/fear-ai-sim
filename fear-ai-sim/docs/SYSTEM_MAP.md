@@ -255,6 +255,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Awareness Bound NEXT-81:** correction-awareness capped per group (500, oldest-first) plus master-eviction purge. Residual: cap-evicted live awareness can duplicate one trust write past 500 corrections - bounded, documented. Pinned in world-sim battery.
 - **Valley Seed Fix NEXT-82:** valley passed dead rngSeed key so all valleys shared world stream 1337 - one-key fix to seed, draw order unchanged, 119/119 dependent suites green. Adjacent: RoamingBandSystem takes rngSeed too (unexamined). Pinned in valley battery.
 - **Harness Seed Fix NEXT-83:** same dead-key pattern in the collision harness (roaming stream always 1337) - one-key fix, 29/29 dependent suites green. Residual gap: no repo-wide dead-config-key lint. Pinned in collision battery.
+- **Frontier Audit CCI-22:** post-arc batch closed (5 chunks, all green). Red-team hit proven live: host-CONFIRMED beliefs expire like gossip (confirmation never touches receivedTick). 22 ranked candidates (3 NOW, 17 NEXT, 2 LATER). Next: confirmed-belief anchoring (NEXT-84).
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

@@ -6957,6 +6957,55 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_22",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit meets CCI cadence: 5 significant commits since CCI-21 (NEXT-79 aging, NEXT-80 valley-live, NEXT-81 awareness bound, NEXT-82 valley seed fix, NEXT-83 harness seed fix)",
+ "Neutral-trust and seed-fix claims attacked and defended: 73 valley tests unchanged by threading; 119/119 dependent suites green after seed fixes; determinism pinned both directions",
+ "Red-team hit proven live (rt22 probe): a host-CONFIRMED rumor (credibility 1.0) expires after 2001 quiet ticks exactly like unconfirmed gossip - confirmation pins confidence but never touches receivedTick, so vindicated truth is forgotten like hearsay",
+ "No benchmark impact; audit is evidence-only"
+ ],
+ "test_evidence": [
+ "Red-team probe executed against current HEAD, not reasoned: confirmed belief held=false after 2001 ticks",
+ "No benchmark impact; audit is evidence-only"
+ ],
+ "benchmark_evidence": [
+ "Audit completes in minutes; no benchmark impact"
+ ],
+ "known_gaps": [
+ "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+ ],
+ "next_action": "MAINTAIN",
+ "candidates_NOW": [
+ "NEXT-84 confirmed-belief anchoring (red-team hit): confirmation refreshes receivedTick and/or extends the age window so host-vouched truth outlives idle hearsay",
+ "Strict-config audit: sweep all System constructors for silently-ignored keys (two dead-key bugs found by accident, not by method)",
+ "Heard-threat reroute advisory: AMBUSH_HOTSPOT belief biases caravan destination scoring (first non-pressure consequence)"
+ ],
+ "candidates_NEXT": [
+ "Trust-gated correction acceptance: distrusted correctors dent credibility instead of full apply (flagged in 6 milestones)",
+ "truthEventId auto-adjudication: matching host truth events auto-correct without explicit correctRumor calls",
+ "Decay-rate and age-window calibration surface: rate x horizon effects mapped valley-side; timescales picked from behavior not precedent",
+ "Faction-level belief stance: FACTION_BETRAYAL and WAR_DECLARED rumors bias faction grievance and posture",
+ "Conflicting-claim handling: two live rumors asserting opposite claims on one topic have no resolution machinery",
+ "Non-threat topic consequences: FAMINE_ALERT belief feeding scarcity advisory; TRADE_EMBARGO feeding route cost",
+ "Priority-queue spread alternative prototype (carried NEXT-73 gap)",
+ "Upkeep-law production-axis mapping (carried NEXT-72 gap)",
+ "Live rankIntents consumer in NPC decision loops (carried NEXT-66 gap)",
+ "Demand-side economy feedback into caravan and faction choice (carried NEXT-63 gap)",
+ "Migration-emitter registration tripwire (carried NEXT-64 gap)",
+ "Morale versus pressure separation audit: group morale driver against threatPressure (XXXII)",
+ "Godot rumor-correction visualization station (integration front)",
+ "RUMOR_CORRECTED surfacing in explanation and debug traces (CLXXX fidelity for belief change)",
+ "Leader-death by rumor by correction system-collision test (CXXXIX)",
+ "Cap-eviction trust-write duplication fix if ever observed past 500 corrections (currently residual only)",
+ "LATER-21 full-stack 100k and 1m soak gate with correction machinery active"
+ ],
+ "candidates_LATER": [
+ "External-host rumor integration evidence (in-repo valley is not independent adoption)",
+ "Human readability evaluation of cascade behavior (BLOCKED_EXTERNAL_PARTICIPANTS)"
+ ]
  }
  ]
 }
