@@ -796,3 +796,75 @@ describe('NEXT-81: correction-awareness bounds', () => {
         expect(run()).toEqual(run());
     });
 });
+
+describe('NEXT-84: confirmed-belief anchoring', () => {
+    function spreadPair(seed = 42) {
+        const world = new WorldSimulationSystem({ seed });
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 5000, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'army report'
+        });
+        const meet = () => {
+            b.position.x = 105;
+            world._generateSystemicEncounter(a, b, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+            b.position.x = 5000;
+        };
+        meet();
+        return { world, a, b, rumor, meet };
+    }
+    function tick(world, n) {
+        for (let i = 0; i < n; i++) world.tick();
+    }
+    test('1. Confirmation renews the belief as of the correction tick', () => {
+        const { world, a, b, rumor, meet } = spreadPair();
+        tick(world, 1500);
+        world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id });
+        tick(world, 500);
+        meet();
+        // Anchored to adjudication (1500), not delivery (2000).
+        expect(b.knownRumors.get(rumor.id).receivedTick).toBe(1500);
+        tick(world, 1500);
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+        tick(world, 1);
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+    });
+    test('2. Unconfirmed control expires on the same schedule', () => {
+        const { world, b, rumor } = spreadPair();
+        tick(world, 1500);
+        tick(world, 1500);
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+    });
+    test('3. Re-confirmation re-anchors an aging truth', () => {
+        const { world, a, b, rumor, meet } = spreadPair();
+        tick(world, 1500);
+        world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id });
+        meet();
+        tick(world, 1500);
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+        world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id });
+        meet();
+        tick(world, 1500);
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+    });
+    test('4. Anchoring is deterministic for a fixed seed', () => {
+        const run = () => {
+            const { world, a, b, rumor, meet } = spreadPair();
+            tick(world, 1500);
+            world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id });
+            meet();
+            tick(world, 1500);
+            return b.knownRumors.has(rumor.id);
+        };
+        expect(run()).toBe(true);
+        expect(run()).toBe(run());
+    });
+});

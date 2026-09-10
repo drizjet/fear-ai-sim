@@ -451,6 +451,11 @@ export class WorldSimulationSystem {
             const vindicatedWeight = 0.5 + 0.5 * (inst.credibility ?? 0.5);
             inst.credibility = 1.0;
             inst.fidelity = 1.0;
+            // NEXT-84: host-truth adjudication is a reinforcement event, not
+            // just a confidence pin - the belief is renewed as of the
+            // correction tick, so vindicated truth outlives idle hearsay
+            // without becoming immortal (re-confirmation re-anchors).
+            inst.receivedTick = master.correction.tick;
             if (relationshipTensorSystem && group.leaderId && master.sourceEntityId) {
                 const originator = this.groups.get(String(master.sourceEntityId));
                 const originLeader = originator?.leaderId;

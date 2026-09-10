@@ -7006,6 +7006,30 @@
  "External-host rumor integration evidence (in-repo valley is not independent adoption)",
  "Human readability evaluation of cascade behavior (BLOCKED_EXTERNAL_PARTICIPANTS)"
  ]
+ },
+ {
+ "milestone": "CONFIRMED_ANCHOR_NEXT84",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "One-line anchor in the confirmed branch: inst.receivedTick = master.correction.tick - adjudication is a reinforcement event, so vindicated truth is renewed as of truth-time and outlives idle hearsay without becoming immortal (re-confirmation re-anchors)",
+ "Delivery-time refresh (NEXT-79) is preserved underneath: the anchor overwrites it on the transmit stamp, so age counts from adjudication even when the correction arrives encounters later",
+ "Mid-build failures: initial battery forgot corrections spread via encounters (3 failures taught the encounter-graph property again); two range collisions ate tests 2-4 and the test-4 setup line; all repaired with zero unintended removals (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 45/45 (4 new NEXT-84 pins: anchor-to-adjudication with expiry keyed to correction tick, unconfirmed control, re-confirmation, seed determinism)",
+ "First anchor-off probe passed vacuously (same-tick delivery masked it); sharpened test keys expiry to the correction tick and the repeat probe fails exactly test 1; fix restored",
+ "Full matrix 342/343 suites, 2610 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~38s"
+ ],
+ "known_gaps": [
+ "Age window still uniform: confirmed truth gets a renewed window, not a longer one (calibration surface still open)",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
