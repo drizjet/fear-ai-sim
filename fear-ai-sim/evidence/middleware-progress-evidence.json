@@ -6910,6 +6910,30 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "VALLEY_SEED_FIX_NEXT82",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Root cause: valley passed rngSeed (dead key) while WorldSimulationSystem reads config.seed, so every valley shared DeterministicRng stream 1337; the only rng consumer is rumor distortion jitter",
+ "Fix is a one-key change (rngSeed->seed) with identical draw order, preserving valley-level determinism; blast radius audited before editing (single consumer) and confirmed after (119/119 across valley, counterfactual, and world-sim suites)",
+ "Live proof: valley seeds 11/12/11 yield world streams 511588/288151/511588 (varies by seed, stable per seed)"
+ ],
+ "test_evidence": [
+ "Valley battery 27/27 (2 new NEXT-82 pins: stream varies by valley seed plus stable per seed; distortion deterministic per seed)",
+ "Revert-to-rngSeed probe fails exactly the variation pin; fix restored",
+ "Full matrix 342/343 suites, 2605 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~12s; full matrix ~39s"
+ ],
+ "known_gaps": [
+ "RoamingBandSystem also takes rngSeed (different class, unexamined - same dead-key pattern possible there)",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

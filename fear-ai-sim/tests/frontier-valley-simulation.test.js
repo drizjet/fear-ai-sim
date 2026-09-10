@@ -434,3 +434,31 @@ describe('NEXT-80: valley misinformation end to end', () => {
             .toBe(sim.relationshipSystem.getRelationship('lead_caravan_merchant_2', 'lead_bandit_warband').trust);
     });
 });
+
+describe('NEXT-82: valley seed plumbing', () => {
+    test('26. World-system stream varies by valley seed and is stable per seed', () => {
+        const a = new FrontierValleySimulation({ seed: 11 });
+        const b = new FrontierValleySimulation({ seed: 12 });
+        const c = new FrontierValleySimulation({ seed: 11 });
+        expect(a.worldSystem.config.seed).not.toBe(b.worldSystem.config.seed);
+        expect(a.worldSystem.config.seed).toBe(c.worldSystem.config.seed);
+    });
+    test('27. Rumor distortion is deterministic for a fixed valley seed', () => {
+        const run = () => {
+            const sim = new FrontierValleySimulation({ seed: 11 });
+            const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+                sourceEntityId: 'bandit_warband_1', severity: 0.9
+            });
+            sim.advance(150);
+            const sevs = [];
+            for (const g of sim.worldSystem.groups.values()) {
+                const inst = g.knownRumors.get(rumor.id);
+                if (inst) sevs.push(inst.perceivedSeverity);
+            }
+            return sevs;
+        };
+        const first = run();
+        expect(first.length).toBeGreaterThanOrEqual(4);
+        expect(run()).toEqual(first);
+    });
+});

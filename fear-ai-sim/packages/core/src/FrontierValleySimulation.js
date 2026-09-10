@@ -64,7 +64,10 @@ export class FrontierValleySimulation {
         this.civSystem = new CivilizationSimulationSystem();
         this.worldSystem = new WorldSimulationSystem({
             encounterProximityRadius: 35.0,
-            rngSeed: this.rng.intRange(1, 1000000)
+            // NEXT-82: was rngSeed (dead key - WorldSimulationSystem reads
+            // config.seed, so every valley shared stream 1337 for rumor
+            // distortion). Draw order unchanged, preserving valley determinism.
+            seed: this.rng.intRange(1, 1000000)
         });
         this.currentTick = 0;
         // NEXT-16: host-reported inter-faction trade flow. The host owns
