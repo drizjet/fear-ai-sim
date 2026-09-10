@@ -5599,6 +5599,30 @@
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RECOVERY_WINDOW_MAP_NOW35",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "ally_approach_recovery_map.mjs (measurement only, zero behavior change): 12-cell grid (N x threat-ticks x peer distance, 5 A values each, 60-tick post-removal horizon, full sequences not leading-run), per-cell APPROACH ticks/urgency/first-latency plus per-cell A-elasticity; fully deterministic"
+      ],
+      "test_evidence": [
+        "Window length is N-driven (fear persistence): ~18 ticks at N=0.3, ~27 at N=0.6; peer distance is presence-only across the grid",
+        "Inverted low-fear gate: at N=0.3 with brief threat only A=0.3 reaches ANXIOUS (A damps fear via social buffering, higher A stays CALM) — A acts twice with opposite signs, net near-neighbor effect non-monotonic",
+        "Panic-overshoot gate: at N=0.9 with sustained threat low-A agents FLEE first (first approach @32+) while high-A approach from tick 0; the 20.4 elasticity there is gate, not slope",
+        "Mid-regime urgency slope is genuine but shallow (elasticity 0.85-1.84 over the full A range); A .45-vs-.55 differences are sub-unit and unlikely to survive noise",
+        "Regression test in functional-persona-signatures.test.js (battery 9/9): determinism, inverted gate, panic latency gap, peer invariance, mid-regime slope",
+        "Mutation probe (flat APPROACH urgency) fails the pin; restore green",
+        "Rerun bit-identical; full matrix 343/343 (2536 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Full 12-cell map ~0.3 s; persona battery ~1 s; matrix ~53 s"
+      ],
+      "known_gaps": [
+        "Near-neighbor A resolution in the recovery window is untested under noise; sub-unit mid-regime differences are the next falsifier (extends NEXT-8)",
+        "A fear-damping mechanism (social buffering) is inferred from gate behavior, not unit-isolated"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

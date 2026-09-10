@@ -118,3 +118,31 @@ describe('NOW-34: agreeableness elicitation map', () => {
         expect(full.elicitingCount).toBe(27);
     });
 });
+
+describe('NOW-35: APPROACH_ALLY recovery-window map', () => {
+    test('9. Recovery window is N-driven with an inverted low-fear gate and a panic-overshoot gate', async () => {
+        const { runRecoveryMap } = await import('../benchmarks/behavioral-evaluation/ally_approach_recovery_map.mjs');
+        const full = runRecoveryMap();
+        expect(runRecoveryMap()).toEqual(full);
+        expect(full.cellCount).toBe(12);
+        const cell = (n, tt, pd) => full.cells.find(c => c.n === n && c.threatTicks === tt && c.peerDist === pd);
+        // Low fear + brief threat: only the lowest A reaches ANXIOUS at all
+        // (A damps fear via social buffering, so high-A stays CALM).
+        const low = cell(0.3, 3, 2);
+        expect(low.perA['0.3'].approachTicks).toBeGreaterThan(0);
+        for (const a of ['0.45', '0.55', '0.7', '0.85']) {
+            expect(low.perA[a].approachTicks).toBe(0);
+        }
+        // High fear + sustained threat: low-A overshoots into PANIC and
+        // approaches late; high-A approaches from tick 0.
+        const high = cell(0.9, 10, 2);
+        expect(high.perA['0.3'].firstApproach).toBeGreaterThanOrEqual(30);
+        // Peer distance is presence-only across the whole grid.
+        const near = cell(0.6, 10, 2);
+        const far = cell(0.6, 10, 8);
+        expect(far.perA).toEqual(near.perA);
+        // Mid-regime urgency carries a genuine (shallow) A slope.
+        expect(near.perA['0.85'].totalUrgency).toBeGreaterThan(near.perA['0.3'].totalUrgency);
+        expect(near.elasticity).toBeGreaterThan(1.0);
+    });
+});
