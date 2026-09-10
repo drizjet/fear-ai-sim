@@ -111,3 +111,24 @@ describe('Sibling-bound sweep: rumor retention', () => {
         expect([...net.rumors.values()].every(r => r.status === RUMOR_STATUS.ACTIVE)).toBe(true);
     });
 });
+
+describe('NEXT-42: post-cap flood dynamics', () => {
+    test('8. Flood preserves spread, fresh rumors propagate, terminal evicts first', async () => {
+        const tiny = { cap: 500, sizes: [10, 600], spreadTicks: 10 };
+        const { runFloodDynamics } = await import('../benchmarks/behavioral-evaluation/rumor_flood_dynamics.mjs');
+        const a = runFloodDynamics(tiny);
+        // Deterministic modulo wall clock: strip timing before comparing.
+        const strip = (r) => ({ ...r, loads: r.loads.map(({ wallMs, ...rest }) => rest) });
+        expect(strip(runFloodDynamics(tiny))).toEqual(strip(a));
+        const [control, flood] = a.loads;
+        expect(control.retained).toBe(10);
+        expect(flood.retained).toBe(500);
+        // Spread machinery intact under flood: per-rumor throughput holds.
+        expect(flood.heardPerRumor).toBe(control.heardPerRumor);
+        expect(a.freshReached).toBe(true);
+        // Terminal-first eviction with oldest-active FIFO behind it.
+        expect(a.terminalFirst.decayedBefore).toBe(30);
+        expect(a.terminalFirst.decayedRetained).toBe(0);
+        expect(a.terminalFirst.oldestRetained).toBe('new20');
+    });
+});

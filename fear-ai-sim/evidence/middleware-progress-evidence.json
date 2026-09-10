@@ -5814,9 +5814,29 @@
         "A zero_0.30 resolution paradox (regime shift, not signal) is flagged, not decomposed",
         "Zero-reads at the intent level (stuck actuator feedback) vs stimulus level untested"
       ],
-      "next_action": "MAINTAIN"
-    }
-  ]
+ "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "RUMOR_FLOOD_DYN_NEXT42",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "benchmarks/behavioral-evaluation/rumor_flood_dynamics.mjs: post-cap flood characterization (loads 10/600 at cap 500, 10 spread ticks; fresh-rumor propagation; terminal-first eviction probe). Measurement only, zero behavior change"
+ ],
+ "test_evidence": [
+ "information-propagation.test.js test 8 (battery 8/8): determinism modulo wall clock, retained 10/500, per-rumor throughput held at 3.0 under flood (spread intact), fresh-after-flood reaches full 3-hop chain, terminal-first (30 decayed evicted before live, oldest retained new20)",
+ "Mutation probe (active/terminal eviction order inverted) fails tests 7+8; restore green",
+ "Full matrix 343/343 (2546 tests, +1); guardian:check CLEAN; two interim full-run failures traced to pre-existing wall-clock flakes (100ms threshold asserts under parallel load), third run green, clean-tree run green"
+ ],
+ "benchmark_evidence": [
+ "Flood 600->500 retained, 1500 hears/10 ticks (50x control, proportional); benchmark <1 s; matrix ~50 s"
+ ],
+ "known_gaps": [
+ "Per-tick spread work scales with rumor count (O rumor x edges); no per-tick spread budget — flood costs throughput, not correctness",
+ "Flood behavior characterized for chain topology only; dense multi-listener topologies untested"
+ ],
+ "next_action": "MAINTAIN"
+ }
+ ]
 }
 
 

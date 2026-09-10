@@ -210,6 +210,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **War Soak NEXT-22:** 5000-tick × 3-seed valley soak, flag-free and rerun-identical. Setup transient separated (warsDeclared=1 at tick 2 is backstory). Emergent ceiling SKIRMISH, never ATTACK; simmer cools to SHADOW; peaks are clamp artifacts (documented). Pinned in pacing battery.
 - **Near-Neighbor Noise NEXT-8:** 7-trait × stimulus-noise benchmark (Weber σ to 0.20, seeded, rerun-identical). N fine-discrimination collapses by σ=0.20; R/L hold; O resolves only at Δ0.20; A never exceeds provisional. Pinned in persona battery.
 - **Sibling Bound Sweep:** band encounters (1000), coalition logs (200 each), propagation rumors (500, terminal-first + inbox prune), world rumors (500 + group-copy purge) — all write- and restore-enforced. Advisory histories now all carry explicit growth policies.
+- **Flood Dynamics NEXT-42:** post-cap flood (600 injects at cap 500) preserves spread (per-rumor throughput 3.0 held), fresh rumors still traverse full chains, terminal-first eviction with oldest-active FIFO confirmed. No per-tick spread budget (throughput cost, not correctness). Pinned in propagation battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
