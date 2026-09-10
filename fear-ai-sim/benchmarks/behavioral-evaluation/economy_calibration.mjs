@@ -76,13 +76,18 @@ export function runSatiationBoundary(options = {}) {
         const sim = new FrontierValleySimulation({ seed });
         mut(sim);
         const deltas = [];
+        const volumes = [];
         let prev = 0;
+        let prevVol = 0;
+        const r1 = (v) => Math.round(v * 100) / 100;
         for (let t = 0; t < ticks; t += legEvery) {
             sim.advance(Math.min(legEvery, ticks - t));
             deltas.push(sim.macroMetrics.deliveries - prev);
             prev = sim.macroMetrics.deliveries;
+            volumes.push(r1(sim.macroMetrics.deliveredVolume - prevVol));
+            prevVol = sim.macroMetrics.deliveredVolume;
         }
-        return { deltas, oakFood: Math.round(sim.civSystem.nodes.get('Oakhaven').market.food * 10) / 10 };
+        return { deltas, volumes, oakFood: Math.round(sim.civSystem.nodes.get('Oakhaven').market.food * 10) / 10 };
     }
     const noUpkeep = (s) => { for (const b of Object.values(s.upkeep)) for (const k of Object.keys(b)) b[k] = 0; };
     const tinyCaps = (s) => { s.storageCaps.Oakhaven.food = 2; s.storageCaps.Oakhaven.timber = 2; };
@@ -95,7 +100,8 @@ export function runSatiationBoundary(options = {}) {
 }
 export function printSatiationBoundary(r) {
     console.log('=== NEXT-67: satiation boundary ===');
-    console.log(`  upkeepZero legs=${r.upkeepZero.deltas} oakFood=${r.upkeepZero.oakFood}`);
-    console.log(`  upkeepNormal legs=${r.upkeepNormal.deltas} oakFood=${r.upkeepNormal.oakFood}`);
-    console.log(`  tinyCaps legs=${r.tinyCaps.deltas} oakFood=${r.tinyCaps.oakFood}`);
+    for (const [k, v] of Object.entries(r)) {
+        if (k === 'config') continue;
+        console.log(`  ${k} legs=${v.deltas} vol=${v.volumes} oakFood=${v.oakFood}`);
+    }
 }

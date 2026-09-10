@@ -6375,6 +6375,27 @@
  "Interplay mapped at one threat geometry (dist 10, int 0.6) and one seed; band-edge geometries (PANIC vs ANXIOUS transitions) unmapped"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "VOLUME_WEIGHT_NEXT62",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FrontierValleySimulation: deliveredVolume macro metric incremented by moved per settle plus snapshot parity; satiation runner gains per-leg volume deltas"
+ ],
+ "test_evidence": [
+ "Volume divorce quantified at 20k: normal counts flat 88-89 while volume sags 156->120 (-23%) as the sink fills; upkeep-0 volume dies 156/24/0/0; tiny caps converge to ~normal steady volume (119-121 vs 120) — steady state is upkeep-limited, not cap-limited",
+ "frontier-valley-simulation.test.js +1 (battery 18/18, 2x green) with rerun-equality and exact volume legs",
+ "Mutation probe (volume increment zeroed) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2570 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Volume map ~1 s; matrix ~43 s"
+ ],
+ "known_gaps": [
+ "Per-loop moved-amount distribution (crumb vs full deliveries) unmapped — legs aggregate volume only",
+ "Upkeep-rate vs inflow-rate steady-state law (which rate binds at which ratio) not yet expressed as a formula"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

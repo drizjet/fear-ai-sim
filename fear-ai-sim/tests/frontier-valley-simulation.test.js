@@ -208,6 +208,25 @@ describe('NEXT-67: satiation boundary at long horizon', () => {
     });
 });
 
+describe('NEXT-62: volume-weighted calibration', () => {
+    test('18. Counts stay flat while volume sags; tiny caps converge near normal', async () => {
+        const { runSatiationBoundary } = await import('../benchmarks/behavioral-evaluation/economy_calibration.mjs');
+        const grid = { seed: 11, ticks: 20000, legEvery: 5000 };
+        const a = runSatiationBoundary(grid);
+        expect(runSatiationBoundary(grid)).toEqual(a);
+        // Normal run: counts flat 88-89 while volume sags 156->120 (-23%)
+        // as the sink fills — the count metric is blind to throughput decay.
+        expect(a.upkeepNormal.volumes).toEqual([156, 157.5, 149.14, 120.02]);
+        expect(a.upkeepNormal.volumes[3]).toBeLessThan(a.upkeepNormal.volumes[0]);
+        // Upkeep-0: volume dies with counts (156/24/0/0).
+        expect(a.upkeepZero.volumes).toEqual([156, 24, 0, 0]);
+        // Tiny caps reach ~normal steady volume: the system is upkeep-limited
+        // in steady state, not cap-limited.
+        expect(a.tinyCaps.volumes).toEqual([32.18, 120.7, 120.49, 119.33]);
+        expect(a.tinyCaps.volumes[3]).toBeGreaterThan(a.upkeepNormal.volumes[3] * 0.9);
+    });
+});
+
 describe('NEXT-43: setup-sweep outcome knobs', () => {
     test('10. Overrides apply, reject unknowns, and split outcome classes', async () => {
         const { runSetupSweep, setupSweepDigest } = await import('../benchmarks/behavioral-evaluation/valley_setup_sweep.mjs');

@@ -83,6 +83,10 @@ export class FrontierValleySimulation {
             panicIncidents: 0,
             totalEncounters: 0,
             deliveries: 0,
+            // NEXT-62: moved volume alongside event counts. Counts measure
+            // loop liveness; volume measures throughput (they divorce when
+            // sinks throttle to crumbs).
+            deliveredVolume: 0,
             fearSum: 0.0,
             fearSamples: 0
         };
@@ -412,6 +416,7 @@ export class FrontierValleySimulation {
         from.market[run.commodity] = available - moved;
         to.market[run.commodity] = destQty + moved;
         this.macroMetrics.deliveries = (this.macroMetrics.deliveries ?? 0) + 1;
+        this.macroMetrics.deliveredVolume = (this.macroMetrics.deliveredVolume ?? 0) + moved;
         this.worldSystem.recordHistoryEvent('TRADE_DELIVERY', {
             primaryId: group.id,
             secondaryId: run.toSettlement,
@@ -730,6 +735,7 @@ export class FrontierValleySimulation {
             panicIncidents: this.macroMetrics.panicIncidents,
             totalEncounters: this.macroMetrics.totalEncounters,
             deliveries: this.macroMetrics.deliveries ?? 0,
+            deliveredVolume: this.macroMetrics.deliveredVolume ?? 0,
             meanPopulationFear: Number(meanFear.toFixed(4)),
             settlements: {
                 northwatch: this.settlements.get(FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH)?.population ?? 0,

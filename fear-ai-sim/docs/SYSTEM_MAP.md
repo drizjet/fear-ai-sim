@@ -233,6 +233,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Misorder Decomposition NEXT-68:** zero misorders are 91% below-gate tie-flips (coin rates); straddles stay perfect, above-gate residue 3. Runner now tallies per-base. Pinned in persona battery.
 - **Sweep Seeds NEXT-69:** FROZEN_SEEDS actually seed sweep agents now (were counter theater); verdicts identical to 4dp. Sensitivity probes negative — architectural hygiene, honestly reported. Pinned in persona battery.
 - **Prosocial Interplay NEXT-70:** WARN-during plus APPROACH-after are temporal modes, never competitors — post-threat approach urgency orders by A for all agents. Pinned in persona battery.
+- **Volume Weighting NEXT-62:** deliveredVolume metric added — counts flat while volume sags 23% as sinks fill; tiny caps converge near normal (upkeep-limited steady state). Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
