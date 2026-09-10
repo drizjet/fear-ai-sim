@@ -81,6 +81,11 @@ export class CoalitionDiplomacyEngine {
      * optional host-reported trade ledger (context.tradeLedger, rows
      * {sourceId, destId, commodity, amount, tick}). Absent ledger means
      * independence means zero restraint: existing callers are untouched.
+     * NOW-33 clock contract: staleness is relative to the READER's clock
+     * (this engine's currentTick by default). A ledger from a foreign
+     * clock must arrive with context.currentTick on the ROWS' basis, or
+     * rows expire against the wrong clock: a fresh reader over-includes
+     * (nothing is stale to a newborn), a long-ticked reader under-includes.
      */
     _restraintFromLedger(grudgeHolder, provocateur, context = {}) {
         const ledger = context.tradeLedger;

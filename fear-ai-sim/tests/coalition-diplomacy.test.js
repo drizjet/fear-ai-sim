@@ -282,3 +282,37 @@ describe('NEXT-29: trade-dependency restraint in coalition incidents', () => {
         expect(cooled.trust).toBe(plain.trust);
     });
 });
+
+describe('NOW-33: ledger-clock contract for coalition restraint', () => {
+    // Staleness is relative to the reader's clock. A foreign ledger must
+    // arrive with context.currentTick on the ROWS' basis (NOW-33 contract).
+    function rowsAt(tick) {
+        const rows = [];
+        for (let i = 0; i < 9; i++) {
+            rows.push({ tick, sourceId: 'faction_A', destId: 'faction_B', commodity: 'grain', amount: 10 });
+        }
+        rows.push({ tick, sourceId: 'faction_C', destId: 'faction_B', commodity: 'grain', amount: 10 });
+        return rows;
+    }
+
+    it('absent ledger means zero restraint', () => {
+        const engine = new CoalitionDiplomacyEngine({ seed: 1 });
+        expect(engine._restraintFromLedger('faction_B', 'faction_A', {})).toBe(0);
+        expect(engine._restraintFromLedger('faction_B', 'faction_A', { tradeLedger: [] })).toBe(0);
+    });
+
+    it('fresh reader over-includes, ticked reader expires, bridged reader restores', () => {
+        const rows = rowsAt(500);
+        const fresh = new CoalitionDiplomacyEngine({ seed: 1 });
+        // Nothing is stale to a newborn: full restraint.
+        expect(fresh._restraintFromLedger('faction_B', 'faction_A', { tradeLedger: rows }))
+            .toBeCloseTo(0.9 * 0.7, 10);
+        // Same rows against an old clock: expired to zero.
+        const old = new CoalitionDiplomacyEngine({ seed: 1 });
+        old.tick(800);
+        expect(old._restraintFromLedger('faction_B', 'faction_A', { tradeLedger: rows })).toBe(0);
+        // Bridging with the rows' own basis restores full restraint.
+        expect(old._restraintFromLedger('faction_B', 'faction_A', { tradeLedger: rows, currentTick: 500 }))
+            .toBeCloseTo(0.9 * 0.7, 10);
+    });
+});

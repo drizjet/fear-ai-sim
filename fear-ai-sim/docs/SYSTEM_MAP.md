@@ -191,6 +191,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Social Demo NOW-32:** Python reference demo gains Phase 5 fracture-and-repair over the live social endpoint; adapter client gains `report_social_event`. Verified against a real loopback server.
 - **Tick Audit NEXT-36:** surveyed all Infinity/window filters — NOW-31 was the only bad default; composed-call default basis pinned. Rule: non-finite basis means unbounded.
 - **Frontier Audit CCI-13:** 27 ranked candidates (1 NOW, 22 NEXT, 4 LATER); all CCI-12 NOW items plus NEXT-36 closed. Next: ledger-clock alignment for coalition restraint (NOW-33, probed cross-clock inconsistency).
+- **Ledger Clock NOW-33:** staleness is relative to the reader's clock (documented + pinned); foreign ledgers must bridge with the rows' tick basis. No behavior change.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

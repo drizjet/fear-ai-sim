@@ -5277,7 +5277,26 @@
       "known_gaps": [
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
-      "next_action": "LEDGER_CLOCK_NOW33"
+      "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "LEDGER_CLOCK_NOW33",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "No behavior change: contract chunk. Staleness is relative to the reader's clock by design (a newborn reader has seen nothing go stale); the fix is contractual, not mechanical: foreign ledgers must arrive with context.currentTick on the rows' basis",
+        "Helper doc now states the rule plus both failure directions (fresh over-includes, long-ticked under-includes)"
+      ],
+      "test_evidence": [
+        "NOW-33 battery 2/2 in coalition-diplomacy.test.js (battery 10/10): absent ledger is zero; fresh reader restores full 0.63 restraint on tick-500 rows, ticked-to-800 reader expires them to zero, explicit currentTick 500 bridges back to 0.63",
+        "Full matrix 343/343 (2518 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Doc plus two unit tests; coalition battery ~1 s; matrix ~37 s"
+      ],
+      "known_gaps": [
+        "No live path shares ledgers across clocks yet (valley keeps its own); the contract activates when the first bridge is built, which is also when it will need re-verification"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
