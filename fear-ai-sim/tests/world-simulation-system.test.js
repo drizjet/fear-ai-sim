@@ -749,3 +749,50 @@ describe('NEXT-79: belief aging and forgetting', () => {
         expect(run()).toBe(run());
     });
 });
+
+describe('NEXT-81: correction-awareness bounds', () => {
+    function awareWorld(config = {}) {
+        const world = new WorldSimulationSystem({ seed: 42, ...config });
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        return { world, a };
+    }
+    test('1. Awareness caps oldest-first at the configured bound', () => {
+        const { world, a } = awareWorld({ maxKnownCorrections: 3 });
+        const ids = [];
+        for (let i = 0; i < 5; i++) {
+            const r = world.createRumor('WAR_DECLARED', { severity: 0.5 + i * 0.1 });
+            ids.push(r.id);
+            world.correctRumor(r.id, { confirmed: false, byGroupId: a.id });
+        }
+        expect(a.knownCorrections.size).toBe(3);
+        expect([...a.knownCorrections]).toEqual(ids.slice(2));
+        expect(a.knownCorrections.has(ids[0])).toBe(false);
+    });
+    test('2. Master eviction purges awareness of the evicted rumor', () => {
+        const { world, a } = awareWorld({ maxRumors: 3 });
+        const r1 = world.createRumor('WAR_DECLARED', { severity: 0.9 });
+        world.createRumor('WAR_DECLARED', { severity: 0.8 });
+        world.createRumor('WAR_DECLARED', { severity: 0.7 });
+        world.correctRumor(r1.id, { confirmed: false, byGroupId: a.id });
+        expect(a.knownCorrections.has(r1.id)).toBe(true);
+        world.createRumor('WAR_DECLARED', { severity: 0.6 });
+        world.createRumor('WAR_DECLARED', { severity: 0.5 });
+        expect(world.rumors.has(r1.id)).toBe(false);
+        expect(a.knownCorrections.has(r1.id)).toBe(false);
+    });
+    test('3. Bounding is deterministic for a fixed seed', () => {
+        const run = () => {
+            const { world, a } = awareWorld({ maxKnownCorrections: 3 });
+            for (let i = 0; i < 5; i++) {
+                const r = world.createRumor('WAR_DECLARED', { severity: 0.5 });
+                world.correctRumor(r.id, { confirmed: true, byGroupId: a.id });
+            }
+            return [...a.knownCorrections];
+        };
+        expect(run()).toEqual(run());
+    });
+});

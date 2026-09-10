@@ -6885,6 +6885,31 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "AWARENESS_BOUND_NEXT81",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "maxKnownCorrections 500 per-group hard backstop in _applyCorrection, oldest-first via Set insertion order (mirrors the NEXT-38 ledger pattern)",
+ "Master eviction now purges correction awareness alongside instance copies in _enforceRumorBound (awareness of an evicted master is meaningless)",
+ "Residual honesty: cap-evicted live awareness can re-apply on re-hearing including a repeat trust write; reachable only past 500 distinct corrections per group, bounded and small - documented, not fixed"
+ ],
+ "test_evidence": [
+ "World-simulation battery 41/41 (3 new NEXT-81 pins: oldest-first cap, eviction purge, seed determinism)",
+ "Cap-off mutation probe fails exactly the cap pin; fix restored",
+ "Full matrix 342/343 suites, 2603 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~42s"
+ ],
+ "known_gaps": [
+ "Cap-evicted live awareness may duplicate a trust write on re-hearing past 500 corrections per group (residual, bounded)",
+ "Valley rngSeed/seed observation still open (needs determinism audit)",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

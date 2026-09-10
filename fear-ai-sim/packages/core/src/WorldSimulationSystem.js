@@ -89,6 +89,7 @@ export const DEFAULT_WORLD_CONFIG = Object.freeze({
     rumorDistortionRate: 0.10,       // Max random distortion in perceived severity per hop
     threatPressureDecayRate: 0.001,  // NEXT-78: per-tick linear alarm fade (combat +0.35 clears in ~350 quiet ticks)
     maxBeliefAgeTicks: 2000,        // NEXT-79: unreinforced rumor instances expire (~6x pressure-clear; pending calibration)
+    maxKnownCorrections: 500,       // NEXT-81: per-group correction-awareness hard backstop (oldest-first)
     maxHistoryEvents: 1000,          // Bounded ring buffer for world history
     maxRumors: 500,                  // Sibling-bound sweep: oldest-origin eviction + group-copy purge
     seed: 1337
@@ -293,6 +294,8 @@ export class WorldSimulationSystem {
             this.rumors.delete(oldestId);
             for (const group of this.groups.values()) {
                 group.knownRumors?.delete(oldestId);
+                // NEXT-81: awareness of an evicted master is meaningless.
+                group.knownCorrections?.delete(oldestId);
             }
         }
     }
@@ -434,6 +437,14 @@ export class WorldSimulationSystem {
     _applyCorrection(group, master, { relationshipTensorSystem = null } = {}) {
         if (!group || !master?.correction) return 'no-correction';
         if (group.knownCorrections) group.knownCorrections.add(master.id);
+        // NEXT-81: hard backstop mirrors the NEXT-38 ledger pattern. Sets
+        // iterate insertion-first, so eviction drops oldest awareness first.
+        if (group.knownCorrections) {
+            const awareCap = this.config.maxKnownCorrections ?? 500;
+            while (group.knownCorrections.size > awareCap) {
+                group.knownCorrections.delete(group.knownCorrections.values().next().value);
+            }
+        }
         const inst = group.knownRumors?.get(master.id);
         if (!inst) return 'unheard';
         if (master.correction.confirmed) {
