@@ -5437,6 +5437,28 @@
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "A_ELICITATION_MAP_NOW34",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "benchmarks/behavioral-evaluation/agreeableness_elicitation_map.mjs (measurement only, zero behavior change): 72-scenario grid (A x threat distance x intensity x peers x leaderCalm, 20 ticks/cell), per-cell modal intent, prosocial urgency, per-scenario A-elasticity and elicitation threshold; fully deterministic"
+      ],
+      "test_evidence": [
+        "Map result: 27/72 scenarios elicit, ALL at thresholdA exactly 0.70 (the agreeableness > 0.65 code gate) with peers present and a visible threat; silence holds exactly where the gate cannot open (peerless or threat-absent); APPROACH_ALLY fires nowhere in the grid; above-threshold urgency slope is shallow (9.06 at A0.70 vs 9.33 at A0.85)",
+        "Reframe of NEXT-8 A finding: provisional-only A is expected behavior for a threshold gate, not a defect; the A signature resolves only pairs straddling 0.65, and no retune was made (measurement-first per anti-target-moving rule)",
+        "Regression test in functional-persona-signatures.test.js (battery 8/8): dead-zone exactness at A .45/.55, runner determinism, uniform-gate regime assertions, 27 eliciting count",
+        "Mutation probe: gate 0.65 -> 0.99 fails the pin; revert green",
+        "Rerun bit-identical; full matrix 343/343 (2529 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Full 72-scenario map ~0.3 s; persona battery ~1 s; matrix ~34 s"
+      ],
+      "known_gaps": [
+        "APPROACH_ALLY elicitation regime (ANXIOUS band, peers, no visible threat) found nowhere in this grid; its live regime is unmapped",
+        "Above-threshold urgency slope is shallow by construction (0.65 + 0.15A); whether that slope carries usable A information is untested"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

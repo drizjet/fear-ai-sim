@@ -94,3 +94,27 @@ describe('NEXT-8: near-neighbor discrimination under noise', () => {
         expect(n.perSigma['sigma_0.20'].deltaStar).toBeNull();
     });
 });
+
+describe('NOW-34: agreeableness elicitation map', () => {
+    test('8. Dead zone below the WARN gate is exact, gate is uniform', async () => {
+        const { runElicitationMap, elicitationCell } = await import('../benchmarks/behavioral-evaluation/agreeableness_elicitation_map.mjs');
+        // Base signature regime: both near-neighbor arms elicit nothing.
+        expect(elicitationCell(0.45, 8, 0.6, 1, 0.6).prosocialUrgency).toBe(0);
+        expect(elicitationCell(0.55, 8, 0.6, 1, 0.6).prosocialUrgency).toBe(0);
+        const full = runElicitationMap();
+        expect(runElicitationMap()).toEqual(full);
+        expect(full.scenarioCount).toBe(72);
+        for (const s of full.scenarios) {
+            if (s.thresholdA === null) {
+                // Silence holds exactly where the gate cannot open: no peers
+                // to warn, or no visible threat to be anxious about.
+                expect(s.peerCount === 0 || s.threatDist === null).toBe(true);
+            } else {
+                expect(s.thresholdA).toBe(0.7);
+                expect(s.peerCount).toBe(1);
+                expect(s.threatDist).not.toBeNull();
+            }
+        }
+        expect(full.elicitingCount).toBe(27);
+    });
+});
