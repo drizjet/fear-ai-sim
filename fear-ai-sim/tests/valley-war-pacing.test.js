@@ -369,3 +369,29 @@ describe('NEXT-38: bounded valley trade ledger', () => {
     expect(sim.tradeLedger[0].commodity).toBe('g200');
   });
 });
+
+describe('NEXT-22: war-degeneracy soak', () => {
+  it('5000-tick soak is flag-free, deterministic, and simmers without locking', async () => {
+    const { runWarSoak, soakDigest } = await import('../benchmarks/behavioral-evaluation/valley_war_degeneracy_soak.mjs');
+    const first = runWarSoak();
+    const second = runWarSoak();
+    expect(soakDigest(first)).toBe(soakDigest(second));
+    expect(first.runs.length).toBe(3);
+    for (const r of first.runs) {
+      expect(r.flags).toEqual([]);
+      expect(r.finalTick).toBe(5000);
+      // Emergent ceiling: SKIRMISH is reached, ATTACK/WAR never lock.
+      const sb = r.visitedStages['SettlersAlliance>ShadowfangBandits'];
+      expect(sb).toContain(ESCALATION_STAGES.SKIRMISH);
+      expect(sb).not.toContain(ESCALATION_STAGES.ATTACK);
+      expect(r.allWarLocked).toBe(false);
+      // Emergent war exists (post-transient), but the simmer always cools.
+      expect(r.firstEmergentWarTick).toBeGreaterThanOrEqual(500);
+      expect(r.finalStages['SettlersAlliance>ShadowfangBandits']).toBe(ESCALATION_STAGES.SHADOW);
+      // Advisory state stays within caps over the full horizon.
+      expect(r.tradeRows).toBeLessThanOrEqual(1000);
+      expect(r.historyRows).toBeLessThanOrEqual(1000);
+      expect(r.rumors).toBeLessThanOrEqual(500);
+    }
+  });
+});

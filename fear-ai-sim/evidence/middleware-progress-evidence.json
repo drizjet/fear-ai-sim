@@ -5362,6 +5362,29 @@
         "N=50 per cell; provisional cells need multi-scenario replication before freezing per house Bonferroni rule"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "WAR_DEGENERACY_SOAK_NEXT22",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "benchmarks/behavioral-evaluation/valley_war_degeneracy_soak.mjs: 5000-tick valley runs x 3 frozen seeds, 10-tick sampling, setup-transient separation at tick 500 (setup hard-codes Settlers>Bandits grievance 0.80, so warsDeclared=1 at tick 2 is backstory, not emergence); emergent visitation, max pressure, first emergent SKIRMISH+, degeneracy flags (ALL_WAR_LOCKED, GRIEVANCE_PINNED_MAX, NON_FINITE_STATE, ADVISORY_STATE_OVER_CAP)"
+      ],
+      "test_evidence": [
+        "All seeds flag-free and rerun-identical: simmer converges to SHADOW/TRADE/UNAWARE; emergent ceiling is SKIRMISH (visited post-500, first at ticks 730-860), ATTACK never reached (0.75 pressure needs multi-channel stacking by design); grievance bursts to clamp ceiling then fully decays; HighlandPass danger pinned 1.0 under chronic combat (decay half-life 80 vs +0.25 spikes); history ledger rides its 1000 cap; trade/rumors stay 0 (no autonomous generation: carried NEXT-33)",
+        "Regression test in valley-war-pacing.test.js (battery 20/20): full 3-seed soak flag-free plus digest determinism, SKIRMISH-visited/ATTACK-absent ceiling, post-transient first-war window, SHADOW final, caps held",
+        "Mutation probe: gating SKIRMISH off (0.60 -> 0.99) fails 3 pacing tests including the soak pin; revert green",
+        "Full matrix 343/343 (2528 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "15000-tick full grid ~0.3 s; pacing battery ~2 s; matrix ~42 s"
+      ],
+      "known_gaps": [
+        "Peak stats (0.9885 grievance, 0.6913 pressure) are clamp-ceiling artifacts, documented in-script, not emergent magnitudes",
+        "Seed trajectories diverge (487/500 samples) but coarse attractor summaries coincide; CCX multi-outcome distribution analysis still open",
+        "HighlandPass permanently pinned is scenario-geography, unjudged: chronic combat vs too-sticky danger is a design question, not a bug verdict",
+        "No ATTACK in 15000 ticks: ceiling is consistent with XLII proportionality but ATTACK-path coverage relies on unit scenarios, not the valley"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
