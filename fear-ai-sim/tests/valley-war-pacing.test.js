@@ -462,3 +462,44 @@ describe('NEXT-44: retaliatory grievance fuel', () => {
     expect(visited).not.toContain(ESCALATION_STAGES.ATTACK);
   });
 });
+
+describe('NEXT-48: mauling-vs-scuffle differentiation', () => {
+  it('scales fight-back fuel monotonically with victim strength', async () => {
+    const { runMaulingScuffle } = await import('../benchmarks/behavioral-evaluation/mauling_scuffle_differentiation.mjs');
+    const a = runMaulingScuffle();
+    expect(runMaulingScuffle()).toEqual(a);
+    const [scuffle, mid, caravan, mauling] = a.rows;
+    // Exact differentiated magnitudes (warband strength 0.6).
+    expect(scuffle.griev).toBeCloseTo(0.1375, 4);
+    expect(mid.griev).toBeCloseTo(0.4125, 4);
+    expect(caravan.griev).toBeCloseTo(0.5125, 4);
+    expect(mauling.griev).toBeCloseTo(0.55, 4);
+    // Strict monotone ordering: scuffles fuel less than maulings.
+    expect(scuffle.griev).toBeLessThan(mid.griev);
+    expect(mid.griev).toBeLessThan(caravan.griev);
+    expect(caravan.griev).toBeLessThan(mauling.griev);
+    expect(scuffle.fear).toBeLessThan(mauling.fear);
+  });
+  it('defaults to full severity when callers pass nothing unusable', async () => {
+    const Fmod = await import('../packages/core/src/FactionSystem.js');
+    const FactionSystem = Fmod.default;
+    const INCIDENT_TYPES = Fmod.INCIDENT_TYPES;
+    const mk = () => {
+      const fs = new FactionSystem();
+      fs.registerFaction({ id: 'AX' });
+      fs.registerFaction({ id: 'BX' });
+      return fs;
+    };
+    const fire = (fs, sev) => {
+      const details = sev === undefined ? {} : { severity: sev };
+      fs.recordIncident('AX', 'BX', INCIDENT_TYPES.SKIRMISH_CASUALTY, details);
+      return fs.getBilateralStance('BX', 'AX').grievance;
+    };
+    // Missing, NaN, and out-of-range severities behave sanely.
+    expect(fire(mk())).toBeCloseTo(0.55, 4);
+    expect(fire(mk(), NaN)).toBeCloseTo(0.55, 4);
+    expect(fire(mk(), 0)).toBeCloseTo(0, 4);
+    expect(fire(mk(), 9)).toBeCloseTo(0.55, 4);
+    expect(fire(mk(), 0.5)).toBeCloseTo(0.275, 4);
+  });
+});

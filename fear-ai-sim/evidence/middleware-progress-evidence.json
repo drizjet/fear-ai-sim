@@ -5835,6 +5835,30 @@
  "Flood behavior characterized for chain topology only; dense multi-listener topologies untested"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "MAULING_SCUFFLE_NEXT48",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FactionSystem SKIRMISH_CASUALTY scales grievance/fear/trust-loss by details.severity in [0,1] (default 1, NaN-safe via Number.isFinite: bitwise-identical old behavior; pre-existing callers passing severity 1.0 unaffected, 0.9 famine-harness callsite 10% reduced within loose bounds)",
+ "FrontierValleySimulation ambush fight-back derives severity from victim strength share (parity-or-better 1.0, unarmed floor 0.25); border-skirmish symmetric path unchanged",
+ "benchmarks/behavioral-evaluation/mauling_scuffle_differentiation.mjs: severity table across victim strengths (measurement helper)"
+ ],
+ "test_evidence": [
+ "Probe measured the gap: caravan (0.5) and patrol (0.7) victims fueled identical 0.55/0.30 before the change",
+ "valley-war-pacing.test.js +2 (battery 26/26): monotone severity table (0.1375/0.4125/0.5125/0.55), strict ordering, severity-default edge cases (missing/NaN->full, 0->zero, 9->clamped)",
+ "Mutation probe (sev forced 1) fails exactly the 2 new tests; restore green",
+ "NEXT-44 reverse ladder re-verified (MOBILIZE visited, no ATTACK over 5000 ticks); collision battery green; full matrix 343/343 (2548 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Severity table deterministic rerun-identical; pacing battery ~3 s; matrix ~42 s"
+ ],
+ "known_gaps": [
+ "Severity floor 0.25 and parity knee 0.5 are judgment calls, not calibrated against designer intent",
+ "Border-skirmish symmetric casualties remain undifferentiated (mutual war-deepening by design, revisit if one-sided massacres need distinct fuel)",
+ "Live-sim caravan default strength 0.5 sits near parity, so live differentiation is modest; true scuffles need genuinely weak victims"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

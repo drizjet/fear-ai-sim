@@ -265,9 +265,16 @@ export class FactionSystem {
                 stanceTargetToSource.casusBelli = 'Lethal border raid on assets';
                 break;
             case INCIDENT_TYPES.SKIRMISH_CASUALTY:
-                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.55 * grievanceScale);
-                stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear + 0.30);
-                stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.40);
+                // NEXT-48: mauling-vs-scuffle differentiation. Callers may
+                // pass details.severity in [0,1] (default 1, NaN-safe):
+                // a mauling inflicts full grievance/fear/trust-loss, a
+                // scuffle only a fraction. Default is identical to the old
+                // undifferentiated behavior.
+                const rawSev = Number(details.severity);
+                const sev = Number.isFinite(rawSev) ? clamp01(rawSev) : 1;
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.55 * sev * grievanceScale);
+                stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear + 0.30 * sev);
+                stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.40 * sev);
                 stanceTargetToSource.casusBelli = 'Hostile skirmish engagement';
                 break;
             case INCIDENT_TYPES.TRADE_ESTABLISHED:

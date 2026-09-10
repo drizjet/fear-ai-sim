@@ -482,8 +482,20 @@ export class FrontierValleySimulation {
                     this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null, restraint });
                     // NEXT-44: the victim fought back, so the raiders bled
                     // too. Symmetric restraint: dependence cools both ways.
+                    // NEXT-48: mauling-vs-scuffle differentiation. The
+                    // fight-back casualty severity scales with the victim's
+                    // strength share (missing strength reads as unarmed):
+                    // parity or better mauls (1.0), an unarmed caravan
+                    // scuffles (0.25 floor). Per-incident fuel, not the
+                    // ladder: the reverse ceiling still holds (less fuel).
+                    const victimGroup = victim === fA ? gA : gB;
+                    const banditGroup = bandit === fA ? gA : gB;
+                    const vStr = Number(victimGroup?.militaryStrength) || 0;
+                    const bStr = Number(banditGroup?.militaryStrength) || 0;
+                    const share = (vStr + bStr) > 0 ? vStr / (vStr + bStr) : 0.5;
+                    const fightSeverity = 0.25 + 0.75 * Math.min(1, share / 0.5);
                     const backRestraint = this._dependencyRestraint(bandit, victim);
-                    this.factionSystem.recordIncident(victim, bandit, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, restraint: backRestraint });
+                    this.factionSystem.recordIncident(victim, bandit, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, restraint: backRestraint, severity: fightSeverity });
                 }
                 // NEXT-44: retaliatory fuel. Border-skirmish combat (never
                 // bandit-initiated: that path attributes blame above) bleeds
