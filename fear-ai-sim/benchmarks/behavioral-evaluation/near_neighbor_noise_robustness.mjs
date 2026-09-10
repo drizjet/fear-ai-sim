@@ -112,8 +112,11 @@ export function runNoiseRobustness(options = {}) {
                             traitsB[def.key] = valB;
                             const rngA = trialRng(seed, ti, di, si, bi, ci, rep, 0);
                             const rngB = trialRng(seed, ti, di, si, bi, ci, rep, 1);
-                            const scoreA = def.signature(traitsA, noisyScenario(def.scenarios[ci], sigma, rngA));
-                            const scoreB = def.signature(traitsB, noisyScenario(def.scenarios[ci], sigma, rngB));
+                            // NEXT-53: shared per-trial agent stream (arm
+                            // differences from traits only).
+                            const trialSeed = `${seed}:${ti}:${di}:${si}:${bi}:${ci}:${rep}`;
+                            const scoreA = def.signature(traitsA, noisyScenario(def.scenarios[ci], sigma, rngA), trialSeed);
+                            const scoreB = def.signature(traitsB, noisyScenario(def.scenarios[ci], sigma, rngB), trialSeed);
                             if (scoreB > scoreA) correct++;
                         }
                     }

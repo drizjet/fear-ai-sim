@@ -133,8 +133,16 @@ export function exactBinomialPValue(k, n, p = 0.50) {
 // Dedicated Trait Behavioral Signatures (with Scenario Regimes)
 // -----------------------------------------------------------------------------
 
-function measureNeuroticismSignature(traits, scen = {}) {
-    const agent = new AffectiveAgent('eval_n', traits);
+// NEXT-53: per-trial agent seeds. Measurement runners pass a coordinate
+// seed so both arms of a trial share one fallback stream (arm differences
+// then come purely from traits, not construction order). Null preserves
+// the legacy construction-counter path byte-identically.
+function agentOpts(trialSeed) {
+    return trialSeed === null || trialSeed === undefined ? undefined : { seed: trialSeed };
+}
+
+function measureNeuroticismSignature(traits, scen = {}, trialSeed = null) {
+    const agent = new AffectiveAgent('eval_n', traits, agentOpts(trialSeed));
     let integratedThreatResponse = 0;
     const startDist = scen.distStart ?? 20.0;
     const intensity = scen.intensity ?? 0.85;
@@ -147,8 +155,8 @@ function measureNeuroticismSignature(traits, scen = {}) {
     return integratedThreatResponse;
 }
 
-function measureResilienceSignature(traits, scen = {}) {
-    const agent = new AffectiveAgent('eval_r', traits);
+function measureResilienceSignature(traits, scen = {}, trialSeed = null) {
+    const agent = new AffectiveAgent('eval_r', traits, agentOpts(trialSeed));
     const shockTicks = scen.shockTicks ?? 5;
     const intensity = scen.intensity ?? 1.0;
 
@@ -166,8 +174,8 @@ function measureResilienceSignature(traits, scen = {}) {
     return 60 - recoveryTicks;
 }
 
-function measureOpennessSignature(traits, scen = {}) {
-    const agent = new AffectiveAgent('eval_o', traits);
+function measureOpennessSignature(traits, scen = {}, trialSeed = null) {
+    const agent = new AffectiveAgent('eval_o', traits, agentOpts(trialSeed));
     let investigateScore = 0;
     const baseDist = scen.baseDist ?? 12.0;
     const intensity = scen.intensity ?? 0.55;
@@ -182,8 +190,8 @@ function measureOpennessSignature(traits, scen = {}) {
     return investigateScore;
 }
 
-function measureExtraversionSignature(traits, scen = {}) {
-    const agent = new AffectiveAgent('eval_e', traits);
+function measureExtraversionSignature(traits, scen = {}, trialSeed = null) {
+    const agent = new AffectiveAgent('eval_e', traits, agentOpts(trialSeed));
     let totalContagionFear = 0;
     const contagionFear = scen.contagionFear ?? 0.70;
 
@@ -194,8 +202,8 @@ function measureExtraversionSignature(traits, scen = {}) {
     return totalContagionFear;
 }
 
-function measureAgreeablenessSignature(traits, scen = {}) {
-    const agent = new AffectiveAgent('eval_a', traits);
+function measureAgreeablenessSignature(traits, scen = {}, trialSeed = null) {
+    const agent = new AffectiveAgent('eval_a', traits, agentOpts(trialSeed));
     const peerDist = scen.peerDist ?? 2.0;
     const threatDist = scen.threatDist ?? 10.0;
     const leaderCalm = scen.leaderCalm ?? 0.60;
@@ -214,8 +222,8 @@ function measureAgreeablenessSignature(traits, scen = {}) {
     return proSocialScore;
 }
 
-function measureConscientiousnessSignature(traits, scen = {}) {
-    const agent = new AffectiveAgent('eval_c', traits);
+function measureConscientiousnessSignature(traits, scen = {}, trialSeed = null) {
+    const agent = new AffectiveAgent('eval_c', traits, agentOpts(trialSeed));
     const threatDist = scen.threatDist ?? 1.2;
     const intensity = scen.intensity ?? 0.95;
 
@@ -233,12 +241,12 @@ function measureConscientiousnessSignature(traits, scen = {}) {
     return disciplinedTicks * 2.0 + dominanceSum;
 }
 
-function measureLeadershipSignature(traits, scen = {}) {
-    const leader = new AffectiveAgent('lead', traits);
+function measureLeadershipSignature(traits, scen = {}, trialSeed = null) {
+    const leader = new AffectiveAgent('lead', traits, agentOpts(trialSeed === null ? null : `${trialSeed}:lead`));
     const followerN = scen.followerN ?? 0.75;
     const soundIntensity = scen.soundIntensity ?? 0.70;
 
-    const follower = new AffectiveAgent('follow', { neuroticism: followerN, fear: 0.70 });
+    const follower = new AffectiveAgent('follow', { neuroticism: followerN, fear: 0.70 }, agentOpts(trialSeed === null ? null : `${trialSeed}:follow`));
     const contagion = new ContagionGraph();
 
     let totalDampening = 0;

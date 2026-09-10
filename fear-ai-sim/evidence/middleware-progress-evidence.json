@@ -6096,6 +6096,29 @@
  "A at total-zero residual (20/40) still open as the NEXT-53 falsifier"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "TRIAL_SEEDS_NEXT53",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "construct_validity_sweeps.mjs: 7 signature functions accept optional trialSeed (null preserves the legacy counter path byte-identically); families + robustness runners pass a shared per-trial coordinate seed (perturb streams stay per-arm)",
+ "No behavior change to any 2-arg caller (sweeps, dashboard paths)"
+ ],
+ "test_evidence": [
+ "Falsifier verdict REJECTS the noise hypothesis: A at total-zero still reads 20/40 with shared streams — residual gate signal (above-gate pairs warn via the urgency slope at zeroed geometry), not fallback noise",
+ "In-process reruns now bit-identical (JSON-equal); N knife-edge jitter eliminated (N at +1.00: 88-92 -> 100)",
+ "Test 12 tightened from bands to exact pins plus rerun-equality; battery 14/14 (2x green)",
+ "Mutation probe (threading cut to null) fails exactly test 12; restore green",
+ "Robustness battery 7/7 unshifted; full matrix 343/343 (2559 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Persona battery ~2 s; matrix ~43 s"
+ ],
+ "known_gaps": [
+ "2-arg sweep callers (construct-validity internals) still use the counter path — same order-fragility if ever rerun-compared",
+ "A-at-zero residual mechanism (which above-gate pairs, urgency slope threshold) described but not separately pinned at the gate level"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

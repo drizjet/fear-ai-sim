@@ -104,8 +104,14 @@ export function runNoiseFamilies(options = {}) {
                             traitsB[def.key] = valB;
                             const rngA = trialRng(seed, ti, di, ci, bi, si, rep, 0);
                             const rngB = trialRng(seed, ti, di, ci, bi, si, rep, 1);
-                            const scoreA = def.signature(traitsA, perturbScen(def.scenarios[si], family, level, rngA));
-                            const scoreB = def.signature(traitsB, perturbScen(def.scenarios[si], family, level, rngB));
+                            // NEXT-53: both arms share one agent fallback
+                            // stream (no arm coordinate): arm differences
+                            // come purely from traits, never from
+                            // construction order. Perturbation streams stay
+                            // per-arm (independent corruption is the point).
+                            const trialSeed = `${seed}:${ti}:${di}:${ci}:${bi}:${si}:${rep}`;
+                            const scoreA = def.signature(traitsA, perturbScen(def.scenarios[si], family, level, rngA), trialSeed);
+                            const scoreB = def.signature(traitsB, perturbScen(def.scenarios[si], family, level, rngB), trialSeed);
                             // NOW-37 tie convention: strictly greater counts.
                             // A tie is a failure to distinguish, so floor and
                             // saturation ties read as 0% (total tie) or

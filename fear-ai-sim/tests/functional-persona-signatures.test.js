@@ -191,28 +191,29 @@ describe('NOW-36: zero-reads dropout mapping', () => {
 });
 
 describe('NEXT-51: large-bias regime crossings', () => {
-    // Bands, not exact pins: signature agents draw fallback streams from a
-    // process-global construction counter, so knife-edge cells (N at +1.00:
-    // 88-92 across in-process runs) jitter while regime cells hold exactly.
-    // Separate-process reruns are identical (CLI-verified).
+    // NEXT-53: exact pins. Both arms share one per-trial fallback stream,
+    // so in-process reruns are bit-identical (no construction-order jitter).
     test('12. E floor-collapses at -0.50, A saturation-ties at +1.00, N holds', async () => {
         const { runBiasRegimes } = await import('../benchmarks/behavioral-evaluation/bias_regime_sweep.mjs');
         const grid = { levels: [-0.5, 0.5, 1.0], traitIdxs: [0, 3, 4], deltas: [0.05, 0.20], reps: 2 };
         const a = runBiasRegimes(grid);
+        expect(runBiasRegimes(grid)).toEqual(a);
         const cell = (t, l) => a.table[t].find((r) => r.level === l);
-        // N immune: systematic scaling preserves orderings (boundary jitter allowed).
-        for (const l of [-0.5, 0.5, 1.0]) expect(cell('neuroticism', l).fine).toBeGreaterThanOrEqual(85);
+        // N immune: systematic scaling preserves orderings exactly.
+        for (const l of [-0.5, 0.5, 1.0]) {
+            expect(cell('neuroticism', l).fine).toBe(100);
+            expect(cell('neuroticism', l).star).toBe(0.05);
+        }
         // E: halved contagion hits the response floor (both score 0.00).
-        expect(cell('extraversion', -0.5).fine).toBeLessThanOrEqual(30);
+        expect(cell('extraversion', -0.5).fine).toBe(20);
         expect(cell('extraversion', -0.5).star).toBeNull();
-        expect(cell('extraversion', 0.5).fine).toBeGreaterThanOrEqual(90);
+        expect(cell('extraversion', 0.5).fine).toBe(100);
         // A: scaled geometry saturates both neighbors identically.
-        expect(cell('agreeableness', 1.0).fine).toBeLessThanOrEqual(30);
+        expect(cell('agreeableness', 1.0).fine).toBe(20);
         expect(cell('agreeableness', 1.0).star).toBeNull();
-        expect(cell('agreeableness', -0.5).fine).toBeGreaterThan(cell('agreeableness', 1.0).fine);
-        // Mechanism anchors (raw signature values, counter-independent):
-        // halved contagion floors both neighbors at exactly 0; scaled
-        // geometry saturates both at exactly 4.75.
+        expect(cell('agreeableness', -0.5).fine).toBe(96);
+        // Mechanism anchors (raw signature values): halved contagion floors
+        // both neighbors at exactly 0; scaled geometry saturates both at 4.75.
         const { TRAIT_DEFINITIONS } = await import('../benchmarks/behavioral-evaluation/construct_validity_sweeps.mjs');
         const mE = TRAIT_DEFINITIONS.find((d) => d.key === 'extraversion').signature;
         const mA = TRAIT_DEFINITIONS.find((d) => d.key === 'agreeableness').signature;
@@ -237,8 +238,10 @@ describe('NOW-37: tie-count convention', () => {
             expect(cell(t).deltaStar).toBeNull();
         }
         // A takes fallback-noise branches at zero stimulus: tie-dominated
-        // (below chance), exact value left unpinned. NEXT-53 falsifier: with
-        // per-trial agent seeds this must read exactly 0 if it is pure noise.
+        // (below chance), exact value left unpinned. NEXT-53 resolution: with
+        // shared per-trial streams it still reads 20/40 — residual gate
+        // signal (above-gate pairs warn via the urgency slope even at zeroed
+        // geometry), not noise. See the NEXT-53 milestone.
         expect(cell('agreeableness').rows['delta_0.05'].accuracyPct).toBeLessThan(50);
         expect(cell('agreeableness').deltaStar).toBeNull();
     });
