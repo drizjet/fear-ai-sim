@@ -265,3 +265,24 @@ describe('NOW-38: A zero-resolution paradox decomposition', () => {
         expect(untiedRate(row('zero_0p3', 0.15))).toBeGreaterThan(70);
     });
 });
+
+describe('NEXT-54: collapse-crossing bisection', () => {
+    test('15. E crosses between -0.50/-0.40 (gate), A slopes with middling clean', async () => {
+        const { runBiasBisection } = await import('../benchmarks/behavioral-evaluation/bias_regime_sweep.mjs');
+        const a = runBiasBisection();
+        expect(runBiasBisection()).toEqual(a);
+        const cell = (rows, l) => rows.find((r) => r.level === l);
+        // E: floor below the 0.4 contagion gate, transitional at -0.40,
+        // resolved with star at -0.30.
+        expect(cell(a.extraversion, -0.5).fine).toBe(20);
+        expect(cell(a.extraversion, -0.5).star).toBeNull();
+        expect(cell(a.extraversion, -0.4).fine).toBe(60);
+        expect(cell(a.extraversion, -0.3).fine).toBe(80);
+        expect(cell(a.extraversion, -0.3).star).toBe(0.05);
+        // A: no sharp crossing — smooth slope, clean itself middling.
+        expect(cell(a.agreeableness, -0.1).fine).toBe(64);
+        expect(cell(a.agreeableness, 0).fine).toBe(44);
+        expect(cell(a.agreeableness, 0.1).fine).toBe(32);
+        expect(cell(a.agreeableness, 0.1).star).toBeNull();
+    });
+});

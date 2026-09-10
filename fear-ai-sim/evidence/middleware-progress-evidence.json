@@ -6119,6 +6119,27 @@
  "A-at-zero residual mechanism (which above-gate pairs, urgency slope threshold) described but not separately pinned at the gate level"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "CROSSING_BISECT_NEXT54",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "bias_regime_sweep.mjs: runBiasBisection (E levels -0.50/-0.40/-0.30, A levels -0.10/0/+0.10); measurement only, no behavior change"
+ ],
+ "test_evidence": [
+ "E crosses between -0.50 (20/20*) and -0.40 (60/60*), resolved with star at -0.30 (80/80) — quantitative match to the 0.4 contagion gate (0.85x0.5=0.425 marginal, 0.5x0.6=0.30 floored)",
+ "A has no crossing: smooth slope 64/44/32 with clean itself middling (44/64 star 0.20) — the NEXT-51 crossing framing corrected",
+ "functional-persona-signatures.test.js +1 (battery 15/15, 2x green) with rerun-equality",
+ "Mutation probe (contagion gate 0.4->0.5) fails exactly tests 12 and 15; restore green",
+ "Full matrix 343/343 (2560 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Bisection <1 s; matrix ~45 s"
+ ],
+ "known_gaps": [
+ "Finer E bisection (-0.50/-0.45) would localize the gate edge to one scenario (0.85 base); marginal value, unbuilt"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

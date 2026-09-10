@@ -55,3 +55,19 @@ export function printBiasRegimes(result) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     printBiasRegimes(runBiasRegimes());
 }
+
+// NEXT-54: bisection of the two NEXT-51 crossings on their own grids.
+export const E_BISECT_LEVELS = Object.freeze([-0.5, -0.4, -0.3]);
+export const A_BISECT_LEVELS = Object.freeze([-0.1, 0, 0.1]);
+
+export function runBiasBisection(options = {}) {
+    const eLevels = options.eLevels ?? E_BISECT_LEVELS;
+    const aLevels = options.aLevels ?? A_BISECT_LEVELS;
+    const e = runBiasRegimes({ levels: eLevels, traitIdxs: [3], deltas: [0.05, 0.20], reps: 2 });
+    const a = runBiasRegimes({ levels: aLevels, traitIdxs: [4], deltas: [0.05, 0.20], reps: 2 });
+    return {
+        config: { eLevels: [...eLevels], aLevels: [...aLevels] },
+        extraversion: e.table.extraversion,
+        agreeableness: a.table.agreeableness
+    };
+}
