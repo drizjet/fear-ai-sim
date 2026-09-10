@@ -6217,6 +6217,63 @@
  "known_gaps": [
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_18",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit method: known-gap aggregation across 8 milestones since CCI-17 (TIE_CONVENTION_NOW37, PARADOX_DECOMP_NOW38, TRIAL_SEEDS_NEXT53, CROSSING_BISECT_NEXT54, BORDER_ASYMMETRY_NEXT55, APPROACH_SLOPE_NEXT61, WEALTH_NAN_NEXT57, TRUST_NAN_NEXT58), CCI-17 candidate status review, one red-team probe (economy plateau at 4x run length)",
+ "8 commits since CCI-17; both CCI-17 NOWs plus NEXT-53/54/55/57/58/61 closed and verified",
+ "Sharpest find (red-team hit): the NEXT-52 slack plateau SHATTERS at 20k ticks along the upkeep axis — upkeep x0 collapses to 104-132 (satiation binds at ~cap/inflow ticks) while x1/x5 flow at 354; production still slack (0.5x/1x/2x identical); tiny-cap trickle reads 290 (superlinear vs 24 at 5k, undecomposed). Plateau verdict was 5k-regime-only; boundary mapping is now the selected next",
+ "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+ ],
+ "test_evidence": [
+ "Matrix 343/343 suites (2564 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+ ],
+ "runtime_evidence": [
+ "NOW-39 A-at-zero residual gate pinning (which above-gate pairs warn at zeroed geometry; urgency-slope threshold).",
+ "NEXT-7 merchant belief-formation dynamics (carried).",
+ "NEXT-10 nested-JSON transport guard (carried).",
+ "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+ "NEXT-12 handshake determinism review (carried).",
+ "NEXT-13 constructor-only over-credit audit (carried).",
+ "NEXT-14 infinite-loop containment research (carried).",
+ "NEXT-15 FearServer fixed-port production review (carried).",
+ "NEXT-17 richer rally dynamics for specificity guards (carried).",
+ "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+ "NEXT-21 numeric-field histograms in middle summaries (carried).",
+ "NEXT-29 floor-slope sensitivity exploration (carried).",
+ "NEXT-30 minimum-severity crystallization floor exploration (carried).",
+ "NEXT-31 graded defusal exploration (carried).",
+ "NEXT-32 acute fear spike for social wounds exploration (carried).",
+ "NEXT-34 dashboard BORDER_TRESPASS restraint (carried).",
+ "NEXT-35 unified extortion-gate theory (carried).",
+ "NEXT-56 casualty-severity designer calibration (floor/knee judgment calls).",
+ "NEXT-59 dense-topology flood dynamics (multi-listener spread under cap pressure).",
+ "NEXT-60 per-tick rumor spread budget (throughput bound, state-safe).",
+ "NEXT-62 volume-weighted economy calibration (trickle deliveries under tiny caps).",
+ "NEXT-63 trade price channel (scarcity/danger response, carried NEXT-45 gap).",
+ "NEXT-64 migration-chain churn pair review (cold rollup beyond camps).",
+ "NEXT-65 faction/rumor/relation retained-state soak (LATER-21 decomposition).",
+ "NEXT-66 intent-level zero-reads (stuck actuator feedback vs stimulus level).",
+ "NEXT-67 satiation-boundary mapping (upkeep-0 collapse at 20k probed; production slack; tiny-cap trickle anomaly).",
+ "NEXT-68 zero-misordered-fraction decomposition (corruption breaks ties wrongly ~17% of untied trials).",
+ "NEXT-69 seed construct-validity sweep internals (2-arg callers still on the counter path).",
+ "NEXT-70 WARN/APPROACH interplay map (which prosocial fires first across A x threat geometries).",
+ "NEXT-71 fine E bisection (-0.50/-0.45 gate-edge localization; marginal).",
+ "LATER-20 second external host architecture (gated on external project availability).",
+ "LATER-21 100k/1m-tick full-stack soak (valley path assayed; needs NEXT-65 first).",
+ "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+ "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+ "Selected next: NEXT-67 (probed collapse with quantified boundary, small contained mapping)."
+ ],
+ "benchmark_evidence": [
+ "Audit completes in minutes; no benchmark impact"
+ ],
+ "known_gaps": [
+ "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
