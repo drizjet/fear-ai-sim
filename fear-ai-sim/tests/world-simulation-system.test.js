@@ -493,3 +493,76 @@ describe('NEXT-74: misinformation cascade live exercise', () => {
         expect(run()).toEqual(run());
     });
 });
+
+describe('NEXT-75: rumor correction (host truth vs belief)', () => {
+    function caravanPair(seed = 42) {
+        const world = new WorldSimulationSystem({ seed });
+        const mk = (id, x) => world.registerGroup(id, {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x, y: 0, z: 100 },
+            militaryStrength: 0.5,
+            wealth: 0.5
+        });
+        return { world, a: mk('a_src', 100), b: mk('b_dst', 105) };
+    }
+    function meet(world, x, y) {
+        return world._generateSystemicEncounter(x, y, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+    }
+    function falseArmy(world, a) {
+        return world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'false army report'
+        });
+    }
+    test('1. Refutation deletes the instance and relieves heard pressure', () => {
+        const { world, a, b } = caravanPair();
+        const rumor = falseArmy(world, a);
+        meet(world, a, b);
+        expect(b.drivers.threatPressure).toBeGreaterThan(0);
+        const corr = world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id });
+        expect(corr.confirmed).toBe(false);
+        expect(a.knownRumors.has(rumor.id)).toBe(false);
+        meet(world, a, b);
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+        expect(b.drivers.threatPressure).toBe(0);
+        const events = world.queryHistory({ eventType: WORLD_EVENT_TYPES.RUMOR_CORRECTED });
+        expect(events.length).toBe(1);
+        expect(events[0].cause).toBe('RUMOR_REFUTED');
+    });
+    test('2. Confirmation pins credibility and keeps the belief', () => {
+        const { world, a, b } = caravanPair();
+        const rumor = falseArmy(world, a);
+        meet(world, a, b);
+        world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id });
+        meet(world, a, b);
+        const inst = b.knownRumors.get(rumor.id);
+        expect(inst).toBeDefined();
+        expect(inst.credibility).toBe(1.0);
+        expect(inst.fidelity).toBe(1.0);
+    });
+    test('3. Groups that never heard the rumor are unaffected', () => {
+        const { world, a, b } = caravanPair();
+        const rumor = falseArmy(world, a);
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id });
+        meet(world, a, b);
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+        expect(b.drivers.threatPressure).toBe(0);
+    });
+    test('4. Corrections survive snapshot round-trip', () => {
+        const { world, a, b } = caravanPair();
+        const rumor = falseArmy(world, a);
+        meet(world, a, b);
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id });
+        meet(world, a, b);
+        const restored = new WorldSimulationSystem({ seed: 999 });
+        restored.importState(world.exportState());
+        expect(restored.rumors.get(rumor.id).correction.confirmed).toBe(false);
+        expect(restored.groups.get(b.id).knownRumors.has(rumor.id)).toBe(false);
+        expect(restored.groups.get(b.id).knownCorrections.has(rumor.id)).toBe(true);
+        expect(restored.groups.get(b.id).drivers.threatPressure).toBe(0);
+    });
+    test('5. Unknown rumor ids correct to null without history', () => {
+        const { world } = caravanPair();
+        expect(world.correctRumor('rumor_missing', { confirmed: false })).toBeNull();
+        expect(world.queryHistory({ eventType: WORLD_EVENT_TYPES.RUMOR_CORRECTED }).length).toBe(0);
+    });
+});

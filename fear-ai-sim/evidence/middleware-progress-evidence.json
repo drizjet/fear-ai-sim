@@ -6684,6 +6684,32 @@
  "Rumor consequence is pressure-only: no reroute, no mobilization, no migration response to heard threats yet"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "RUMOR_CORRECTION_NEXT75",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "correctRumor(rumorId, {confirmed, byGroupId}): host-truth adjudication stamps master.correction, applies locally to the correcting group, logs RUMOR_CORRECTED (RUMOR_CONFIRMED/RUMOR_REFUTED causes)",
+ "Refutation deletes the instance and symmetrically relieves heard-threat pressure (-0.15 x credibility, floored); confirmation pins credibility and fidelity to 1.0",
+ "Corrections spread on encounters via transmitCorrections (sender knownCorrections -> receiver), plus transmit-time stamping for in-flight instances; refuted instances are excluded from pressure bumps",
+ "Correction awareness persists across snapshot round-trip (knownCorrections set + master correction record)",
+ "Mid-build failure: two mis-anchored edits landed rumor lines inside the NaN-guard block and dropped the tradeRun restore line; both repaired and verified via diff review plus NaN-battery green (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 24/24 (5 new NEXT-75 pins: refutation deletes + relieves to zero with history row; confirmation pins 1.0; unheard groups unaffected; snapshot round-trip; unknown id null without history)",
+ "Mutation probe -0.15->-0.0 fails exactly the two relief pins; fix restored",
+ "Full matrix 342/343 suites, 2581 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~34s"
+ ],
+ "known_gaps": [
+ "Correction acceptance is unconditional - a distrusted source's correction carries the same weight as a trusted one (trust-gated acceptance open)",
+ "No origin credibility loss in WorldSimulationSystem when a group's rumor is refuted (exists only in InformationPropagationEngine)",
+ "truthEventId still inert as an automatic adjudicator - corrections require explicit host correctRumor calls"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

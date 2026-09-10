@@ -72,6 +72,7 @@ export const WORLD_EVENT_TYPES = Object.freeze({
     CAMP_ABANDONED: 'CAMP_ABANDONED',
     MIGRATION_COMPLETED: 'MIGRATION_COMPLETED',
     RUMOR_SPREAD: 'RUMOR_SPREAD',
+    RUMOR_CORRECTED: 'RUMOR_CORRECTED',
     AMBUSH_LOGGED: 'AMBUSH_LOGGED',
     TREATY_NOTED: 'TREATY_NOTED',
     TRADE_DELIVERY: 'TRADE_DELIVERY'
@@ -178,6 +179,7 @@ export class WorldSimulationSystem {
             // host report): { fromSettlement, toSettlement, commodity, amount }
             tradeRun: tradeRun ? { ...tradeRun } : null,
             knownRumors: new Map(), // Map<rumorId, KnownRumorInstance>
+            knownCorrections: new Set(), // NEXT-75: rumorIds whose host-truth correction this group has applied
             lastIntent: null
         };
         this.groups.set(group.id, group);
@@ -251,7 +253,8 @@ export class WorldSimulationSystem {
             },
             sourceEntityId: sourceEntityId ? String(sourceEntityId) : null,
             severity: clamp01(severity),
-            description: String(description || topic)
+            description: String(description || topic),
+            correction: null, // NEXT-75: { confirmed, tick, byGroupId } once host truth adjudicates
         };
         this.rumors.set(rumor.id, rumor);
         this._enforceRumorBound();
@@ -335,6 +338,7 @@ export class WorldSimulationSystem {
                     passedBy: sender.id
                 };
                 receiver.knownRumors.set(rId, newInstance);
+                if (masterRumor.correction) this._applyCorrection(receiver, masterRumor);
                 transmitted.push(newInstance);
 
                 // Record historical event for significant rumor spread
@@ -367,10 +371,85 @@ export class WorldSimulationSystem {
         for (const inst of transmitted) {
             const master = this.rumors.get(inst.rumorId);
             if (!master) continue;
+            if (master.correction && !master.correction.confirmed) continue;
             if (master.topic !== RUMOR_TOPICS.AMBUSH_HOTSPOT && master.topic !== RUMOR_TOPICS.WAR_DECLARED) continue;
             if (inst.perceivedSeverity < 0.5) continue;
             receiver.drivers.threatPressure = clamp01(receiver.drivers.threatPressure + 0.15 * (inst.credibility ?? 0.5));
         }
+    }
+    /**
+     * NEXT-75: host-truth adjudication of a rumor (world truth vs belief).
+     * The host owns truth; Fear AI only updates advisory belief. A refutation
+     * deletes the instance and symmetrically relieves heard-threat pressure;
+     * a confirmation pins credibility and fidelity to 1. Corrections spread
+     * between groups on encounters via transmitCorrections.
+     * @param {string} rumorId Master rumor id
+     * @param {object} [opts] { confirmed:boolean, byGroupId:string|null }
+     * @returns {object|null} Correction record or null when unknown
+     */
+    correctRumor(rumorId, { confirmed = false, byGroupId = null } = {}) {
+        const master = this.rumors.get(String(rumorId));
+        if (!master) return null;
+        master.correction = {
+            confirmed: Boolean(confirmed),
+            tick: this.tickCount,
+            byGroupId: byGroupId ? String(byGroupId) : null
+        };
+        if (byGroupId && this.groups.has(String(byGroupId))) {
+            this._applyCorrection(this.groups.get(String(byGroupId)), master);
+        }
+        this.recordHistoryEvent(WORLD_EVENT_TYPES.RUMOR_CORRECTED, {
+            primaryId: master.correction.byGroupId,
+            secondaryId: master.id,
+            location: { ...(this.groups.get(master.correction.byGroupId)?.position ?? { x: 0, y: 0, z: 0 }) },
+            cause: master.correction.confirmed ? 'RUMOR_CONFIRMED' : 'RUMOR_REFUTED',
+            consequences: { rumorTopic: master.topic, confirmed: master.correction.confirmed }
+        });
+        return master.correction;
+    }
+    /**
+     * NEXT-75: apply a master correction to one group's belief.
+     * @param {object} group Receiving group
+     * @param {object} master Master rumor carrying .correction
+     * @returns {string} 'refuted' | 'confirmed' | 'unheard' | 'no-correction'
+     */
+    _applyCorrection(group, master) {
+        if (!group || !master?.correction) return 'no-correction';
+        if (group.knownCorrections) group.knownCorrections.add(master.id);
+        const inst = group.knownRumors?.get(master.id);
+        if (!inst) return 'unheard';
+        if (master.correction.confirmed) {
+            inst.credibility = 1.0;
+            inst.fidelity = 1.0;
+            return 'confirmed';
+        }
+        group.knownRumors.delete(master.id);
+        if ((master.topic === RUMOR_TOPICS.AMBUSH_HOTSPOT || master.topic === RUMOR_TOPICS.WAR_DECLARED)
+            && inst.perceivedSeverity >= 0.5 && group.drivers) {
+            group.drivers.threatPressure = clamp01(group.drivers.threatPressure - 0.15 * (inst.credibility ?? 0.5));
+        }
+        return 'refuted';
+    }
+    /**
+     * NEXT-75: spread host-truth corrections the sender has applied to a
+     * receiver that has not. Acceptance is unconditional (host truth is not
+     * a trust vote); trust-gated acceptance is an open gap.
+     * @param {string} senderGroupId Correcting group
+     * @param {string} receiverGroupId Learning group
+     * @returns {Array<object>} Applied { rumorId, result } records
+     */
+    transmitCorrections(senderGroupId, receiverGroupId) {
+        const sender = this.groups.get(String(senderGroupId));
+        const receiver = this.groups.get(String(receiverGroupId));
+        if (!sender || !receiver) return [];
+        const applied = [];
+        for (const cid of sender.knownCorrections ?? []) {
+            if (receiver.knownCorrections?.has(cid)) continue;
+            const master = this.rumors.get(cid);
+            if (!master?.correction) continue;
+            applied.push({ rumorId: cid, result: this._applyCorrection(receiver, master) });
+        }
+        return applied;
     }
 
     /**
@@ -548,6 +627,8 @@ export class WorldSimulationSystem {
         const heardBA = this.transmitRumors(gB.id, gA.id, bilateralTrust);
         this._applyHeardThreatPressure(gB, heardAB);
         this._applyHeardThreatPressure(gA, heardBA);
+        this.transmitCorrections(gA.id, gB.id);
+        this.transmitCorrections(gB.id, gA.id);
 
         // Record historical ledger entry
         const historyEvent = this.recordHistoryEvent(WORLD_EVENT_TYPES.ENCOUNTER_OCCURRED, {
@@ -774,7 +855,8 @@ export class WorldSimulationSystem {
                 drivers: { ...g.drivers },
                 campId: g.campId,
                 tradeRun: g.tradeRun ? { ...g.tradeRun } : null,
-                knownRumors: Array.from(g.knownRumors.entries()).map(([rId, inst]) => ({ ...inst }))
+                knownRumors: Array.from(g.knownRumors.entries()).map(([rId, inst]) => ({ ...inst })),
+                knownCorrections: Array.from(g.knownCorrections ?? [])
             })),
             camps: Array.from(this.camps.entries()).map(([id, c]) => ({ ...c })),
             rumors: Array.from(this.rumors.entries()).map(([id, r]) => ({ ...r })),
@@ -817,6 +899,7 @@ export class WorldSimulationSystem {
                     campId: g.campId,
                     tradeRun: g.tradeRun ? { ...g.tradeRun } : null,
                     knownRumors: new Map(),
+                    knownCorrections: new Set(Array.isArray(g.knownCorrections) ? g.knownCorrections : []),
                     lastIntent: null
                 };
                 if (Array.isArray(g.knownRumors)) {
