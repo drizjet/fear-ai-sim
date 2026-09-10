@@ -506,8 +506,18 @@ export class FrontierValleySimulation {
                 // (NOW-16: animal hunger is not faction warfare).
                 const W = FRONTIER_VALLEY_FACTIONS.WILDLIFE;
                 if (enc.encounterType === ENCOUNTER_TYPES.BORDER_SKIRMISH && fA && fB && fA !== fB && fA !== W && fB !== W) {
-                    this.factionSystem.recordIncident(fA, fB, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null });
-                    this.factionSystem.recordIncident(fB, fA, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null });
+                    // NEXT-55: one-sided massacres fuel asymmetrically. Each
+                    // direction scales with the INFLICTER's strength share
+                    // (same 0.25-floor/parity-knee map as the NEXT-48
+                    // fight-back): the mauled side grieves fully, the mauler
+                    // barely notices the scuffle. Parity stays symmetric.
+                    const aStr = Number(gA?.militaryStrength) || 0;
+                    const bStr = Number(gB?.militaryStrength) || 0;
+                    const sevFor = (inf, vic) => (inf + vic) > 0
+                        ? 0.25 + 0.75 * Math.min(1, (inf / (inf + vic)) / 0.5)
+                        : 0.5;
+                    this.factionSystem.recordIncident(fA, fB, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, severity: sevFor(aStr, bStr) });
+                    this.factionSystem.recordIncident(fB, fA, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, severity: sevFor(bStr, aStr) });
                 }
             } else if (enc.advisoryResolution === 'EXTORTION_PAID') {
                 if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.15);

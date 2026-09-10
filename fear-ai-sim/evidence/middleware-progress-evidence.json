@@ -6140,6 +6140,26 @@
  "Finer E bisection (-0.50/-0.45) would localize the gate edge to one scenario (0.85 base); marginal value, unbuilt"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "BORDER_ASYMMETRY_NEXT55",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FrontierValleySimulation border-skirmish path: each direction scales with the inflicter's strength share via the NEXT-48 map (0.25 floor, parity knee 0.5); parity behavior unchanged (1.0 both ways)"
+ ],
+ "test_evidence": [
+ "Probe: 9:1 asymmetry fueled identically (0.55/0.55) before the change",
+ "valley-war-pacing.test.js +1 (battery 27/27): parity symmetric exact (0.55/0.55), mauling splits (0.55 vs 0.22) with ordering",
+ "Mutation probe (severity forced 1) fails exactly the new test; restore green. Process note: inline // mutation comments inside calls eat closers — use syntax-safe mutations",
+ "NEXT-44 symmetric pins still pass (default 0.7/0.5 gives 0.55/0.48); reverse ladder re-verified via battery; full matrix 343/343 (2561 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Pacing battery ~3 s; matrix ~43 s"
+ ],
+ "known_gaps": [
+ "Border severity reuses the ambush floor/knee without independent calibration (see NEXT-56)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

@@ -503,3 +503,32 @@ describe('NEXT-48: mauling-vs-scuffle differentiation', () => {
     expect(fire(mk(), 0.5)).toBeCloseTo(0.275, 4);
   });
 });
+
+describe('NEXT-55: border-skirmish asymmetric fuel', () => {
+  const S = FRONTIER_VALLEY_FACTIONS.SETTLERS;
+  const N = FRONTIER_VALLEY_FACTIONS.NOMADS;
+  function border(aStr, bStr) {
+    const sim = new FrontierValleySimulation({ seed: 4242 });
+    sim.worldSystem.groups.get('patrol_settlers_1').militaryStrength = aStr;
+    sim.worldSystem.groups.get('nomad_clan_1').militaryStrength = bStr;
+    sim._recordEncounterConsequences([{
+      encounterId: 'b55', partyAId: 'patrol_settlers_1', partyBId: 'nomad_clan_1',
+      advisoryResolution: 'COMBAT_ENGAGEMENT', encounterType: 'BORDER_SKIRMISH'
+    }]);
+    return {
+      sn: sim.factionSystem.getBilateralStance(S, N).grievance,
+      ns: sim.factionSystem.getBilateralStance(N, S).grievance
+    };
+  }
+  it('stays symmetric at parity, splits on a 9:1 mauling', () => {
+    // Parity: both directions fuel fully and identically.
+    const par = border(0.7, 0.7);
+    expect(par.sn).toBeCloseTo(0.55, 4);
+    expect(par.ns).toBeCloseTo(0.55, 4);
+    // Mauling: the mauled side grieves fully, the mauler shrugs.
+    const mau = border(0.9, 0.1);
+    expect(mau.ns).toBeCloseTo(0.55, 4);
+    expect(mau.sn).toBeCloseTo(0.22, 4);
+    expect(mau.sn).toBeLessThan(mau.ns);
+  });
+});
