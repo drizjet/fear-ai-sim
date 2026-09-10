@@ -6074,6 +6074,28 @@
  "A at total-zero reads 20/40 (fallback-stream noise vs residual signal undecided) — NEXT-53 falsifier: per-trial agent seeds must drive it to exactly 0 if pure noise"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "PARADOX_DECOMP_NOW38",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "near_neighbor_noise_families.mjs: per-row tie counter (additive ties field; all existing pins unaffected)"
+ ],
+ "test_evidence": [
+ "Paradox decomposed: zero_0.30 unties trials (ties 28->10 at d0.05, 18->4 at d0.15) while dropout preserves ties (27, 18-20, both arms fall back to identical defaults); correct-given-untied stays high (clean 100%, zero 83%) — corruption reveals real straddling-pair gaps by desynchronizing the arms, adds no signal",
+ "Single-mak ablation: all 8 zero-masks on the straddling pair stay ordered — no single field explains it; asymmetry across arms is the mechanism",
+ "functional-persona-signatures.test.js +1 (battery 14/14, 3x green): exact tie counts plus untied-correctness bands",
+ "Mutation probe (zero family neutered to missing) fails exactly tests 11 and 14; restore green",
+ "Full matrix 343/343 (2559 tests, one re-run after two parallel-load flakes in conformance/heavy suites, both green standalone); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Persona battery ~2 s; matrix ~44-50 s"
+ ],
+ "known_gaps": [
+ "Correct-given-untied under zero (83%) trails clean (100%): corruption breaks ties correctly most but not all of the time — misordered fraction undecomposed",
+ "A at total-zero residual (20/40) still open as the NEXT-53 falsifier"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

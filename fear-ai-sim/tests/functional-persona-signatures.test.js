@@ -243,3 +243,22 @@ describe('NOW-37: tie-count convention', () => {
         expect(cell('agreeableness').deltaStar).toBeNull();
     });
 });
+
+describe('NOW-38: A zero-resolution paradox decomposition', () => {
+    test('14. Zero-reads un-tie trials; untied trials were ordered all along', async () => {
+        const { runNoiseFamilies } = await import('../benchmarks/behavioral-evaluation/near_neighbor_noise_families.mjs');
+        const grid = { traitIdxs: [4], deltas: [0.05, 0.15], conds: [['clean', 0], ['zero', 0.30]], reps: 2 };
+        const a = runNoiseFamilies(grid);
+        const row = (ck, d) => a.traits.agreeableness.perCond[ck].rows[`delta_${d.toFixed(2)}`];
+        // Asymmetric per-arm zero masks break ties (28->10, 18->4).
+        expect(row('clean_0', 0.05).ties).toBe(28);
+        expect(row('zero_0p3', 0.05).ties).toBe(10);
+        expect(row('clean_0', 0.15).ties).toBe(18);
+        expect(row('zero_0p3', 0.15).ties).toBe(4);
+        // Correct-given-untied stays high: the signal was real, suppression
+        // was the ties. Clean untied trials are perfectly ordered.
+        const untiedRate = (r) => (r.correct / (r.total - r.ties)) * 100;
+        expect(untiedRate(row('clean_0', 0.15))).toBe(100);
+        expect(untiedRate(row('zero_0p3', 0.15))).toBeGreaterThan(70);
+    });
+});

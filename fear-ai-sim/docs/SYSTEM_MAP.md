@@ -220,6 +220,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Economy Calibration NEXT-52:** upkeep/production sweep finds a flat slack plateau (all cells 88 deliveries — cycle time binds); cliffs only at production-zero (27) and tiny caps (24). No retune. Pinned in valley battery.
 - **Frontier Audit CCI-17:** 36 ranked candidates (2 NOW, 30 NEXT, 4 LATER); entire CCI-16 bench closed. Sharp finds: pinned persona cells are construction-counter immune (jitter localizes to knife-edges); below-chance cells are tie-dominated, not inverted. Next: tie-count convention doc (NOW-37).
 - **Tie Convention NOW-37:** strict-greater locked and documented — total stimulus zero reads 0%, below-chance cells are indistinguishability, never inversion. A-at-zero residual (20/40) becomes the NEXT-53 falsifier. Pinned in persona battery.
+- **Paradox Decomposition NOW-38:** A zero-"resolution" is tie-breaking by asymmetric corruption (ties 28→10), not new signal — untied trials were ordered all along (clean 100%). Runner now counts ties. Pinned in persona battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

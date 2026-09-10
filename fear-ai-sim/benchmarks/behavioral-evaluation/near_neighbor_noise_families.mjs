@@ -90,6 +90,7 @@ export function runNoiseFamilies(options = {}) {
             for (let di = 0; di < deltas.length; di++) {
                 const delta = deltas[di];
                 let correct = 0;
+                let ties = 0;
                 let total = 0;
                 for (let bi = 0; bi < bases.length; bi++) {
                     const valA = bases[bi];
@@ -113,6 +114,7 @@ export function runNoiseFamilies(options = {}) {
                             // capable-but-backwards. Below-chance cells are
                             // indistinguishability, not inversion.
                             if (scoreB > scoreA) correct++;
+                            else if (scoreB === scoreA) ties++;
                         }
                     }
                 }
@@ -127,7 +129,7 @@ export function runNoiseFamilies(options = {}) {
                     deltaStarProvisional = !survivesBonferroni;
                 }
                 rows[`delta_${delta.toFixed(2)}`] = {
-                    correct, total, accuracyPct, wilson, clopper,
+                    correct, total, ties, accuracyPct, wilson, clopper,
                     pValue, survivesBonferroni
                 };
             }
