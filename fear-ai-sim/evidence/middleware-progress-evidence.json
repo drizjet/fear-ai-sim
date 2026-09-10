@@ -5793,6 +5793,28 @@
         "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "ZERO_READS_MAP_NOW36",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Extended near_neighbor_noise_families.mjs with the zero family (reads-0 with prob p per numeric field) at matched 0.10/0.30 levels: 12 conditions now, Bonferroni recomputed in-runner; NEXT-40 runner and pins untouched (custom grids isolate them)"
+      ],
+      "test_evidence": [
+        "Mechanism atlas (all-zero vs missing-all vs clean, base scenarios): missing is bit-identical to clean on every trait (defaults engage); zero reads as ABSENT stimulus — threat signatures collapse (N 28.71 to 0.00, E 11.51 to 0.00), recovery/discipline signatures saturate (R 28 to 59, C 20.05 to 47.80), O/L insensitive",
+        "Stochastic grid: zero degrades strictly worse than matched dropout nearly everywhere; N zero_0.30 kills fine discrimination (58%/50%, star null) vs dropout 72%/76% star 0.05; R zero_0.30 inverts an ordering below chance (d0.15 46%); A zero_0.30 paradoxically resolves (78/80%*) by regime-shifting threats away, flagged as curiosity",
+        "Regression test in functional-persona-signatures.test.js (battery 11/11): tiny-grid determinism, exact 74/58 split with star-present-vs-null",
+        "Mutation probe (zero branch neutered) fails the pin; restore green",
+        "Rerun bit-identical; full matrix 343/343 (2545 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Full 12-condition grid ~2 s; persona battery ~2 s; matrix ~36 s"
+      ],
+      "known_gaps": [
+        "A zero_0.30 resolution paradox (regime shift, not signal) is flagged, not decomposed",
+        "Zero-reads at the intent level (stuck actuator feedback) vs stimulus level untested"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

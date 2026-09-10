@@ -168,3 +168,24 @@ describe('NEXT-40: discrimination under noise families', () => {
         expect(dropped).toBeGreaterThan(50);
     });
 });
+
+describe('NOW-36: zero-reads dropout mapping', () => {
+    // Same tiny grid plus the zero family at matched rate; the full
+    // 7-trait grid lives in near_neighbor_noise_families.mjs.
+    const tinyZero = { traitIdxs: [0], deltas: [0.05, 0.20], conds: [['clean', 0], ['dropout', 0.30], ['zero', 0.30]], reps: 2 };
+
+    test('11. Zero-reads corrupt strictly worse than missing-at-matched-rate', async () => {
+        const { runNoiseFamilies } = await import('../benchmarks/behavioral-evaluation/near_neighbor_noise_families.mjs');
+        const a = runNoiseFamilies(tinyZero);
+        expect(runNoiseFamilies(tinyZero)).toEqual(a);
+        const n = a.traits.neuroticism;
+        const dropped = n.perCond.dropout_0p3;
+        const zeroed = n.perCond.zero_0p3;
+        // Missing degrades; zero collapses fine discrimination entirely.
+        expect(dropped.rows['delta_0.05'].accuracyPct).toBe(74);
+        expect(zeroed.rows['delta_0.05'].accuracyPct).toBe(58);
+        expect(zeroed.rows['delta_0.05'].accuracyPct).toBeLessThan(dropped.rows['delta_0.05'].accuracyPct);
+        expect(dropped.deltaStar).toBe(0.05);
+        expect(zeroed.deltaStar).toBeNull();
+    });
+});

@@ -27,7 +27,7 @@ import { trialRng } from './near_neighbor_noise_robustness.mjs';
 
 export const FAMILY_DELTAS = Object.freeze([0.05, 0.10, 0.15, 0.20]);
 export const FAMILY_BASES = Object.freeze([0.15, 0.30, 0.45, 0.60, 0.75]);
-// [family, level]: bias offset, spike (p, K=1.0), dropout p, corr sigma.
+// [family, level]: bias offset, spike (p, K=1.0), dropout p, zero-reads p, corr sigma.
 export const FAMILY_CONDS = Object.freeze([
     ['clean', 0],
     ['gauss', 0.10],
@@ -38,6 +38,8 @@ export const FAMILY_CONDS = Object.freeze([
     ['spike', 0.15],
     ['dropout', 0.10],
     ['dropout', 0.30],
+    ['zero', 0.10],
+    ['zero', 0.30],
     ['corr', 0.10]
 ]);
 export const FAMILY_SEED = 20261024;
@@ -52,6 +54,7 @@ function perturbScen(scen, family, level, rng) {
         else if (family === 'bias') out[k] = v * (1 + level);
         else if (family === 'spike') out[k] = rng.next() < level ? v * (1 + Math.sign(rng.gauss() || 1) * 1.0) : v;
         else if (family === 'dropout') out[k] = rng.next() < level ? undefined : v;
+        else if (family === 'zero') out[k] = rng.next() < level ? 0 : v;
         else if (family === 'corr') out[k] = v * (1 + level * shared);
         else out[k] = v;
     }
