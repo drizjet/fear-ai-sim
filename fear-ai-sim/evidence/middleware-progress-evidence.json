@@ -5881,6 +5881,28 @@
  "bilateralTrust NaN path via relationship tensor unreviewed"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "WARN_SLOPE_UTILITY_NEXT47",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "IntentResolver: WARN urgency formula extracted to exported warnGroupUrgency/WARN_AGREEABLENESS_GATE (callsite byte-identical); benchmarks/behavioral-evaluation/a_warn_urgency_utility.mjs measures the shipped formula, not a copy",
+ "No behavior change: verdict is the slope is live, no retune"
+ ],
+ "test_evidence": [
+ "Utility sweep (held-urgency 0.5-0.9 x warner A): 11/81 rungs flip OVERRIDE_DANGER between A=0.66 and A=1.0 (tip band u in [0.60, 0.65]) — high-A warners interrupt flight where just-above-gate warners cannot",
+ "intent-stabilizer.test.js +1 (battery 6/6): rerun-equal, slope geometry, exact 11/81 with tip band",
+ "Mutation probe (prod slope flattened to constant) fails the pin; restore green",
+ "Full matrix 343/343 (2551 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Sweep <1 s deterministic; matrix ~41 s"
+ ],
+ "known_gaps": [
+ "APPROACH_ALLY A-slope (width 0.20) utility not swept — trivially live by margin comparison, unpinned",
+ "Tip band calibrated at default margin 0.15/cooldown 5; hosts retuning the stabilizer shift the band (benchmark accepts margin/cooldown options)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

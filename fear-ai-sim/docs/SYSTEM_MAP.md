@@ -213,6 +213,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Flood Dynamics NEXT-42:** post-cap flood (600 injects at cap 500) preserves spread (per-rumor throughput 3.0 held), fresh rumors still traverse full chains, terminal-first eviction with oldest-active FIFO confirmed. No per-tick spread budget (throughput cost, not correctness). Pinned in propagation battery.
 - **Mauling NEXT-48:** fight-back casualties scale with victim strength share (severity 1.0 at parity, 0.25 floor unarmed; table 0.55/0.5125/0.4125/0.1375). Severity defaults to old behavior, NaN-safe. Reverse ladder still caps below ATTACK. Pinned in pacing battery.
 - **NaN Strictness NEXT-46:** corrupt force-strengths no longer hide behind a false "superior escort defense" rationale — explicit indeterminate hold, same safe avoidance. Clamp/severity/restraint/affect inputs audited NaN-safe. Pinned in world-sim battery.
+- **Warn Slope NEXT-47:** above-gate A urgency slope (width 0.0525) is narrow but live — flips stabilizer overrides on 11/81 held-urgency rungs (tip band 0.60-0.65). Formula extracted and pinned against the shipped code. No retune.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

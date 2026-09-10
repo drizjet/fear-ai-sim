@@ -19,6 +19,15 @@ export const ACTION_INTENTS = Object.freeze([
     'RECOVERING'
 ]);
 
+// NEXT-47: above-threshold agreeableness urgency slope, extracted so the
+// utility benchmark measures the shipped formula instead of a copy.
+// Gate: WARN_GROUP fires only for agreeableness > WARN_AGREEABLENESS_GATE.
+export const WARN_AGREEABLENESS_GATE = 0.65;
+export function warnGroupUrgency(agreeableness) {
+    const a = Number.isFinite(agreeableness) ? agreeableness : 0.5;
+    return Math.min(1.0, 0.65 + a * 0.15);
+}
+
 export class IntentResolver {
     /**
      * Resolve semantic intent from affective state and sensory observations
@@ -184,11 +193,11 @@ export class IntentResolver {
             const agreeableness = agent.traits?.agreeableness ?? 0.5;
 
             // Highly agreeable agents prioritize warning nearby peers under threat
-            if (peers.length > 0 && threats.length > 0 && agreeableness > 0.65) {
+            if (peers.length > 0 && threats.length > 0 && agreeableness > WARN_AGREEABLENESS_GATE) {
                 return {
                     type: 'WARN_GROUP',
                     target_id: peers[0].id,
-                    urgency: Math.min(1.0, 0.65 + agreeableness * 0.15),
+                    urgency: warnGroupUrgency(agreeableness),
                     vector_hint: { x: 0, y: 0, z: 0 },
                     suggested_posture: 'DEFENSIVE_STANCE'
                 };

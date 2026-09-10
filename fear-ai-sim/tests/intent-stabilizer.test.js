@@ -56,3 +56,20 @@ describe('Front B / Sections 294–296: Intent Stabilizer', () => {
         expect(() => s.update('a', 11, {})).toThrow();
     });
 });
+
+describe('NEXT-47: above-threshold A urgency-slope utility', () => {
+    test('WARN slope flips stabilizer overrides on a narrow held-urgency band', async () => {
+        const { runWarnSlopeUtility, warnUrgency } = await import('../benchmarks/behavioral-evaluation/a_warn_urgency_utility.mjs');
+        expect(runWarnSlopeUtility()).toEqual(runWarnSlopeUtility());
+        const r = runWarnSlopeUtility();
+        // Slope geometry: gate 0.65, width 0.0525 below the 0.15 margin.
+        expect(warnUrgency(0.66)).toBeCloseTo(0.749, 4);
+        expect(warnUrgency(1.0)).toBe(0.8);
+        // Verdict: narrow but live — high-A warners interrupt flight where
+        // just-above-gate warners cannot.
+        expect(r.rungs).toBe(81);
+        expect(r.diffs).toBe(11);
+        expect(r.tipLo).toBe(0.6);
+        expect(r.tipHi).toBe(0.65);
+    });
+});
