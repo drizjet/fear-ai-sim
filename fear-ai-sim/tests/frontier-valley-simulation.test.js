@@ -206,3 +206,18 @@ describe('NEXT-9: compaction-wired long soak', () => {
         expect(r.deliveries).toBeGreaterThan(0);
     });
 });
+
+describe('NEXT-41: HighlandPass pin attribution verdict', () => {
+    test('13. Pin is chronic combat, not sticky decay: removal recovers to floor', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        sim.advance(500);
+        // Chronic side: a failure nearly every tick while bandits operate.
+        expect(sim.macroMetrics.routeFailures).toBeGreaterThanOrEqual(400);
+        expect(sim.civSystem.routes.get('HighlandPass').perceivedDanger).toBe(1.0);
+        // Host removes the warband (host owns entities); decay alone must
+        // recover the route to its floor on the documented half-life.
+        sim.worldSystem.groups.delete('bandit_warband_1');
+        sim.advance(800);
+        expect(sim.civSystem.routes.get('HighlandPass').perceivedDanger).toBeCloseTo(0.35, 2);
+    });
+});

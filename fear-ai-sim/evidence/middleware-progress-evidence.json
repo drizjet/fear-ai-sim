@@ -5740,6 +5740,59 @@
         "Bias tested at +-0.10 only; larger miscalibrations that push regimes across gates are open"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_16",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 6 milestones since CCI-15 (RECOVERY_WINDOW_MAP_NOW35, SETUP_SWEEP_HARNESS_NEXT43, RETALIATORY_FUEL_NEXT44, PRODUCTION_FLOW_NEXT45, COMPACTION_SOAK_NEXT9, NOISE_FAMILIES_NEXT40), CCI-15 candidate status review, two probes (bandit-removal recovery, zero-vs-missing dropout)",
+        "6 commits since CCI-15; NOW-35 plus NEXT-9/40/43/44/45 closed and verified",
+        "Sharpest find 1 (closed same-turn as NEXT-41): HighlandPass pin fully attributed to chronic combat, zero stickiness. Bandit removal recovers danger 1.0 to floor 0.35 within ~400 ticks on the documented 80-tick half-life. Verdict: scenario-geography, no retune. Pinned as valley test 13",
+        "Sharpest find 2 (ranked NOW-36): zero-reads dropout diverges from missing-data dropout. Missing engages defaults (≈clean); stuck-at-zero reads AS data and silently corrupts (N 28.71 to 0.00, R 28.00 to 59.00 — inflation, not just loss)",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 343/343 suites (2543 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-36 zero-reads dropout mapping (probed: silent corruption/inflation vs graceful defaults).",
+        "NEXT-7 merchant belief-formation dynamics (carried).",
+        "NEXT-10 nested-JSON transport guard (carried).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+        "NEXT-12 handshake determinism review (carried).",
+        "NEXT-13 constructor-only over-credit audit (carried).",
+        "NEXT-14 infinite-loop containment research (carried).",
+        "NEXT-15 FearServer fixed-port production review (carried).",
+        "NEXT-17 richer rally dynamics for specificity guards (carried).",
+        "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+        "NEXT-21 numeric-field histograms in middle summaries (carried).",
+        "NEXT-29 floor-slope sensitivity exploration (carried).",
+        "NEXT-30 minimum-severity crystallization floor exploration (carried).",
+        "NEXT-31 graded defusal exploration (carried).",
+        "NEXT-32 acute fear spike for social wounds exploration (carried).",
+        "NEXT-34 dashboard BORDER_TRESPASS restraint (carried).",
+        "NEXT-35 unified extortion-gate theory (carried).",
+        "NEXT-42 post-cap rumor and flood-loss dynamics characterization (carried).",
+        "NEXT-46 NaN-basis contract strictness review (carried).",
+        "NEXT-47 above-threshold A urgency-slope utility test (carried).",
+        "NEXT-48 mauling-vs-scuffle differentiation (from NEXT-44 gap).",
+        "NEXT-49 archive steady-state bounding (from NEXT-9 gap).",
+        "NEXT-50 --expose-gc leak assay precursor to LATER-21 (from NEXT-9 gap).",
+        "NEXT-51 large-bias regime-crossing review (from NEXT-40 gap).",
+        "NEXT-52 economy calibration review: rates, caps, upkeep (from NEXT-45 gaps).",
+        "LATER-20 second external host architecture (gated on external project availability).",
+        "LATER-21 100k/1m-tick soak with memory-leak detection (needs NEXT-50 first).",
+        "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-36 (probed corruption delta, small contained mapping)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
