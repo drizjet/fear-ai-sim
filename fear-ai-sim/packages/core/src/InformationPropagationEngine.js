@@ -43,7 +43,11 @@ export const DEFAULT_PROPAGATION_CONFIG = Object.freeze({
     minConfidence: 0.05,
     mutationRate: 0.1,
     maxHops: 8,
-    maxRetainedRumors: 500 // Sibling-bound sweep: terminal-first eviction, inboxes pruned
+    maxRetainedRumors: 500, // Sibling-bound sweep: terminal-first eviction, inboxes pruned
+    // NEXT-60: per-tick spread budget. Infinity preserves the old unbounded
+    // behavior exactly; a finite budget defers the sorted-tail to later
+    // ticks (state-safe graceful degradation under flood).
+    maxSpreadPerTick: Infinity
 });
 
 function makeRng(seed) {
@@ -155,13 +159,15 @@ export class InformationPropagationEngine {
     advanceTick() {
         this.tick += 1;
         const newlyHeard = [];
+        const budget = this.config.maxSpreadPerTick ?? Infinity;
         // Spread: every agent holding an active rumor shares with listeners.
         // Deterministic order: sorted agent ids, sorted rumor ids.
-        for (const [listener, sources] of [...this.listenEdges.entries()].sort()) {
+        spread: for (const [listener, sources] of [...this.listenEdges.entries()].sort()) {
             for (const source of [...sources].sort()) {
                 const sourceInbox = this.inboxes.get(source);
                 if (!sourceInbox) continue;
                 for (const [rumorId] of [...sourceInbox.entries()].sort()) {
+                    if (newlyHeard.length >= budget) break spread;
                     const rumor = this.rumors.get(rumorId);
                     if (!rumor || rumor.status !== RUMOR_STATUS.ACTIVE) continue;
                     if (rumor.hops + 1 > this.config.maxHops) continue;

@@ -6415,6 +6415,27 @@
  "known_gaps": [
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FLOOD_BUDGET_NEXT5960",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "InformationPropagationEngine: maxSpreadPerTick config (default Infinity, byte-identical old behavior); labeled-break deferral in deterministic sorted order; zero budget is a kill switch. Mid-build repair note: incremental edits dropped the rumor lookup, ACTIVE guard, maxHops check, and inbox declaration in sequence — caught by the propagation battery each time, loop reconstructed and diff-minimized"
+ ],
+ "test_evidence": [
+ "Dense n=8 flood: 3500 hears/10t (~10x chain wall time), fresh reaches 8/8; budget 100 caps exactly 100/tick (1000 total) with deferred fresh 3/8; budget 0 spreads nothing (origin keeps rumor)",
+ "information-propagation.test.js +1 (battery 9/9, 2x green) with rerun-equality",
+ "Mutation probe (break neutered) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2572 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Dense flood <1 s; matrix ~36 s"
+ ],
+ "known_gaps": [
+ "Budget/deficit interaction with rumor decay unmapped: deferred rumors decay while waiting — under tight budgets fresh low-confidence rumors may die queued",
+ "Optimal budget sizing vs host frame budget unmapped (host-specific)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

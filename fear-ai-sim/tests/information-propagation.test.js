@@ -132,3 +132,27 @@ describe('NEXT-42: post-cap flood dynamics', () => {
         expect(a.terminalFirst.oldestRetained).toBe('new20');
     });
 });
+
+describe('NEXT-59/60: dense topology and spread budget', () => {
+    test('9. Dense flood spreads wide; budget caps per-tick work and defers losslessly', async () => {
+        const { runDenseFlood } = await import('../benchmarks/behavioral-evaluation/rumor_flood_dynamics.mjs');
+        const open = runDenseFlood({});
+        expect(runDenseFlood({})).toEqual(open);
+        // Dense n=8: 10x the chain work for proportional spread; fresh reaches all.
+        expect(open.retained).toBe(500);
+        expect(open.heard).toBe(3500);
+        expect(open.freshHolders).toBe(8);
+        // Budget 100: exactly 100/tick, deferred fresh (3/8 in 3 ticks).
+        const capped = runDenseFlood({ budget: 100 });
+        expect(runDenseFlood({ budget: 100 })).toEqual(capped);
+        expect(capped.heard).toBe(1000);
+        expect(capped.peakPerTick).toBe(100);
+        expect(capped.freshHolders).toBe(3);
+        expect(capped.freshHolders).toBeLessThan(open.freshHolders);
+        // Budget 0 is a kill switch: nothing spreads, origin keeps its rumor.
+        const off = runDenseFlood({ budget: 0 });
+        expect(off.heard).toBe(0);
+        expect(off.peakPerTick).toBe(0);
+        expect(off.freshHolders).toBe(1);
+    });
+});
