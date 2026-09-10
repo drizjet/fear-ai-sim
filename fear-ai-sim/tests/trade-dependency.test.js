@@ -67,3 +67,31 @@ describe('Section LII: Trade Dependency', () => {
         expect(eng.auditImmutability().hostPhysicsMutations).toBe(0);
     });
 });
+
+describe('NEXT-37: clock-bridging contract', () => {
+    test('6. Foreign basis wins when numeric, reader clock otherwise', async () => {
+        const { resolveLedgerNowTick } = await import('../packages/core/index.js');
+        expect(resolveLedgerNowTick(500, 800)).toBe(500);
+        expect(resolveLedgerNowTick(0, 800)).toBe(0);
+        expect(resolveLedgerNowTick(undefined, 800)).toBe(800);
+        expect(resolveLedgerNowTick(null, 800)).toBe(800);
+        expect(resolveLedgerNowTick('500', 800)).toBe(800);
+        // Explicit non-finite basis keeps whole-ledger meaning downstream.
+        expect(resolveLedgerNowTick(Infinity, 800)).toBe(Infinity);
+    });
+
+    test('7. Coalition bridge honors the shared helper end to end', async () => {
+        const { CoalitionDiplomacyEngine } = await import('../packages/core/index.js');
+        const rows = [];
+        for (let i = 0; i < 9; i++) {
+            rows.push({ sourceId: 'faction_A', destId: 'faction_B', commodity: 'food', amount: 10, tick: 500 + i });
+        }
+        const old = new CoalitionDiplomacyEngine({ seed: 1 });
+        old.tick(800);
+        // Unbridged: rows (500-508) are stale against the old clock.
+        expect(old._restraintFromLedger('faction_B', 'faction_A', { tradeLedger: rows })).toBe(0);
+        // Bridged through the shared contract: full restraint restored.
+        expect(old._restraintFromLedger('faction_B', 'faction_A', { tradeLedger: rows, currentTick: 500 }))
+            .toBeCloseTo(0.7, 10);
+    });
+});

@@ -30,6 +30,21 @@ export const DEFAULT_DEPENDENCY_CONFIG = Object.freeze({
     windowTicks: 200
 });
 
+/**
+ * NEXT-37 clock-bridging contract, shared by every tick-windowed ledger
+ * reader. Staleness is relative to the READER's clock by default; a ledger
+ * arriving from a foreign clock must carry its rows' tick basis, which
+ * wins when it is a number. Semantics are exactly the NOW-33 rule:
+ * absent/non-number basis falls back to the reader's tick; an explicit
+ * Infinity (or NaN) keeps the whole-ledger NOW-31 meaning downstream.
+ * @param {number|undefined} contextTick rows' basis supplied by the caller
+ * @param {number} readerTick the reading engine's own clock
+ * @returns {number} nowTick to pass windowed reads
+ */
+export function resolveLedgerNowTick(contextTick, readerTick) {
+    return typeof contextTick === 'number' ? contextTick : readerTick;
+}
+
 export class TradeDependencyEngine {
     /**
      * @param {object} [config={}] overrides

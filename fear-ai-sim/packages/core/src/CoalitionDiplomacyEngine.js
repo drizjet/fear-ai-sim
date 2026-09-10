@@ -25,7 +25,7 @@
 
 import { DeterministicRng } from './DeterministicRng.js';
 import { ESCALATION_STAGES, FACTION_CULTURES, INCIDENT_TYPES } from './FactionSystem.js';
-import { TradeDependencyEngine } from './TradeDependencyEngine.js';
+import { TradeDependencyEngine, resolveLedgerNowTick } from './TradeDependencyEngine.js';
 
 export const TREATY_TYPES = Object.freeze({
     MUTUAL_DEFENSE_PACT: 'MUTUAL_DEFENSE_PACT',
@@ -92,11 +92,10 @@ export class CoalitionDiplomacyEngine {
     _restraintFromLedger(grudgeHolder, provocateur, context = {}) {
         const ledger = context.tradeLedger;
         if (!Array.isArray(ledger) || ledger.length === 0 || !grudgeHolder || !provocateur) return 0;
-        // Tick basis defaults to this engine's clock; callers bridging a
-        // foreign ledger (e.g. valley rows) pass context.currentTick.
+        // NEXT-37: shared clock-bridging contract (see resolveLedgerNowTick).
         // NOTE: Infinity would stale every ticked row (cutoff arithmetic),
         // so it must never be the default here.
-        const nowTick = typeof context.currentTick === 'number' ? context.currentTick : this.currentTick;
+        const nowTick = resolveLedgerNowTick(context.currentTick, this.currentTick);
         return this.dependency.advise(ledger, grudgeHolder, provocateur, 1, nowTick).restraint;
     }
     /**

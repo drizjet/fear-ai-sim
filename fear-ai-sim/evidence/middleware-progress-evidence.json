@@ -5459,6 +5459,26 @@
         "Above-threshold urgency slope is shallow by construction (0.65 + 0.15A); whether that slope carries usable A information is untested"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "CLOCK_BRIDGE_CONTRACT_NEXT37",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "resolveLedgerNowTick(contextTick, readerTick) exported from TradeDependencyEngine (owns window semantics) and re-exported via core index; CoalitionDiplomacyEngine._restraintFromLedger migrated to it with byte-identical semantics (same typeof-number selection). Audit: valley passes its own tick (same-clock, correct), FabeChunkIntegration/test fixtures pass explicit ticks, rumor engines are single-clock; the coalition bridge was the only foreign-clock reader",
+        "No behavior change by construction: helper body is the extracted NOW-33 expression"
+      ],
+      "test_evidence": [
+        "2 new tests in trade-dependency.test.js (battery 8/8): helper selection matrix (finite/zero wins, undefined/null/string fall back, Infinity passes through to whole-ledger meaning); coalition end-to-end stale-unbridged vs restored-bridged through the shared helper",
+        "Mutation probe (helper returns reader tick always) fails both new tests; revert green",
+        "Full matrix 343/343 (2531 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Dependency battery ~1 s; matrix ~33 s"
+      ],
+      "known_gaps": [
+        "NaN context basis passes through to whole-ledger meaning per NOW-31 (documented); a stricter contract could reject it, unjudged"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

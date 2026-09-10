@@ -362,7 +362,8 @@ export {
 } from './src/SecurityDilemmaHarness.js';
 export {
  TradeDependencyEngine,
- DEFAULT_DEPENDENCY_CONFIG
+ DEFAULT_DEPENDENCY_CONFIG,
+ resolveLedgerNowTick
 } from './src/TradeDependencyEngine.js';
 export {
  BlockadeEngine,
