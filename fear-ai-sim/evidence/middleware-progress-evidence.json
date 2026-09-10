@@ -6858,6 +6858,33 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "VALLEY_CASCADE_LIVE_NEXT80",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FrontierValleySimulation owns a RelationshipTensorSystem; all 6 roaming groups carry deterministic leaderIds; stranger-neutral 0.5 trust seeded so threading reproduces the old no-store default exactly (all 73 valley tests pass unchanged)",
+ "advance() threads the store into worldSystem.tick; getState/setState persist and restore it (fork-safe: counterfactual suite green)",
+ "Live dynamics probed before pinning (seed 11): false WAR_DECLARED 3 holders at t=50, 5 at t=100, 6 at t=400; holder refutation converges to zero holders by t=600 with directed trust losses toward the bandit leader",
+ "Correction spread follows the encounter graph: an isolated non-holder (patrol) refutation spread to nobody in 150 ticks, while a holder refutation cleaned the valley - recorded as design property, not a bug",
+ "Mid-build failures: three mis-anchored edits (tick-call duplication with missing closer; two dropped memberCount lines; test 22/23 collision) all repaired via region re-read and diff review with zero unintended removals (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "Valley battery 25/25 (5 new NEXT-80 pins: live cascade reach, holder-refutation cleaning plus trust with encounter-path pin, convergence to zero, seed determinism, snapshot round-trip of rumor plus correction plus trust)",
+ "First threading probe passed vacuously (direct correctRumor write masked it); encounter-path pin added and second probe fails exactly test 22; fix restored",
+ "Full matrix 342/343 suites, 2600 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~10-12s; full matrix ~38s"
+ ],
+ "known_gaps": [
+ "Valley worldSystem constructed with rngSeed (ignored) instead of seed: its DeterministicRng always uses 1337 across valley seeds (observed, untouched - valley pins depend on current behavior; needs a determinism audit of its own)",
+ "knownCorrections sets grow without a cap (NEXT-81)",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

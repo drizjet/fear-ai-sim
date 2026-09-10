@@ -23,6 +23,7 @@ import { DeterministicRng } from './DeterministicRng.js';
 import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES, INCIDENT_TYPES, casualtySeverityScale } from './FactionSystem.js';
 import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
 import { WorldSimulationSystem, ROAMING_PARTY_TYPES, ENCOUNTER_TYPES } from './WorldSimulationSystem.js';
+import { RelationshipTensorSystem } from './RelationshipTensorSystem.js';
 import { TradeDependencyEngine } from './TradeDependencyEngine.js';
 
 export const FRONTIER_VALLEY_FACTIONS = Object.freeze({
@@ -57,6 +58,9 @@ export class FrontierValleySimulation {
         this.rng = new DeterministicRng(this.seed);
 
         this.factionSystem = new FactionSystem();
+        // NEXT-80: valley-owned directed trust store so rumor corrections
+        // (refutation loss, vindication reward) exercise live in encounters.
+        this.relationshipSystem = new RelationshipTensorSystem();
         this.civSystem = new CivilizationSimulationSystem();
         this.worldSystem = new WorldSimulationSystem({
             encounterProximityRadius: 35.0,
@@ -264,7 +268,8 @@ export class FrontierValleySimulation {
             memberCount: 8,
             position: { x: 120 + jitX * 0.5, y: 0, z: 120 + jitZ * 0.5 },
             waypoints: [{ x: 50, y: 0, z: 200 }, { x: 200, y: 0, z: 50 }],
-            militaryStrength: 0.70
+            militaryStrength: 0.70,
+            leaderId: 'lead_patrol_settlers'
         });
 
         this.worldSystem.registerGroup('caravan_merchant_1', {
@@ -282,7 +287,8 @@ export class FrontierValleySimulation {
                 toSettlement: FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN,
                 commodity: 'food',
                 amount: 2.0
-            }
+            },
+            leaderId: 'lead_caravan_merchant_1'
         });
 
         this.worldSystem.registerGroup('caravan_merchant_2', {
@@ -300,7 +306,8 @@ export class FrontierValleySimulation {
                 toSettlement: FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN,
                 commodity: 'timber',
                 amount: 1.5
-            }
+            },
+            leaderId: 'lead_caravan_merchant_2'
         });
 
         this.worldSystem.registerGroup('bandit_warband_1', {
@@ -310,7 +317,8 @@ export class FrontierValleySimulation {
             memberCount: 6,
             position: { x: 60 + jitX, y: 0, z: 210 + jitZ },
             waypoints: [{ x: 60, y: 0, z: 210 }, { x: 175, y: 0, z: 250 }],
-            militaryStrength: 0.60
+            militaryStrength: 0.60,
+            leaderId: 'lead_bandit_warband'
         });
 
         this.worldSystem.registerGroup('nomad_clan_1', {
@@ -320,7 +328,8 @@ export class FrontierValleySimulation {
             memberCount: 12,
             position: { x: 220 + jitX * 0.7, y: 0, z: 180 + jitZ * 0.7 },
             waypoints: [{ x: 220, y: 0, z: 180 }, { x: 280, y: 0, z: 220 }],
-            wealth: 0.40
+            wealth: 0.40,
+            leaderId: 'lead_nomad_clan'
         });
 
         this.worldSystem.registerGroup('wolf_pack_1', {
@@ -329,8 +338,18 @@ export class FrontierValleySimulation {
             factionId: FRONTIER_VALLEY_FACTIONS.WILDLIFE,
             memberCount: 4,
             position: { x: 80 + jitX * 0.3, y: 0, z: 220 + jitZ * 0.3 },
-            waypoints: [{ x: 80, y: 0, z: 220 }, { x: 100, y: 0, z: 240 }]
+            waypoints: [{ x: 80, y: 0, z: 220 }, { x: 100, y: 0, z: 240 }],
+            leaderId: 'lead_wolf_pack'
         });
+        // NEXT-80: stranger-neutral trust so threading the relationship
+        // store reproduces the old no-store 0.5 default exactly until
+        // rumor corrections (the only valley trust writer) fire.
+        const leaders = [...this.worldSystem.groups.values()].map(g => g.leaderId).filter(Boolean);
+        for (const s of leaders) {
+            for (const t of leaders) {
+                if (s !== t) this.relationshipSystem.getRelationship(s, t).trust = 0.5;
+            }
+        }
     }
     /**
      * Report host-observed inter-faction trade flow (NEXT-16). The host
@@ -598,7 +617,7 @@ export class FrontierValleySimulation {
             this.civSystem.advanceSimulation(1);
 
             // 2. Advance World System (movement, encounters, rumors)
-            this.worldSystem.tick(1.0, { factionSystem: this.factionSystem });
+            this.worldSystem.tick(1.0, { factionSystem: this.factionSystem, relationshipTensorSystem: this.relationshipSystem });
             const encounters = this.worldSystem.activeEncounters || [];
             this.macroMetrics.totalEncounters += encounters.length;
             this._recordEncounterConsequences(encounters);
@@ -793,6 +812,7 @@ export class FrontierValleySimulation {
             })),
             factionSystem: this.factionSystem.getState(),
             civSystem: this.civSystem.getState(),
+            relationshipSystem: this.relationshipSystem.getState(),
             worldSystem: this.worldSystem.exportState()
         };
     }
@@ -826,6 +846,9 @@ export class FrontierValleySimulation {
         }
         if (snapshot.civSystem) {
             this.civSystem.setState(snapshot.civSystem);
+        }
+        if (snapshot.relationshipSystem) {
+            this.relationshipSystem.setState(snapshot.relationshipSystem);
         }
         if (snapshot.worldSystem) {
             this.worldSystem.importState(snapshot.worldSystem);

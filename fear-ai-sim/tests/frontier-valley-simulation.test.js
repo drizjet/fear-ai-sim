@@ -355,3 +355,82 @@ describe('NEXT-63: advisory price channel', () => {
         expect(a.advisoryPrice('food')).toBeGreaterThan(a.advisoryPrice('timber'));
     });
 });
+
+describe('NEXT-80: valley misinformation end to end', () => {
+    const SEED = 11;
+    function seededValley() {
+        const sim = new FrontierValleySimulation({ seed: SEED });
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9, description: 'false army report'
+        });
+        return { sim, rumor };
+    }
+    function holders(sim, rumor) {
+        return [...sim.worldSystem.groups.values()]
+            .filter(g => g.knownRumors.has(rumor.id)).map(g => g.id).sort();
+    }
+    test('21. A false army report cascades live across valley groups', () => {
+        const { sim, rumor } = seededValley();
+        sim.advance(150);
+        expect(holders(sim, rumor).length).toBeGreaterThanOrEqual(4);
+        expect(sim.worldSystem.queryHistory({ eventType: 'RUMOR_SPREAD' }).length).toBeGreaterThanOrEqual(3);
+    });
+    test('22. Holder refutation cleans believers and costs bandit-directed trust', () => {
+        const { sim, rumor } = seededValley();
+        sim.advance(150);
+        const pre = holders(sim, rumor).length;
+        sim.worldSystem.correctRumor(rumor.id, {
+            confirmed: false, byGroupId: 'caravan_merchant_1',
+            relationshipTensorSystem: sim.relationshipSystem
+        });
+        sim.advance(150);
+        expect(holders(sim, rumor).length).toBeLessThan(pre);
+        expect(sim.worldSystem.queryHistory({ eventType: 'RUMOR_CORRECTED' }).length).toBe(1);
+        const writes = [];
+        for (const [, m] of sim.relationshipSystem.relationships) {
+            for (const [t, v] of m) {
+                if (t === 'lead_bandit_warband' && v.trust < 0.5) writes.push(v);
+            }
+        }
+        expect(writes.length).toBeGreaterThanOrEqual(1);
+        expect(writes.every(v => v.grievance > 0)).toBe(true);
+        // Encounter-path pin: caravan_2 never corrected anything itself; its
+        // loss must have arrived via a live encounter, which requires the
+        // valley tick to thread the relationship store (not just correctRumor).
+        expect(sim.relationshipSystem.getRelationship('lead_caravan_merchant_2', 'lead_bandit_warband').trust)
+            .toBeLessThan(0.5);
+    });
+    test('23. The valley converges to zero holders of the falsehood', () => {
+        const { sim, rumor } = seededValley();
+        sim.advance(150);
+        sim.worldSystem.correctRumor(rumor.id, {
+            confirmed: false, byGroupId: 'caravan_merchant_1',
+            relationshipTensorSystem: sim.relationshipSystem
+        });
+        sim.advance(450);
+        expect(holders(sim, rumor)).toEqual([]);
+    });
+    test('24. Valley cascade is deterministic for a fixed seed', () => {
+        const run = () => {
+            const { sim, rumor } = seededValley();
+            sim.advance(150);
+            return holders(sim, rumor);
+        };
+        expect(run()).toEqual(run());
+    });
+    test('25. Valley snapshot preserves rumor and correction state', () => {
+        const { sim, rumor } = seededValley();
+        sim.advance(150);
+        sim.worldSystem.correctRumor(rumor.id, {
+            confirmed: false, byGroupId: 'caravan_merchant_1',
+            relationshipTensorSystem: sim.relationshipSystem
+        });
+        sim.advance(150);
+        const restored = new FrontierValleySimulation({ seed: 999 });
+        restored.setState(sim.getState());
+        expect(holders(restored, rumor)).toEqual(holders(sim, rumor));
+        expect(restored.worldSystem.rumors.get(rumor.id).correction.confirmed).toBe(false);
+        expect(restored.relationshipSystem.getRelationship('lead_caravan_merchant_2', 'lead_bandit_warband').trust)
+            .toBe(sim.relationshipSystem.getRelationship('lead_caravan_merchant_2', 'lead_bandit_warband').trust);
+    });
+});
