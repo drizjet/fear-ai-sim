@@ -6548,6 +6548,26 @@
  "No demand side: prices never feed back into caravan or faction decisions (advisory only by constitutional design)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "MIGRATION_ROLLUP_NEXT64",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No behavior change: 50k-tick archive holds zero MIGRATION_COMPLETED/TREATY_NOTED/BATTLE_FOUGHT events (no emitters exist) — nothing to roll. Readiness proven generically instead"
+ ],
+ "test_evidence": [
+ "Live 50k probe: 1199 archive rows are deliveries + camp churn + 2 boundary rows; migration anchor types absent (reserved anchor types with no emitting system)",
+ "event-log-compaction.test.js +1 (battery 17/17): synthetic migration open/close pair rolls with a one-line spec (cold pair only, warm pair stays whole)",
+ "Mutation probe (rollable gate narrowed to kept-only) fails exactly the NEXT-49 pair test plus the new test; restore green",
+ "Full matrix 342/343 suites (2568 pass; 8 dashboard EACCES env failures, known); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Compaction battery ~30 s (long-horizon fixtures); matrix ~40 s"
+ ],
+ "known_gaps": [
+ "When migration emitters land, a pair spec must be registered alongside them — no tripwire enforces this (new emitters ship their own tests by convention)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

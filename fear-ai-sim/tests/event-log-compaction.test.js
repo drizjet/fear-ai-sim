@@ -286,3 +286,27 @@ describe('NEXT-49: cold-tier steady-state bounding', () => {
     expect(a.stats.coldPaired).toBe(0);
   });
 });
+
+describe('NEXT-64: migration-chain cold readiness', () => {
+    it('rolls configured migration pairs with no code change; live valley emits none', async () => {
+        const { compactEventLog } = await import('../packages/core/index.js');
+        // Generic mechanism check: any configured open/close pair rolls.
+        const evs = [
+            { eventId: 'm-est-1', type: 'MIGRATION_STARTED', tick: 10, primaryId: 'clan', parentEventIds: [] },
+            { eventId: 'm-end-1', type: 'MIGRATION_COMPLETED', tick: 40, primaryId: 'clan', parentEventIds: [] },
+            { eventId: 'm-est-2', type: 'MIGRATION_STARTED', tick: 900, primaryId: 'clan', parentEventIds: [] },
+            { eventId: 'm-end-2', type: 'MIGRATION_COMPLETED', tick: 950, primaryId: 'clan', parentEventIds: [] },
+        ];
+        const out = compactEventLog(evs, {
+            anchorTypes: ['MIGRATION_STARTED', 'MIGRATION_COMPLETED'],
+            bulkTypes: [],
+            coldAgeTicks: 100,
+            coldPairRollup: [{ open: 'MIGRATION_STARTED', close: 'MIGRATION_COMPLETED', key: 'primaryId' }]
+        });
+        // maxTick 950, cutoff 850: only the first pair is cold.
+        expect(out.stats.coldPaired).toBe(1);
+        expect(out.coldPairSummaries).toHaveLength(1);
+        expect(out.coldPairSummaries[0]).toMatchObject({ keyValue: 'clan', pairCount: 1 });
+        expect(out.events.some((e) => e.eventId === 'm-est-2')).toBe(true);
+    });
+});
