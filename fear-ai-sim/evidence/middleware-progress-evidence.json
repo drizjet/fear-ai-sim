@@ -6934,6 +6934,29 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "HARNESS_SEED_FIX_NEXT83",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Same dead-key pattern as NEXT-82: collision harness passed rngSeed while RoamingBandSystem reads config.seed; one-key fix with identical draw order",
+ "Collision, roaming-band, and unwired-adjacency suites green without re-pinning (29/29)"
+ ],
+ "test_evidence": [
+ "Collision battery 10/10 (1 new NEXT-83 pin: roaming stream varies by harness seed plus stable per seed)",
+ "Revert-to-rngSeed probe fails exactly the new pin; fix restored",
+ "Full matrix 342/343 suites, 2606 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Collision battery ~1s; full matrix ~36s"
+ ],
+ "known_gaps": [
+ "No repo-wide dead-config-key lint: the same pattern could recur wherever constructors spread unknown keys silently (consider a strict-config audit)",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

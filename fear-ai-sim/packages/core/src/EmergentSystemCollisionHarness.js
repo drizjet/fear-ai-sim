@@ -74,7 +74,9 @@ export class EmergentSystemCollisionHarness {
         const factionSystem = new FactionSystem();
         const economicSystem = new EconomicFeedbackSystem();
         const migrationSystem = new SettlementMigrationSystem();
-        const roamingSystem = new RoamingBandSystem({ rngSeed: this.rng.intRange(1, 1000000) });
+        // NEXT-83: was rngSeed (dead key - RoamingBandSystem reads
+        // config.seed). Draw order unchanged, preserving harness determinism.
+        const roamingSystem = new RoamingBandSystem({ seed: this.rng.intRange(1, 1000000) });
         const interventionSystem = new ScenarioInterventionSystem();
         const cascadeSystem = new MultiFeedbackCascadeSystem();
 

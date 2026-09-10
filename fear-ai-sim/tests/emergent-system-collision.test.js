@@ -105,3 +105,14 @@ describe('EmergentSystemCollisionHarness (Front E / Sections 61–63)', () => {
         expect(JSON.stringify(externalGameHost)).toBe(hostBefore);
     });
 });
+
+describe('NEXT-83: collision-harness seed plumbing', () => {
+    it('roaming stream varies by harness seed and is stable per seed', () => {
+        const a = new EmergentSystemCollisionHarness({ seed: 12345 });
+        const b = new EmergentSystemCollisionHarness({ seed: 54321 });
+        const c = new EmergentSystemCollisionHarness({ seed: 12345 });
+        const seedOf = (h) => h.subsystems.roamingSystem.config.seed;
+        expect(seedOf(a)).not.toBe(seedOf(b));
+        expect(seedOf(a)).toBe(seedOf(c));
+    });
+});
