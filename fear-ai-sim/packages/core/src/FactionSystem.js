@@ -65,6 +65,19 @@ function clamp01(v) {
     return Math.max(0.0, Math.min(1.0, v));
 }
 
+/**
+ * NEXT-56: shared casualty-severity map (NEXT-48 fight-back and NEXT-55
+ * border paths). Strength share 0 -> floor, share >= knee -> 1.0.
+ * Defaults reproduce the shipped behavior exactly; the sweep varies them
+ * to calibrate the designer-facing tradeoff surface.
+ */
+export function casualtySeverityScale(share, floor = 0.25, knee = 0.5) {
+    const s = Number.isFinite(share) ? Math.min(1, Math.max(0, share)) : 0.5;
+    const f = Number.isFinite(floor) ? Math.min(1, Math.max(0, floor)) : 0.25;
+    const k = Number.isFinite(knee) && knee > 0 ? knee : 0.5;
+    return f + (1 - f) * Math.min(1, s / k);
+}
+
 export class FactionSystem {
     /**
      * @param {object} [config={}]

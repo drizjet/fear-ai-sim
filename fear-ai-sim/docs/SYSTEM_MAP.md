@@ -234,6 +234,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Sweep Seeds NEXT-69:** FROZEN_SEEDS actually seed sweep agents now (were counter theater); verdicts identical to 4dp. Sensitivity probes negative — architectural hygiene, honestly reported. Pinned in persona battery.
 - **Prosocial Interplay NEXT-70:** WARN-during plus APPROACH-after are temporal modes, never competitors — post-threat approach urgency orders by A for all agents. Pinned in persona battery.
 - **Volume Weighting NEXT-62:** deliveredVolume metric added — counts flat while volume sags 23% as sinks fill; tiny caps converge near normal (upkeep-limited steady state). Pinned in valley battery.
+- **Severity Calibration NEXT-56:** shared casualty map extracted (sweepable floor/knee) — incidents tune 0.33-0.55 while the ladder ceiling holds everywhere. Designers tune feel, not stability. Pinned in pacing battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

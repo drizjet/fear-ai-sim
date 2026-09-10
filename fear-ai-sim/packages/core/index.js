@@ -51,7 +51,8 @@ export {
     ESCALATION_STAGES,
     FACTION_CULTURES,
     INCIDENT_TYPES,
-    DEFAULT_FACTION_CONFIG
+    DEFAULT_FACTION_CONFIG,
+    casualtySeverityScale
 } from './src/FactionSystem.js';
 export {
     CivilizationSimulationSystem,

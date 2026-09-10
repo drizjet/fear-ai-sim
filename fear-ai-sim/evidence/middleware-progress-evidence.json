@@ -6396,6 +6396,25 @@
  "Upkeep-rate vs inflow-rate steady-state law (which rate binds at which ratio) not yet expressed as a formula"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "SEVERITY_CALIB_NEXT56",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FactionSystem: exported casualtySeverityScale/share-floor-knee map; both valley callsites (ambush fight-back, border symmetric) routed through it with sim.severityParams overrides, defaults byte-identical (pacing battery green pre-sweep)"
+ ],
+ "test_evidence": [
+ "Calibration surface 3x3: incidents span 0.33-0.55 (tunable feel) while the reverse-ladder ceiling is invariant (peak 0.9885, MOBILIZE everywhere, ATTACK nowhere) — designers tune feel freely without destabilizing the ladder",
+ "valley-war-pacing.test.js +1 (battery 28/28): rerun-equal, corner magnitudes, single-peak invariance with mobilize-everywhere/attack-nowhere",
+ "Mutation probe (map forced to 1) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2571 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Surface <1 s; matrix ~35 s"
+ ],
+ "known_gaps": [
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

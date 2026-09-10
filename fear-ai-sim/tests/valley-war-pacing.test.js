@@ -532,3 +532,25 @@ describe('NEXT-55: border-skirmish asymmetric fuel', () => {
     expect(mau.sn).toBeLessThan(mau.ns);
   });
 });
+
+describe('NEXT-56: severity calibration surface', () => {
+    test('Incidents tune with floor/knee while the ladder ceiling holds everywhere', async () => {
+        const { runSeverityCalibration } = await import('../benchmarks/behavioral-evaluation/severity_calibration.mjs');
+        const grid = { floors: [0, 0.25, 0.5], knees: [0.25, 0.5, 0.75], ticks: 5000 };
+        const a = runSeverityCalibration(grid);
+        expect(runSeverityCalibration(grid)).toEqual(a);
+        expect(a.cells).toHaveLength(9);
+        const at = (f, k) => a.cells.find((c) => c.floor === f && c.knee === k);
+        // Feel is tunable: soft corner vs hard corner differ markedly.
+        expect(at(0, 0.75).incident).toBeCloseTo(0.3333, 4);
+        expect(at(0.5, 0.25).incident).toBeCloseTo(0.55, 4);
+        expect(at(0, 0.75).incident).toBeLessThan(at(0.5, 0.25).incident);
+        // Ceiling invariant: every cell mobilizes, none attacks, same peak.
+        const peaks = new Set(a.cells.map((c) => c.maxGriev));
+        expect(peaks.size).toBe(1);
+        for (const c of a.cells) {
+            expect(c.mobilize).toBe(true);
+            expect(c.attack).toBe(false);
+        }
+    });
+});

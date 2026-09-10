@@ -20,7 +20,7 @@
  */
 
 import { DeterministicRng } from './DeterministicRng.js';
-import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES, INCIDENT_TYPES } from './FactionSystem.js';
+import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES, INCIDENT_TYPES, casualtySeverityScale } from './FactionSystem.js';
 import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
 import { WorldSimulationSystem, ROAMING_PARTY_TYPES, ENCOUNTER_TYPES } from './WorldSimulationSystem.js';
 import { TradeDependencyEngine } from './TradeDependencyEngine.js';
@@ -498,7 +498,9 @@ export class FrontierValleySimulation {
                     const vStr = Number(victimGroup?.militaryStrength) || 0;
                     const bStr = Number(banditGroup?.militaryStrength) || 0;
                     const share = (vStr + bStr) > 0 ? vStr / (vStr + bStr) : 0.5;
-                    const fightSeverity = 0.25 + 0.75 * Math.min(1, share / 0.5);
+                    // NEXT-56: shared map; sweepable via sim.severityParams.
+                    const sevP = this.severityParams ?? {};
+                    const fightSeverity = casualtySeverityScale(share, sevP.floor, sevP.knee);
                     const backRestraint = this._dependencyRestraint(bandit, victim);
                     this.factionSystem.recordIncident(victim, bandit, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, restraint: backRestraint, severity: fightSeverity });
                 }
@@ -518,8 +520,9 @@ export class FrontierValleySimulation {
                     // barely notices the scuffle. Parity stays symmetric.
                     const aStr = Number(gA?.militaryStrength) || 0;
                     const bStr = Number(gB?.militaryStrength) || 0;
+                    const sevP = this.severityParams ?? {};
                     const sevFor = (inf, vic) => (inf + vic) > 0
-                        ? 0.25 + 0.75 * Math.min(1, (inf / (inf + vic)) / 0.5)
+                        ? casualtySeverityScale(inf / (inf + vic), sevP.floor, sevP.knee)
                         : 0.5;
                     this.factionSystem.recordIncident(fA, fB, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, severity: sevFor(aStr, bStr) });
                     this.factionSystem.recordIncident(fB, fA, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, severity: sevFor(bStr, aStr) });
