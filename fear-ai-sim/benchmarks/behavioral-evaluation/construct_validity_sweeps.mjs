@@ -397,7 +397,9 @@ export function runConstructValiditySweeps() {
             for (const seed of FROZEN_SEEDS) {
                 const traits = makeNeutral();
                 traits[def.key] = val;
-                const score = def.signature(traits, {});
+                // NEXT-69: the loop seed now actually seeds the agents
+                // (previously construction-counter theater).
+                const score = def.signature(traits, {}, `sweep:mono:${def.key}:${val}:${seed}`);
                 seedScores.push(score);
             }
             const meanScore = seedScores.reduce((a, b) => a + b, 0) / seedScores.length;
@@ -430,7 +432,7 @@ export function runConstructValiditySweeps() {
                 for (const seed of FROZEN_SEEDS) {
                     const traits = makeNeutral();
                     traits[tDef.key] = val;
-                    const score = sDef.signature(traits, {});
+                    const score = sDef.signature(traits, {}, `sweep:cross:${tDef.key}:${sDef.key}:${val}:${seed}`);
                     seedScores.push(score);
                 }
                 sigMeans.push(seedScores.reduce((a, b) => a + b, 0) / seedScores.length);
@@ -488,18 +490,20 @@ export function runConstructValiditySweeps() {
                 const valA = base;
                 const valB = Math.min(1.0, base + delta);
 
-                for (const scen of def.scenarios) {
+                for (let sci = 0; sci < def.scenarios.length; sci++) {
+                    const scen = def.scenarios[sci];
                     for (let sIdx = 0; sIdx < 2; sIdx++) {
                         totalTrials++;
-                        const seed = FROZEN_SEEDS[sIdx];
-
+                        // Shared per-trial stream (NEXT-53 convention): arm
+                        // differences come from traits only.
+                        const trialSeed = `sweep:nn:${def.key}:${delta}:${base}:${sci}:${sIdx}`;
                         const traitsA = makeNeutral();
                         traitsA[def.key] = valA;
-                        const scoreA = def.signature(traitsA, scen);
+                        const scoreA = def.signature(traitsA, scen, trialSeed);
 
                         const traitsB = makeNeutral();
                         traitsB[def.key] = valB;
-                        const scoreB = def.signature(traitsB, scen);
+                        const scoreB = def.signature(traitsB, scen, trialSeed);
 
                         if (scoreB > scoreA) correctCount++;
                     }

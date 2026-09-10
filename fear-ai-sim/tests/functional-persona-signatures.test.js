@@ -323,3 +323,19 @@ describe('NEXT-68: zero-misordered-fraction decomposition', () => {
         expect(cell('above', 'zero_0p3/delta_0.15').wrong).toBeLessThanOrEqual(2);
     });
 });
+
+describe('NEXT-69: seeded sweep internals', () => {
+    test('18. Validity sweep is order-free with verdicts intact', async () => {
+        const { runConstructValiditySweeps } = await import('../benchmarks/behavioral-evaluation/construct_validity_sweeps.mjs');
+        const a = runConstructValiditySweeps();
+        expect(runConstructValiditySweeps()).toEqual(a);
+        // Headline verdicts survive real seeding: N/R entangled drivers,
+        // O/E/A/C/L isolated and monotonic.
+        expect(a.constructAdmission.neuroticism.verdict).toBe('ENTANGLED_BROAD_DRIVER');
+        expect(a.constructAdmission.resilience.verdict).toBe('ENTANGLED_BROAD_DRIVER');
+        for (const t of ['openness', 'extraversion', 'agreeableness', 'conscientiousness', 'leadership']) {
+            expect(a.constructAdmission[t].verdict).toBe('ISOLATED_AND_MONOTONIC');
+        }
+        expect(a.monotonicity.agreeableness.spearmanRho).toBeCloseTo(0.9910, 4);
+    });
+});

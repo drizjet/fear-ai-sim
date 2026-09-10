@@ -6336,6 +6336,25 @@
  "Above-gate residual (3 wrongs: asymmetric leaderCalm flips on urgency slope hypothesized, not isolated)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "SWEEP_SEEDS_NEXT69",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "construct_validity_sweeps.mjs: FROZEN_SEEDS now actually seed agents in all three sections (mono/cross per-value seeds, nn shared per-trial streams); 2-arg signature convention unchanged for other callers"
+ ],
+ "test_evidence": [
+ "Sweep verdicts identical to 4dp under real seeding (N/R entangled, O/E/A/C/L isolated, same leaks) — the counter theater never moved a reported digit",
+ "functional-persona-signatures.test.js +1 (battery 18/18, 2x green): in-process rerun-equality plus admission verdicts and A rho",
+ "Mutation probes NEGATIVE (reported, not hidden): unthreading mono or nn sections still passes — current sweep outputs are fully stream-robust, so the pin locks the determinism property architecturally rather than catching a live sensitivity. Value is future-proofing, not a fixed bug",
+ "Full matrix 343/343 (2568 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Sweep <1 s; matrix ~41 s"
+ ],
+ "known_gaps": [
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
