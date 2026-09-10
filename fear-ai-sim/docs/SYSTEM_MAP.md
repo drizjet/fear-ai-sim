@@ -192,6 +192,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Tick Audit NEXT-36:** surveyed all Infinity/window filters — NOW-31 was the only bad default; composed-call default basis pinned. Rule: non-finite basis means unbounded.
 - **Frontier Audit CCI-13:** 27 ranked candidates (1 NOW, 22 NEXT, 4 LATER); all CCI-12 NOW items plus NEXT-36 closed. Next: ledger-clock alignment for coalition restraint (NOW-33, probed cross-clock inconsistency).
 - **Ledger Clock NOW-33:** staleness is relative to the reader's clock (documented + pinned); foreign ledgers must bridge with the rows' tick basis. No behavior change.
+- **Compaction Soak NEXT-9:** rolling compaction wired into 100k-tick path (lossless 100-tick drain, re-compacted archive). All delivery anchors survive (1769/1769); live ledger capped; 94% byte savings. Pinned in valley battery.
 - **Production NEXT-45:** settlement production + sink upkeep + storage caps; second caravan. Flow oscillates perpetually (354/20k ticks), bounded, faction ledger still untouched. Pinned in valley battery.
 - **Retaliation NEXT-44:** combat bleeds both ways — ambush fight-back + symmetric border casualties (wildlife excluded, self-limiting to hot stages). Bandit-direction grievance peaks 0.989, caps at MOBILIZE; soak still flag-free. Pinned in pacing battery.
 - **Outcomes NEXT-22b:** 12-seed × 5000-tick distribution = exactly 1 macro class (CV 0 on failures; deliveries tight). Robust simmer, zero story variance: CCX multi-outcome needs setup knobs, not seeds. Pinned in pacing battery.

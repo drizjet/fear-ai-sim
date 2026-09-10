@@ -191,3 +191,18 @@ describe('NEXT-43: setup-sweep outcome knobs', () => {
         ]);
     });
 });
+
+describe('NEXT-9: compaction-wired long soak', () => {
+    test('12. Rolling compaction keeps every delivery anchor with a bounded live ledger', async () => {
+        const { runCompactionSoak, compactionDigest } = await import('../benchmarks/behavioral-evaluation/valley_compaction_soak.mjs');
+        // Tiny grid for suite speed; the full 2x100k grid lives in the script.
+        const tiny = { seeds: [11], ticks: 2000, window: 100 };
+        const first = runCompactionSoak(tiny);
+        expect(compactionDigest(runCompactionSoak(tiny))).toBe(compactionDigest(first));
+        const r = first.runs[0];
+        expect(r.liveLedger).toBeLessThanOrEqual(1000);
+        expect(r.anchorComplete).toBe(true);
+        expect(r.keptDeliveries).toBe(r.deliveries);
+        expect(r.deliveries).toBeGreaterThan(0);
+    });
+});

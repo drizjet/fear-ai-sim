@@ -5692,6 +5692,30 @@
         "Price response to scarcity/danger is still open (trade has no price channel)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "COMPACTION_SOAK_NEXT9",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "valley_compaction_soak.mjs: 2 seeds x 100k ticks (~3.5 s each) with rolling compaction wired into the long-horizon path (100-tick lossless drain via id watermark into an id-deduped archive re-compacted in place; summaries accumulate). Live blind eviction unchanged. Valley anchor set (deliveries, battles, camps, migration, treaties) plus bulk set (encounters, rumors); rolling-vs-global boundary distinction documented in-script",
+        "No production-code changes: harness-only chunk (compactor and valley both pre-existing)"
+      ],
+      "test_evidence": [
+        "100k anchors complete: 1769/1769 and 1788/1788 deliveries survive; archive ~8k events with ~1500 summaries (94% byte savings); live ledger rides its 1000 cap; heap legs characterized (GC-noisy, no assertion)",
+        "First harness version (10k drain) kept only 156/1769 — the failure that proved periodic draining cannot fix blind eviction and forced the rolling design with the 100-tick lossless bound (8 pushes/tick measured)",
+        "Compactor semantics verified by probe: anchor membership wins over bulk listing; KEPT-plus-boundary is the backstop that makes misclassification non-fatal",
+        "Regression test in frontier-valley-simulation.test.js (battery 12/12): tiny-grid determinism, live cap, anchor-complete equality",
+        "Mutation probe (drain watermark broken) fails exactly the new test; restore green",
+        "Full matrix 343/343 (2542 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "100k grid ~7 s for 2 seeds; valley battery ~2 s; matrix ~34 s"
+      ],
+      "known_gaps": [
+        "Archive grows monotonically (~8k/100k ticks of distinct kept content); true steady-state bounding wants middle-tier tuning or colder archiving, unbuilt",
+        "Heap legs are GC-noisy; a --expose-gc leak assay is the LATER-21 precursor, not done here"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
