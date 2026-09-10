@@ -6568,6 +6568,27 @@
  "When migration emitters land, a pair spec must be registered alongside them — no tripwire enforces this (new emitters ship their own tests by convention)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "INTENT_ZERO_NEXT66",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No behavior change: measurement-only characterization of the existing breaker/ranking response surface"
+ ],
+ "test_evidence": [
+ "Three-way verdict: 3x structural BLOCKED trips the breaker (rejected with fallback, completion reversibly clears); 50x transient HOST_BUSY never trips but demotes via reliability (0.0192, adjusted below base); missing reports stay at the Laplace prior, uncertain, never filtered",
+ "Unlike stimulus-zero corruption (reads AS data), intent-level stuck feedback degrades gracefully in both branches — hard filter for structural causes, soft demotion otherwise; host mis-coding risk bounded by demotion",
+ "host-feedback-loop.test.js +1 (battery 8/8, 2x green)",
+ "Mutation probe (HOST_BUSY added to structural set) fails exactly the new test; restore green",
+ "Full matrix 342/343 suites (2569 pass; 8 dashboard EACCES env failures, known); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Feedback battery ~1 s; matrix ~34 s"
+ ],
+ "known_gaps": [
+ "No live core path consumes rankIntents yet (CLI demo does) — the breaker/demotion machinery is wired but idle in NPC decision loops (affordance-learning integration open)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

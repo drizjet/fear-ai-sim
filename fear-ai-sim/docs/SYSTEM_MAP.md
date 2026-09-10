@@ -241,6 +241,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Budget Decay NEXT-73:** tight budgets starve queued rumors that survive unbounded (lifetime 11 ticks either way; budget-2 never delivers). Dashboard suite env-blocked (port bind), pre-existing. Pinned in propagation battery.
 - **Price Channel NEXT-63:** advisory scarcity-danger multiplier (blocked-pass food 1.55 vs safe timber 1.38); hosts own exchange. Pinned in valley battery.
 - **Migration Rollup NEXT-64:** no migration churn exists (zero such anchors at 50k — types reserved, no emitters); generic pair mechanism proven ready with a one-line spec. Pinned in compaction battery.
+- **Intent Zero NEXT-66:** stuck-actuator feedback degrades gracefully both ways — structural trips a reversible breaker, transient demotes via reliability, missing is a no-op. Live-consumer wiring still open. Pinned in feedback battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

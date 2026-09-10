@@ -98,3 +98,37 @@ describe('Sections 208–211, 288–293: Execution-Aware Advisory Loop', () => {
         expect(() => loop.reportOutcome({ agentId: 'x', intentType: 'FLEE_FROM', outcome: 'BOGUS' })).toThrow();
     });
 });
+
+describe('NEXT-66: intent-level stuck-actuator feedback', () => {
+    test('8. Structural trips the breaker (reversibly); transient demotes; missing is a no-op', () => {
+        // Structural: 3x BLOCKED trips, completion clears.
+        const s = new HostFeedbackLoop();
+        for (let i = 0; i < 3; i++) {
+            s.reportOutcome({ agentId: 'g', intentType: 'FLEE_FROM', outcome: INTENT_OUTCOMES.EXECUTION_FAILED, reason: FAILURE_REASONS.BLOCKED });
+        }
+        expect(s.isUnavailable('g', 'FLEE_FROM')).toBe(true);
+        const ranked = s.rankIntents('g', [{ type: 'FLEE_FROM', score: 0.9 }]);
+        expect(ranked.ranked).toHaveLength(0);
+        expect(ranked.rejectedAlternatives[0].reason).toContain('BLOCKED');
+        const cleared = s.reportOutcome({ agentId: 'g', intentType: 'FLEE_FROM', outcome: INTENT_OUTCOMES.GOAL_COMPLETED });
+        expect(cleared.unavailable).toBe(false);
+        expect(cleared.availabilityChanged).toBe(true);
+        // Transient-coded permanent failure: never trips, but reliability
+        // demotion keeps it ranked below anything healthier.
+        const t = new HostFeedbackLoop();
+        for (let i = 0; i < 50; i++) {
+            t.reportOutcome({ agentId: 'g', intentType: 'FLEE_FROM', outcome: INTENT_OUTCOMES.EXECUTION_FAILED, reason: FAILURE_REASONS.HOST_BUSY });
+        }
+        expect(t.isUnavailable('g', 'FLEE_FROM')).toBe(false);
+        expect(t.reliability('g', 'FLEE_FROM')).toBeCloseTo(1 / 52, 4);
+        const rt = t.rankIntents('g', [{ type: 'FLEE_FROM', score: 0.9 }]);
+        expect(rt.ranked).toHaveLength(1);
+        expect(rt.ranked[0].adjustedScore).toBeLessThan(0.9);
+        // Missing reports: Laplace prior, uncertain, never filtered.
+        const m = new HostFeedbackLoop();
+        expect(m.isUnavailable('g', 'FLEE_FROM')).toBe(false);
+        expect(m.reliability('g', 'FLEE_FROM')).toBe(0.5);
+        const rm = m.rankIntents('g', [{ type: 'FLEE_FROM', score: 0.9 }]);
+        expect(rm.ranked[0].uncertain).toBe(true);
+    });
+});
