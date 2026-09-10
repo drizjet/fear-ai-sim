@@ -212,6 +212,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Sibling Bound Sweep:** band encounters (1000), coalition logs (200 each), propagation rumors (500, terminal-first + inbox prune), world rumors (500 + group-copy purge) — all write- and restore-enforced. Advisory histories now all carry explicit growth policies.
 - **Flood Dynamics NEXT-42:** post-cap flood (600 injects at cap 500) preserves spread (per-rumor throughput 3.0 held), fresh rumors still traverse full chains, terminal-first eviction with oldest-active FIFO confirmed. No per-tick spread budget (throughput cost, not correctness). Pinned in propagation battery.
 - **Mauling NEXT-48:** fight-back casualties scale with victim strength share (severity 1.0 at parity, 0.25 floor unarmed; table 0.55/0.5125/0.4125/0.1375). Severity defaults to old behavior, NaN-safe. Reverse ladder still caps below ATTACK. Pinned in pacing battery.
+- **NaN Strictness NEXT-46:** corrupt force-strengths no longer hide behind a false "superior escort defense" rationale — explicit indeterminate hold, same safe avoidance. Clamp/severity/restraint/affect inputs audited NaN-safe. Pinned in world-sim battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

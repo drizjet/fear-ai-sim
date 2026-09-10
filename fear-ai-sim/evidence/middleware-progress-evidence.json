@@ -5859,6 +5859,28 @@
  "Live-sim caravan default strength 0.5 sits near parity, so live differentiation is modest; true scuffles need genuinely weak victims"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "NAN_BASIS_STRICTNESS_NEXT46",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "WorldSimulationSystem ambush path: explicit indeterminate-strength branch (non-finite bandit/victim strength holds as MUTUAL_AVOIDANCE with honest rationale). Same safe resolution as before; all finite paths byte-identical",
+ "Audit: both clamp01 helpers NaN-safe, setup-stance override clamp finite-guarded, severity/restraint details NaN-safe, AffectiveAgent observations/dt finite-guarded — the ambush rationale was the last silent-false explanation on the encounter path"
+ ],
+ "test_evidence": [
+ "Probe: NaN/undefined strengths resolved avoidance while claiming 'victim's superior escort defense' (false explanation of corrupt data)",
+ "world-simulation-system.test.js +2 (battery 12/12): indeterminate quartet (NaN/NaN/undefined) holds with honest rationale; finite combat/extortion/avoidance resolutions and rationales unchanged",
+ "Mutation probe (branch neutered to if(false)) fails exactly the new indeterminate test; restore green",
+ "Full matrix 343/343 (2550 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-sim battery ~1 s; matrix ~61 s"
+ ],
+ "known_gaps": [
+ "NaN victim.wealth still resolves safe (extortion skipped) without an explicit indeterminate note — same class, lower stakes (resolution already conservative)",
+ "bilateralTrust NaN path via relationship tensor unreviewed"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

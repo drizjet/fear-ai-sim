@@ -305,3 +305,48 @@ describe('Sibling-bound sweep: rumor map cap', () => {
         expect(sys.groups.get('g1').knownRumors.has(first.id)).toBe(false);
     });
 });
+
+describe('NEXT-46: NaN-basis contract strictness', () => {
+    function ambushPair(banditStr, victimStr) {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const caravan = world.registerGroup('c_nan', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: victimStr,
+            wealth: 0.85
+        });
+        const bandits = world.registerGroup('b_nan', {
+            type: ROAMING_PARTY_TYPES.BANDITS,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: banditStr,
+            wealth: 0.1
+        });
+        // Bypass registration clamping to simulate corrupt host-side reads.
+        bandits.militaryStrength = banditStr;
+        caravan.militaryStrength = victimStr;
+        return world._generateSystemicEncounter(bandits, caravan, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+    }
+    test('1. Non-finite strengths hold with an honest rationale', () => {
+        for (const [b, v] of [[NaN, 0.5], [0.6, NaN], [NaN, NaN], [undefined, 0.5]]) {
+            const enc = ambushPair(b, v);
+            expect(enc.encounterType).toBe(ENCOUNTER_TYPES.AMBUSH_INTERCEPTION);
+            expect(enc.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE);
+            expect(enc.diagnosticRationale).toContain('indeterminate');
+            expect(enc.diagnosticRationale).not.toContain('superior escort defense');
+        }
+    });
+    test('2. Finite paths keep their exact resolutions and rationales', () => {
+        // Parity-ish combat band (0.6/0.5 = 1.2): combat, contested rationale.
+        const combat = ambushPair(0.6, 0.5);
+        expect(combat.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.COMBAT_ENGAGEMENT);
+        expect(combat.diagnosticRationale).toContain('contested transit zone');
+        // Overwhelming bandits vs wealthy victim: extortion with ratio text.
+        const extort = ambushPair(0.75, 0.2);
+        expect(extort.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.EXTORTION_PAID);
+        expect(extort.diagnosticRationale).toContain('power imbalance');
+        // Outgunned bandits: honest avoidance with the defense rationale.
+        const avoid = ambushPair(0.2, 0.8);
+        expect(avoid.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE);
+        expect(avoid.diagnosticRationale).toContain('superior escort defense');
+    });
+});

@@ -437,8 +437,20 @@ export class WorldSimulationSystem {
 
             encounterType = ENCOUNTER_TYPES.AMBUSH_INTERCEPTION;
 
+            // NEXT-46: NaN-basis strictness. Non-finite strengths previously
+            // fell through to the avoidance branch with a FALSE rationale
+            // ("victim's superior escort defense"). Corrupt readings now
+            // hold with an honest rationale; the resolution (safe-default
+            // avoidance) is unchanged. All finite paths are untouched.
+            const bStr = Number(bandit.militaryStrength);
+            const vStr = Number(victim.militaryStrength);
+            if (!Number.isFinite(bStr) || !Number.isFinite(vStr)) {
+                advisoryResolution = ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE;
+                urgency = 0.5;
+                diagnosticRationale = `Bandits (${bandit.id}) hold: force-strength readings indeterminate, declining ambush as a safe default.`;
+            } else {
             // Power ratio comparison
-            const powerRatio = bandit.militaryStrength / Math.max(0.05, victim.militaryStrength);
+            const powerRatio = bStr / Math.max(0.05, vStr);
             if (powerRatio > 1.4 && victim.wealth > 0.3) {
                 advisoryResolution = ENCOUNTER_RESOLUTIONS.EXTORTION_PAID;
                 urgency = 0.85;
@@ -455,6 +467,7 @@ export class WorldSimulationSystem {
                 advisoryResolution = ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE;
                 urgency = 0.5;
                 diagnosticRationale = `Bandits (${bandit.id}) decline ambush due to victim's superior escort defense.`;
+            }
             }
         }
         // Context 2: Rival Faction Mobilization or War
