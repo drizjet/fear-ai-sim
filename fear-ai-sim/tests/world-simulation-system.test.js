@@ -381,3 +381,34 @@ describe('NEXT-57: victim-wealth indeterminate note', () => {
         expect(good.diagnosticRationale).not.toContain('unreadable');
     });
 });
+
+describe('NEXT-58: relationship trust-NaN review', () => {
+    function refugeeAid(trustValue) {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const rel = new RelationshipTensorSystem();
+        const host = world.registerGroup('h_t', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.9, leaderId: 'L1'
+        });
+        const refugees = world.registerGroup('r_t', {
+            type: ROAMING_PARTY_TYPES.REFUGEES,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.1, wealth: 0.05, leaderId: 'L2'
+        });
+        if (trustValue !== undefined) rel.getRelationship('L1', 'L2').trust = trustValue;
+        return world._generateSystemicEncounter(host, refugees, { distance: 5, factionSystem: null, relationshipTensorSystem: rel });
+    }
+    test('4. Unreadable trust denies aid safely with an honest note, never claimed trust', () => {
+        const bad = refugeeAid(NaN);
+        expect(bad.encounterType).toBe(ENCOUNTER_TYPES.REFUGEE_ENCOUNTER);
+        expect(bad.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE);
+        expect(bad.diagnosticRationale).toContain('indeterminate');
+        // High finite trust still aids; low finite trust denies without the note.
+        const good = refugeeAid(0.9);
+        expect(good.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.AID_PROVIDED);
+        const low = refugeeAid(0.1);
+        expect(low.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE);
+        expect(low.diagnosticRationale).not.toContain('indeterminate');
+    });
+});

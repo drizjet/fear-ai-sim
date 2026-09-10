@@ -226,6 +226,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Border Asymmetry NEXT-55:** border-skirmish fuel scales per-direction with inflicter share — 9:1 mauling splits 0.55/0.22, parity stays 0.55/0.55. Pinned in pacing battery.
 - **Approach Slope NEXT-61:** ungated A slope (width 0.20) flips overrides on 40/121 rungs — broadly live vs WARN's narrow 11/81. Formula extracted with NaN guard. Pinned in stabilizer battery.
 - **Wealth NaN NEXT-57:** unreadable victim wealth can never price tribute — same safe combat resolution, now with an explicit note instead of a silent contested fight. Pinned in world-sim battery.
+- **Trust NaN NEXT-58:** corrupt relationship reads fall back neutral-deny with an explicit indeterminate note; transmit/weight paths audited already-safe. Pinned in world-sim battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

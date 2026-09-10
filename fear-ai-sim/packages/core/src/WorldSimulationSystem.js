@@ -414,11 +414,18 @@ export class WorldSimulationSystem {
             }
         }
 
+        // NEXT-58: trust-NaN review. Non-finite store reads fall back to
+        // the neutral defaults (identical effective behavior: clamp01 and
+        // comparisons already treated NaN as no-trust), but the encounter
+        // now knows the reading was indeterminate instead of claiming low
+        // trust it never measured.
+        let trustIndeterminate = false;
         if (relationshipTensorSystem && gA.leaderId && gB.leaderId) {
             const relAB = relationshipTensorSystem.getRelationship(gA.leaderId, gB.leaderId);
             if (relAB) {
-                bilateralTrust = relAB.trust;
-                bilateralGrievance = relAB.grievance;
+                if (Number.isFinite(relAB.trust)) bilateralTrust = relAB.trust;
+                else { bilateralTrust = 0.0; trustIndeterminate = true; }
+                bilateralGrievance = Number.isFinite(relAB.grievance) ? relAB.grievance : 0.0;
             }
         }
 
@@ -496,7 +503,8 @@ export class WorldSimulationSystem {
             } else {
                 advisoryResolution = ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE;
                 urgency = 0.3;
-                diagnosticRationale = `Refugees (${refugees.id}) turned away due to low trust or scarce rations.`;
+                diagnosticRationale = `Refugees (${refugees.id}) turned away due to low trust or scarce rations.`
+                    + (trustIndeterminate ? ' Trust readings indeterminate; no trust claimed.' : '');
             }
         }
         // Context 4: Wildlife Pack attack

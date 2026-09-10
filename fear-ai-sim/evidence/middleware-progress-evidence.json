@@ -6199,6 +6199,24 @@
  "known_gaps": [
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "TRUST_NAN_NEXT58",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "WorldSimulationSystem encounter trust reads finite-guarded (NaN trust -> 0.0 neutral-deny, NaN grievance -> 0.0; both identical effective behavior to the old silent paths) with a trustIndeterminate flag feeding an honest refugee-rationale note. Audit: transmitRumors clamp01 already NaN-safe, recordInteraction weight NaN-guarded, store writes finite by construction"
+ ],
+ "test_evidence": [
+ "world-simulation-system.test.js +1 (battery 14/14): NaN trust denies aid with the indeterminate note; 0.9 aids; 0.1 denies without the note",
+ "Mutation probe (note text altered) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2564 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-sim battery ~1 s; matrix ~41 s"
+ ],
+ "known_gaps": [
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
