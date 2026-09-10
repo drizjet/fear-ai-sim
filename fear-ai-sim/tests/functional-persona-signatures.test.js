@@ -339,3 +339,26 @@ describe('NEXT-69: seeded sweep internals', () => {
         expect(a.monotonicity.agreeableness.spearmanRho).toBeCloseTo(0.9910, 4);
     });
 });
+
+describe('NEXT-70: WARN vs APPROACH interplay', () => {
+    test('19. Warn-during plus approach-after; approach urgency orders by A', async () => {
+        const { runProsocialInterplay } = await import('../benchmarks/behavioral-evaluation/prosocial_interplay_map.mjs');
+        const a = runProsocialInterplay();
+        expect(runProsocialInterplay()).toEqual(a);
+        // During threat the gate splits: flee below, warn above.
+        expect(a.table['0.3'].during.type).toBe('FLEE_FROM');
+        expect(a.table['0.5'].during.type).toBe('FLEE_FROM');
+        expect(a.table['0.7'].during.type).toBe('WARN_GROUP');
+        expect(a.table['0.9'].during.type).toBe('WARN_GROUP');
+        // After clearance everyone approaches; urgency strictly orders by A.
+        const urg = (k) => a.table[k].after8.urgency;
+        for (const k of ['0.3', '0.5', '0.7', '0.9']) {
+            expect(a.table[k].after8.type).toBe('APPROACH_ALLY');
+            expect(a.table[k].after8.band).toBe('ANXIOUS');
+        }
+        expect(urg('0.3')).toBeLessThan(urg('0.5'));
+        expect(urg('0.5')).toBeLessThan(urg('0.7'));
+        expect(urg('0.7')).toBeLessThan(urg('0.9'));
+        expect(urg('0.9')).toBeCloseTo(0.63, 4);
+    });
+});

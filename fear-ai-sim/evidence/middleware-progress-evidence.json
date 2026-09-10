@@ -6355,6 +6355,26 @@
  "known_gaps": [
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "PROSOCIAL_INTERPLAY_NEXT70",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "prosocial_interplay_map.mjs: A x threat-phase intent map (measurement only, no behavior change)"
+ ],
+ "test_evidence": [
+ "Interplay is temporal, not competitive: WARN needs visible threats, APPROACH needs their absence with lingering anxiety; high-A warns during and approaches after, low-A flees during and approaches after; post-threat approach urgency strictly orders by A (0.51/0.55/0.59/0.63)",
+ "functional-persona-signatures.test.js +1 (battery 19/19, 2x green) with rerun-equality",
+ "Mutation probe (WARN gate 0.65->0.85) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2569 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Map <1 s; matrix ~40 s"
+ ],
+ "known_gaps": [
+ "Interplay mapped at one threat geometry (dist 10, int 0.6) and one seed; band-edge geometries (PANIC vs ANXIOUS transitions) unmapped"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
