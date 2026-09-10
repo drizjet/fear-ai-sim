@@ -566,3 +566,82 @@ describe('NEXT-75: rumor correction (host truth vs belief)', () => {
         expect(world.queryHistory({ eventType: WORLD_EVENT_TYPES.RUMOR_CORRECTED }).length).toBe(0);
     });
 });
+
+describe('NEXT-76: refutation costs directed trust (later loss of trust)', () => {
+    function pairing(seed = 42) {
+        const world = new WorldSimulationSystem({ seed });
+        const rel = new RelationshipTensorSystem();
+        const mk = (id, x, leader) => world.registerGroup(id, {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: leader
+        });
+        const a = mk('a_src', 100, 'LA');
+        const b = mk('b_dst', 105, 'LB');
+        const meet = () => world._generateSystemicEncounter(a, b,
+            { distance: 5, factionSystem: null, relationshipTensorSystem: rel });
+        return { world, rel, a, b, meet };
+    }
+    test('1. Believer loses directed trust toward the originator only', () => {
+        const { world, rel, a, b, meet } = pairing();
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'false army report'
+        });
+        meet();
+        const cred = b.knownRumors.get(rumor.id).credibility;
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        const expected = -(0.30 * (0.5 + 0.5 * cred));
+        expect(rel.getRelationship('LB', 'LA').trust).toBeCloseTo(expected, 4);
+        expect(rel.getRelationship('LB', 'LA').grievance).toBeGreaterThan(0);
+        expect(rel.getRelationship('LA', 'LB').trust).toBe(0);
+    });
+    test('2. Repeated encounters do not double-count the trust loss', () => {
+        const { world, rel, a, b, meet } = pairing();
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'false army report'
+        });
+        meet();
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        const once = rel.getRelationship('LB', 'LA').trust;
+        meet();
+        meet();
+        expect(rel.getRelationship('LB', 'LA').trust).toBe(once);
+    });
+    test('3. Unheard groups lose no trust and gain no entry', () => {
+        const { world, rel, a, b, meet } = pairing();
+        const c = world.registerGroup('c_far', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 110, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LC'
+        });
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'false army report'
+        });
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        expect(c.knownRumors.has(rumor.id)).toBe(false);
+        expect(rel.hasRelationship('LC', 'LA')).toBe(false);
+    });
+    test('4. Confirmation changes no trust', () => {
+        const { world, rel, a, b, meet } = pairing();
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'true army report'
+        });
+        meet();
+        world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        expect(rel.getRelationship('LB', 'LA').trust).toBe(0);
+        expect(rel.hasRelationship('LA', 'LA')).toBe(false);
+    });
+    test('5. Originator self-correction writes no self-trust entry', () => {
+        const { world, rel, a, b, meet } = pairing();
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'own false report'
+        });
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        expect(a.knownRumors.has(rumor.id)).toBe(false);
+        expect(rel.hasRelationship('LA', 'LA')).toBe(false);
+    });
+});

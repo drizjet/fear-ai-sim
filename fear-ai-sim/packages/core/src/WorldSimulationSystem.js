@@ -18,6 +18,7 @@
  */
 
 import { DeterministicRng } from './DeterministicRng.js';
+import { INTERACTION_TYPES } from './RelationshipTensorSystem.js';
 
 export const ROAMING_PARTY_TYPES = Object.freeze({
     PATROL: 'PATROL',
@@ -301,7 +302,7 @@ export class WorldSimulationSystem {
      * @param {number} [trust=0.5] Directed trust R(receiver -> sender)
      * @returns {Array<object>} Rumors transmitted
      */
-    transmitRumors(senderGroupId, receiverGroupId, trust = 0.5) {
+    transmitRumors(senderGroupId, receiverGroupId, trust = 0.5, { relationshipTensorSystem = null } = {}) {
         const sender = this.groups.get(String(senderGroupId));
         const receiver = this.groups.get(String(receiverGroupId));
         if (!sender || !receiver) return [];
@@ -312,6 +313,11 @@ export class WorldSimulationSystem {
         for (const [rId, instance] of sender.knownRumors.entries()) {
             const masterRumor = this.rumors.get(rId);
             if (!masterRumor) continue;
+            // NEXT-76: a receiver that already knows the refutation does not
+            // re-receive the dead rumor (prevents trust-write double counting
+            // and spurious re-spread history on repeated encounters).
+            if (masterRumor.correction && !masterRumor.correction.confirmed
+                && receiver.knownCorrections?.has(rId)) continue;
 
             const nextHops = instance.hops + 1;
             const decayedFidelity = Math.max(0.05, instance.fidelity * (1.0 - this.config.rumorFidelityDecayPerHop));
@@ -338,7 +344,7 @@ export class WorldSimulationSystem {
                     passedBy: sender.id
                 };
                 receiver.knownRumors.set(rId, newInstance);
-                if (masterRumor.correction) this._applyCorrection(receiver, masterRumor);
+                if (masterRumor.correction) this._applyCorrection(receiver, masterRumor, { relationshipTensorSystem });
                 transmitted.push(newInstance);
 
                 // Record historical event for significant rumor spread
@@ -387,7 +393,7 @@ export class WorldSimulationSystem {
      * @param {object} [opts] { confirmed:boolean, byGroupId:string|null }
      * @returns {object|null} Correction record or null when unknown
      */
-    correctRumor(rumorId, { confirmed = false, byGroupId = null } = {}) {
+    correctRumor(rumorId, { confirmed = false, byGroupId = null, relationshipTensorSystem = null } = {}) {
         const master = this.rumors.get(String(rumorId));
         if (!master) return null;
         master.correction = {
@@ -396,7 +402,7 @@ export class WorldSimulationSystem {
             byGroupId: byGroupId ? String(byGroupId) : null
         };
         if (byGroupId && this.groups.has(String(byGroupId))) {
-            this._applyCorrection(this.groups.get(String(byGroupId)), master);
+            this._applyCorrection(this.groups.get(String(byGroupId)), master, { relationshipTensorSystem });
         }
         this.recordHistoryEvent(WORLD_EVENT_TYPES.RUMOR_CORRECTED, {
             primaryId: master.correction.byGroupId,
@@ -409,11 +415,16 @@ export class WorldSimulationSystem {
     }
     /**
      * NEXT-75: apply a master correction to one group's belief.
+     * NEXT-76: a group whose HELD belief is refuted loses directed trust
+     * toward the rumor originator (later loss of trust). Unheard groups and
+     * confirmations change no trust. Weight scales with how strongly the
+     * falsehood was believed (0.5 + 0.5 x credibility).
      * @param {object} group Receiving group
      * @param {object} master Master rumor carrying .correction
+     * @param {object} [opts] { relationshipTensorSystem }
      * @returns {string} 'refuted' | 'confirmed' | 'unheard' | 'no-correction'
      */
-    _applyCorrection(group, master) {
+    _applyCorrection(group, master, { relationshipTensorSystem = null } = {}) {
         if (!group || !master?.correction) return 'no-correction';
         if (group.knownCorrections) group.knownCorrections.add(master.id);
         const inst = group.knownRumors?.get(master.id);
@@ -423,22 +434,24 @@ export class WorldSimulationSystem {
             inst.fidelity = 1.0;
             return 'confirmed';
         }
+        const believedWeight = 0.5 + 0.5 * (inst.credibility ?? 0.5);
         group.knownRumors.delete(master.id);
         if ((master.topic === RUMOR_TOPICS.AMBUSH_HOTSPOT || master.topic === RUMOR_TOPICS.WAR_DECLARED)
             && inst.perceivedSeverity >= 0.5 && group.drivers) {
             group.drivers.threatPressure = clamp01(group.drivers.threatPressure - 0.15 * (inst.credibility ?? 0.5));
         }
+        if (relationshipTensorSystem && group.leaderId && master.sourceEntityId) {
+            const originator = this.groups.get(String(master.sourceEntityId));
+            const originLeader = originator?.leaderId;
+            if (originLeader && originLeader !== group.leaderId) {
+                relationshipTensorSystem.recordInteraction(
+                    group.leaderId, originLeader,
+                    INTERACTION_TYPES.FALSE_REPORT_EXPOSED, { weight: believedWeight });
+            }
+        }
         return 'refuted';
     }
-    /**
-     * NEXT-75: spread host-truth corrections the sender has applied to a
-     * receiver that has not. Acceptance is unconditional (host truth is not
-     * a trust vote); trust-gated acceptance is an open gap.
-     * @param {string} senderGroupId Correcting group
-     * @param {string} receiverGroupId Learning group
-     * @returns {Array<object>} Applied { rumorId, result } records
-     */
-    transmitCorrections(senderGroupId, receiverGroupId) {
+    transmitCorrections(senderGroupId, receiverGroupId, { relationshipTensorSystem = null } = {}) {
         const sender = this.groups.get(String(senderGroupId));
         const receiver = this.groups.get(String(receiverGroupId));
         if (!sender || !receiver) return [];
@@ -447,7 +460,7 @@ export class WorldSimulationSystem {
             if (receiver.knownCorrections?.has(cid)) continue;
             const master = this.rumors.get(cid);
             if (!master?.correction) continue;
-            applied.push({ rumorId: cid, result: this._applyCorrection(receiver, master) });
+            applied.push({ rumorId: cid, result: this._applyCorrection(receiver, master, { relationshipTensorSystem }) });
         }
         return applied;
     }
@@ -623,12 +636,12 @@ export class WorldSimulationSystem {
         // Exchange rumors upon convergence; hearing a severe threat rumor raises
         // advisory threat pressure (fear-from-information, credibility-scaled).
         // Matches the extortion-pressure precedent (+0.15 scale); combat (+0.35).
-        const heardAB = this.transmitRumors(gA.id, gB.id, bilateralTrust);
-        const heardBA = this.transmitRumors(gB.id, gA.id, bilateralTrust);
+        const heardAB = this.transmitRumors(gA.id, gB.id, bilateralTrust, { relationshipTensorSystem });
+        const heardBA = this.transmitRumors(gB.id, gA.id, bilateralTrust, { relationshipTensorSystem });
         this._applyHeardThreatPressure(gB, heardAB);
         this._applyHeardThreatPressure(gA, heardBA);
-        this.transmitCorrections(gA.id, gB.id);
-        this.transmitCorrections(gB.id, gA.id);
+        this.transmitCorrections(gA.id, gB.id, { relationshipTensorSystem });
+        this.transmitCorrections(gB.id, gA.id, { relationshipTensorSystem });
 
         // Record historical ledger entry
         const historyEvent = this.recordHistoryEvent(WORLD_EVENT_TYPES.ENCOUNTER_OCCURRED, {

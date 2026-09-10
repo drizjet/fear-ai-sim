@@ -25,6 +25,7 @@ export const INTERACTION_TYPES = Object.freeze({
     AID_RECEIVED: 'AID_RECEIVED',
     AID_PROVIDED: 'AID_PROVIDED',
     RESCUE_CONFIRMED: 'RESCUE_CONFIRMED',
+    FALSE_REPORT_EXPOSED: 'FALSE_REPORT_EXPOSED',
     PEACEFUL_COEXISTENCE: 'PEACEFUL_COEXISTENCE'
 });
 
@@ -174,6 +175,16 @@ export class RelationshipTensorSystem {
                 rel.respect = Math.min(1.0, rel.respect + 0.30 * weight);
                 rel.grievance = Math.max(0.0, rel.grievance - 0.30 * weight);
                 rel.familiarity = Math.min(1.0, rel.familiarity + 0.20 * weight);
+                break;
+
+            case INTERACTION_TYPES.FALSE_REPORT_EXPOSED:
+                // NEXT-76: a believed false report is exposed. Trust loss sits
+                // between aid given (+0.20) and abandonment (-0.50): a lie is
+                // serious but not violence. Grievance rises; respect dips.
+                rel.trust = Math.max(-1.0, rel.trust - 0.30 * weight);
+                rel.grievance = Math.min(1.0, rel.grievance + 0.25 * weight);
+                rel.respect = Math.max(0.0, rel.respect - 0.10 * weight);
+                rel.familiarity = Math.min(1.0, rel.familiarity + 0.05 * weight);
                 break;
 
             case INTERACTION_TYPES.PEACEFUL_COEXISTENCE:

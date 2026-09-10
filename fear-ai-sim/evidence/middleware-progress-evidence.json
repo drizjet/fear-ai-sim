@@ -6710,6 +6710,31 @@
  "truthEventId still inert as an automatic adjudicator - corrections require explicit host correctRumor calls"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "REFUTATION_TRUST_LOSS_NEXT76",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "RelationshipTensorSystem.FALSE_REPORT_EXPOSED: trust -0.30 x weight, grievance +0.25, respect -0.10 (between aid-given and abandonment precedents)",
+ "WorldSim._applyCorrection writes directed believer-leader -> originator-leader trust loss on refuted HELD beliefs only; weight 0.5 + 0.5 x believed credibility; self-correction and unheard groups write nothing",
+ "Rel system threaded through correctRumor, transmitCorrections, transmitRumors stamp, and the encounter flow; refuted rumors skip re-transmit to aware receivers (prevents double counting and spurious re-spread history)",
+ "Mid-build failure: one edit duplicated transmitCorrections and dropped the refuted return; repaired via region re-read (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 29/29 (5 new NEXT-76 pins: directed loss with exact magnitude, no double count across repeated encounters, unheard groups gain no entry, confirmation writes nothing, self-correction writes nothing)",
+ "Mutation probe -0.30->-0.0 fails exactly the magnitude pin; fix restored",
+ "Full matrix 342/343 suites, 2586 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~34s"
+ ],
+ "known_gaps": [
+ "Correction acceptance still unconditional regardless of source trust (trust now records the aftermath, but distrust does not gate acceptance)",
+ "truthEventId still inert as an automatic adjudicator - corrections require explicit host correctRumor calls",
+ "No confirmed-truth trust reward: groups whose true reports are vindicated gain no trust (asymmetric with the falsehood penalty)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
