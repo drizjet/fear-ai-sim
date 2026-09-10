@@ -6181,6 +6181,24 @@
  "WARN vs APPROACH slope interplay (both prosocial, different gates) unmapped — which fires first across A x threat geometries"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "WEALTH_NAN_NEXT57",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "WorldSimulationSystem extortion band: finite wealth required for tribute (Number-wrapped comparison, identical for all finite inputs); non-finite wealth in the extortion band falls to combat exactly as before with an explicit unreadable-wealth note (string-only change)"
+ ],
+ "test_evidence": [
+ "world-simulation-system.test.js +1 (battery 13/13): NaN wealth -> combat with note and null tribute; finite 0.85 -> extortion with 0.2975 tribute and no note",
+ "Mutation probe (note condition neutered) fails exactly the new test; restore green. Process note: first probe edited note text but left the asserted substring intact — probe the condition, not the prose",
+ "Full matrix 343/343 (2563 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-sim battery ~1 s; matrix ~43 s"
+ ],
+ "known_gaps": [
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

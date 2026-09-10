@@ -350,3 +350,34 @@ describe('NEXT-46: NaN-basis contract strictness', () => {
         expect(avoid.diagnosticRationale).toContain('superior escort defense');
     });
 });
+
+describe('NEXT-57: victim-wealth indeterminate note', () => {
+    function wealthyAmbush(victimWealth) {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const caravan = world.registerGroup('c_w', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.2,
+            wealth: 0.85
+        });
+        const bandits = world.registerGroup('b_w', {
+            type: ROAMING_PARTY_TYPES.BANDITS,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.75,
+            wealth: 0.1
+        });
+        caravan.wealth = victimWealth;
+        return world._generateSystemicEncounter(bandits, caravan, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+    }
+    test('3. Unreadable wealth falls to combat with an honest note, never fiction tribute', () => {
+        const bad = wealthyAmbush(NaN);
+        expect(bad.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.COMBAT_ENGAGEMENT);
+        expect(bad.diagnosticRationale).toContain('unreadable');
+        expect(bad.suggestedTribute).toBeNull();
+        // Finite wealthy path unchanged: extortion with computed tribute.
+        const good = wealthyAmbush(0.85);
+        expect(good.advisoryResolution).toBe(ENCOUNTER_RESOLUTIONS.EXTORTION_PAID);
+        expect(good.suggestedTribute).toBeCloseTo(0.2975, 4);
+        expect(good.diagnosticRationale).not.toContain('unreadable');
+    });
+});

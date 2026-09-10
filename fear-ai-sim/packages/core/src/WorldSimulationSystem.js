@@ -451,18 +451,24 @@ export class WorldSimulationSystem {
             } else {
             // Power ratio comparison
             const powerRatio = bStr / Math.max(0.05, vStr);
-            if (powerRatio > 1.4 && victim.wealth > 0.3) {
+            // NEXT-57: non-finite wealth can never select extortion (the
+            // tribute quantity would be fiction). It falls to combat exactly
+            // as before; only the rationale now says the wealth reading was
+            // skipped, instead of silently presenting a contested fight.
+            const wealth = Number(victim.wealth);
+            if (powerRatio > 1.4 && wealth > 0.3) {
                 advisoryResolution = ENCOUNTER_RESOLUTIONS.EXTORTION_PAID;
                 urgency = 0.85;
                 // 35% victim-wealth share mirrors the RoamingBandSystem
                 // doctrine for the same situation (pay to avoid slaughter);
                 // advisory only — the host moves no goods.
-                suggestedTribute = Math.round(victim.wealth * 0.35 * 10000) / 10000;
+                suggestedTribute = Math.round(wealth * 0.35 * 10000) / 10000;
                 diagnosticRationale = `Bandits (${bandit.id}) intercept wealthy group (${victim.id}); demand tribute under power imbalance (${powerRatio.toFixed(2)}x).`;
             } else if (powerRatio > 0.9) {
                 advisoryResolution = ENCOUNTER_RESOLUTIONS.COMBAT_ENGAGEMENT;
                 urgency = 0.95;
-                diagnosticRationale = `Bandits (${bandit.id}) assault caravan (${victim.id}) in contested transit zone.`;
+                diagnosticRationale = `Bandits (${bandit.id}) assault caravan (${victim.id}) in contested transit zone.`
+                    + (!Number.isFinite(wealth) && powerRatio > 1.4 ? ' Victim wealth unreadable; tribute skipped as a safe default.' : '');
             } else {
                 advisoryResolution = ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE;
                 urgency = 0.5;
