@@ -5994,6 +5994,66 @@
  "Price channel still absent (carried NEXT-45 gap)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_17",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit method: known-gap aggregation across 9 milestones since CCI-16 (ZERO_READS_MAP_NOW36, RUMOR_FLOOD_DYN_NEXT42, MAULING_SCUFFLE_NEXT48, NAN_BASIS_STRICTNESS_NEXT46, WARN_SLOPE_UTILITY_NEXT47, ARCHIVE_STEADY_STATE_NEXT49, LEAK_ASSAY_NEXT50, BIAS_REGIMES_NEXT51, ECONOMY_CALIBRATION_NEXT52), CCI-16 candidate status review, two probes (construction-counter offset immunity, tie-count mechanism)",
+ "9 commits since CCI-16; the entire CCI-16 bench (NOW-36, NEXT-42/46/47/48/49/50/51/52) closed and verified",
+ "Sharpest find 1: pinned persona cells are construction-counter immune (+0/+37/+1000 offset builds hold 100/100/72) — jitter localizes to knife-edge cells only; per-trial agent seeds downgraded from NOW to NEXT with evidence",
+ "Sharpest find 2: below-chance cells are tie-dominated, not inverted — the runner counts ties as failures (scoreB > scoreA strictly), so floor/saturation ties read as 20%, never as capable-but-backwards; interpretation fix, no code change",
+ "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+ ],
+ "test_evidence": [
+ "Matrix 343/343 suites (2557 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+ ],
+ "runtime_evidence": [
+ "NOW-37 tie-count convention documentation (below-chance cells are tie-dominated indistinguishability; audit-and-pin interpretation).",
+ "NOW-38 A zero-resolution paradox decomposition (regime-shift hypothesis from NOW-36 verified against the 0.65 gate).",
+ "NEXT-7 merchant belief-formation dynamics (carried).",
+ "NEXT-10 nested-JSON transport guard (carried).",
+ "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+ "NEXT-12 handshake determinism review (carried).",
+ "NEXT-13 constructor-only over-credit audit (carried).",
+ "NEXT-14 infinite-loop containment research (carried).",
+ "NEXT-15 FearServer fixed-port production review (carried).",
+ "NEXT-17 richer rally dynamics for specificity guards (carried).",
+ "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+ "NEXT-21 numeric-field histograms in middle summaries (carried).",
+ "NEXT-29 floor-slope sensitivity exploration (carried).",
+ "NEXT-30 minimum-severity crystallization floor exploration (carried).",
+ "NEXT-31 graded defusal exploration (carried).",
+ "NEXT-32 acute fear spike for social wounds exploration (carried).",
+ "NEXT-34 dashboard BORDER_TRESPASS restraint (carried).",
+ "NEXT-35 unified extortion-gate theory (carried).",
+ "NEXT-53 per-trial signature agent seeds (measurement hygiene; downgraded with counter-immunity evidence).",
+ "NEXT-54 E/A crossing bisection (E between -0.50/-0.25, A between -0.10/+0.10).",
+ "NEXT-55 border-skirmish symmetric casualty differentiation (one-sided massacre fuel).",
+ "NEXT-56 casualty-severity designer calibration (floor 0.25 / knee 0.5 are judgment calls).",
+ "NEXT-57 victim-wealth NaN indeterminate note (same class as NEXT-46, conservative resolution).",
+ "NEXT-58 relationship-tensor trust NaN path review.",
+ "NEXT-59 dense-topology flood dynamics (multi-listener spread under cap pressure).",
+ "NEXT-60 per-tick rumor spread budget (throughput bound, state-safe).",
+ "NEXT-61 APPROACH_ALLY slope utility sweep (width 0.20, expected live).",
+ "NEXT-62 volume-weighted economy calibration (trickle deliveries under tiny caps).",
+ "NEXT-63 trade price channel (scarcity/danger response, carried NEXT-45 gap).",
+ "NEXT-64 migration-chain churn pair review (cold rollup beyond camps).",
+ "NEXT-65 faction/rumor/relation retained-state soak (LATER-21 decomposition).",
+ "NEXT-66 intent-level zero-reads (stuck actuator feedback vs stimulus level).",
+ "LATER-20 second external host architecture (gated on external project availability).",
+ "LATER-21 100k/1m-tick full-stack soak (valley path assayed; needs NEXT-65 first).",
+ "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+ "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+ "Selected next: NOW-37 (near-zero cost, clarifies below-chance cells across three milestones)."
+ ],
+ "benchmark_evidence": [
+ "Audit completes in minutes; no benchmark impact"
+ ],
+ "known_gaps": [
+ "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
