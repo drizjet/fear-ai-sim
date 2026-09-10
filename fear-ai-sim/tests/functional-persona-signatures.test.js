@@ -119,6 +119,25 @@ describe('NOW-34: agreeableness elicitation map', () => {
     });
 });
 
+describe('NOW-39: residual gate at zeroed geometry', () => {
+    test('16. Only both-arms-above-gate pairs order with no stimulus', async () => {
+        const { TRAIT_DEFINITIONS } = await import('../benchmarks/behavioral-evaluation/construct_validity_sweeps.mjs');
+        const def = TRAIT_DEFINITIONS.find((d) => d.key === 'agreeableness');
+        const mA = def.signature;
+        const T = (a) => ({ neuroticism: 0.5, resilience: 0.5, openness: 0.5, extraversion: 0.5, agreeableness: a, conscientiousness: 0.5, leadership: 0.5 });
+        const zeroed = { peerDist: 0, threatDist: 0, leaderCalm: 0 };
+        // Zeroed geometry is scenario-independent: one comparison per pair.
+        const orders = (a, b) => mA(T(b), zeroed) > mA(T(a), zeroed);
+        // Below gate: ties (the 20/40 residual comes only from above).
+        expect(orders(0.45, 0.50)).toBe(false);
+        expect(orders(0.60, 0.65)).toBe(false);
+        // Both arms above the strict 0.65 gate: urgency slope separates them.
+        expect(orders(0.75, 0.80)).toBe(true);
+        expect(orders(0.75, 0.95)).toBe(true);
+        expect(orders(0.60, 0.80)).toBe(true);
+    });
+});
+
 describe('NOW-35: APPROACH_ALLY recovery-window map', () => {
     test('9. Recovery window is N-driven with an inverted low-fear gate and a panic-overshoot gate', async () => {
         const { runRecoveryMap } = await import('../benchmarks/behavioral-evaluation/ally_approach_recovery_map.mjs');

@@ -229,6 +229,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Trust NaN NEXT-58:** corrupt relationship reads fall back neutral-deny with an explicit indeterminate note; transmit/weight paths audited already-safe. Pinned in world-sim battery.
 - **Frontier Audit CCI-18:** 34 ranked candidates (1 NOW, 29 NEXT, 4 LATER); all CCI-17 NOWs plus 6 NEXTs closed. Red-team hit: economy plateau shatters at 20k on upkeep-0 (satiation binds); production still slack. Next: satiation-boundary mapping (NEXT-67).
 - **Satiation Boundary NEXT-67:** upkeep-0 stalls by 15k (legs 88/16/0/0, sink at cap); upkeep>=1 flows forever. Counts measure liveness, not volume — volume weighting stays NEXT-62. Pinned in valley battery.
+- **Residual Gate NOW-39:** at zeroed geometry only both-arms-above-gate pairs order (urgency slope, no stimulus); all below-gate pairs tie. Gate mutation fails 5 pins. Pinned in persona battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

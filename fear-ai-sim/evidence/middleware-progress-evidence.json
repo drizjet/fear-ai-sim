@@ -6296,6 +6296,25 @@
  "Tiny-cap early trickle (24 vs 88) vs late full-count wrapping: wrap-period dynamics under micro-space unmapped"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "RESIDUAL_GATE_NOW39",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No behavior change: measurement-only gate map at zeroed scenario geometry (raw signature calls)"
+ ],
+ "test_evidence": [
+ "Gate map: below-gate pairs tie universally (0.45/0.50, 0.60/0.65 incl. the strict-gate edge); both-arms-above-gate pairs order everywhere (0.60/0.80, 0.75/0.80, 0.75/0.95) via the urgency slope with no stimulus at all",
+ "functional-persona-signatures.test.js +1 (battery 16/16, 3x green)",
+ "Mutation probe (WARN gate 0.65->0.85) fails 5 tests (gate load-bearing across elicitation, regime, tie, residual, and slope pins); restore green",
+ "Full matrix 343/343 (2566 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Persona battery ~2 s; matrix ~42 s"
+ ],
+ "known_gaps": [
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
