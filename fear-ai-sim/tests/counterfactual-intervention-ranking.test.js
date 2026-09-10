@@ -110,9 +110,12 @@ describe('LXVII: counterfactual intervention ranking', () => {
       const r = rankAll({ outcome: { metric, direction: 'lower' } });
       expect(r.recommendation.mutation.type).toBe(COUNTERFACTUAL_MUTATIONS.PACIFY_BANDIT_RAIDERS);
       expect(r.recommendation.score).toBeGreaterThan(0);
-      // Route security, the routeFailures champion, does nothing here.
+      // Route security, the routeFailures champion, must not win here.
+      // (Exact zero was a ratchet artifact: with no alarm fade, pressured
+      // branches compared identically. Secure routes slightly reducing fear
+      // is principled; losing to pacification is the invariant.)
       const routeFix = r.ranking.find((e) => e.mutation.type === COUNTERFACTUAL_MUTATIONS.ALTER_ROUTE_SECURITY);
-      expect(routeFix.score).toBe(0);
+      expect(routeFix.score).toBeLessThan(r.recommendation.score);
     }
   });
 

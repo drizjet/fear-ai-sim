@@ -87,6 +87,7 @@ export const DEFAULT_WORLD_CONFIG = Object.freeze({
     hungerForageRate: 0.03,          // Per tick hunger reduction while foraging
     rumorFidelityDecayPerHop: 0.12,  // 12% fidelity loss per transmission hop
     rumorDistortionRate: 0.10,       // Max random distortion in perceived severity per hop
+    threatPressureDecayRate: 0.001,  // NEXT-78: per-tick linear alarm fade (combat +0.35 clears in ~350 quiet ticks)
     maxHistoryEvents: 1000,          // Bounded ring buffer for world history
     maxRumors: 500,                  // Sibling-bound sweep: oldest-origin eviction + group-copy purge
     seed: 1337
@@ -715,6 +716,9 @@ export class WorldSimulationSystem {
             group.drivers.hunger = clamp01(group.drivers.hunger - this.config.hungerForageRate * dt);
             group.drivers.fatigue = clamp01(group.drivers.fatigue + (this.config.fatigueAccumulationRate * 0.3) * dt);
         }
+        // NEXT-78: alarm fades with quiet time in every state. Encounters
+        // re-bump on their own ticks, so sustained contact sustains alarm.
+        group.drivers.threatPressure = clamp01(group.drivers.threatPressure - this.config.threatPressureDecayRate * dt);
 
         // State Transition 1: Exhaustion -> Establish Camp
         if (group.drivers.fatigue >= 0.80 && group.state !== ROAMING_STATES.CAMPED && group.state !== ROAMING_STATES.ENGAGED) {

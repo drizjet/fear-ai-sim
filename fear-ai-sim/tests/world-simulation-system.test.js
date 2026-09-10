@@ -647,3 +647,47 @@ describe('NEXT-76: refutation costs directed trust (later loss of trust)', () =>
         expect(rel.hasRelationship('LA', 'LA')).toBe(false);
     });
 });
+
+describe('NEXT-78: threat-pressure alarm fade', () => {
+    function quietPair(seed = 42, config = {}) {
+        const world = new WorldSimulationSystem({ seed, ...config });
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 5000, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        return { world, a, b };
+    }
+    test('1. Quiet ticks fade alarm linearly at the configured rate', () => {
+        const { world, b } = quietPair();
+        b.drivers.threatPressure = 0.35;
+        for (let i = 0; i < 50; i++) world.tick();
+        expect(b.drivers.threatPressure).toBeCloseTo(0.30, 6);
+    });
+    test('2. Long quiet fully clears alarm without going negative', () => {
+        const { world, b } = quietPair();
+        b.drivers.threatPressure = 0.35;
+        for (let i = 0; i < 1000; i++) world.tick();
+        expect(b.drivers.threatPressure).toBe(0);
+    });
+    test('3. Custom decay rates are respected', () => {
+        const { world, b } = quietPair(42, { threatPressureDecayRate: 0.01 });
+        b.drivers.threatPressure = 0.1;
+        for (let i = 0; i < 10; i++) world.tick();
+        expect(b.drivers.threatPressure).toBeCloseTo(0, 9);
+    });
+    test('4. Fade is deterministic for a fixed seed', () => {
+        const run = () => {
+            const { world, b } = quietPair();
+            b.drivers.threatPressure = 0.2;
+            for (let i = 0; i < 37; i++) world.tick();
+            return b.drivers.threatPressure;
+        };
+        expect(run()).toBe(run());
+    });
+});

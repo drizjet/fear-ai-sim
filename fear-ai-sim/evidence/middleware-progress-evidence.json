@@ -6760,6 +6760,30 @@
  "Rumor consequence still pressure-plus-trust only: no reroute, mobilization, or migration response to heard threats"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "THREAT_PRESSURE_DECAY_NEXT78",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "threatPressureDecayRate 0.001/tick linear fade in _tickGroupDriversAndState, all states, NaN-safe via clamp01 idiom (combat +0.35 clears in ~350 quiet ticks; rumor +0.15 in ~150)",
+ "Encounters re-bump on their own ticks so sustained contact sustains alarm; decay is pure arithmetic (deterministic, host-authority neutral)",
+ "Counterfactual finding: exact-zero route-security fear score was a ratchet artifact - with fade, secure routes slightly reduce fear (0.0026), still losing to pacification; assertion relaxed to the ranking invariant with rationale comment"
+ ],
+ "test_evidence": [
+ "World-simulation battery 33/33 (4 new NEXT-78 pins: linear fade rate, full clear floored at zero, custom rate respected, seed determinism)",
+ "Decay-off mutation probe fails exactly the 3 fade pins; fix restored",
+ "Full matrix 342/343 suites, 2590 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~40s"
+ ],
+ "known_gaps": [
+ "Decay rate 0.001 is a precedent-anchored constant (between fatigue recovery 0.02 and grievance decay 0.0008), not a calibrated psychometric timescale",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
