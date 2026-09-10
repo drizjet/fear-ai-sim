@@ -250,6 +250,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Vindication Reward NEXT-77:** confirmed true reports earn directed trust (+0.15 scale, half the falsehood penalty); same believed-weight formula; no double reward (credibility pinned at 1.0). Trust symmetry around corrections now complete. Pinned in world-sim battery.
 - **Pressure Decay NEXT-78:** alarm fades 0.001/tick in all states (combat clears in ~350 quiet ticks); sustained contact re-bumps. Counterfactual exact-zero was a ratchet artifact - relaxed to ranking invariant. Pinned in world-sim battery.
 - **Frontier Audit CCI-21:** WORLD INFORMATION arc closed (5 chunks, all green). Red-team hit proven live: uncorrected false beliefs are immortal (receivedTick write-only; pressure fades but falsehood stays). 22 ranked candidates (3 NOW, 17 NEXT, 2 LATER). Next: belief aging (NEXT-79).
+- **Belief Aging NEXT-79:** unreinforced rumor instances expire after maxBeliefAgeTicks (2000 default); re-hearing refreshes recency without strengthening; corrections unaffected. Closes the immortal-belief hit. Pinned in world-sim battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

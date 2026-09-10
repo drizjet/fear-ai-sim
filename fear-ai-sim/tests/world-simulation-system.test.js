@@ -691,3 +691,61 @@ describe('NEXT-78: threat-pressure alarm fade', () => {
         expect(run()).toBe(run());
     });
 });
+
+describe('NEXT-79: belief aging and forgetting', () => {
+    function spreadPair(seed = 42, config = {}) {
+        const world = new WorldSimulationSystem({ seed, ...config });
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 5000, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'unverified army report'
+        });
+        world._generateSystemicEncounter(a, b, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+        b.position.x = 5000;
+        return { world, a, b, rumor };
+    }
+    test('1. Unreinforced beliefs expire past maxBeliefAgeTicks', () => {
+        const { world, b, rumor } = spreadPair();
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+        for (let i = 0; i < 2001; i++) world.tick();
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+    });
+    test('2. Fresh beliefs survive within the age window', () => {
+        const { world, b, rumor } = spreadPair();
+        for (let i = 0; i < 1990; i++) world.tick();
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+    });
+    test('3. Re-hearing refreshes recency without strengthening', () => {
+        const { world, a, b, rumor } = spreadPair();
+        const firstCred = b.knownRumors.get(rumor.id).credibility;
+        for (let i = 0; i < 1500; i++) world.tick();
+        b.position.x = 105;
+        world._generateSystemicEncounter(a, b, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+        b.position.x = 5000;
+        expect(b.knownRumors.get(rumor.id).credibility).toBeLessThanOrEqual(firstCred);
+        for (let i = 0; i < 1500; i++) world.tick();
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+    });
+    test('4. Custom age windows are respected', () => {
+        const { world, b, rumor } = spreadPair(42, { maxBeliefAgeTicks: 100 });
+        for (let i = 0; i < 101; i++) world.tick();
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+    });
+    test('5. Expiry is deterministic for a fixed seed', () => {
+        const run = () => {
+            const { world, b, rumor } = spreadPair();
+            for (let i = 0; i < 2001; i++) world.tick();
+            return b.knownRumors.has(rumor.id);
+        };
+        expect(run()).toBe(false);
+        expect(run()).toBe(run());
+    });
+});

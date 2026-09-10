@@ -6833,6 +6833,31 @@
  "External-host rumor integration evidence (in-repo valley is not independent adoption)",
  "Human readability evaluation of cascade behavior (BLOCKED_EXTERNAL_PARTICIPANTS)"
  ]
+ },
+ {
+ "milestone": "BELIEF_AGING_NEXT79",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "maxBeliefAgeTicks 2000 default: per-group per-tick sweep in _tickGroupDriversAndState expires instances older than the window (missing receivedTick treated as fresh; O(instances) against capped inboxes)",
+ "Re-hearing refreshes receivedTick even when it does not strengthen credibility (age and confidence separate, XIX); corrections unaffected, aware receivers stay protected",
+ "Closes the CCI-21 red-team hit: the rt21 20k-tick scenario now clears the false belief instead of holding it forever",
+ "Mid-build failure: one hunk consumed the replace-branch opening (syntax break); repaired via region re-read with zero unintended removals (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 38/38 (5 new NEXT-79 pins: expiry past window, survival within window, rehearing refresh without strengthening, custom window, seed determinism)",
+ "Age-sweep mutation probe (window x1e6) fails exactly the 3 expiry pins; fix restored",
+ "Full matrix 342/343 suites, 2595 pass including counterfactual suite WITH aging active (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~36s"
+ ],
+ "known_gaps": [
+ "maxBeliefAgeTicks 2000 is precedent-anchored, not calibrated; age window does not yet vary by topic severity, credibility, or confirmation state",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

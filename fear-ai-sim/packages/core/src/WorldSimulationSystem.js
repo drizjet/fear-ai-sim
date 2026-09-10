@@ -88,6 +88,7 @@ export const DEFAULT_WORLD_CONFIG = Object.freeze({
     rumorFidelityDecayPerHop: 0.12,  // 12% fidelity loss per transmission hop
     rumorDistortionRate: 0.10,       // Max random distortion in perceived severity per hop
     threatPressureDecayRate: 0.001,  // NEXT-78: per-tick linear alarm fade (combat +0.35 clears in ~350 quiet ticks)
+    maxBeliefAgeTicks: 2000,        // NEXT-79: unreinforced rumor instances expire (~6x pressure-clear; pending calibration)
     maxHistoryEvents: 1000,          // Bounded ring buffer for world history
     maxRumors: 500,                  // Sibling-bound sweep: oldest-origin eviction + group-copy purge
     seed: 1337
@@ -334,6 +335,11 @@ export class WorldSimulationSystem {
 
             // Check if receiver already knows rumor
             const existing = receiver.knownRumors.get(rId);
+            // NEXT-79: re-hearing refreshes recency even when it does not
+            // strengthen the belief (age and confidence stay separate).
+            if (existing && calculatedCredibility <= existing.credibility) {
+                existing.receivedTick = this.tickCount;
+            }
             if (!existing || calculatedCredibility > existing.credibility) {
                 const newInstance = {
                     rumorId: rId,
@@ -719,6 +725,17 @@ export class WorldSimulationSystem {
         // NEXT-78: alarm fades with quiet time in every state. Encounters
         // re-bump on their own ticks, so sustained contact sustains alarm.
         group.drivers.threatPressure = clamp01(group.drivers.threatPressure - this.config.threatPressureDecayRate * dt);
+        // NEXT-79: unreinforced beliefs expire. Re-hearing refreshes
+        // receivedTick at transmit time; corrections are unaffected (a
+        // forgotten-then-reheard refuted rumor stays blocked for the aware).
+        if (group.knownRumors?.size) {
+            const maxAge = this.config.maxBeliefAgeTicks ?? 2000;
+            for (const [rId, inst] of group.knownRumors) {
+                if (this.tickCount - (inst.receivedTick ?? this.tickCount) > maxAge) {
+                    group.knownRumors.delete(rId);
+                }
+            }
+        }
 
         // State Transition 1: Exhaustion -> Establish Camp
         if (group.drivers.fatigue >= 0.80 && group.state !== ROAMING_STATES.CAMPED && group.state !== ROAMING_STATES.ENGAGED) {
