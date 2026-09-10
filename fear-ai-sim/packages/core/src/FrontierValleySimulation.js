@@ -82,6 +82,7 @@ export class FrontierValleySimulation {
             migrations: 0,
             panicIncidents: 0,
             totalEncounters: 0,
+            deliveries: 0,
             fearSum: 0.0,
             fearSamples: 0
         };
@@ -215,7 +216,15 @@ export class FrontierValleySimulation {
             memberCount: 5,
             position: { x: 50, y: 0, z: 200 },
             waypoints: [{ x: 175, y: 0, z: 250 }, { x: 300, y: 0, z: 300 }],
-            wealth: 0.85
+            wealth: 0.85,
+            // NEXT-33: standing settlement-layer run (valley fiction, not a
+            // host faction-trade report): Northwatch food to Oakhaven.
+            tradeRun: {
+                fromSettlement: FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH,
+                toSettlement: FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN,
+                commodity: 'food',
+                amount: 2.0
+            }
         });
 
         this.worldSystem.registerGroup('bandit_warband_1', {
@@ -252,7 +261,10 @@ export class FrontierValleySimulation {
      * owns goods, wealth, and movement; Fear AI records an advisory
      * ledger row driving dependency restraint on later conflict
      * grievances. Unknown factions are rejected: silent ledger growth
-     * from typos would corrupt restraint math.
+     * from typos would corrupt restraint math. NEXT-33 boundary: the
+     * autonomous caravan flow settles settlement-layer deliveries only
+     * and never calls this method, so faction restraint keeps its host
+     * grounding (no forged inter-faction dependence).
      * @param {object} [flow={}]
      * @param {string} flow.sourceFaction exporter
      * @param {string} flow.destFaction importer
@@ -303,6 +315,40 @@ export class FrontierValleySimulation {
         return this.dependency.advise(
             this.tradeLedger, victimFaction, provocateurFaction, 1, this.currentTick
         ).restraint;
+    }
+
+    /**
+     * Settles one standing settlement-layer delivery when a caravan
+     * completes its waypoint loop (NEXT-33). Goods move between settlement
+     * markets, conserved: the transfer is min(amount, origin stock), so
+     * origins floor at zero and totals never inflate. This is valley
+     * fiction for the internal reference world: it NEVER writes the
+     * faction trade ledger, which stays host-reported only (see
+     * recordValleyTrade), so restraint math keeps its host grounding.
+     * @param {object} group caravan group carrying tradeRun
+     */
+    _settleTradeDelivery(group) {
+        const run = group.tradeRun;
+        const from = this.civSystem.nodes.get(run.fromSettlement);
+        const to = this.civSystem.nodes.get(run.toSettlement);
+        if (!from || !to) return;
+        const available = Number(from.market?.[run.commodity]) || 0;
+        const moved = Math.min(Number(run.amount) || 0, Math.max(0, available));
+        if (moved <= 0) return;
+        from.market[run.commodity] = available - moved;
+        to.market[run.commodity] = (Number(to.market?.[run.commodity]) || 0) + moved;
+        this.macroMetrics.deliveries = (this.macroMetrics.deliveries ?? 0) + 1;
+        this.worldSystem.recordHistoryEvent('TRADE_DELIVERY', {
+            primaryId: group.id,
+            secondaryId: run.toSettlement,
+            cause: 'CARAVAN_LOOP_WRAP',
+            consequences: {
+                commodity: run.commodity,
+                amount: moved,
+                from: run.fromSettlement,
+                to: run.toSettlement
+            }
+        });
     }
 
     /**
@@ -366,7 +412,12 @@ export class FrontierValleySimulation {
                         group.position.x += (dx / dist) * step;
                         group.position.z += (dz / dist) * step;
                     } else {
-                        this.worldSystem.advanceWaypoint(group.id);
+                        const nextIdx = this.worldSystem.advanceWaypoint(group.id);
+                        // NEXT-33: caravan loop-wrap settles one standing
+                        // settlement-layer delivery (goods move, conserved).
+                        if (nextIdx === 0 && group.type === ROAMING_PARTY_TYPES.CARAVAN && group.tradeRun) {
+                            this._settleTradeDelivery(group);
+                        }
                     }
                 }
             }
@@ -534,6 +585,7 @@ export class FrontierValleySimulation {
             routeFailures: this.macroMetrics.routeFailures,
             panicIncidents: this.macroMetrics.panicIncidents,
             totalEncounters: this.macroMetrics.totalEncounters,
+            deliveries: this.macroMetrics.deliveries ?? 0,
             meanPopulationFear: Number(meanFear.toFixed(4)),
             settlements: {
                 northwatch: this.settlements.get(FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH)?.population ?? 0,

@@ -5479,6 +5479,29 @@
         "NaN context basis passes through to whole-ledger meaning per NOW-31 (documented); a stricter contract could reject it, unjudged"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "AUTONOMOUS_TRADE_FLOW_NEXT33",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "WorldSimulationSystem: tradeRun param on registerGroup (default null, zero behavior change otherwise), TRADE_DELIVERY event type, export/import round-trip. FrontierValleySimulation: caravan_merchant_1 carries a standing Northwatch-food-to-Oakhaven run; loop-wrap in advance() settles one conserved delivery (min(amount, origin stock), origins floor at zero); TRADE_DELIVERY history events (capped ledger); deliveries counter in macroMetrics init plus getMacroSummary (import spread covers restore)",
+        "Authority boundary held by design: autonomy settles settlement-layer goods only and never calls recordValleyTrade, so faction-restraint math keeps its host grounding (documented on both methods). No invented inter-faction counterparties"
+      ],
+      "test_evidence": [
+        "3000-tick probe: 10 deliveries, Northwatch 20 -> 0, Oakhaven 50 -> 70, exact conservation, faction ledger 0 rows",
+        "2 new tests in frontier-valley-simulation.test.js (battery 9/9): first-delivery event shape plus long-horizon conservation with host-ledger boundary; empty-origin stall without debt plus determinism (10 deliveries at seed 11)",
+        "Mutation probe (deliveries never settle) fails exactly the 2 new tests; restore green",
+        "NEXT-22 soak pin unaffected (pacing battery green with flow active); full matrix 343/343 (2533 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Valley battery ~1 s; matrix ~34 s"
+      ],
+      "known_gaps": [
+        "Origin drains to zero with no production (XLVIII carried separately); flow stalls honestly but indefinitely until production exists",
+        "Single caravan, single commodity, single route; multi-caravan scheduling and price response are open",
+        "Early delivery history events are evicted by the 1000-cap ledger on long horizons (NEXT-38 policy working as designed, observed during test authoring)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

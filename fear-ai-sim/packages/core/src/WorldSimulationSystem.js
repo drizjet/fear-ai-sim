@@ -73,7 +73,8 @@ export const WORLD_EVENT_TYPES = Object.freeze({
     MIGRATION_COMPLETED: 'MIGRATION_COMPLETED',
     RUMOR_SPREAD: 'RUMOR_SPREAD',
     AMBUSH_LOGGED: 'AMBUSH_LOGGED',
-    TREATY_NOTED: 'TREATY_NOTED'
+    TREATY_NOTED: 'TREATY_NOTED',
+    TRADE_DELIVERY: 'TRADE_DELIVERY'
 });
 
 export const DEFAULT_WORLD_CONFIG = Object.freeze({
@@ -134,7 +135,8 @@ export class WorldSimulationSystem {
         militaryStrength = 0.5,
         wealth = 0.5,
         leaderId = null,
-        traits = {}
+        traits = {},
+        tradeRun = null
     } = {}) {
         if (!id) return null;
         const group = {
@@ -172,6 +174,9 @@ export class WorldSimulationSystem {
                 morale: 0.8
             },
             campId: null,
+            // NEXT-33: standing autonomous trade run (valley fiction, not a
+            // host report): { fromSettlement, toSettlement, commodity, amount }
+            tradeRun: tradeRun ? { ...tradeRun } : null,
             knownRumors: new Map(), // Map<rumorId, KnownRumorInstance>
             lastIntent: null
         };
@@ -720,6 +725,7 @@ export class WorldSimulationSystem {
                 state: g.state,
                 drivers: { ...g.drivers },
                 campId: g.campId,
+                tradeRun: g.tradeRun ? { ...g.tradeRun } : null,
                 knownRumors: Array.from(g.knownRumors.entries()).map(([rId, inst]) => ({ ...inst }))
             })),
             camps: Array.from(this.camps.entries()).map(([id, c]) => ({ ...c })),
@@ -761,6 +767,7 @@ export class WorldSimulationSystem {
                     state: g.state,
                     drivers: { ...g.drivers },
                     campId: g.campId,
+                    tradeRun: g.tradeRun ? { ...g.tradeRun } : null,
                     knownRumors: new Map(),
                     lastIntent: null
                 };

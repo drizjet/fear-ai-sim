@@ -118,3 +118,38 @@ describe('Sections 111-114 / Front C: Frontier Valley Canonical World & Degenera
         expect(summary.settlements.oakhaven).toBeGreaterThan(0);
     });
 });
+
+describe('NEXT-33: autonomous settlement-layer trade flow', () => {
+    it('8. Caravan loop-wrap delivers conserved goods and logs history', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const food = () => sim.civSystem.nodes.get(FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH).market.food
+            + sim.civSystem.nodes.get(FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN).market.food;
+        const before = food();
+        for (let t = 0; t < 1000 && sim.macroMetrics.deliveries < 1; t++) sim.advance(1);
+        expect(sim.macroMetrics.deliveries).toBe(1);
+        expect(food()).toBeCloseTo(before, 10);
+        const events = sim.worldSystem.queryHistory({ eventType: 'TRADE_DELIVERY', limit: 0 });
+        expect(events.length).toBe(1);
+        expect(events[0].consequences).toMatchObject({ commodity: 'food', amount: 2 });
+        // Long-horizon conservation plus host-ledger boundary.
+        sim.advance(3000);
+        expect(food()).toBeCloseTo(before, 10);
+        expect(sim.tradeLedger.length).toBe(0);
+    });
+
+    it('9. Empty origin stalls without debt, and flow is deterministic', () => {
+        const run = () => {
+            const sim = new FrontierValleySimulation({ seed: 11 });
+            sim.advance(3000);
+            return {
+                deliveries: sim.macroMetrics.deliveries,
+                north: sim.civSystem.nodes.get(FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH).market.food,
+                oak: sim.civSystem.nodes.get(FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN).market.food
+            };
+        };
+        const a = run();
+        expect(run()).toEqual(a);
+        expect(a.north).toBeGreaterThanOrEqual(0);
+        expect(a.deliveries).toBe(10);
+    });
+});
