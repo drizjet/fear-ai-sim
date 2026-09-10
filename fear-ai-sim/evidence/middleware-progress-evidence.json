@@ -5297,6 +5297,27 @@
         "No live path shares ledgers across clocks yet (valley keeps its own); the contract activates when the first bridge is built, which is also when it will need re-verification"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "LEDGER_BOUND_NEXT38",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Valley trade ledger joins history (capped 1000) and incidents (20/pair) under explicit growth policies; sibling uncapped histories are logged below, not claimed closed. Two-tier bound: window eviction on write (provably invisible — every read passes nowTick at or ahead of write tick, so evicted rows could never count) plus MAX_VALLEY_TRADE_ROWS 1000 hard backstop matching house scale",
+        "Eviction is lazy on write only; no growth path exists without writes, so advance() needs no sweep"
+      ],
+      "test_evidence": [
+        "NEXT-38 battery 2/2 in valley-war-pacing.test.js (battery 19/19): eviction invisibility across a 500-tick advance (0.63, then 0 by read windowing, then 0.7 on one fresh row with length 1); flood caps at 1000 newest-retained",
+        "Mutation check: both new tests fail with the valley file stashed",
+        "Full matrix 343/343 (2520 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Eviction scans only stale prefix per write; pacing battery ~1 s; matrix ~39 s"
+      ],
+      "known_gaps": [
+        "Hard-cap eviction under flood is lossy by design (oldest dropped); restraint math under sustained 1000-row floods is uncharacterized but bounded",
+        "Sibling uncapped histories found during scoping review (not yet bounded): RoamingBandSystem.encounterHistory, CoalitionDiplomacyEngine violationsLog/espionageLog, WorldSimulationSystem rumors map, InformationPropagationEngine rumors map"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

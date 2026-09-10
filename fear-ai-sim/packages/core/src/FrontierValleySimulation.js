@@ -32,6 +32,10 @@ export const FRONTIER_VALLEY_FACTIONS = Object.freeze({
     WILDLIFE: 'TimberWolfPack'
 });
 
+// NEXT-38: hard backstop on host-reported trade rows (matches the
+// historyLedger house cap scale). Window eviction handles the common
+// case invisibly; this bounds the flood case.
+export const MAX_VALLEY_TRADE_ROWS = 1000;
 export const FRONTIER_VALLEY_SETTLEMENTS = Object.freeze({
     NORTHWATCH: 'Northwatch',
     RIVERBEND: 'Riverbend',
@@ -273,6 +277,18 @@ export class FrontierValleySimulation {
             amount
         };
         this.tradeLedger.push(row);
+        // NEXT-38: bounded growth. Window eviction first: rows older than
+        // the dependency window can never count again, because every read
+        // passes a nowTick at or ahead of this tick (provably invisible).
+        // Hard cap second, matching the historyLedger house convention:
+        // lossy under flood, bounded always.
+        const floor = this.currentTick - this.dependency.config.windowTicks;
+        while (this.tradeLedger.length > 0 && this.tradeLedger[0].tick < floor) {
+            this.tradeLedger.shift();
+        }
+        while (this.tradeLedger.length > MAX_VALLEY_TRADE_ROWS) {
+            this.tradeLedger.shift();
+        }
         return row;
     }
 

@@ -334,3 +334,38 @@ describe('NEXT-16: trade-dependency conflict restraint', () => {
       .toThrow('UNKNOWN_TRADE_FACTION');
   });
 });
+
+describe('NEXT-38: bounded valley trade ledger', () => {
+  const S = FRONTIER_VALLEY_FACTIONS.SETTLERS;
+  const B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+  const N = FRONTIER_VALLEY_FACTIONS.NOMADS;
+  function fed() {
+    const sim = new FrontierValleySimulation({ seed: 4242 });
+    for (let i = 0; i < 9; i++) sim.recordValleyTrade({ sourceFaction: B, destFaction: S, amount: 10 });
+    sim.recordValleyTrade({ sourceFaction: N, destFaction: S, amount: 10 });
+    return sim;
+  }
+
+  it('window eviction is invisible: stale rows drop only when they cannot count', () => {
+    const sim = fed();
+    expect(sim.tradeLedger.length).toBe(10);
+    expect(sim._dependencyRestraint(S, B)).toBeCloseTo(0.63, 10);
+    sim.advance(500);
+    // Read-time windowing already excludes the stale rows...
+    expect(sim._dependencyRestraint(S, B)).toBe(0);
+    // ...so evicting them on the next write changes nothing countable.
+    sim.recordValleyTrade({ sourceFaction: B, destFaction: S, amount: 10 });
+    expect(sim.tradeLedger.length).toBe(1);
+    expect(sim._dependencyRestraint(S, B)).toBeCloseTo(0.7, 10);
+  });
+
+  it('flood reports cap at 1000 rows, newest retained', () => {
+    const sim = new FrontierValleySimulation({ seed: 4242 });
+    for (let i = 0; i < 1200; i++) {
+      sim.recordValleyTrade({ sourceFaction: B, destFaction: S, amount: 1, commodity: `g${i}` });
+    }
+    expect(sim.tradeLedger.length).toBe(1000);
+    expect(sim.tradeLedger[999].commodity).toBe('g1199');
+    expect(sim.tradeLedger[0].commodity).toBe('g200');
+  });
+});
