@@ -27,6 +27,12 @@ export function warnGroupUrgency(agreeableness) {
     const a = Number.isFinite(agreeableness) ? agreeableness : 0.5;
     return Math.min(1.0, 0.65 + a * 0.15);
 }
+// NEXT-61: ungated ally-approach slope (width 0.20 over the full A range),
+// extracted for the same shipped-formula measurement.
+export function approachAllyUrgency(agreeableness) {
+    const a = Number.isFinite(agreeableness) ? agreeableness : 0.5;
+    return Math.min(1.0, 0.45 + a * 0.2);
+}
 
 export class IntentResolver {
     /**
@@ -233,7 +239,7 @@ export class IntentResolver {
                 return {
                     type: 'APPROACH_ALLY',
                     target_id: ally.id,
-                    urgency: Math.min(1.0, 0.45 + agreeableness * 0.2),
+                    urgency: approachAllyUrgency(agreeableness),
                     vector_hint: towardsAlly,
                     suggested_posture: 'UPRIGHT'
                 };

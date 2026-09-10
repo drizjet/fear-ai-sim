@@ -6160,6 +6160,27 @@
  "Border severity reuses the ambush floor/knee without independent calibration (see NEXT-56)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "APPROACH_SLOPE_NEXT61",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "IntentResolver: APPROACH_ALLY urgency extracted to exported approachAllyUrgency (finite-guard: NaN/undefined read neutral 0.55 instead of poisoning urgency with NaN; all finite inputs byte-identical)",
+ "a_warn_urgency_utility.mjs: runApproachSlopeUtility measures the shipped formula"
+ ],
+ "test_evidence": [
+ "Sweep verdict broadly live: 40/121 held-urgency rungs flip OVERRIDE_DANGER (tip band 0.305-0.500) vs WARN's narrow 11/81",
+ "intent-stabilizer.test.js +1 (battery 7/7): rerun-equal, exact 40/121 with band, NaN/undefined guard pins",
+ "Mutation probe (slope flattened to constant) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2562 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Sweep <1 s; matrix ~43 s"
+ ],
+ "known_gaps": [
+ "WARN vs APPROACH slope interplay (both prosocial, different gates) unmapped — which fires first across A x threat geometries"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

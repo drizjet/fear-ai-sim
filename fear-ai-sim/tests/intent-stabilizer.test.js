@@ -73,3 +73,24 @@ describe('NEXT-47: above-threshold A urgency-slope utility', () => {
         expect(r.tipHi).toBe(0.65);
     });
 });
+
+describe('NEXT-61: APPROACH_ALLY slope utility', () => {
+    test('Approach slope flips overrides across a wide band, NaN reads neutral', async () => {
+        const { runApproachSlopeUtility, approachUrgency } = await import('../benchmarks/behavioral-evaluation/a_warn_urgency_utility.mjs');
+        expect(runApproachSlopeUtility()).toEqual(runApproachSlopeUtility());
+        const r = runApproachSlopeUtility();
+        // Slope geometry: ungated, width 0.20 over the full A range.
+        expect(approachUrgency(0)).toBe(0.45);
+        expect(approachUrgency(1.0)).toBe(0.65);
+        // Verdict: broadly live — low-A agents hold flight where high-A
+        // agents break for allies across a 0.195-wide held-urgency band.
+        expect(r.rungs).toBe(121);
+        expect(r.diffs).toBe(40);
+        expect(r.tipLo).toBe(0.305);
+        expect(r.tipHi).toBe(0.5);
+        // Finite guard: corrupt agreeableness reads neutral, never NaN.
+        const { approachAllyUrgency } = await import('../packages/core/src/IntentResolver.js');
+        expect(approachAllyUrgency(NaN)).toBe(0.55);
+        expect(approachAllyUrgency(undefined)).toBe(0.55);
+    });
+});
