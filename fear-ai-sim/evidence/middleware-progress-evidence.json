@@ -5667,6 +5667,31 @@
         "Fight-back casualties apply on every ambush combat regardless of power ratio; mauling-vs-scuffle differentiation is open"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "PRODUCTION_FLOW_NEXT45",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Settlement production table (Northwatch food 0.02/cap 20, Riverbend timber 0.02/cap 25) plus Oakhaven sink upkeep (0.012 each) applied per tick in advance(); storageCaps bound every sink (Oakhaven 150/120); deliveries stall honestly at both ends (empty origin, full sink); second caravan (Riverbend timber run) on the same settle logic",
+        "Rates are model params awaiting calibration; boundedness is by construction (caps), not by luck"
+      ],
+      "test_evidence": [
+        "20k-tick run: 354 deliveries, all markets within caps, zero negatives, faction ledger still 0 rows; flow oscillates perpetually instead of stalling at either end",
+        "NEXT-33 tests deliberately updated (10 -> 53 deliveries at 3000 ticks; conservation replaced by bounded-books: production breaks strict conservation by design)",
+        "New NEXT-45 test (valley battery 11/11): both caravans deliver, 20k caps held, perpetual flow (20k count exceeds 3k count)",
+        "Mutation probe (production zeroed) fails 2 tests; restore green",
+        "Interaction caught and handled: second caravan shifts NEXT-22b deliveries CV 0 -> 0.0042 (seed-jittered first loop); pin relaxed deliberately with measured value, class assertions untouched",
+        "Full matrix 343/343 (2541 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Valley battery ~2 s; matrix ~34 s"
+      ],
+      "known_gaps": [
+        "Rates/caps/upkeep are uncalibrated scenario params; the 150/120 sink caps and 0.012 upkeep want play-data review",
+        "No consumption at producer settlements; Oakhaven-only upkeep is a stated simplification",
+        "Price response to scarcity/danger is still open (trade has no price channel)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

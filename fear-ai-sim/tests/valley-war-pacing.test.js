@@ -410,7 +410,9 @@ describe('NEXT-22b: outcome distribution across seeds', () => {
     expect(Object.keys(first.classes)[0]).toBe('SHADOW/TRADE/UNAWARE|wars=1|ally=0');
     expect(first.dispersion.totalEncounters.cv).toBeLessThan(0.05);
     expect(first.dispersion.routeFailures.cv).toBe(0);
-    expect(first.dispersion.deliveries.cv).toBe(0);
+    // Second caravan's seed-jittered first loop shifts totals by ~1 per
+    // 5000 ticks (CV 0.0042): tight, but honestly nonzero since NEXT-45.
+    expect(first.dispersion.deliveries.cv).toBeLessThan(0.05);
   });
 });
 

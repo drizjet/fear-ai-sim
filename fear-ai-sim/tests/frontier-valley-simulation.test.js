@@ -122,22 +122,18 @@ describe('Sections 111-114 / Front C: Frontier Valley Canonical World & Degenera
 describe('NEXT-33: autonomous settlement-layer trade flow', () => {
     it('8. Caravan loop-wrap delivers conserved goods and logs history', () => {
         const sim = new FrontierValleySimulation({ seed: 11 });
-        const food = () => sim.civSystem.nodes.get(FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH).market.food
-            + sim.civSystem.nodes.get(FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN).market.food;
-        const before = food();
         for (let t = 0; t < 1000 && sim.macroMetrics.deliveries < 1; t++) sim.advance(1);
-        expect(sim.macroMetrics.deliveries).toBe(1);
-        expect(food()).toBeCloseTo(before, 10);
+        // Both caravans may settle on the same tick; count matches events.
+        expect(sim.macroMetrics.deliveries).toBeGreaterThanOrEqual(1);
         const events = sim.worldSystem.queryHistory({ eventType: 'TRADE_DELIVERY', limit: 0 });
-        expect(events.length).toBe(1);
-        expect(events[0].consequences).toMatchObject({ commodity: 'food', amount: 2 });
-        // Long-horizon conservation plus host-ledger boundary.
+        expect(events.length).toBe(sim.macroMetrics.deliveries);
+        expect(events.map(e => e.consequences)).toContainEqual(expect.objectContaining({ commodity: 'food', amount: 2 }));
+        // Faction ledger stays host-reported only: autonomy forges nothing.
         sim.advance(3000);
-        expect(food()).toBeCloseTo(before, 10);
         expect(sim.tradeLedger.length).toBe(0);
     });
 
-    it('9. Empty origin stalls without debt, and flow is deterministic', () => {
+    it('9. Production sustains origins and flow is deterministic', () => {
         const run = () => {
             const sim = new FrontierValleySimulation({ seed: 11 });
             sim.advance(3000);
@@ -149,8 +145,28 @@ describe('NEXT-33: autonomous settlement-layer trade flow', () => {
         };
         const a = run();
         expect(run()).toEqual(a);
-        expect(a.north).toBeGreaterThanOrEqual(0);
-        expect(a.deliveries).toBe(10);
+        // Pre-production this was exactly 10 with Northwatch drained to 0;
+        // production plus the second caravan changed both deliberately.
+        expect(a.deliveries).toBe(53);
+        expect(a.north).toBeGreaterThan(5);
+    });
+});
+
+describe('NEXT-45: production, upkeep, and multi-caravan scheduling', () => {
+    test('11. Both caravans deliver; sinks stay capped with no negatives over 20k ticks', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        sim.advance(1000);
+        const early = sim.worldSystem.queryHistory({ eventType: 'TRADE_DELIVERY', limit: 0 });
+        expect(new Set(early.map(e => e.primaryId))).toEqual(new Set(['caravan_merchant_1', 'caravan_merchant_2']));
+        const d3k = (() => { const s = new FrontierValleySimulation({ seed: 11 }); s.advance(3000); return s.macroMetrics.deliveries; })();
+        sim.advance(19000);
+        expect(sim.macroMetrics.deliveries).toBeGreaterThan(d3k);
+        const oak = sim.civSystem.nodes.get(FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN).market;
+        expect(oak.food).toBeLessThanOrEqual(150.0);
+        expect(oak.timber).toBeLessThanOrEqual(120.0);
+        for (const node of sim.civSystem.nodes.values()) {
+            for (const qty of Object.values(node.market)) expect(qty).toBeGreaterThanOrEqual(0);
+        }
     });
 });
 

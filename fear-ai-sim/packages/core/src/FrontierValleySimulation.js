@@ -151,6 +151,29 @@ export class FrontierValleySimulation {
             });
         }
 
+        // NEXT-45: settlement production (valley fiction, same authority
+        // story as the caravan flow). Rates are model params, caps are
+        // storage bounds: growth is bounded by construction, never by luck.
+        this.production = {
+            [FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH]: { food: { rate: 0.020, cap: 20.0 } },
+            [FRONTIER_VALLEY_SETTLEMENTS.RIVERBEND]: { timber: { rate: 0.020, cap: 25.0 } }
+        };
+
+        // NEXT-45: storage caps bound every sink (Oakhaven would otherwise
+        // accumulate without limit — the LXXII infinite-wealth watch).
+        // Delivery stalls honestly when the destination is full, symmetric
+        // with the empty-origin stall. Caps are scenario params.
+        this.storageCaps = {
+            [FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH]: { food: 20.0 },
+            [FRONTIER_VALLEY_SETTLEMENTS.RIVERBEND]: { timber: 25.0 },
+            [FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN]: { food: 150.0, timber: 120.0 }
+        };
+        // NEXT-45: sink upkeep (population consumption). Below mean inflow
+        // so the flow oscillates perpetually instead of satiation-stalling;
+        // above zero so sinks cannot inflate without bound even uncapped.
+        this.upkeep = {
+            [FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN]: { food: 0.012, timber: 0.012 }
+        };
         // 2. Setup Trade Routes in CivilizationSystem
         this.civSystem.registerRoute(FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS, {
             fromNodeId: FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH,
@@ -258,6 +281,24 @@ export class FrontierValleySimulation {
             }
         });
 
+        this.worldSystem.registerGroup('caravan_merchant_2', {
+            name: 'Riverbend Timber Run',
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            factionId: FRONTIER_VALLEY_FACTIONS.SETTLERS,
+            memberCount: 4,
+            position: { x: 200 + jitX * 0.5, y: 0, z: 50 + jitZ * 0.5 },
+            waypoints: [{ x: 250, y: 0, z: 150 }, { x: 300, y: 0, z: 300 }],
+            wealth: 0.60,
+            // NEXT-45: second standing run (Riverbend timber to Oakhaven)
+            // proving multi-caravan scheduling on the same settle logic.
+            tradeRun: {
+                fromSettlement: FRONTIER_VALLEY_SETTLEMENTS.RIVERBEND,
+                toSettlement: FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN,
+                commodity: 'timber',
+                amount: 1.5
+            }
+        });
+
         this.worldSystem.registerGroup('bandit_warband_1', {
             name: 'Shadowfang Ambushers',
             type: ROAMING_PARTY_TYPES.BANDITS,
@@ -350,12 +391,11 @@ export class FrontierValleySimulation {
 
     /**
      * Settles one standing settlement-layer delivery when a caravan
-     * completes its waypoint loop (NEXT-33). Goods move between settlement
-     * markets, conserved: the transfer is min(amount, origin stock), so
-     * origins floor at zero and totals never inflate. This is valley
-     * fiction for the internal reference world: it NEVER writes the
-     * faction trade ledger, which stays host-reported only (see
-     * recordValleyTrade), so restraint math keeps its host grounding.
+     * completes its waypoint loop (NEXT-33, capped NEXT-45). The transfer
+     * is min(amount, origin stock, destination space): origins floor at
+     * zero, sinks stall honestly at their storage caps, totals never
+     * inflate. Valley fiction for the internal reference world: it NEVER
+     * writes the faction trade ledger, which stays host-reported only.
      * @param {object} group caravan group carrying tradeRun
      */
     _settleTradeDelivery(group) {
@@ -364,10 +404,13 @@ export class FrontierValleySimulation {
         const to = this.civSystem.nodes.get(run.toSettlement);
         if (!from || !to) return;
         const available = Number(from.market?.[run.commodity]) || 0;
-        const moved = Math.min(Number(run.amount) || 0, Math.max(0, available));
+        const destQty = Number(to.market?.[run.commodity]) || 0;
+        const destCap = Number(this.storageCaps?.[run.toSettlement]?.[run.commodity]);
+        const space = Number.isFinite(destCap) ? Math.max(0, destCap - destQty) : Infinity;
+        const moved = Math.min(Number(run.amount) || 0, Math.max(0, available), space);
         if (moved <= 0) return;
         from.market[run.commodity] = available - moved;
-        to.market[run.commodity] = (Number(to.market?.[run.commodity]) || 0) + moved;
+        to.market[run.commodity] = destQty + moved;
         this.macroMetrics.deliveries = (this.macroMetrics.deliveries ?? 0) + 1;
         this.worldSystem.recordHistoryEvent('TRADE_DELIVERY', {
             primaryId: group.id,
@@ -380,6 +423,35 @@ export class FrontierValleySimulation {
                 to: run.toSettlement
             }
         });
+    }
+
+    /**
+     * Produces settlement goods each tick up to storage caps (NEXT-45).
+     * Bounded by construction: min(cap, qty + rate) can never inflate
+     * past cap, and unknown settlements/commodities are skipped, never
+     * created. Unblocks the caravan flow from honest indefinite stall.
+     */
+    _produceSettlements() {
+        for (const [settlementId, outputs] of Object.entries(this.production ?? {})) {
+            const node = this.civSystem.nodes.get(settlementId);
+            if (!node) continue;
+            for (const [commodity, spec] of Object.entries(outputs)) {
+                const rate = Number(spec?.rate) || 0;
+                const cap = Number(spec?.cap);
+                if (!(rate > 0) || !Number.isFinite(cap)) continue;
+                const qty = Number(node.market?.[commodity]) || 0;
+                node.market[commodity] = Math.min(cap, qty + rate);
+            }
+        }
+        for (const [settlementId, burns] of Object.entries(this.upkeep ?? {})) {
+            const node = this.civSystem.nodes.get(settlementId);
+            if (!node) continue;
+            for (const [commodity, rate] of Object.entries(burns)) {
+                if (!(Number(rate) > 0)) continue;
+                const qty = Number(node.market?.[commodity]) || 0;
+                node.market[commodity] = Math.max(0, qty - Number(rate));
+            }
+        }
     }
 
     /**
@@ -468,6 +540,9 @@ export class FrontierValleySimulation {
                     }
                 }
             }
+
+            // NEXT-45: settlement production before consumption/delivery.
+            this._produceSettlements();
 
             // 1. Advance Civ System (trade, resource flows)
             this.civSystem.advanceSimulation(1);
