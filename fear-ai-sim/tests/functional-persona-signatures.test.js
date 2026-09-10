@@ -146,3 +146,25 @@ describe('NOW-35: APPROACH_ALLY recovery-window map', () => {
         expect(near.elasticity).toBeGreaterThan(1.0);
     });
 });
+
+describe('NEXT-40: discrimination under noise families', () => {
+    // Tiny grid (N only, 2 deltas x 3 conditions) for suite speed; the
+    // full 7-trait grid lives in near_neighbor_noise_families.mjs.
+    const tiny = { traitIdxs: [0], deltas: [0.05, 0.20], conds: [['clean', 0], ['bias', 0.10], ['dropout', 0.30]], reps: 2 };
+
+    test('10. Runner is deterministic; bias is harmless, dropout degrades', async () => {
+        const { runNoiseFamilies } = await import('../benchmarks/behavioral-evaluation/near_neighbor_noise_families.mjs');
+        const a = runNoiseFamilies(tiny);
+        expect(runNoiseFamilies(tiny)).toEqual(a);
+        const n = a.traits.neuroticism;
+        const clean = n.perCond.clean_0.rows['delta_0.05'].accuracyPct;
+        const biased = n.perCond.bias_0p1.rows['delta_0.05'].accuracyPct;
+        const dropped = n.perCond.dropout_0p3.rows['delta_0.05'].accuracyPct;
+        // Systematic miscalibration shifts both arms together: no loss.
+        expect(clean).toBe(100);
+        expect(biased).toBe(clean);
+        // Missing fields degrade gracefully, never collapse or crash.
+        expect(dropped).toBeLessThan(clean);
+        expect(dropped).toBeGreaterThan(50);
+    });
+});

@@ -5716,6 +5716,30 @@
         "Heap legs are GC-noisy; a --expose-gc leak assay is the LATER-21 precursor, not done here"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "NOISE_FAMILIES_NEXT40",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "near_neighbor_noise_families.mjs: 7 traits x 10 conditions (clean, gauss x2, bias x2, spike x2, dropout x2, corr) x 4 deltas x 50 paired trials (~28k signature evals, ~1.3 s), same stats gates and Bonferroni discipline as NEXT-8; NEXT-8 runner untouched with frozen numbers intact",
+        "Dropout probe up front: missing fields engage signature defaults without throwing on any trait, so undefined-dropout is the honest missing-data model"
+      ],
+      "test_evidence": [
+        "Bias is harmless (100% nearly everywhere): systematic miscalibration shifts both arms through near-linear regimes — genuine robustness, not a weak test",
+        "Correlated and independent proportional noise barely differ (N gauss_0.10 vs corr_0.10 both delta* 0.15 provisional): the independence assumption does not matter much",
+        "Spike and dropout degrade monotonically with level; R and L hold delta* 0.05 across every family; A never exceeds provisional under any family including clean",
+        "Regression test in functional-persona-signatures.test.js (battery 10/10): determinism, bias-equals-clean at 100%, dropout degrades-but-above-chance",
+        "Mutation probe (dropout disabled) fails the pin; restore green",
+        "Rerun bit-identical; full matrix 343/343 (2543 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Full 7-trait grid ~1.3 s; persona battery ~1 s; matrix ~37 s"
+      ],
+      "known_gaps": [
+        "Zero-reads dropout (sensor stuck at 0 rather than missing) untested; distinct failure mode from missing-with-default",
+        "Bias tested at +-0.10 only; larger miscalibrations that push regimes across gates are open"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
