@@ -5339,6 +5339,29 @@
         "ListenEdges/credibility and per-group knownRumors membership remain host-entity-bounded (agents/groups), not separately capped"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "NEAR_NEIGHBOR_NOISE_NEXT8",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "benchmarks/behavioral-evaluation/near_neighbor_noise_robustness.mjs: reuses TRAIT_DEFINITIONS signatures and stats gates from construct_validity_sweeps.mjs; injects Weber-proportional stimulus noise (sigma 0/0.05/0.10/0.20) via per-trial-coordinate seeded RNG (order-independent, rerun-identical); paired A/B with independent draws; delta-star per (trait, sigma) with Bonferroni over the 112-cell grid; per-trait resolution frontier",
+        "sigma=0 column reproduces the noiseless sweep comparisons exactly (same N=50 cells)"
+      ],
+      "test_evidence": [
+        "Full grid (7 traits x 4 deltas x 4 sigmas x 50 paired trials, ~22k signature evals): N collapses (delta* 0.05 -> none by sigma 0.20; d0.05 100% -> 36%); R and L retain delta* 0.05 at sigma 0.20 (L Bonferroni-surviving at the finest delta; R provisional at 0.05, surviving at 0.10+); E and C degrade gracefully; O resolves only at delta 0.20; A never exceeds provisional at any noise level including zero",
+        "2 regression tests in functional-persona-signatures.test.js (battery 7/7): runner determinism plus noiseless N resolution; high-noise collapse of fine N discrimination",
+        "Mutation probe: disabling noise injection fails the collapse test; restored green",
+        "Rerun bit-identical (diff clean); full matrix 343/343 (2527 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Full grid ~1 s; persona battery ~1 s; matrix ~38 s"
+      ],
+      "known_gaps": [
+        "Noise is stimulus-proportional only; sensor-dropout/bias/spike and correlated multi-trait noise are untested",
+        "A-trait weakness (provisional-only even noiseless) is flagged, not explained; candidate architecture follow-up",
+        "N=50 per cell; provisional cells need multi-scenario replication before freezing per house Bonferroni rule"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

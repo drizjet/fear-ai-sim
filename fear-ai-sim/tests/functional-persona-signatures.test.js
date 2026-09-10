@@ -67,3 +67,30 @@ describe('Sections VIII-XIII: Functional Persona Signatures', () => {
         expect(fps.auditImmutability().hostPhysicsMutations).toBe(0);
     });
 });
+
+describe('NEXT-8: near-neighbor discrimination under noise', () => {
+    // Tiny grid (N only, 2 deltas x 2 sigmas) for suite speed; the full
+    // 7-trait grid lives in near_neighbor_noise_robustness.mjs.
+    const tiny = { traitIdxs: [0], deltas: [0.05, 0.20], sigmas: [0, 0.20], reps: 2 };
+
+    test('6. Runner is deterministic and noiseless column resolves N at delta 0.05', async () => {
+        const { runNoiseRobustness } = await import('../benchmarks/behavioral-evaluation/near_neighbor_noise_robustness.mjs');
+        const a = runNoiseRobustness(tiny);
+        const b = runNoiseRobustness(tiny);
+        expect(a).toEqual(b);
+        const n = a.traits.neuroticism;
+        expect(n.perSigma['sigma_0.00'].rows['delta_0.05'].accuracyPct).toBe(100);
+        expect(n.perSigma['sigma_0.00'].deltaStar).toBe(0.05);
+    });
+
+    test('7. High stimulus noise collapses fine N discrimination', async () => {
+        const { runNoiseRobustness } = await import('../benchmarks/behavioral-evaluation/near_neighbor_noise_robustness.mjs');
+        const r = runNoiseRobustness(tiny);
+        const n = r.traits.neuroticism;
+        const clean = n.perSigma['sigma_0.00'].rows['delta_0.05'].accuracyPct;
+        const noisy = n.perSigma['sigma_0.20'].rows['delta_0.05'].accuracyPct;
+        expect(noisy).toBeLessThan(clean);
+        // Chance-level accuracy must claim no delta-star (binomial + Wilson gate).
+        expect(n.perSigma['sigma_0.20'].deltaStar).toBeNull();
+    });
+});
