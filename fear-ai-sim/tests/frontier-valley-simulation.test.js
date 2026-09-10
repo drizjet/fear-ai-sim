@@ -188,6 +188,26 @@ describe('NEXT-52: economy calibration verdict', () => {
     });
 });
 
+describe('NEXT-67: satiation boundary at long horizon', () => {
+    test('17. Upkeep-0 satiates by 15k, upkeep>=1 flows; counts hide volume', async () => {
+        const { runSatiationBoundary } = await import('../benchmarks/behavioral-evaluation/economy_calibration.mjs');
+        const grid = { seed: 11, ticks: 20000, legEvery: 5000 };
+        const a = runSatiationBoundary(grid);
+        expect(runSatiationBoundary(grid)).toEqual(a);
+        // Satiation onset 5k-10k, full stall by 15k; sink pinned at its cap.
+        expect(a.upkeepZero.deltas).toEqual([88, 16, 0, 0]);
+        expect(a.upkeepZero.oakFood).toBe(150);
+        // Normal upkeep flows at full count forever — even with the sink at
+        // 149.7/150: counts measure loop liveness, not moved volume (NEXT-62).
+        expect(a.upkeepNormal.deltas).toEqual([88, 89, 89, 88]);
+        expect(a.upkeepNormal.oakFood).toBeCloseTo(149.7, 1);
+        // Tiny caps throttle only the first window, then wrap at full count
+        // while moving crumbs (sink pinned 1.7/2).
+        expect(a.tinyCaps.deltas).toEqual([24, 89, 89, 88]);
+        expect(a.tinyCaps.oakFood).toBeLessThanOrEqual(2);
+    });
+});
+
 describe('NEXT-43: setup-sweep outcome knobs', () => {
     test('10. Overrides apply, reject unknowns, and split outcome classes', async () => {
         const { runSetupSweep, setupSweepDigest } = await import('../benchmarks/behavioral-evaluation/valley_setup_sweep.mjs');

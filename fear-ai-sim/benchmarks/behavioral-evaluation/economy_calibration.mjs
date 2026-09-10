@@ -63,3 +63,39 @@ export function printEconomyCalibration(r) {
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     printEconomyCalibration(runEconomyCalibration());
 }
+
+// NEXT-67: satiation-boundary mapping. The NEXT-52 count-plateau holds to
+// 5k ticks; at 4x run length the upkeep-0 cell satiates (sink fills, flow
+// stalls) while upkeep>=1 flows forever. Legs are per-window delivery
+// deltas; oakFood tracks the normal-run sink against its 150 cap.
+export function runSatiationBoundary(options = {}) {
+    const seed = options.seed ?? ECON_SEED;
+    const ticks = options.ticks ?? 20000;
+    const legEvery = options.legEvery ?? 5000;
+    function legs(mut) {
+        const sim = new FrontierValleySimulation({ seed });
+        mut(sim);
+        const deltas = [];
+        let prev = 0;
+        for (let t = 0; t < ticks; t += legEvery) {
+            sim.advance(Math.min(legEvery, ticks - t));
+            deltas.push(sim.macroMetrics.deliveries - prev);
+            prev = sim.macroMetrics.deliveries;
+        }
+        return { deltas, oakFood: Math.round(sim.civSystem.nodes.get('Oakhaven').market.food * 10) / 10 };
+    }
+    const noUpkeep = (s) => { for (const b of Object.values(s.upkeep)) for (const k of Object.keys(b)) b[k] = 0; };
+    const tinyCaps = (s) => { s.storageCaps.Oakhaven.food = 2; s.storageCaps.Oakhaven.timber = 2; };
+    return {
+        config: { seed, ticks, legEvery },
+        upkeepZero: legs(noUpkeep),
+        upkeepNormal: legs(() => {}),
+        tinyCaps: legs(tinyCaps)
+    };
+}
+export function printSatiationBoundary(r) {
+    console.log('=== NEXT-67: satiation boundary ===');
+    console.log(`  upkeepZero legs=${r.upkeepZero.deltas} oakFood=${r.upkeepZero.oakFood}`);
+    console.log(`  upkeepNormal legs=${r.upkeepNormal.deltas} oakFood=${r.upkeepNormal.oakFood}`);
+    console.log(`  tinyCaps legs=${r.tinyCaps.deltas} oakFood=${r.tinyCaps.oakFood}`);
+}

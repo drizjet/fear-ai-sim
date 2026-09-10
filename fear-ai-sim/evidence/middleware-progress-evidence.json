@@ -6274,6 +6274,28 @@
  "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "SATIATION_BOUND_NEXT67",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "economy_calibration.mjs: runSatiationBoundary (per-window delivery legs + sink trajectory at 20k ticks); measurement only, no behavior change"
+ ],
+ "test_evidence": [
+ "Red-team confirm: upkeep-0 legs [88,16,0,0] (onset 5k-10k, full stall by 15k, sink pinned 150/150); upkeep>=1 flat [88,89,89,88]; tiny caps [24,89,89,88] with sink 1.7/2",
+ "Count/volume divorce: normal run hits its own food cap (~14k) yet counts never dip — deliveries count loop liveness, not moved volume; volume weighting stays NEXT-62",
+ "frontier-valley-simulation.test.js +1 (battery 17/17, 2x green) with rerun-equality",
+ "Mutation probe (dest-space unbounded) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2565 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Boundary map ~1 s; matrix ~42 s"
+ ],
+ "known_gaps": [
+ "Satiation onset tick (5k-10k window) not bisected to the caravan-loop; linear fill model unverified against loop-phase effects",
+ "Tiny-cap early trickle (24 vs 88) vs late full-count wrapping: wrap-period dynamics under micro-space unmapped"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
