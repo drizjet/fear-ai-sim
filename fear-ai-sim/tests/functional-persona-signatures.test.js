@@ -223,3 +223,23 @@ describe('NEXT-51: large-bias regime crossings', () => {
             .toBe(mA(T(0.5, 0.6), { peerDist: 3.0, threatDist: 15.0, leaderCalm: 0.9 }));
     });
 });
+
+describe('NOW-37: tie-count convention', () => {
+    test('13. Total stimulus zero reads 0% (ties fail), never ~50%', async () => {
+        const { runNoiseFamilies } = await import('../benchmarks/behavioral-evaluation/near_neighbor_noise_families.mjs');
+        const grid = { traitIdxs: [0, 3, 4], deltas: [0.05, 0.20], conds: [['bias', -1.0]], reps: 2 };
+        const a = runNoiseFamilies(grid);
+        const cell = (t) => a.traits[t].perCond.bias_m1;
+        // N/E take no stochastic branches at zero stimulus: total tie.
+        for (const t of ['neuroticism', 'extraversion']) {
+            expect(cell(t).rows['delta_0.05'].accuracyPct).toBe(0);
+            expect(cell(t).rows['delta_0.20'].accuracyPct).toBe(0);
+            expect(cell(t).deltaStar).toBeNull();
+        }
+        // A takes fallback-noise branches at zero stimulus: tie-dominated
+        // (below chance), exact value left unpinned. NEXT-53 falsifier: with
+        // per-trial agent seeds this must read exactly 0 if it is pure noise.
+        expect(cell('agreeableness').rows['delta_0.05'].accuracyPct).toBeLessThan(50);
+        expect(cell('agreeableness').deltaStar).toBeNull();
+    });
+});

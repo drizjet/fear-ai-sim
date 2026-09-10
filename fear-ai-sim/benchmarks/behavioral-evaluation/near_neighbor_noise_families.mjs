@@ -105,6 +105,13 @@ export function runNoiseFamilies(options = {}) {
                             const rngB = trialRng(seed, ti, di, ci, bi, si, rep, 1);
                             const scoreA = def.signature(traitsA, perturbScen(def.scenarios[si], family, level, rngA));
                             const scoreB = def.signature(traitsB, perturbScen(def.scenarios[si], family, level, rngB));
+                            // NOW-37 tie convention: strictly greater counts.
+                            // A tie is a failure to distinguish, so floor and
+                            // saturation ties read as 0% (total tie) or
+                            // below-chance (tie-dominated cells like E at
+                            // bias -0.50 or A at bias +1.00) — never as
+                            // capable-but-backwards. Below-chance cells are
+                            // indistinguishability, not inversion.
                             if (scoreB > scoreA) correct++;
                         }
                     }
