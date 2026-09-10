@@ -237,6 +237,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Severity Calibration NEXT-56:** shared casualty map extracted (sweepable floor/knee) — incidents tune 0.33-0.55 while the ladder ceiling holds everywhere. Designers tune feel, not stability. Pinned in pacing battery.
 - **Flood Budget NEXT-59/60:** dense flood characterized (3500 hears/10t); per-tick spread budget caps work exactly (100/tick) with lossless deferral, 0 disables. Pinned in propagation battery.
 - **Frontier Audit CCI-19:** 27 ranked candidates (0 NOW, 23 NEXT, 4 LATER); all 8 CCI-18 chunks closed. Red-team hit: throughput law — volume ≈ upkeep × T, counts need only upkeep > 0. Next: upkeep-law formalization (NEXT-72).
+- **Upkeep Law NEXT-72:** steady volume rises with drain rate then saturates at caravan capacity (two regimes, both horizons pinned). Counts need upkeep > 0; volume needs upkeep rate. Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

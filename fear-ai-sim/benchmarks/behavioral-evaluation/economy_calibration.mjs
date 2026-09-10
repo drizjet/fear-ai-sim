@@ -105,3 +105,31 @@ export function printSatiationBoundary(r) {
         console.log(`  ${k} legs=${v.deltas} vol=${v.volumes} oakFood=${v.oakFood}`);
     }
 }
+
+// NEXT-72: upkeep-law formalization. Steady volume has two regimes:
+// upkeep-limited (volume rises with the drain rate) and inflow-limited
+// (drains clear faster than caravans deliver; volume caps at caravan
+// capacity). Absolute upkeep rates here; the shipped rate is 0.012.
+export const UPKEEP_LAW_RATES = Object.freeze([0.002, 0.012, 0.02]);
+export const UPKEEP_LAW_HORIZONS = Object.freeze([10000, 20000]);
+
+export function runUpkeepLaw(options = {}) {
+    const seed = options.seed ?? ECON_SEED;
+    const rates = options.rates ?? UPKEEP_LAW_RATES;
+    const horizons = options.horizons ?? UPKEEP_LAW_HORIZONS;
+    const r1 = (v) => Math.round(v * 10) / 10;
+    const table = {};
+    for (const ticks of horizons) {
+        for (const u of rates) {
+            const sim = new FrontierValleySimulation({ seed });
+            for (const b of Object.values(sim.upkeep)) for (const k of Object.keys(b)) b[k] = u;
+            sim.advance(ticks);
+            table[`T${ticks}/u${u}`] = r1(sim.macroMetrics.deliveredVolume);
+        }
+    }
+    return { config: { seed, rates: [...rates], horizons: [...horizons] }, table };
+}
+export function printUpkeepLaw(r) {
+    console.log('=== NEXT-72: upkeep law ===');
+    console.log('  volume: ' + Object.entries(r.table).map(([k, v]) => `${k}=${v}`).join(' '));
+}

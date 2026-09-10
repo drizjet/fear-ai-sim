@@ -6486,6 +6486,27 @@
  "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "UPKEEP_LAW_NEXT72",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "economy_calibration.mjs: runUpkeepLaw (absolute upkeep rates x 10k/20k horizons); measurement only, no behavior change"
+ ],
+ "test_evidence": [
+ "Two-regime law: upkeep-limited rise (260->583 at 20k across 0.002->0.012) then inflow-limited saturation (583->627, ratio <1.2; 10k saturates fully at 313.5=313.5)",
+ "frontier-valley-simulation.test.js +1 (battery 19/19, 2x green) with rerun-equality, exact volumes, monotonicity plus saturation ratios",
+ "Mutation probe (upkeep burn disabled) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2573 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Law map ~1 s; matrix ~42 s"
+ ],
+ "known_gaps": [
+ "Law calibrated at seed 11, two commodities, fixed caravan schedule — rate constants, not a dimensionless formula",
+ "Production-rate axis of the 2D law unmapped (production slack at tested rates; zero is the only cliff)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

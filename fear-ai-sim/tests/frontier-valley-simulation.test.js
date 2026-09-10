@@ -227,6 +227,26 @@ describe('NEXT-62: volume-weighted calibration', () => {
     });
 });
 
+describe('NEXT-72: upkeep-law formalization', () => {
+    test('19. Volume rises with upkeep then saturates at caravan capacity', async () => {
+        const { runUpkeepLaw } = await import('../benchmarks/behavioral-evaluation/economy_calibration.mjs');
+        const a = runUpkeepLaw();
+        expect(runUpkeepLaw()).toEqual(a);
+        const v = (t, u) => a.table[`T${t}/u${u}`];
+        // Exact steady volumes at both horizons.
+        expect(v(10000, 0.002)).toBe(219.9);
+        expect(v(10000, 0.012)).toBe(313.5);
+        expect(v(20000, 0.002)).toBe(259.8);
+        expect(v(20000, 0.012)).toBe(582.7);
+        // Monotone in upkeep at each horizon; saturating at the top
+        // (inflow-limited: drains clear faster than caravans deliver).
+        for (const t of [10000, 20000]) {
+            expect(v(t, 0.002)).toBeLessThan(v(t, 0.012));
+            expect(v(t, 0.02) / v(t, 0.012)).toBeLessThan(1.2);
+        }
+    });
+});
+
 describe('NEXT-43: setup-sweep outcome knobs', () => {
     test('10. Overrides apply, reject unknowns, and split outcome classes', async () => {
         const { runSetupSweep, setupSweepDigest } = await import('../benchmarks/behavioral-evaluation/valley_setup_sweep.mjs');
