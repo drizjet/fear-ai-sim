@@ -624,15 +624,17 @@ describe('NEXT-76: refutation costs directed trust (later loss of trust)', () =>
         expect(c.knownRumors.has(rumor.id)).toBe(false);
         expect(rel.hasRelationship('LC', 'LA')).toBe(false);
     });
-    test('4. Confirmation changes no trust', () => {
+    test('4. Confirmation earns directed trust at half the falsehood scale', () => {
         const { world, rel, a, b, meet } = pairing();
         const rumor = world.createRumor('WAR_DECLARED', {
             sourceEntityId: a.id, severity: 0.9, description: 'true army report'
         });
         meet();
+        const cred = b.knownRumors.get(rumor.id).credibility;
         world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
         meet();
-        expect(rel.getRelationship('LB', 'LA').trust).toBe(0);
+        const expected = 0.15 * (0.5 + 0.5 * cred);
+        expect(rel.getRelationship('LB', 'LA').trust).toBeCloseTo(expected, 4);
         expect(rel.hasRelationship('LA', 'LA')).toBe(false);
     });
     test('5. Originator self-correction writes no self-trust entry', () => {

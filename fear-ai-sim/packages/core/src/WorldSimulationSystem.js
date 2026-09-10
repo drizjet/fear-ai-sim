@@ -430,8 +430,18 @@ export class WorldSimulationSystem {
         const inst = group.knownRumors?.get(master.id);
         if (!inst) return 'unheard';
         if (master.correction.confirmed) {
+            const vindicatedWeight = 0.5 + 0.5 * (inst.credibility ?? 0.5);
             inst.credibility = 1.0;
             inst.fidelity = 1.0;
+            if (relationshipTensorSystem && group.leaderId && master.sourceEntityId) {
+                const originator = this.groups.get(String(master.sourceEntityId));
+                const originLeader = originator?.leaderId;
+                if (originLeader && originLeader !== group.leaderId) {
+                    relationshipTensorSystem.recordInteraction(
+                        group.leaderId, originLeader,
+                        INTERACTION_TYPES.TRUE_REPORT_VINDICATED, { weight: vindicatedWeight });
+                }
+            }
             return 'confirmed';
         }
         const believedWeight = 0.5 + 0.5 * (inst.credibility ?? 0.5);

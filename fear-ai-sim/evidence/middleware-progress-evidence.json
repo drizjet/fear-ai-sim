@@ -6735,6 +6735,31 @@
  "No confirmed-truth trust reward: groups whose true reports are vindicated gain no trust (asymmetric with the falsehood penalty)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "VINDICATION_REWARD_NEXT77",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "RelationshipTensorSystem.TRUE_REPORT_VINDICATED: trust +0.15 x weight, grievance -0.10, respect +0.05 (half the falsehood scale: negativity bias, believer already acted on the warning)",
+ "WorldSim._applyCorrection confirmed branch writes directed believer-leader -> originator-leader reward with the same believed-weight formula; self/unheard paths unchanged",
+ "No double reward on repeat encounters: confirmation pins credibility to 1.0 so later transmits never re-qualify (verified by the no-double-count test still passing)",
+ "Mid-build failure: one range collision ate test 3 body and duplicated test 4; repaired via region re-read with only superseded lines removed (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 29/29 (NEXT-76 test 4 rewritten as vindication magnitude pin with exact toBeCloseTo match)",
+ "Precise line-195 mutation probe (+0.15->+0.0, vindication only) fails exactly the rewritten pin; broad probe of all three +0.15 gains also fails exactly one test",
+ "Full matrix 342/343 suites, 2586 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~36s"
+ ],
+ "known_gaps": [
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator - corrections require explicit host correctRumor calls",
+ "Rumor consequence still pressure-plus-trust only: no reroute, mobilization, or migration response to heard threats"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

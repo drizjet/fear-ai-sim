@@ -26,6 +26,7 @@ export const INTERACTION_TYPES = Object.freeze({
     AID_PROVIDED: 'AID_PROVIDED',
     RESCUE_CONFIRMED: 'RESCUE_CONFIRMED',
     FALSE_REPORT_EXPOSED: 'FALSE_REPORT_EXPOSED',
+    TRUE_REPORT_VINDICATED: 'TRUE_REPORT_VINDICATED',
     PEACEFUL_COEXISTENCE: 'PEACEFUL_COEXISTENCE'
 });
 
@@ -184,6 +185,16 @@ export class RelationshipTensorSystem {
                 rel.trust = Math.max(-1.0, rel.trust - 0.30 * weight);
                 rel.grievance = Math.min(1.0, rel.grievance + 0.25 * weight);
                 rel.respect = Math.max(0.0, rel.respect - 0.10 * weight);
+                rel.familiarity = Math.min(1.0, rel.familiarity + 0.05 * weight);
+                break;
+
+            case INTERACTION_TYPES.TRUE_REPORT_VINDICATED:
+                // NEXT-77: mirror of FALSE_REPORT_EXPOSED at half gain scale.
+                // Being right earns less than being wrong costs (negativity
+                // bias, and the believer already acted on the true warning).
+                rel.trust = Math.min(1.0, rel.trust + 0.15 * weight);
+                rel.grievance = Math.max(0.0, rel.grievance - 0.10 * weight);
+                rel.respect = Math.min(1.0, rel.respect + 0.05 * weight);
                 rel.familiarity = Math.min(1.0, rel.familiarity + 0.05 * weight);
                 break;
 
