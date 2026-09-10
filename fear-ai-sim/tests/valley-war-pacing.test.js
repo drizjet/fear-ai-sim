@@ -413,3 +413,50 @@ describe('NEXT-22b: outcome distribution across seeds', () => {
     expect(first.dispersion.deliveries.cv).toBe(0);
   });
 });
+
+describe('NEXT-44: retaliatory grievance fuel', () => {
+  const S = FRONTIER_VALLEY_FACTIONS.SETTLERS;
+  const B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+  const N = FRONTIER_VALLEY_FACTIONS.NOMADS;
+  function synthetic(resolution, partyA, partyB, encounterType) {
+    return [{ encounterId: 'syn-r', partyAId: partyA, partyBId: partyB, advisoryResolution: resolution, encounterType }];
+  }
+
+  it('ambush combat bleeds both ways: victim raids up, raiders take casualties', () => {
+    const sim = new FrontierValleySimulation({ seed: 4242 });
+    sim._recordEncounterConsequences(synthetic(
+      'COMBAT_ENGAGEMENT', 'bandit_warband_1', 'caravan_merchant_1', 'AMBUSH_INTERCEPTION',
+    ));
+    expect(sim.factionSystem.getBilateralStance(S, B).grievance).toBeGreaterThan(0.5);
+    expect(sim.factionSystem.getBilateralStance(B, S).grievance).toBeGreaterThan(0.4);
+  });
+
+  it('border-skirmish combat records symmetric casualties, wildlife excluded', () => {
+    const sim = new FrontierValleySimulation({ seed: 4242 });
+    sim._recordEncounterConsequences(synthetic(
+      'COMBAT_ENGAGEMENT', 'patrol_settlers_1', 'nomad_clan_1', 'BORDER_SKIRMISH',
+    ));
+    expect(sim.factionSystem.getBilateralStance(S, N).grievance).toBeGreaterThan(0.4);
+    expect(sim.factionSystem.getBilateralStance(N, S).grievance).toBeGreaterThan(0.4);
+    const wBefore = sim.factionSystem.getBilateralStance(S, FRONTIER_VALLEY_FACTIONS.WILDLIFE).incidents.length;
+    sim._recordEncounterConsequences(synthetic(
+      'COMBAT_ENGAGEMENT', 'patrol_settlers_1', 'wolf_pack_1', 'BORDER_SKIRMISH',
+    ));
+    expect(sim.factionSystem.getBilateralStance(S, FRONTIER_VALLEY_FACTIONS.WILDLIFE).incidents.length).toBe(wBefore);
+  });
+
+  it('reverse ladder engages but caps below ATTACK over 5000 ticks', () => {
+    const sim = new FrontierValleySimulation({ seed: 11 });
+    const visited = new Set();
+    let maxG = 0;
+    for (let t = 0; t < 5000; t += 10) {
+      sim.advance(10);
+      const st = sim.factionSystem.getBilateralStance(B, S);
+      visited.add(st.stage);
+      maxG = Math.max(maxG, st.grievance);
+    }
+    expect(maxG).toBeGreaterThan(0.5);
+    expect(visited).toContain(ESCALATION_STAGES.MOBILIZE);
+    expect(visited).not.toContain(ESCALATION_STAGES.ATTACK);
+  });
+});

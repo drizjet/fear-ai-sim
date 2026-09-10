@@ -22,7 +22,7 @@
 import { DeterministicRng } from './DeterministicRng.js';
 import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES, INCIDENT_TYPES } from './FactionSystem.js';
 import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
-import { WorldSimulationSystem, ROAMING_PARTY_TYPES } from './WorldSimulationSystem.js';
+import { WorldSimulationSystem, ROAMING_PARTY_TYPES, ENCOUNTER_TYPES } from './WorldSimulationSystem.js';
 import { TradeDependencyEngine } from './TradeDependencyEngine.js';
 
 export const FRONTIER_VALLEY_FACTIONS = Object.freeze({
@@ -408,6 +408,22 @@ export class FrontierValleySimulation {
                     // faction cools its grudge (grievance scaled, facts kept).
                     const restraint = this._dependencyRestraint(victim, bandit);
                     this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null, restraint });
+                    // NEXT-44: the victim fought back, so the raiders bled
+                    // too. Symmetric restraint: dependence cools both ways.
+                    const backRestraint = this._dependencyRestraint(bandit, victim);
+                    this.factionSystem.recordIncident(victim, bandit, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, restraint: backRestraint });
+                }
+                // NEXT-44: retaliatory fuel. Border-skirmish combat (never
+                // bandit-initiated: that path attributes blame above) bleeds
+                // both sides, so each faction records SKIRMISH_CASUALTY
+                // against the other. Self-limiting by construction: Context 2
+                // requires an already-hot stage, so retaliation deepens
+                // ongoing wars but cannot start them. Wildlife excluded
+                // (NOW-16: animal hunger is not faction warfare).
+                const W = FRONTIER_VALLEY_FACTIONS.WILDLIFE;
+                if (enc.encounterType === ENCOUNTER_TYPES.BORDER_SKIRMISH && fA && fB && fA !== fB && fA !== W && fB !== W) {
+                    this.factionSystem.recordIncident(fA, fB, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null });
+                    this.factionSystem.recordIncident(fB, fA, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null });
                 }
             } else if (enc.advisoryResolution === 'EXTORTION_PAID') {
                 if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.15);

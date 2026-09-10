@@ -5645,6 +5645,28 @@
         "Grievance washout is observed, not explained per-channel; a decay-vs-encounter attribution is open"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "RETALIATORY_FUEL_NEXT44",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Encounter audit: the model has no bandits-lose outcome (outgunned victims produce MUTUAL_AVOIDANCE, not bandit casualties), so reverse fuel comes from mutual combat. Two paths in _recordEncounterConsequences COMBAT branch: ambush fight-back (victim records SKIRMISH_CASUALTY on raiders, symmetric restraint) and border-skirmish symmetric casualties (both directions, wildlife and same-faction guarded; Context 2 requires an already-hot stage so retaliation deepens wars but cannot start them)"
+      ],
+      "test_evidence": [
+        "Bandit-direction grievance now peaks 0.989 over 5000 ticks and visits MOBILIZE/THREATEN/SHADOW, never ATTACK (g-only fuel caps proportionately for raiders)",
+        "Valley re-soak with both fuels: flag-free, cools to SHADOW — no destabilization",
+        "3 new tests in valley-war-pacing.test.js (battery 24/24): ambush bleeds both ways, border symmetric with wildlife exclusion, 5000-tick reverse ceiling",
+        "Mutation probe (casualties swapped for tribute) fails exactly the 3 new tests; restore green",
+        "Full matrix 343/343 (2540 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Pacing battery ~3 s; matrix ~44 s"
+      ],
+      "known_gaps": [
+        "Bandit-direction ATTACK remains unfueled (no terr/eco on that stance); MOBILIZE ceiling is judged proportionate for raiders, revisit if bandits gain holdings",
+        "Fight-back casualties apply on every ambush combat regardless of power ratio; mauling-vs-scuffle differentiation is open"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
