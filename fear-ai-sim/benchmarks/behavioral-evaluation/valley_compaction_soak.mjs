@@ -23,7 +23,7 @@
 
 import { fileURLToPath } from 'node:url';
 import { FrontierValleySimulation } from '../../packages/core/src/FrontierValleySimulation.js';
-import { compactEventLog } from '../../packages/core/src/EventLogCompactor.js';
+import { compactEventLog, mergeColdSummaries, mergeColdPairSummaries } from '../../packages/core/src/EventLogCompactor.js';
 
 export const SOAK100K_SEEDS = Object.freeze([11, 7]);
 export const SOAK100K_TICKS = 100000;
@@ -54,14 +54,22 @@ export function runCompactionSoak(options = {}) {
     const seeds = options.seeds ?? SOAK100K_SEEDS;
     const ticks = options.ticks ?? SOAK100K_TICKS;
     const window = options.window ?? SOAK100K_WINDOW;
+    // NEXT-49: cold tier. Camp establish/abandon churn (net-zero history)
+    // rolls into per-group occupancy once 5000 ticks old; cold summaries
+    // merge per type. Residual archive growth is the true-anchor rate.
+    const coldAgeTicks = options.coldAgeTicks ?? 5000;
+    const coldPairs = [{ open: 'CAMP_ESTABLISHED', close: 'CAMP_ABANDONED', key: 'primaryId' }];
     const runs = [];
     for (const seed of seeds) {
         const sim = new FrontierValleySimulation({ seed });
         let archived = [];
         let summaries = [];
         let middleSummaries = [];
+        let coldPairSummaries = [];
         let summarized = 0;
         let middleSummarized = 0;
+        let coldPaired = 0;
+        let coldSummariesMerged = 0;
         let maxN = 0;
         let peakArchive = 0;
         const heap = [process.memoryUsage().heapUsed];
@@ -77,13 +85,24 @@ export function runCompactionSoak(options = {}) {
             }
             const out = compactEventLog(archived, {
                 anchorTypes: [...VALLEY_ANCHORS],
-                bulkTypes: [...VALLEY_BULK]
+                bulkTypes: [...VALLEY_BULK],
+                coldAgeTicks,
+                coldPairRollup: coldPairs,
             });
             archived = out.events;
-            summaries = summaries.concat(out.summaries);
-            middleSummaries = middleSummaries.concat(out.middleSummaries);
+            // NEXT-49: cross-pass cold accumulation. Per-pass outputs merge
+            // into persistent cumulative spans (idempotent), so summary
+            // counts stay bounded while the archive keeps growing warm.
+            const cutoff = (t + window) - coldAgeTicks;
+            const ms = mergeColdSummaries(summaries.concat(out.summaries), cutoff);
+            summaries = ms.entries; coldSummariesMerged += ms.mergedCount;
+            const mm = mergeColdSummaries(middleSummaries.concat(out.middleSummaries), cutoff);
+            middleSummaries = mm.entries; coldSummariesMerged += mm.mergedCount;
+            coldPairSummaries = mergeColdPairSummaries(coldPairSummaries.concat(out.coldPairSummaries ?? []));
             summarized += out.stats.summarized;
             middleSummarized += out.stats.middleSummarized;
+            coldPaired += out.stats.coldPaired ?? 0;
+            coldSummariesMerged += out.stats.coldSummariesMerged ?? 0;
             peakArchive = Math.max(peakArchive, archived.length);
             heap.push(process.memoryUsage().heapUsed);
         }
@@ -97,6 +116,9 @@ export function runCompactionSoak(options = {}) {
             peakArchive,
             summaryCount: summaries.length,
             middleSummaryCount: middleSummaries.length,
+            coldPairSummaryCount: coldPairSummaries.length,
+            coldPaired,
+            coldSummariesMerged,
             keptDeliveries,
             anchorComplete: keptDeliveries === sim.macroMetrics.deliveries,
             wallMs,
@@ -109,7 +131,8 @@ export function runCompactionSoak(options = {}) {
 export function compactionDigest(result) {
     return result.runs.map(r => [
         r.seed, r.ticks, r.deliveries, r.liveLedger, r.archiveEvents,
-        r.peakArchive, r.summaryCount, r.keptDeliveries, r.anchorComplete
+        r.peakArchive, r.summaryCount, r.middleSummaryCount, r.coldPairSummaryCount,
+        r.coldPaired, r.coldSummariesMerged, r.keptDeliveries, r.anchorComplete
     ].join('|')).join('\n');
 }
 
@@ -118,7 +141,7 @@ export function printCompactionSoak(result) {
     for (const r of result.runs) {
         console.log(`--- seed ${r.seed} @${r.ticks} ${r.wallMs}ms heapMB[${r.heapMB[0]}>${r.heapMB[Math.floor(r.heapMB.length / 2)]}>${r.heapMB[r.heapMB.length - 1]}]`);
         console.log(`  deliveries=${r.deliveries} keptDeliveries=${r.keptDeliveries} anchorsComplete=${r.anchorComplete}`);
-        console.log(`  archive=${r.archiveEvents} peak=${r.peakArchive} summaries=${r.summaryCount}+${r.middleSummaryCount}`);
+        console.log(`  archive=${r.archiveEvents} peak=${r.peakArchive} summaries=${r.summaryCount}+${r.middleSummaryCount} coldPairs=${r.coldPairSummaryCount} (paired=${r.coldPaired} merged=${r.coldSummariesMerged})`);
     }
 }
 

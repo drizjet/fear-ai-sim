@@ -5903,6 +5903,29 @@
  "Tip band calibrated at default margin 0.15/cooldown 5; hosts retuning the stabilizer shift the band (benchmark accepts margin/cooldown options)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "ARCHIVE_STEADY_STATE_NEXT49",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "EventLogCompactor cold tier (opt-in, default byte-identical): cold camp establish/abandon pairs roll into per-key occupancy (referenced/boundary halves stay whole via refd-set + reason gate); cold bulk/middle summaries merge per type into cumulative spans (idempotent exported mergers, also used cross-pass by the soak)",
+ "Soak harness wires coldAgeTicks 5000 with cross-pass cumulative accumulation; digest extended with cold fields; index exports the mergers"
+ ],
+ "test_evidence": [
+ "100k soak seed 11: archive 8047->2083 (-74%), summaries ~1490->75 (-95%), 2982 pairs into 6 occupancy rows; seed 7 identical shape; anchor-complete both; residual growth is exactly the delivery-anchor rate",
+ "3 new pins (2 compactor unit + 1 soak-8k): pair rollup with referenced-half protection + closure proof, summary merge idempotence + default-identical, soak determinism with churn absorbed and archive < deliveries+1000",
+ "Mutation probe (cold tier disabled) fails exactly the 3 new tests; restore green",
+ "Full matrix 343/343 (2554 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Cold 100k soak ~3 s (faster than pre-cold ~7 s: smaller archive recompacted); matrix ~55 s"
+ ],
+ "known_gaps": [
+ "Residual archive still grows at the delivery-anchor rate (~18/k-tick); true delivery summarization would break the anchor-complete guarantee and is out of scope",
+ "Cold age 5000 and camp-only pairs are judgment calls; other churn pairs (migration completed chains?) unreviewed",
+ "Heap legs still GC-noisy; --expose-gc assay remains NEXT-50"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

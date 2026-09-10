@@ -165,6 +165,8 @@ export {
 export {
     compactEventLog,
     verifyAnchorClosure,
+    mergeColdSummaries,
+    mergeColdPairSummaries,
     DEFAULT_ANCHOR_TYPES,
     DEFAULT_BULK_TYPES
 } from './src/EventLogCompactor.js';

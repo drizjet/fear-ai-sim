@@ -4,9 +4,9 @@ import { makeSoakRng } from '../world-soak-monitor.js';
 import {
   compactEventLog,
   verifyAnchorClosure,
+  mergeColdSummaries,
   DEFAULT_ANCHOR_TYPES,
 } from '../packages/core/index.js';
-
 // Sections LXXI (NEXT-8): event-log compaction must shrink the log while
 // preserving every causal anchor. The compacted log keeps all anchor-type
 // events, per-type boundaries, and the transitive parent-closure; bulk
@@ -235,4 +235,54 @@ describe('LXXI NOW-12: middle-summary value distributions', () => {
     const gate = a.middleSummaries.find((s) => s.type === 'FACTION_ACTION_GATE' && s.values.allowed);
     expect(gate).toBeDefined();
   }, 180000);
+});
+
+describe('NEXT-49: cold-tier steady-state bounding', () => {
+  const campSpan = (n, key) => ([
+    { eventId: `est-${n}`, type: 'CAMP_ESTABLISHED', tick: n * 10, primaryId: key, parentEventIds: [] },
+    { eventId: `abd-${n}`, type: 'CAMP_ABANDONED', tick: n * 10 + 5, primaryId: key, parentEventIds: [] },
+  ]);
+  const coldOpts = {
+    anchorTypes: ['CAMP_ESTABLISHED', 'CAMP_ABANDONED', 'TRADE_DELIVERY'],
+    bulkTypes: ['MARKET_TICK'],
+    coldAgeTicks: 50,
+    coldPairRollup: [{ open: 'CAMP_ESTABLISHED', close: 'CAMP_ABANDONED', key: 'primaryId' }],
+  };
+  it('rolls unreferenced cold camp pairs into per-key occupancy, keeps referenced halves whole', () => {
+    const evs = [
+      ...campSpan(1, 'g1'), ...campSpan(2, 'g1'), ...campSpan(3, 'g2'),
+      { eventId: 'd1', type: 'TRADE_DELIVERY', tick: 35, parentEventIds: ['est-3'] },
+      { eventId: 'm1', type: 'MARKET_TICK', tick: 5, parentEventIds: [] },
+      { eventId: 'd2', type: 'TRADE_DELIVERY', tick: 200, parentEventIds: [] },
+    ];
+    const out = compactEventLog(evs, coldOpts);
+    // g1 pairs rolled (2 pairs, 4 events gone); g2's est-3 is referenced by
+    // the delivery, so the g2 pair stays whole.
+    expect(out.stats.coldPaired).toBe(2);
+    expect(out.coldPairSummaries).toHaveLength(1);
+    expect(out.coldPairSummaries[0]).toMatchObject({ keyValue: 'g1', pairCount: 2 });
+    expect(out.events.some((e) => e.eventId === 'est-3')).toBe(true);
+    expect(out.events.some((e) => e.eventId === 'abd-3')).toBe(true);
+    expect(out.events.some((e) => e.eventId === 'd1')).toBe(true);
+    expect(verifyAnchorClosure(out.events).closed).toBe(true);
+  });
+  it('merges cold summaries idempotently and leaves the default path byte-identical', () => {
+    const evs = [];
+    for (let i = 0; i < 300; i++) evs.push({ eventId: `m${i}`, type: 'MARKET_TICK', tick: i, parentEventIds: [] });
+    const cold = compactEventLog(evs, { ...coldOpts, coldAgeTicks: 30 });
+    expect(cold.stats.coldSummariesMerged).toBeGreaterThan(0);
+    const total = cold.summaries.reduce((n, s) => n + s.count, 0);
+    // First/last per type stay whole as boundary evidence; the rest sums.
+    expect(total).toBe(298);
+    expect(cold.events.map((e) => e.eventId).sort()).toEqual(['m0', 'm299']);
+    // Idempotent re-merge preserves counts.
+    const re = mergeColdSummaries(cold.summaries, 1000);
+    expect(re.entries.reduce((n, s) => n + s.count, 0)).toBe(298);
+    // Default path untouched: no cold keys requested, zero cold activity,
+    // identical output with or without the null default spelled out.
+    const a = compactEventLog(evs, { bulkTypes: ['MARKET_TICK'] });
+    const b = compactEventLog(evs, { bulkTypes: ['MARKET_TICK'], coldAgeTicks: null, coldPairRollup: [] });
+    expect(JSON.stringify(a)).toBe(JSON.stringify(b));
+    expect(a.stats.coldPaired).toBe(0);
+  });
 });

@@ -53,6 +53,109 @@ function parentsOf(e) {
   return e.parentEventIds.filter((p) => typeof p === 'string' && p.length > 0);
 }
 
+/**
+ * NEXT-49: merge cold summaries (bulk or middle) at/before `cutoff` per
+ * (kind, type) into cumulative spans. Warm entries keep their order.
+ * Idempotent: re-merging merged entries preserves counts and spans.
+ * Returns { entries, mergedCount }. Pure and deterministic.
+ */
+export function mergeColdSummaries(list, cutoff, options = {}) {
+  const middleMaxActors = Math.max(1, options.middleMaxActors ?? 8);
+  const maxDistinct = Math.max(1, options.maxDistinct ?? 8);
+  const arr = Array.isArray(list) ? list : [];
+  const cold = new Map();
+  const warm = [];
+  for (const s of arr) {
+    const end = Number.isFinite(s?.windowEnd) ? s.windowEnd : Number.MAX_SAFE_INTEGER;
+    if (end <= cutoff) {
+      const k = `${s?.kind ?? 'summary'}::${s?.type ?? '?'}`;
+      if (!cold.has(k)) cold.set(k, []);
+      cold.get(k).push(s);
+    } else warm.push(s);
+  }
+  const merged = [];
+  let mergedCount = 0;
+  for (const [k, group] of [...cold.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+    if (group.length === 1) { merged.push(group[0]); continue; }
+    mergedCount += group.length - 1;
+    const first = group[0];
+    const out = { ...first };
+    out.count = group.reduce((n, g) => n + (Number.isFinite(g?.count) ? g.count : 0), 0);
+    out.windowStart = Math.min(...group.map((g) => (Number.isFinite(g?.windowStart) ? g.windowStart : 0)));
+    out.windowEnd = Math.max(...group.map((g) => (Number.isFinite(g?.windowEnd) ? g.windowEnd : 0)));
+    if (Number.isFinite(group[0]?.firstTick)) out.firstTick = Math.min(...group.map((g) => g.firstTick));
+    if (Number.isFinite(group[0]?.lastTick)) out.lastTick = Math.max(...group.map((g) => g.lastTick));
+    if (group.some((g) => Array.isArray(g?.actors))) {
+      out.actors = [];
+      out.actorOverflow = 0;
+      for (const g of group) {
+        for (const a of (g.actors ?? [])) {
+          if (out.actors.includes(a)) continue;
+          if (out.actors.length < middleMaxActors) out.actors.push(a);
+          else out.actorOverflow += 1;
+        }
+        out.actorOverflow += (Number.isFinite(g?.actorOverflow) ? g.actorOverflow : 0);
+      }
+    }
+    if (group.some((g) => g?.values && typeof g.values === 'object')) {
+      out.values = {};
+      out.valuesOverflow = {};
+      for (const g of group) {
+        for (const [f, bucket] of Object.entries(g.values ?? {})) {
+          const dst = (out.values[f] ??= {});
+          for (const [v, n] of Object.entries(bucket ?? {})) {
+            if (dst[v] !== undefined) dst[v] += n;
+            else if (Object.keys(dst).length < maxDistinct) dst[v] = n;
+            else out.valuesOverflow[f] = (out.valuesOverflow[f] ?? 0) + n;
+          }
+        }
+        for (const [f, n] of Object.entries(g.valuesOverflow ?? {})) {
+          out.valuesOverflow[f] = (out.valuesOverflow[f] ?? 0) + n;
+        }
+      }
+    }
+    merged.push(out);
+  }
+  warm.sort((a, b) => ((a?.windowStart ?? 0) - (b?.windowStart ?? 0)) || (String(a?.type ?? '') < String(b?.type ?? '') ? -1 : 1));
+  return { entries: [...merged, ...warm], mergedCount };
+}
+
+/**
+ * NEXT-49: merge cold-pair occupancy summaries sharing
+ * (openType, closeType, key, keyValue) into cumulative spans.
+ * Idempotent and deterministic. Returns the merged array.
+ */
+export function mergeColdPairSummaries(list) {
+  const arr = Array.isArray(list) ? list : [];
+  const byKey = new Map();
+  for (const s of arr) {
+    const k = `${s?.openType ?? '?'}::${s?.closeType ?? '?'}::${s?.key ?? '?'}::${s?.keyValue ?? '?'}`;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(s);
+  }
+  const out = [];
+  for (const [k, group] of [...byKey.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+    if (group.length === 1) { out.push(group[0]); continue; }
+    const first = group[0];
+    const ex = [];
+    for (const g of group) {
+      for (const id of (g?.exampleEventIds ?? [])) {
+        if (ex.length >= 8) break;
+        if (!ex.includes(id)) ex.push(id);
+      }
+      if (ex.length >= 8) break;
+    }
+    out.push({
+      ...first,
+      pairCount: group.reduce((n, g) => n + (Number.isFinite(g?.pairCount) ? g.pairCount : 0), 0),
+      firstOpenTick: Math.min(...group.map((g) => (Number.isFinite(g?.firstOpenTick) ? g.firstOpenTick : 0))),
+      lastCloseTick: Math.max(...group.map((g) => (Number.isFinite(g?.lastCloseTick) ? g.lastCloseTick : 0))),
+      exampleEventIds: ex,
+    });
+  }
+  return out;
+}
+
 export function compactEventLog(events, options = {}) {
   const {
     anchorTypes = DEFAULT_ANCHOR_TYPES,
@@ -67,6 +170,17 @@ export function compactEventLog(events, options = {}) {
     middleMinRepeat = 50,
     middleWindowTicks = null,
     middleMaxActors = 8,
+    // NEXT-49: cold-tier steady-state bounding (opt-in; default off, which
+    // is byte-identical to the old behavior). Anything at or below
+    // (maxTick - coldAgeTicks) is cold. Cold open/close pairs sharing a key
+    // (e.g. nomad camp establish/abandon churn: net-zero history) roll up
+    // into per-key cumulative occupancy summaries — but ONLY when both
+    // halves are plain anchor-kept (reason 'anchor'): closure-referenced
+    // or boundary events stay whole, so anchor closure cannot break.
+    // Cold bulk/middle summaries merge per type into cumulative spans.
+    // Residual archive growth is then exactly the true-anchor rate.
+    coldAgeTicks = null,
+    coldPairRollup = [],
     // NOW-12: per-value distributions over caller-named primitive fields
     // (for example allowed true/false splits). Empty by default (off);
     // distinct values per field cap at middleMaxDistinct, overflow counted.
@@ -214,9 +328,76 @@ export function compactEventLog(events, options = {}) {
     middleSummaries.push(s);
   }
 
+  // NEXT-49: cold tier. Pairs and summaries at or below the cold cutoff
+  // roll into cumulative spans. Skipped entirely when coldAgeTicks is not
+  // a finite number (default): byte-identical old behavior.
+  const coldRemoved = new Set();
+  const coldPairSummaries = [];
+  let coldPaired = 0;
+  let coldSummariesMerged = 0;
+  if (Number.isFinite(coldAgeTicks)) {
+    let maxTick = 0;
+    list.forEach((e) => { const t = tickOf(e); if (t > maxTick) maxTick = t; });
+    const cutoff = maxTick - Math.max(0, coldAgeTicks);
+    const isCold = (e) => tickOf(e) <= cutoff;
+    // Referenced evidence (parents of kept events) never rolls, whatever
+    // its reason tag: anchor-typed but closure-referenced halves stay whole.
+    const refd = new Set();
+    for (const i of keep) for (const p of parentsOf(list[i])) refd.add(p);
+    const rollable = (i) => reason.get(i) === 'anchor' && !refd.has(eventIdOf(list[i], i));
+    // Cold open/close pair rollup (FIFO per key; rollable halves only).
+    for (const spec of (Array.isArray(coldPairRollup) ? coldPairRollup : [])) {
+      const open = spec?.open, close = spec?.close, key = spec?.key ?? 'primaryId';
+      if (typeof open !== 'string' || typeof close !== 'string' || typeof key !== 'string') continue;
+      const pending = new Map();
+      const pairs = [];
+      list.forEach((e, i) => {
+        if (!isCold(e) || coldRemoved.has(i)) return;
+        const t = e?.type;
+        const kv = e?.[key];
+        if (typeof kv !== 'string' || kv.length === 0) return;
+        if (t === open) {
+          if (rollable(i)) {
+            if (!pending.has(kv)) pending.set(kv, []);
+            pending.get(kv).push(i);
+          }
+        } else if (t === close) {
+          if (!rollable(i)) return;
+          const q = pending.get(kv);
+          if (q && q.length > 0) pairs.push([q.shift(), i]);
+        }
+      });
+      // Group pairs per key into cumulative occupancy summaries.
+      const byKey = new Map();
+      for (const [oi, ci] of pairs) {
+        const kv = list[oi][key];
+        if (!byKey.has(kv)) byKey.set(kv, []);
+        byKey.get(kv).push([oi, ci]);
+        coldRemoved.add(oi); coldRemoved.add(ci);
+      }
+      for (const [kv, ps] of [...byKey.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))) {
+        ps.sort((a, b) => tickOf(list[a[0]]) - tickOf(list[b[0]]));
+        coldPaired += ps.length;
+        coldPairSummaries.push({
+          kind: 'cold-pair-summary', openType: open, closeType: close, key, keyValue: kv,
+          pairCount: ps.length,
+          firstOpenTick: tickOf(list[ps[0][0]]), lastCloseTick: tickOf(list[ps[ps.length - 1][1]]),
+          exampleEventIds: ps.slice(0, 4).map(([oi, ci]) => [eventIdOf(list[oi], oi), eventIdOf(list[ci], ci)]).flat(),
+        });
+      }
+    }
+    // Cold summary merge: bulk + middle summaries at/before the cutoff
+    // collapse per (kind, type) into cumulative spans (idempotent).
+    const mb = mergeColdSummaries(summaries, cutoff, { middleMaxActors, maxDistinct });
+    summaries.length = 0; summaries.push(...mb.entries); coldSummariesMerged += mb.mergedCount;
+    const mm = mergeColdSummaries(middleSummaries, cutoff, { middleMaxActors, maxDistinct });
+    middleSummaries.length = 0; middleSummaries.push(...mm.entries); coldSummariesMerged += mm.mergedCount;
+  }
+
   const compacted = [];
   let dropped = 0;
   list.forEach((e, i) => {
+    if (coldRemoved.has(i)) return; // NEXT-49: rolled into a cold summary
     if (keep.has(i)) { compacted.push(e); return; }
     const t = e?.type;
     if (typeof t === 'string' && bulkSet.has(t)) return; // summarized
@@ -225,17 +406,21 @@ export function compactEventLog(events, options = {}) {
   });
 
   const originalBytes = Buffer.byteLength(JSON.stringify(list), 'utf8');
-  const compactBytes = Buffer.byteLength(JSON.stringify({ events: compacted, summaries, middleSummaries }), 'utf8');
+  const compactBytes = Buffer.byteLength(JSON.stringify({ events: compacted, summaries, middleSummaries, coldPairSummaries }), 'utf8');
   return {
     events: compacted,
     summaries,
     middleSummaries,
+    coldPairSummaries,
     danglingParents: [...dangling].sort(),
     stats: {
       original: list.length,
       kept: compacted.length,
       summarized: summaries.reduce((s, x) => s + x.count, 0),
       middleSummarized: middleSummaries.reduce((s, x) => s + x.count, 0),
+      coldPaired,
+      coldPairSummaries: coldPairSummaries.length,
+      coldSummariesMerged,
       dropped,
       originalBytes,
       compactBytes,
@@ -257,4 +442,4 @@ export function verifyAnchorClosure(events) {
   return { closed: broken.length === 0, broken };
 }
 
-export default { compactEventLog, verifyAnchorClosure, DEFAULT_ANCHOR_TYPES, DEFAULT_BULK_TYPES };
+export default { compactEventLog, verifyAnchorClosure, mergeColdSummaries, mergeColdPairSummaries, DEFAULT_ANCHOR_TYPES, DEFAULT_BULK_TYPES };

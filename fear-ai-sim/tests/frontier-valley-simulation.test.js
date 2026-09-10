@@ -207,6 +207,24 @@ describe('NEXT-9: compaction-wired long soak', () => {
     });
 });
 
+describe('NEXT-49: cold-tier archive bounding on the long grid', () => {
+    test('14. Camp churn rolls into occupancy while delivery anchors stay complete', async () => {
+        const { runCompactionSoak, compactionDigest } = await import('../benchmarks/behavioral-evaluation/valley_compaction_soak.mjs');
+        // 8000 ticks crosses the 5000-tick cold age; suite stays fast.
+        const grid = { seeds: [11], ticks: 8000, window: 100 };
+        const first = runCompactionSoak(grid);
+        expect(compactionDigest(runCompactionSoak(grid))).toBe(compactionDigest(first));
+        const r = first.runs[0];
+        expect(r.anchorComplete).toBe(true);
+        expect(r.keptDeliveries).toBe(r.deliveries);
+        // Churn absorbed: pairs rolled, per-group occupancy bounded.
+        expect(r.coldPaired).toBeGreaterThan(0);
+        expect(r.coldPairSummaryCount).toBeLessThanOrEqual(8);
+        // Residual archive is anchors plus the warm window, not the churn.
+        expect(r.archiveEvents).toBeLessThan(r.deliveries + 1000);
+    });
+});
+
 describe('NEXT-41: HighlandPass pin attribution verdict', () => {
     test('13. Pin is chronic combat, not sticky decay: removal recovers to floor', () => {
         const sim = new FrontierValleySimulation({ seed: 11 });
