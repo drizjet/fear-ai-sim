@@ -192,7 +192,8 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Tick Audit NEXT-36:** surveyed all Infinity/window filters — NOW-31 was the only bad default; composed-call default basis pinned. Rule: non-finite basis means unbounded.
 - **Frontier Audit CCI-13:** 27 ranked candidates (1 NOW, 22 NEXT, 4 LATER); all CCI-12 NOW items plus NEXT-36 closed. Next: ledger-clock alignment for coalition restraint (NOW-33, probed cross-clock inconsistency).
 - **Ledger Clock NOW-33:** staleness is relative to the reader's clock (documented + pinned); foreign ledgers must bridge with the rows' tick basis. No behavior change.
-- **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling uncapped histories (band encounters, coalition logs, rumor maps) logged as follow-up.
+- **Sibling Bound Sweep:** band encounters (1000), coalition logs (200 each), propagation rumors (500, terminal-first + inbox prune), world rumors (500 + group-copy purge) — all write- and restore-enforced. Advisory histories now all carry explicit growth policies.
+- **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.

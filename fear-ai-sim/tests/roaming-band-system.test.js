@@ -233,3 +233,17 @@ describe('Front C: RoamingBandSystem & Procedural Encounters', () => {
         expect(system.bands.get('guard_unit').position).toEqual(initialPos);
     });
 });
+
+describe('Sibling-bound sweep: encounter history cap', () => {
+    test('10. History retains newest rows and trims oversized restores', () => {
+        const sys = new RoamingBandSystem({ seed: 7, maxEncounterHistory: 5, encounterRadius: 1e9 });
+        sys.registerBand({ id: 'a', position: { x: 0, y: 0 } });
+        sys.registerBand({ id: 'b', position: { x: 1, y: 0 } });
+        for (let i = 0; i < 10; i++) sys.evaluateSystemicEncounters();
+        expect(sys.encounterHistory.length).toBe(5);
+        const live = new RoamingBandSystem({ seed: 7, maxEncounterHistory: 5 });
+        live.setState({ bands: [], encounterHistory: Array.from({ length: 12 }, (_, i) => ({ n: i })) });
+        expect(live.encounterHistory.length).toBe(5);
+        expect(live.encounterHistory[0].n).toBe(7);
+    });
+});

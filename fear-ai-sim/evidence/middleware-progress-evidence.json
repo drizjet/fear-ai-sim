@@ -5318,6 +5318,27 @@
         "Sibling uncapped histories found during scoping review (not yet bounded): RoamingBandSystem.encounterHistory, CoalitionDiplomacyEngine violationsLog/espionageLog, WorldSimulationSystem rumors map, InformationPropagationEngine rumors map"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SIBLING_BOUND_SWEEP",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Closed the four sibling gaps logged under LEDGER_BOUND_NEXT38: RoamingBandSystem.encounterHistory capped at maxEncounterHistory 1000 (config, house diagnostic scale); CoalitionDiplomacyEngine espionage/violations logs capped at maxLogEntries 200 (options, rare-event diagnostic); InformationPropagationEngine rumors capped at maxRetainedRumors 500 with terminal-first eviction plus inbox pruning and a lifetime totalInjected counter preserving the rumorsInjected stat; WorldSimulationSystem rumors capped at maxRumors 500 with oldest-origin eviction plus per-group knownRumors purge (readers already skip missing masters)",
+        "All caps enforced on write and on snapshot restore; log/history truncation is behavior-invisible (zero external readers, effects applied at record time)"
+      ],
+      "test_evidence": [
+        "5 new tests across 4 batteries (38/38 in touched files): band newest-retained plus restore trim; coalition newest-retained plus both-log restore trim; IPE flood retention with injected-count and inbox-prune checks plus terminal-before-active eviction; world oldest-origin eviction with group-copy purge",
+        "Mutation check: exactly the 5 new tests fail with the four source files stashed; 38/38 pass restored",
+        "Full matrix 343/343 (2525 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Touched batteries ~1 s each; matrix ~38 s"
+      ],
+      "known_gaps": [
+        "Rumor eviction under sustained flood is lossy (oldest/terminal dropped); spread dynamics past the cap are uncharacterized but bounded",
+        "ListenEdges/credibility and per-group knownRumors membership remain host-entity-bounded (agents/groups), not separately capped"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

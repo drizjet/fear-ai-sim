@@ -72,6 +72,8 @@ export class CoalitionDiplomacyEngine {
         this.factionHonor = new Map(); // Map<factionId, number [0..1]>
         this.espionageLog = [];        // Array of executed covert operations
         this.violationsLog = [];       // Array of treaty betrayals
+        // Sibling-bound sweep: rare-event diagnostic logs, newest retained.
+        this.maxDiplomaticLogEntries = options.maxLogEntries ?? 200;
         // NEXT-29: trade-dependency restraint shares the valley curve.
         this.dependency = new TradeDependencyEngine();
     }
@@ -317,6 +319,9 @@ export class CoalitionDiplomacyEngine {
 
         treaty.violationRecord = record;
         this.violationsLog.push(record);
+        while (this.violationsLog.length > this.maxDiplomaticLogEntries) {
+            this.violationsLog.shift();
+        }
 
         // Escalate bilateral grievance in FactionSystem if provided
         const factionSystem = context.factionSystem;
@@ -461,6 +466,9 @@ export class CoalitionDiplomacyEngine {
         };
 
         this.espionageLog.push(report);
+        while (this.espionageLog.length > this.maxDiplomaticLogEntries) {
+            this.espionageLog.shift();
+        }
         return report;
     }
 
@@ -641,5 +649,7 @@ export class CoalitionDiplomacyEngine {
         this.factionHonor = new Map(snapshot.factionHonor || []);
         this.espionageLog = Array.isArray(snapshot.espionageLog) ? snapshot.espionageLog.map(e => ({ ...e })) : [];
         this.violationsLog = Array.isArray(snapshot.violationsLog) ? snapshot.violationsLog.map(v => ({ ...v })) : [];
+        while (this.espionageLog.length > this.maxDiplomaticLogEntries) this.espionageLog.shift();
+        while (this.violationsLog.length > this.maxDiplomaticLogEntries) this.violationsLog.shift();
     }
 }

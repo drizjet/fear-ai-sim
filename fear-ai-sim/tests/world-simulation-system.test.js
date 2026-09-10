@@ -292,3 +292,16 @@ describe('Milestone I: WorldSimulationSystem — Roaming Nomads, Encounters, Rum
         expect(patrol.position).toEqual({ x: 100, y: 0, z: 100 }); // Unaltered by middleware tick!
     });
 });
+
+describe('Sibling-bound sweep: rumor map cap', () => {
+    test('10. Master map evicts oldest-origin and purges group copies', () => {
+        const sys = new WorldSimulationSystem({ seed: 3, maxRumors: 10 });
+        sys.registerGroup('g1', { position: { x: 0, y: 0, z: 0 } });
+        const first = sys.createRumor(RUMOR_TOPICS.WAR_DECLARED, { description: 'first', sourceEntityId: 'g1' });
+        expect(sys.groups.get('g1').knownRumors.has(first.id)).toBe(true);
+        for (let i = 0; i < 14; i++) sys.createRumor(RUMOR_TOPICS.WAR_DECLARED, { description: `r${i}` });
+        expect(sys.rumors.size).toBe(10);
+        expect(sys.rumors.has(first.id)).toBe(false);
+        expect(sys.groups.get('g1').knownRumors.has(first.id)).toBe(false);
+    });
+});

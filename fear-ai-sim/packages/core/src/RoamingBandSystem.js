@@ -69,6 +69,7 @@ export const DEFAULT_BAND_CONFIG = Object.freeze({
     emergencyThreatDistance: 35.0,  // Proximity to trigger emergency camp evacuation
     encounterRadius: 40.0,          // Proximity to trigger procedural systemic encounter
     maxTravelRange: 500.0,          // Normalization distance for destination evaluation
+    maxEncounterHistory: 1000,      // Sibling-bound sweep: diagnostic history, newest retained
     seed: 1337
 });
 
@@ -439,6 +440,9 @@ export class RoamingBandSystem {
                     const encounter = this._resolveEncounter(bandA, bandB, dist);
                     encounters.push(encounter);
                     this.encounterHistory.push(encounter);
+                    while (this.encounterHistory.length > this.config.maxEncounterHistory) {
+                        this.encounterHistory.shift();
+                    }
 
                     // If encounter involved violence or ambush, record hazard on both bands
                     if (encounter.resolution === ENCOUNTER_RESOLUTIONS.COMBAT_ENGAGEMENT ||
@@ -602,5 +606,8 @@ export class RoamingBandSystem {
         this.destinations = new Map(state.destinations || []);
         this.corridorHazards = new Map(state.corridorHazards || []);
         this.encounterHistory = [...(state.encounterHistory || [])];
+        while (this.encounterHistory.length > this.config.maxEncounterHistory) {
+            this.encounterHistory.shift();
+        }
     }
 }

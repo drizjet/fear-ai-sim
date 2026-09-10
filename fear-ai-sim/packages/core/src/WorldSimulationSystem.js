@@ -85,6 +85,7 @@ export const DEFAULT_WORLD_CONFIG = Object.freeze({
     rumorFidelityDecayPerHop: 0.12,  // 12% fidelity loss per transmission hop
     rumorDistortionRate: 0.10,       // Max random distortion in perceived severity per hop
     maxHistoryEvents: 1000,          // Bounded ring buffer for world history
+    maxRumors: 500,                  // Sibling-bound sweep: oldest-origin eviction + group-copy purge
     seed: 1337
 });
 
@@ -248,6 +249,7 @@ export class WorldSimulationSystem {
             description: String(description || topic)
         };
         this.rumors.set(rumor.id, rumor);
+        this._enforceRumorBound();
 
         // Seed into source entity's known rumors if specified
         if (sourceEntityId && this.groups.has(sourceEntityId)) {
@@ -262,6 +264,26 @@ export class WorldSimulationSystem {
             });
         }
         return rumor;
+    }
+    /**
+     * Sibling-bound sweep: evict oldest-origin rumors beyond maxRumors
+     * and purge their per-group copies. Readers already skip missing
+     * masters, so pruning is behavior-invisible below the cap.
+     */
+    _enforceRumorBound() {
+        const cap = this.config.maxRumors ?? 500;
+        while (this.rumors.size > cap) {
+            let oldestId = null;
+            let oldestTick = Infinity;
+            for (const [id, r] of this.rumors) {
+                if (r.originTick < oldestTick) { oldestTick = r.originTick; oldestId = id; }
+            }
+            if (oldestId === null) break;
+            this.rumors.delete(oldestId);
+            for (const group of this.groups.values()) {
+                group.knownRumors?.delete(oldestId);
+            }
+        }
     }
 
     /**
@@ -764,6 +786,7 @@ export class WorldSimulationSystem {
                 this.rumors.set(r.id, { ...r });
             }
         }
+        this._enforceRumorBound();
 
         this.historyLedger = Array.isArray(snapshot.historyLedger)
             ? snapshot.historyLedger.map(e => ({ ...e }))

@@ -316,3 +316,24 @@ describe('NOW-33: ledger-clock contract for coalition restraint', () => {
             .toBeCloseTo(0.9 * 0.7, 10);
     });
 });
+
+describe('Sibling-bound sweep: diplomatic log caps', () => {
+    it('violations log retains newest and trims oversized restores (both logs)', () => {
+        const engine = new CoalitionDiplomacyEngine({ seed: 1, maxLogEntries: 5 });
+        for (let i = 0; i < 8; i++) {
+            engine.proposeTreaty(`t${i}`, 'faction_A', 'faction_B', TREATY_TYPES.TRADE_LEAGUE, {});
+            engine.recordTreatyViolation(`t${i}`, 'faction_A', `x${i}`, {});
+        }
+        expect(engine.violationsLog.length).toBe(5);
+        expect(engine.violationsLog[0].reason).toBe('x3');
+        const restored = new CoalitionDiplomacyEngine({ seed: 1, maxLogEntries: 5 });
+        restored.setState({
+            ...engine.getState(),
+            espionageLog: Array.from({ length: 9 }, (_, i) => ({ n: i })),
+            violationsLog: Array.from({ length: 9 }, (_, i) => ({ n: i })),
+        });
+        expect(restored.espionageLog.length).toBe(5);
+        expect(restored.espionageLog[0].n).toBe(4);
+        expect(restored.violationsLog.length).toBe(5);
+    });
+});

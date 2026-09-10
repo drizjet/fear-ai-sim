@@ -79,3 +79,35 @@ describe('Section XX: Information Propagation', () => {
         expect(net.auditImmutability().hostPhysicsMutations).toBe(0);
     });
 });
+
+describe('Sibling-bound sweep: rumor retention', () => {
+    test('6. Flood retains newest, keeps lifetime injected count, prunes inboxes', () => {
+        const net = new InformationPropagationEngine({ maxRetainedRumors: 10 }, 7);
+        net.registerAgent('a', 0.6);
+        net.registerAgent('b', 0.6);
+        net.addListenEdge('b', 'a');
+        for (let i = 0; i < 15; i++) net.injectRumor('ROAD_AMBUSH', `c${i}`, 'a');
+        expect(net.rumors.size).toBe(10);
+        expect(net.networkStats().rumorsInjected).toBe(15);
+        expect([...net.rumors.values()][0].claim).toBe('c5');
+        for (const inbox of net.inboxes.values()) {
+            for (const id of inbox.keys()) expect(net.rumors.has(id)).toBe(true);
+        }
+    });
+
+    test('7. Terminal rumors evict before active ones', () => {
+        const net = new InformationPropagationEngine({ maxRetainedRumors: 10 }, 7);
+        net.registerAgent('a', 0.6);
+        const decayedIds = [];
+        for (let i = 0; i < 3; i++) {
+            decayedIds.push(net.injectRumor('ROAD_AMBUSH', `doomed${i}`, 'a', { confidence: 0.06 }));
+        }
+        net.advanceTick();
+        net.advanceTick();
+        for (const id of decayedIds) expect(net.rumors.get(id).status).toBe(RUMOR_STATUS.DECAYED);
+        for (let i = 0; i < 10; i++) net.injectRumor('ROAD_AMBUSH', `fresh${i}`, 'a');
+        expect(net.rumors.size).toBe(10);
+        for (const id of decayedIds) expect(net.rumors.has(id)).toBe(false);
+        expect([...net.rumors.values()].every(r => r.status === RUMOR_STATUS.ACTIVE)).toBe(true);
+    });
+});

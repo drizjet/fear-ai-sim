@@ -42,7 +42,8 @@ export const DEFAULT_PROPAGATION_CONFIG = Object.freeze({
     tickDecay: 0.01,
     minConfidence: 0.05,
     mutationRate: 0.1,
-    maxHops: 8
+    maxHops: 8,
+    maxRetainedRumors: 500 // Sibling-bound sweep: terminal-first eviction, inboxes pruned
 });
 
 function makeRng(seed) {
@@ -69,6 +70,7 @@ export class InformationPropagationEngine {
         this.inboxes = new Map();
         this.tick = 0;
         this.nextRumorId = 1;
+        this.totalInjected = 0;
         this.corrections = 0;
     }
 
@@ -115,7 +117,35 @@ export class InformationPropagationEngine {
         };
         this.rumors.set(id, rumor);
         this.inboxes.get(origin).set(id, { confidence: rumor.confidence, hops: 0, tick: this.tick });
+        this.totalInjected = (this.totalInjected ?? 0) + 1;
+        this._enforceRumorBound();
         return id;
+    }
+
+    /**
+     * Sibling-bound sweep: evict oldest terminal rumors first, then
+     * oldest active if still over cap. Map insertion order is
+     * deterministic, so eviction is replay-stable. Evicted ids are
+     * pruned from every inbox.
+     */
+    _enforceRumorBound() {
+        const cap = this.config.maxRetainedRumors ?? 500;
+        if (this.rumors.size <= cap) return;
+        const terminal = [];
+        const active = [];
+        for (const [id, rumor] of this.rumors) {
+            (rumor.status === RUMOR_STATUS.ACTIVE ? active : terminal).push(id);
+        }
+        const evict = [];
+        while (terminal.length && this.rumors.size - evict.length > cap) evict.push(terminal.shift());
+        while (active.length && this.rumors.size - evict.length > cap) evict.push(active.shift());
+        for (const id of evict) this.rumors.delete(id);
+        if (evict.length) {
+            const gone = new Set(evict);
+            for (const inbox of this.inboxes.values()) {
+                for (const id of gone) inbox.delete(id);
+            }
+        }
     }
 
     /**
@@ -163,6 +193,7 @@ export class InformationPropagationEngine {
             rumor.confidence = round4(rumor.confidence - this.config.tickDecay);
             if (rumor.confidence < this.config.minConfidence) rumor.status = RUMOR_STATUS.DECAYED;
         }
+        this._enforceRumorBound();
         return newlyHeard;
     }
 
@@ -205,7 +236,7 @@ export class InformationPropagationEngine {
         }
         return {
             tick: this.tick,
-            rumorsInjected: this.rumors.size,
+            rumorsInjected: this.totalInjected ?? this.rumors.size,
             rumorsActive: active,
             totalReach: reach,
             corrections: this.corrections,
