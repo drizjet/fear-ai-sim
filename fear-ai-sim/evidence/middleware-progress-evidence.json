@@ -5209,6 +5209,25 @@
         "Demo Phase 5 runs two social posts without asserting anything (demos print, tests assert); the endpoint itself is pinned by the NOW-25 conformance battery"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "TICK_BASIS_AUDIT_NEXT36",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "No source change: audit chunk. Surveyed every Infinity use and every tick-window filter in core/runtime/protocol: the NOW-31 default was the only default-Infinity time basis; LOD4 Infinity is explicitly guarded; EventLogCompactor guards with max(1, window); queryHistory defaults sinceTick 0 (include-all, sane); all other comparisons are ordinary",
+        "One forwarding gap found and pinned: restrainedRecommend carries its own nowTick default into dependencyOf, and no test exercised the composed path without an explicit tick"
+      ],
+      "test_evidence": [
+        "NEXT-36 test in dependency-restraint-interaction.test.js: composed call with default basis damps (0.8 ratio, AVOID_CONFLICT); fails on pre-NOW-31 semantics via temporary revert, passes with the fix",
+        "Full matrix 343/343 (2516 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Audit is static plus one composed call; interaction battery ~1 s; matrix ~46 s"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; new time filters should follow the rule established here (non-finite basis means unbounded, guarded LOD-style otherwise)"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

@@ -37,6 +37,20 @@ describe('CCV: dependency restrains retaliation', () => {
         expect(composed.recommendation.level).toBe(model.recommend('granary', 'mill_town').level);
         expect(composed.advisory).toBe('NO_RESTRAINT');
     });
+
+    test('NEXT-36. Default basis damps through the composed call, not just the primitive', () => {
+        // NOW-31 fixed dependencyOf; restrainedRecommend forwards its own
+        // nowTick default, so the composed path needs its own pin: with no
+        // explicit tick, a dependent importer must still get restraint.
+        const eng = new TradeDependencyEngine();
+        const model = new RetaliationModel();
+        model.provoke('granary', 'mill_town', 'RAID');
+        const plain = model.recommend('granary', 'mill_town');
+        const composed = eng.restrainedRecommend(GRAIN_LEDGER, model, 'mill_town', 'granary', 'granary', 'mill_town');
+        expect(composed.recommendation.level).toBeLessThan(plain.level);
+        expect(composed.advisory).toBe('AVOID_CONFLICT');
+        expect(composed.dependency.ratio).toBeCloseTo(0.8, 4);
+    });
 });
 
 describe('CCII red-team: no eternal war, no identity collapse', () => {
