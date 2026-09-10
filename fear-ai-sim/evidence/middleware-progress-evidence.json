@@ -5525,6 +5525,27 @@
         "Bandits-direction ATTACK (retaliatory) still has no grievance input in the valley; only the victim-direction ladder was fueled"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "OUTCOME_DISTRIBUTION_NEXT22B",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "valley_outcome_distribution.mjs: 12 frozen seeds x 5000 ticks (~0.7 s), categorical outcome classes plus numeric dispersion (min/max/mean/CV), digest helper; fully deterministic"
+      ],
+      "test_evidence": [
+        "All 12 seeds converge to one macro class (SHADOW/TRADE/UNAWARE, wars=1, ally=0); routeFailures and deliveries CV exactly 0; encounters CV 0.019; final grievance varies only as noise around zero (0.00-0.12). Robust simmer, zero story variance: CCX multi-outcome needs setup variation, not seed variation",
+        "Regression test in valley-war-pacing.test.js (battery 21/21): determinism, single-class pin with exact class string, dispersion bounds",
+        "Mutation probe (nomad trust 0.60 -> 0.90 flips the class to ALLY) fails exactly the new test — confirming both pin sensitivity and the setup-knob claim; restore green",
+        "Full matrix 343/343 (2535 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Distribution grid ~0.7 s; pacing battery ~3 s; matrix ~40 s"
+      ],
+      "known_gaps": [
+        "Setup-parameter variation (grudges, cultures, readiness, geography) is the hypothesized outcome knob but unbuilt; a setup-sweep harness is the follow-up",
+        "Grievance CV is high (2.57) only because the mean is ~0.01; absolute story impact nil"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

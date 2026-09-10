@@ -397,3 +397,19 @@ describe('NEXT-22: war-degeneracy soak', () => {
     }
   });
 });
+
+describe('NEXT-22b: outcome distribution across seeds', () => {
+  it('12 seeds converge to one macro class with tight numeric dispersion', async () => {
+    const { runOutcomeDistribution, outcomeDigest } = await import('../benchmarks/behavioral-evaluation/valley_outcome_distribution.mjs');
+    const first = runOutcomeDistribution();
+    expect(outcomeDigest(runOutcomeDistribution())).toBe(outcomeDigest(first));
+    expect(first.runs.length).toBe(12);
+    // Single attractor today: robust simmer, zero story variance. A future
+    // setup-variation feature should deliberately change this count.
+    expect(first.classCount).toBe(1);
+    expect(Object.keys(first.classes)[0]).toBe('SHADOW/TRADE/UNAWARE|wars=1|ally=0');
+    expect(first.dispersion.totalEncounters.cv).toBeLessThan(0.05);
+    expect(first.dispersion.routeFailures.cv).toBe(0);
+    expect(first.dispersion.deliveries.cv).toBe(0);
+  });
+});
