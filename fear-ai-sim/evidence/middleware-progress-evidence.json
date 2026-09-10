@@ -6315,6 +6315,27 @@
  "known_gaps": [
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "MISORDER_DECOMP_NEXT68",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "near_neighbor_noise_families.mjs: additive per-base tallies (correct/ties/total + valA/valB) on every row; aggregate pins untouched",
+ "zero_misorder_breakdown.mjs: gate pair-class breakdown consuming the runner's own tallies (no loop replication)"
+ ],
+ "test_evidence": [
+ "Decomposition: clean below-gate has zero wrongs (ties absorb all); zero below-gate flips ties near coin rates (15/15, 14/12); straddles perfect under both conds; above-gate residue 3 wrongs total — 91% of misorders are below-gate tie-flips",
+ "functional-persona-signatures.test.js +1 (battery 17/17, 2x green) with rerun-equality",
+ "Mutation probe (zero neutered to missing) fails exactly tests 11, 14, 17; restore green",
+ "Full matrix 343/343 (2567 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Breakdown <1 s; matrix ~41 s"
+ ],
+ "known_gaps": [
+ "Above-gate residual (3 wrongs: asymmetric leaderCalm flips on urgency slope hypothesized, not isolated)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

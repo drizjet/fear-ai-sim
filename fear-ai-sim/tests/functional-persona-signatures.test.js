@@ -305,3 +305,21 @@ describe('NEXT-54: collapse-crossing bisection', () => {
         expect(cell(a.agreeableness, 0.1).star).toBeNull();
     });
 });
+
+describe('NEXT-68: zero-misordered-fraction decomposition', () => {
+    test('17. Misorders are below-gate tie-flips; straddles stay perfect', async () => {
+        const { runMisorderBreakdown } = await import('../benchmarks/behavioral-evaluation/zero_misorder_breakdown.mjs');
+        const a = runMisorderBreakdown();
+        expect(runMisorderBreakdown()).toEqual(a);
+        const cell = (c, k) => a.classes[c][k];
+        // Clean below-gate: ties absorb everything, zero wrongs.
+        expect(cell('below', 'clean_0/delta_0.05')).toMatchObject({ correct: 12, tied: 28, wrong: 0 });
+        expect(cell('below', 'clean_0/delta_0.15')).toMatchObject({ correct: 12, tied: 18, wrong: 0 });
+        // Zero below-gate: asymmetric masks flip ties near coin rates.
+        expect(cell('below', 'zero_0p3/delta_0.05')).toMatchObject({ correct: 15, tied: 10, wrong: 15 });
+        expect(cell('below', 'zero_0p3/delta_0.15').wrong).toBe(12);
+        // Straddles never misorder under either cond; above-gate residue small.
+        expect(cell('straddle', 'zero_0p3/delta_0.15')).toMatchObject({ correct: 10, tied: 0, wrong: 0 });
+        expect(cell('above', 'zero_0p3/delta_0.15').wrong).toBeLessThanOrEqual(2);
+    });
+});

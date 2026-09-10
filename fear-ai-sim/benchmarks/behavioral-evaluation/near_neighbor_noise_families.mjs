@@ -95,6 +95,10 @@ export function runNoiseFamilies(options = {}) {
                 for (let bi = 0; bi < bases.length; bi++) {
                     const valA = bases[bi];
                     const valB = Math.min(1.0, valA + delta);
+                    // NEXT-68: per-base tallies for pair-class decomposition
+                    // (additive; aggregate pins unaffected).
+                    const base = { valA, valB, correct: 0, ties: 0, total: 0 };
+                    (rows[`delta_${delta.toFixed(2)}`] ??= {}).byBase ??= [];
                     for (let si = 0; si < def.scenarios.length; si++) {
                         for (let rep = 0; rep < reps; rep++) {
                             total++;
@@ -121,8 +125,12 @@ export function runNoiseFamilies(options = {}) {
                             // indistinguishability, not inversion.
                             if (scoreB > scoreA) correct++;
                             else if (scoreB === scoreA) ties++;
+                            if (scoreB > scoreA) base.correct++;
+                            else if (scoreB === scoreA) base.ties++;
+                            base.total++;
                         }
                     }
+                    rows[`delta_${delta.toFixed(2)}`].byBase.push(base);
                 }
                 const accuracyPct = parseFloat(((correct / total) * 100).toFixed(1));
                 const wilson = wilsonScoreInterval(correct, total);
@@ -134,10 +142,10 @@ export function runNoiseFamilies(options = {}) {
                     deltaStar = delta;
                     deltaStarProvisional = !survivesBonferroni;
                 }
-                rows[`delta_${delta.toFixed(2)}`] = {
+                Object.assign(rows[`delta_${delta.toFixed(2)}`], {
                     correct, total, ties, accuracyPct, wilson, clopper,
                     pValue, survivesBonferroni
-                };
+                });
             }
             perCond[`${family}_${String(level).replace('-', 'm').replace('.', 'p')}`] = {
                 family, level, deltaStar, deltaStarProvisional, rows
