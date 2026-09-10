@@ -5546,6 +5546,59 @@
         "Grievance CV is high (2.57) only because the mean is ~0.01; absolute story impact nil"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_15",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 5 milestones since CCI-14 (A_ELICITATION_MAP_NOW34, CLOCK_BRIDGE_CONTRACT_NEXT37, AUTONOMOUS_TRADE_FLOW_NEXT33, ATTACK_PATH_FUEL_NEXT39, OUTCOME_DISTRIBUTION_NEXT22B), CCI-14 candidate status review, APPROACH_ALLY regime probe",
+        "5 commits since CCI-14; NOW-34 plus NEXT-22b/33/37/39 closed and verified",
+        "Sharpest new find (probed, not theorized): APPROACH_ALLY live regime is lingering fear after threat removal. 10 threat ticks then cleared threats with peers present yields APPROACH_ALLY 20/20 ticks at both A=0.5 and A=0.8, with urgency scaling 0.45+0.20A — the below-gate A slope lives in the recovery window, not the acute-threat window. Ranked NOW-35 (map urgency slope across A x recovery timing x peer distance)",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 343/343 suites (2535 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-35 APPROACH_ALLY recovery-window A-slope mapping (probed: 20/20 elicitation post-threat, 0.45+0.20A urgency).",
+        "NEXT-7 merchant belief-formation dynamics (carried).",
+        "NEXT-9 compaction-wired 100k soak (carried).",
+        "NEXT-10 nested-JSON transport guard (carried).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+        "NEXT-12 handshake determinism review (carried).",
+        "NEXT-13 constructor-only over-credit audit (carried).",
+        "NEXT-14 infinite-loop containment research (carried).",
+        "NEXT-15 FearServer fixed-port production review (carried).",
+        "NEXT-17 richer rally dynamics for specificity guards (carried).",
+        "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+        "NEXT-21 numeric-field histograms in middle summaries (carried).",
+        "NEXT-29 floor-slope sensitivity exploration (carried).",
+        "NEXT-30 minimum-severity crystallization floor exploration (carried).",
+        "NEXT-31 graded defusal exploration (carried).",
+        "NEXT-32 acute fear spike for social wounds exploration (carried).",
+        "NEXT-34 dashboard BORDER_TRESPASS restraint (carried).",
+        "NEXT-35 unified extortion-gate theory (carried).",
+        "NEXT-40 dropout/bias/spike and correlated multi-trait noise extension (carried).",
+        "NEXT-41 HighlandPass pinned design verdict (carried).",
+        "NEXT-42 post-cap rumor and flood-loss dynamics characterization (carried).",
+        "NEXT-43 setup-sweep harness for valley outcome knobs (from NEXT-22b gap).",
+        "NEXT-44 retaliatory-direction ATTACK fuel (from NEXT-39 gap).",
+        "NEXT-45 settlement production plus multi-caravan trade scheduling (from NEXT-33 gaps).",
+        "NEXT-46 NaN-basis contract strictness review (from NEXT-37 gap).",
+        "NEXT-47 above-threshold A urgency-slope utility test (from NOW-34 gap).",
+        "LATER-20 second external host architecture (gated on external project availability).",
+        "LATER-21 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-35 (same family as NOW-34, probed regime, small contained measurement)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }
