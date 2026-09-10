@@ -5228,6 +5228,56 @@
         "Audit is point-in-time; new time filters should follow the rule established here (non-finite basis means unbounded, guarded LOD-style otherwise)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "FRONTIER_AUDIT_CCI_13",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Audit method: known-gap aggregation across 3 milestones since CCI-12 (INFINITY_BASIS_NOW31, SOCIAL_DEMO_NOW32, TICK_BASIS_AUDIT_NEXT36), CCI-12 candidate status review, cross-clock ledger probe",
+        "3 commits since CCI-12; both CCI-12 NOW items (31, 32) plus NEXT-36 closed and verified",
+        "Sharpest new find (probed, not theorized): valley-clock rows at tick 500 read through a fresh coalition clock count fully (no expiry, over-inclusion) but expire once the coalition ticks past 700. Cross-clock ledgers behave inconsistently with engine age. Ranked NOW-33",
+        "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x Generalization / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+      ],
+      "test_evidence": [
+        "Matrix 343/343 suites (2516 tests) at last chunk close; guardian:check CLEAN at last chunk close"
+      ],
+      "runtime_evidence": [
+        "NOW-33 ledger-clock alignment for coalition restraint (verified: fresh clock over-includes, ticked clock expires; same rows, different answers by engine age).",
+        "NEXT-7 merchant belief-formation dynamics (carried).",
+        "NEXT-8 near-neighbor persona discrimination under noise (carried).",
+        "NEXT-9 compaction-wired 100k soak (carried).",
+        "NEXT-10 nested-JSON transport guard (carried).",
+        "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+        "NEXT-12 handshake determinism review (carried).",
+        "NEXT-13 constructor-only over-credit audit (carried).",
+        "NEXT-14 infinite-loop containment research (carried).",
+        "NEXT-15 FearServer fixed-port production review (carried).",
+        "NEXT-17 richer rally dynamics for specificity guards (carried).",
+        "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+        "NEXT-21 numeric-field histograms in middle summaries (carried).",
+        "NEXT-22 long-horizon war degeneracy soak beyond 2000 ticks (carried).",
+        "NEXT-29 floor-slope sensitivity exploration (carried).",
+        "NEXT-30 minimum-severity crystallization floor exploration (carried).",
+        "NEXT-31 graded defusal exploration (carried).",
+        "NEXT-32 acute fear spike for social wounds exploration (carried).",
+        "NEXT-33 autonomous valley trade flow design (carried).",
+        "NEXT-34 dashboard BORDER_TRESPASS restraint (carried).",
+        "NEXT-35 unified extortion-gate theory (carried).",
+        "NEXT-37 clock-bridging contract for shared ledgers (generalize the NOW-33 fix into a rule plus helper).",
+        "NEXT-38 bounded growth policy for the valley trade ledger (uncapped push per host report; incidents are capped, the ledger is not).",
+        "LATER-20 second external host architecture (gated on external project availability).",
+        "LATER-21 100k/1m-tick soak with memory-leak detection (needs NEXT-9 first).",
+        "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+        "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+        "Selected next: NOW-33 (same family as NOW-31, probed behavior delta, small contained fix)."
+      ],
+      "benchmark_evidence": [
+        "Audit completes in minutes; no benchmark impact"
+      ],
+      "known_gaps": [
+        "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+      ],
+      "next_action": "LEDGER_CLOCK_NOW33"
     }
   ]
 }

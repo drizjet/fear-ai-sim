@@ -190,6 +190,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Infinity Basis NOW-31:** non-finite tick basis counts the whole ledger (was: silently zero). All live callers pass explicit ticks, so only the wrong default path changed.
 - **Social Demo NOW-32:** Python reference demo gains Phase 5 fracture-and-repair over the live social endpoint; adapter client gains `report_social_event`. Verified against a real loopback server.
 - **Tick Audit NEXT-36:** surveyed all Infinity/window filters — NOW-31 was the only bad default; composed-call default basis pinned. Rule: non-finite basis means unbounded.
+- **Frontier Audit CCI-13:** 27 ranked candidates (1 NOW, 22 NEXT, 4 LATER); all CCI-12 NOW items plus NEXT-36 closed. Next: ledger-clock alignment for coalition restraint (NOW-33, probed cross-clock inconsistency).
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
 - **Tauri Rust (`src-tauri`):** RNG, logging, export. **Not** the fear band model.
