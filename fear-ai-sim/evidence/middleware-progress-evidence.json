@@ -5502,6 +5502,29 @@
         "Early delivery history events are evicted by the 1000-cap ledger on long horizons (NEXT-38 policy working as designed, observed during test authoring)"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "ATTACK_PATH_FUEL_NEXT39",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "Rate sweep proved the top rung unreachable: raids at ANY rate including every tick peaked at SKIRMISH, because grievance + territorial cap pressure at 0.70 against the 0.75 ATTACK threshold while no incident type produced economicPressure. Fix: RAID_CONFIRMED now burns the economic base (+0.25, decaying with existing half-life), so chronic raiding totalizes and sparse raids still simmer",
+        "attack_path_frontier.mjs maps the raid-rate frontier (k=1..120 over 2000 ticks) plus single-raid proportionality"
+      ],
+      "test_evidence": [
+        "Frontier: k<=30 reaches ATTACK (first at ~2-3 stacked raids), k>=60 peaks at SKIRMISH, single raid yields THREATEN only — XLII proportionality holds in both directions",
+        "Valley re-soak with fuel: ATTACK visited emergently yet all seeds still cool to SHADOW with zero flags — the restored ladder did not degenerate the attractor (maxPress 0.69 -> 0.89, still burst-transient)",
+        "NEXT-22 soak pin deliberately updated (SKIRMISH-only ceiling -> full ladder live, still never locked); pre-existing test 11 (SKIRMISH-or-ATTACK) already admitted the restored behavior",
+        "New frontier pin in faction-escalation-matrix.test.js plus updated soak ceiling; mutation probe (fuel removed) fails both; restore green",
+        "Full matrix 343/343 (2534 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Frontier ~0.2 s; escalation batteries ~2 s; matrix ~40 s"
+      ],
+      "known_gaps": [
+        "Fuel magnitude (+0.25) is reasoned from decay equilibria, not calibrated against play data; the k~=30 frontier location is a model property awaiting designer review",
+        "Bandits-direction ATTACK (retaliatory) still has no grievance input in the valley; only the victim-direction ladder was fueled"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

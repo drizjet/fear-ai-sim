@@ -380,10 +380,12 @@ describe('NEXT-22: war-degeneracy soak', () => {
     for (const r of first.runs) {
       expect(r.flags).toEqual([]);
       expect(r.finalTick).toBe(5000);
-      // Emergent ceiling: SKIRMISH is reached, ATTACK/WAR never lock.
+      // Emergent ceiling (NEXT-39): the full ladder is live — ATTACK is
+      // visited transiently under burst concentration — but it never
+      // locks: the simmer always cools back to SHADOW via decay.
       const sb = r.visitedStages['SettlersAlliance>ShadowfangBandits'];
       expect(sb).toContain(ESCALATION_STAGES.SKIRMISH);
-      expect(sb).not.toContain(ESCALATION_STAGES.ATTACK);
+      expect(sb).toContain(ESCALATION_STAGES.ATTACK);
       expect(r.allWarLocked).toBe(false);
       // Emergent war exists (post-transient), but the simmer always cools.
       expect(r.firstEmergentWarTick).toBeGreaterThanOrEqual(500);

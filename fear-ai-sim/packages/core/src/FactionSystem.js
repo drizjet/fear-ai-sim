@@ -250,10 +250,18 @@ export class FactionSystem {
             case INCIDENT_TYPES.RAID_CONFIRMED:
                 // NOW-14: a raid is inherently a territorial violation as
                 // well as a grievance (matches BORDER_TRESPASS pressure).
+                // NEXT-39: raids also burn the economic base (fields,
+                // stockpiles, caravans). Without this fuel the ATTACK rung
+                // (P >= 0.75) was unreachable at any raid rate: grievance +
+                // territorial cap at 0.70 and no incident type produced
+                // economicPressure (verified by rate sweep: daily raids
+                // peaked at SKIRMISH). Chronic raiding must be able to
+                // totalize; sparse raids still simmer via decay.
                 stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.65 * grievanceScale);
                 stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear + 0.40);
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.50);
                 stanceTargetToSource.territorialPressure = clamp01(stanceTargetToSource.territorialPressure + 0.35);
+                stanceTargetToSource.economicPressure = clamp01(stanceTargetToSource.economicPressure + 0.25);
                 stanceTargetToSource.casusBelli = 'Lethal border raid on assets';
                 break;
             case INCIDENT_TYPES.SKIRMISH_CASUALTY:

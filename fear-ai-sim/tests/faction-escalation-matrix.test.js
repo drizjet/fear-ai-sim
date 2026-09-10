@@ -347,3 +347,23 @@ describe('Milestone F: Faction Escalation Matrix & Multi-Faction Diplomacy', () 
         expect([ESCALATION_STAGES.SKIRMISH, ESCALATION_STAGES.ATTACK]).toContain(rep.toStage);
     });
 });
+
+describe('NEXT-39: ATTACK-path raid-rate frontier', () => {
+    test('12. Chronic raiding totalizes, sparse raids simmer, one raid threatens', async () => {
+        const { raidRateFrontier } = await import('../benchmarks/behavioral-evaluation/attack_path_frontier.mjs');
+        const full = raidRateFrontier();
+        expect(raidRateFrontier()).toEqual(full);
+        const byK = Object.fromEntries(full.rows.map(r => [r.everyTicks, r]));
+        // Chronic (weekly or denser) reaches ATTACK; sparse never does.
+        for (const k of [1, 3, 7, 15, 30]) {
+            expect(byK[k].stages).toContain(ESCALATION_STAGES.ATTACK);
+            expect(byK[k].firstAttackTick).toBeGreaterThanOrEqual(0);
+        }
+        for (const k of [60, 120]) {
+            expect(byK[k].stages).not.toContain(ESCALATION_STAGES.ATTACK);
+            expect(byK[k].firstAttackTick).toBe(-1);
+        }
+        // XLII proportionality: a single raid threatens, never attacks.
+        expect(full.singleRaidStage).toBe(ESCALATION_STAGES.THREATEN);
+    });
+});
