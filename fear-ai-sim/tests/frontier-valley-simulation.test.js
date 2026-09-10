@@ -225,6 +225,28 @@ describe('NEXT-49: cold-tier archive bounding on the long grid', () => {
     });
 });
 
+describe('NEXT-50: leak assay retained-state legs', () => {
+    test('15. Cold archive stays far below warm at matched ticks, legs stay ordered', async () => {
+        const { runLeakAssay, leakDigest } = await import('../benchmarks/behavioral-evaluation/leak_assay.mjs');
+        const grid = { seeds: [11], ticks: 8000, window: 100, legEvery: 4000 };
+        const cold = runLeakAssay({ ...grid, cold: true });
+        // Deterministic modulo wall clock and GC timing (not in the digest).
+        expect(leakDigest(runLeakAssay({ ...grid, cold: true }))).toBe(leakDigest(cold));
+        const warm = runLeakAssay({ ...grid, cold: false });
+        const c = cold.runs[0];
+        const w = warm.runs[0];
+        // Cold tier absorbs the churn at matched ticks.
+        expect(c.legs[c.legs.length - 1].archive).toBeLessThan(w.legs[w.legs.length - 1].archive);
+        // Summaries stay bounded on both paths (cross-pass merge).
+        for (const leg of [...c.legs, ...w.legs]) expect(leg.summaries).toBeLessThan(200);
+        // Legs march forward in tick order with non-shrinking archives.
+        for (const run of [c, w]) {
+            expect(run.legs.map((l) => l.tick)).toEqual([4000, 8000]);
+            expect(run.legs[1].archive).toBeGreaterThanOrEqual(run.legs[0].archive);
+        }
+    });
+});
+
 describe('NEXT-41: HighlandPass pin attribution verdict', () => {
     test('13. Pin is chronic combat, not sticky decay: removal recovers to floor', () => {
         const sim = new FrontierValleySimulation({ seed: 11 });

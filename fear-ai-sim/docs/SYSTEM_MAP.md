@@ -215,6 +215,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **NaN Strictness NEXT-46:** corrupt force-strengths no longer hide behind a false "superior escort defense" rationale — explicit indeterminate hold, same safe avoidance. Clamp/severity/restraint/affect inputs audited NaN-safe. Pinned in world-sim battery.
 - **Warn Slope NEXT-47:** above-gate A urgency slope (width 0.0525) is narrow but live — flips stabilizer overrides on 11/81 held-urgency rungs (tip band 0.60-0.65). Formula extracted and pinned against the shipped code. No retune.
 - **Archive Steady-State NEXT-49:** cold tier rolls camp churn into per-group occupancy (2982 pairs → 6 rows) and merges cold summaries per type — archive 8k → 2.1k at 100k ticks, residual growth exactly the delivery-anchor rate. Referenced halves stay whole. Pinned in compaction + valley batteries.
+- **Leak Assay NEXT-50:** forced-GC retained-state legs show flat heap (+0.2MB/15k ticks) with archive at the anchor rate — no leak; cold 58% below warm at matched ticks. LATER-21 precursor done. Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

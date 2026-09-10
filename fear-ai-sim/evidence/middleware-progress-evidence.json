@@ -5926,6 +5926,27 @@
  "Heap legs still GC-noisy; --expose-gc assay remains NEXT-50"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "LEAK_ASSAY_NEXT50",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "benchmarks/behavioral-evaluation/leak_assay.mjs: retained-state legs (heap + archive + summaries per legEvery ticks) with forced GC when available, cold/warm contrast, GC-free digest (pins assert counts only, never heap magnitudes)"
+ ],
+ "test_evidence": [
+ "Verdict: no leak — post-GC heap flat (5.1-5.2MB across 5x20k fresh soaks; +0.2MB over 15k retained ticks) while archive grows at the designed anchor rate; cold archive 58% below warm at matched 20k ticks (668 vs 1604)",
+ "frontier-valley-simulation.test.js +1 (battery 15/15): digest determinism, cold<warm ordering, summaries bounded, legs ordered with non-shrinking archives",
+ "Mutation probe (cold wiring neutered) fails the pin; restore green",
+ "Full matrix 343/343 (2555 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Assay <1 s at 20k grid; matrix ~51 s"
+ ],
+ "known_gaps": [
+ "Assay covers the valley+compaction retained path only; faction/rumor/relation long-lived growth unassayed (LATER-21 100k/1m soak still the full gate)",
+ "Heap legs are single-process snapshots; fragmentation/old-space pressure not measured"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
