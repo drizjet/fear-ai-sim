@@ -170,6 +170,24 @@ describe('NEXT-45: production, upkeep, and multi-caravan scheduling', () => {
     });
 });
 
+describe('NEXT-52: economy calibration verdict', () => {
+    test('16. Slack plateau is flat, cliffs bind only at starvation and tiny caps', async () => {
+        const { runEconomyCalibration } = await import('../benchmarks/behavioral-evaluation/economy_calibration.mjs');
+        const grid = { seed: 11, ticks: 5000, upkeepMults: [0, 1, 5], prodMults: [0.5, 1, 2] };
+        const a = runEconomyCalibration(grid);
+        expect(runEconomyCalibration(grid)).toEqual(a);
+        // Caravan cycle time binds in-regime: every plateau cell identical.
+        const cells = Object.values(a.plateau);
+        expect(new Set(cells).size).toBe(1);
+        expect(cells[0]).toBe(88);
+        // Cliffs: no production drains initial stock; tiny caps choke flow.
+        expect(a.cliffs.productionZero).toBeLessThan(cells[0]);
+        expect(a.cliffs.tinyCaps).toBeLessThan(cells[0]);
+        expect(a.cliffs.productionZero).toBe(27);
+        expect(a.cliffs.tinyCaps).toBe(24);
+    });
+});
+
 describe('NEXT-43: setup-sweep outcome knobs', () => {
     test('10. Overrides apply, reject unknowns, and split outcome classes', async () => {
         const { runSetupSweep, setupSweepDigest } = await import('../benchmarks/behavioral-evaluation/valley_setup_sweep.mjs');

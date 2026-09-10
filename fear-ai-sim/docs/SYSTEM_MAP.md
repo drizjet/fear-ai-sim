@@ -217,6 +217,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Archive Steady-State NEXT-49:** cold tier rolls camp churn into per-group occupancy (2982 pairs → 6 rows) and merges cold summaries per type — archive 8k → 2.1k at 100k ticks, residual growth exactly the delivery-anchor rate. Referenced halves stay whole. Pinned in compaction + valley batteries.
 - **Leak Assay NEXT-50:** forced-GC retained-state legs show flat heap (+0.2MB/15k ticks) with archive at the anchor rate — no leak; cold 58% below warm at matched ticks. LATER-21 precursor done. Pinned in valley battery.
 - **Bias Regimes NEXT-51:** large-bias sweep maps two crossings — E floor-collapses at -0.50 (contagion below gate, both score 0.00), A saturation-ties at +0.50 (both 4.75); N/C/L immune. No retune; fallback-counter jitter noted. Pinned in persona battery.
+- **Economy Calibration NEXT-52:** upkeep/production sweep finds a flat slack plateau (all cells 88 deliveries — cycle time binds); cliffs only at production-zero (27) and tiny caps (24). No retune. Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

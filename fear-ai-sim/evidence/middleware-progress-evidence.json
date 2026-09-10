@@ -5971,6 +5971,29 @@
  "Below-chance cells (20%) imply tie-handling systematically favors one arm; tie-break influence unreviewed"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "ECONOMY_CALIBRATION_NEXT52",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "benchmarks/behavioral-evaluation/economy_calibration.mjs: upkeep/production/cap sweep on 5000-tick valley runs (measurement only, params mutated live per cell, no behavior change)"
+ ],
+ "test_evidence": [
+ "Slack plateau: all 9 cells (upkeep 0x/1x/5x, production 0.5x/1x/2x) deliver exactly 88 — caravan cycle time binds, stocks never hit bounds in-regime",
+ "Cliffs: production zero -> 27 (initial-stock drain), tiny sink caps -> 24; sink caps 150/120 -> 15/12 also bind (probe)",
+ "frontier-valley-simulation.test.js +1 (battery 16/16, 2x green): plateau flatness exact, cliff values exact, in-process rerun-equal",
+ "Mutation probe (sink caps 150/120 -> 15/12) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2557 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Map <1 s deterministic; matrix ~50 s"
+ ],
+ "known_gaps": [
+ "Calibration verdict holds for the tested regime (flows ~1x, 5k ticks); ~2x flows or ~2x run lengths may exit the plateau — re-sweep if caravan capacity or schedule changes",
+ "Deliveries count events, not volume: tiny-cap starvation still counts trickle deliveries (24); volume-weighted calibration open",
+ "Price channel still absent (carried NEXT-45 gap)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

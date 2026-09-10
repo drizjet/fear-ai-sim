@@ -1,0 +1,65 @@
+#!/usr/bin/env node
+/**
+ * NEXT-52: Economy calibration review (NEXT-45 gap).
+ *
+ * NEXT-45 left production rates, sink caps, and upkeep "uncalibrated
+ * scenario params". This map sweeps them on a 5000-tick valley run and
+ * finds a wide slack plateau: deliveries are identical across upkeep
+ * 0x-200x and production 0.5x-2x (caravan cycle time binds, stocks
+ * never hit bounds in-regime). Cliffs exist only at starvation
+ * (production 0 -> initial-stock drain) and tiny sink caps. Verdict:
+ * calibration does not matter until flows scale ~2x or runs lengthen
+ * ~2x — no retune, plateau plus cliff edges pinned. Measurement only.
+ * Deterministic for a fixed seed and construction order.
+ */
+
+import { fileURLToPath } from 'node:url';
+import { FrontierValleySimulation } from '../../packages/core/src/FrontierValleySimulation.js';
+
+export const ECON_SEED = 11;
+export const ECON_TICKS = 5000;
+
+function runCell({ upkeepMult = 1, prodMult = 1, tinyCaps = false, seed = ECON_SEED, ticks = ECON_TICKS }) {
+    const sim = new FrontierValleySimulation({ seed });
+    if (upkeepMult !== 1) {
+        for (const b of Object.values(sim.upkeep)) for (const k of Object.keys(b)) b[k] *= upkeepMult;
+    }
+    if (prodMult !== 1) {
+        for (const p of Object.values(sim.production)) for (const c of Object.values(p)) c.rate *= prodMult;
+    }
+    if (tinyCaps) {
+        sim.storageCaps.Oakhaven.food = 2;
+        sim.storageCaps.Oakhaven.timber = 2;
+    }
+    sim.advance(ticks);
+    return sim.macroMetrics.deliveries;
+}
+
+export function runEconomyCalibration(options = {}) {
+    const seed = options.seed ?? ECON_SEED;
+    const ticks = options.ticks ?? ECON_TICKS;
+    const plateau = {};
+    for (const u of (options.upkeepMults ?? [0, 1, 5])) {
+        for (const p of (options.prodMults ?? [0.5, 1, 2])) {
+            plateau[`u${u}/p${p}`] = runCell({ upkeepMult: u, prodMult: p, seed, ticks });
+        }
+    }
+    return {
+        config: { seed, ticks },
+        plateau,
+        cliffs: {
+            productionZero: runCell({ upkeepMult: 1, prodMult: 0, seed, ticks }),
+            tinyCaps: runCell({ upkeepMult: 1, prodMult: 1, tinyCaps: true, seed, ticks })
+        }
+    };
+}
+
+export function printEconomyCalibration(r) {
+    console.log('=== NEXT-52: economy calibration map ===');
+    console.log('  plateau: ' + Object.entries(r.plateau).map(([k, v]) => `${k}=${v}`).join(' '));
+    console.log(`  cliffs: productionZero=${r.cliffs.productionZero} tinyCaps=${r.cliffs.tinyCaps}`);
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+    printEconomyCalibration(runEconomyCalibration());
+}
