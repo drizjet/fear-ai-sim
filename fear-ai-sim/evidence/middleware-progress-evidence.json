@@ -5947,6 +5947,30 @@
  "Heap legs are single-process snapshots; fragmentation/old-space pressure not measured"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "BIAS_REGIMES_NEXT51",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "benchmarks/behavioral-evaluation/bias_regime_sweep.mjs: 7-trait accuracy table over bias [-0.50..+1.00] (measurement only, no behavior change)"
+ ],
+ "test_evidence": [
+ "N/C/L hold everywhere (N>=90); R softens to 80/100 under positive bias; O flat 60/80",
+ "E collapses at -0.50 (20/20*, star null): halved contagion hits the response floor (raw mechanism: both neighbors exactly 0.00); +0.50 strengthens to 100/100",
+ "A collapses at +0.50/+1.00 (20/40*, star null): scaled geometry saturates both neighbors at exactly 4.75; asymmetric (96/96 at -0.50)",
+ "functional-persona-signatures.test.js +1 (battery 12/12, 3x green): jitter-robust bands plus exact mechanism anchors",
+ "Mutation probe (contagion gate 0.4->0.2) fails exactly the new test; restore green",
+ "Full matrix 343/343 (2556 tests); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Sweep ~2 s deterministic across processes; matrix ~51 s"
+ ],
+ "known_gaps": [
+ "Signature agents draw fallback streams from a process-global construction counter: knife-edge cells jitter across in-process reruns (N at +1.00: 88-92); pins use bands, mechanisms use exact structural anchors — measurement-hygiene fix (per-trial agent seeds) open",
+ "E/A collapse crossings between sampled levels not bisected (E between -0.50/-0.25, A between -0.10/+0.10)",
+ "Below-chance cells (20%) imply tie-handling systematically favors one arm; tie-break influence unreviewed"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

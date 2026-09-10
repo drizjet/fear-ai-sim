@@ -189,3 +189,37 @@ describe('NOW-36: zero-reads dropout mapping', () => {
         expect(zeroed.deltaStar).toBeNull();
     });
 });
+
+describe('NEXT-51: large-bias regime crossings', () => {
+    // Bands, not exact pins: signature agents draw fallback streams from a
+    // process-global construction counter, so knife-edge cells (N at +1.00:
+    // 88-92 across in-process runs) jitter while regime cells hold exactly.
+    // Separate-process reruns are identical (CLI-verified).
+    test('12. E floor-collapses at -0.50, A saturation-ties at +1.00, N holds', async () => {
+        const { runBiasRegimes } = await import('../benchmarks/behavioral-evaluation/bias_regime_sweep.mjs');
+        const grid = { levels: [-0.5, 0.5, 1.0], traitIdxs: [0, 3, 4], deltas: [0.05, 0.20], reps: 2 };
+        const a = runBiasRegimes(grid);
+        const cell = (t, l) => a.table[t].find((r) => r.level === l);
+        // N immune: systematic scaling preserves orderings (boundary jitter allowed).
+        for (const l of [-0.5, 0.5, 1.0]) expect(cell('neuroticism', l).fine).toBeGreaterThanOrEqual(85);
+        // E: halved contagion hits the response floor (both score 0.00).
+        expect(cell('extraversion', -0.5).fine).toBeLessThanOrEqual(30);
+        expect(cell('extraversion', -0.5).star).toBeNull();
+        expect(cell('extraversion', 0.5).fine).toBeGreaterThanOrEqual(90);
+        // A: scaled geometry saturates both neighbors identically.
+        expect(cell('agreeableness', 1.0).fine).toBeLessThanOrEqual(30);
+        expect(cell('agreeableness', 1.0).star).toBeNull();
+        expect(cell('agreeableness', -0.5).fine).toBeGreaterThan(cell('agreeableness', 1.0).fine);
+        // Mechanism anchors (raw signature values, counter-independent):
+        // halved contagion floors both neighbors at exactly 0; scaled
+        // geometry saturates both at exactly 4.75.
+        const { TRAIT_DEFINITIONS } = await import('../benchmarks/behavioral-evaluation/construct_validity_sweeps.mjs');
+        const mE = TRAIT_DEFINITIONS.find((d) => d.key === 'extraversion').signature;
+        const mA = TRAIT_DEFINITIONS.find((d) => d.key === 'agreeableness').signature;
+        const T = (e, a) => ({ neuroticism: 0.5, resilience: 0.5, openness: 0.5, extraversion: e, agreeableness: a, conscientiousness: 0.5, leadership: 0.5 });
+        expect(mE(T(0.45, 0.5), { contagionFear: 0.3 })).toBe(0);
+        expect(mE(T(0.55, 0.5), { contagionFear: 0.3 })).toBe(0);
+        expect(mA(T(0.5, 0.5), { peerDist: 3.0, threatDist: 15.0, leaderCalm: 0.9 }))
+            .toBe(mA(T(0.5, 0.6), { peerDist: 3.0, threatDist: 15.0, leaderCalm: 0.9 }));
+    });
+});
