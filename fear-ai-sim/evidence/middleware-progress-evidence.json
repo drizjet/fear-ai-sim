@@ -6589,6 +6589,27 @@
  "No live core path consumes rankIntents yet (CLI demo does) — the breaker/demotion machinery is wired but idle in NPC decision loops (affordance-learning integration open)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "RETAINED_SOAK_NEXT65",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No behavior change: all bounds pre-existed (sibling caps, prune policies); this chunk measures and pins them. Valley finding: the valley path barely exercises rumor-master/relationship machinery (rumors 0, relEdges 0 at 50k) — real coverage came from direct subsystem soaks"
+ ],
+ "test_evidence": [
+ "Propagation 2000-tick flood soak: rumors 500/500, peak inbox 500, inboxes fixed at agent count; relations: 200 agents x 20k interactions hold degree <= 50 (10000 edges, no N-squared blowup)",
+ "Valley 50k composite legs flat: incidents 40, ledger 1000 at every 10k leg; bilateral lists capped at 20 per pair",
+ "2 new pins (propagation battery 11/11, pacing 29/29); mutation probe (cap 20->10000) fails exactly the incident pin; restore green",
+ "Full matrix 342/343 suites (2571 pass; 8 dashboard EACCES env failures, known); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Soak probes ~25 s (dense 12-agent flood); matrix ~33 s"
+ ],
+ "known_gaps": [
+ "Valley rumor/relationship paths are idle in the reference world — misinformation cascades (XXII) have no live exercise there",
+ "LATER-21 still needs the full-stack 100k/1m soak gate"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

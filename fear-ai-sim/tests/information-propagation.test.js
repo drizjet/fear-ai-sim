@@ -171,3 +171,23 @@ describe('NEXT-73: budget/decay interaction', () => {
         expect(row(2).heardByD).toBe(false);
     });
 });
+
+describe('NEXT-65: retained-state bounds under continuous load', () => {
+    test('11. Rumor map and every inbox stay capped over 300 injected ticks', async () => {
+        const { InformationPropagationEngine } = await import('../packages/core/src/InformationPropagationEngine.js');
+        const e = new InformationPropagationEngine({ maxRetainedRumors: 500 }, 7);
+        for (let i = 0; i < 6; i++) e.registerAgent('a' + i, 0.9);
+        for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) {
+            if (i !== j) e.addListenEdge('a' + i, 'a' + j);
+        }
+        let peakInbox = 0;
+        for (let t = 0; t < 300; t++) {
+            e.injectRumor('ROAD_AMBUSH', 'r' + t, 'a0');
+            e.advanceTick();
+            for (const [, ib] of e.inboxes) peakInbox = Math.max(peakInbox, ib.size);
+        }
+        expect(e.rumors.size).toBeLessThanOrEqual(500);
+        expect(peakInbox).toBeLessThanOrEqual(500);
+        expect(e.inboxes.size).toBe(6);
+    });
+});

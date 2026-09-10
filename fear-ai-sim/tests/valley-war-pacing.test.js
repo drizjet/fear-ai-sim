@@ -554,3 +554,28 @@ describe('NEXT-56: severity calibration surface', () => {
         }
     });
 });
+
+describe('NEXT-65: faction retained-state bounds', () => {
+    test('Bilateral incident lists stay capped; valley legs stay flat to 50k', async () => {
+        const Fmod = await import('../packages/core/src/FactionSystem.js');
+        const fs = new Fmod.default();
+        fs.registerFaction({ id: 'AX' });
+        fs.registerFaction({ id: 'BX' });
+        for (let i = 0; i < 100; i++) {
+            fs.recordIncident('AX', 'BX', Fmod.INCIDENT_TYPES.PROVOCATION, {});
+        }
+        expect(fs.getBilateralStance('BX', 'AX').incidents.length).toBeLessThanOrEqual(20);
+        // Valley composite: incidents, ledger flat across 50k ticks.
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const legs = [];
+        for (let t = 0; t < 50000; t += 10000) {
+            sim.advance(10000);
+            let n = 0;
+            for (const [, m] of sim.factionSystem.stances) {
+                for (const s of m.values()) n += s.incidents.length;
+            }
+            legs.push([n, sim.worldSystem.historyLedger.length]);
+        }
+        expect(legs).toEqual([[40, 1000], [40, 1000], [40, 1000], [40, 1000], [40, 1000]]);
+    });
+});
