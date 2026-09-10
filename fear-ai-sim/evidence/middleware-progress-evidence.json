@@ -6610,6 +6610,55 @@
  "LATER-21 still needs the full-stack 100k/1m soak gate"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_20",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit method: known-gap aggregation across 6 milestones since CCI-19 (UPKEEP_LAW_NEXT72, BUDGET_DECAY_NEXT73, PRICE_CHANNEL_NEXT63, MIGRATION_ROLLUP_NEXT64, INTENT_ZERO_NEXT66, RETAINED_SOAK_NEXT65), CCI-19 candidate status review, one red-team probe (upkeep law across seeds 7/42)",
+ "6 commits since CCI-19; NEXT-63/64/65/66/72/73 closed and verified",
+ "Sharpest find (red-team defended): the upkeep law SHAPE is seed-invariant — seeds 7/42 reproduce monotone rise plus saturation with constants shifted ~1% (316.5 vs 313.5, 588.7/633 vs 582.7/627). The law is not seed-11 fiction",
+ "Ranked by FrontierValue (CapabilityGap x UserImpact x EvidenceGap x Leverage x GeneralizationPotential / Cost). Tiers: NOW (verified-open, executable), NEXT (structural), LATER (gated/external)."
+ ],
+ "test_evidence": [
+ "Matrix 342/343 suites (2571 pass; 8 dashboard EACCES env failures, known) at last chunk close; guardian:check CLEAN at last chunk close"
+ ],
+ "runtime_evidence": [
+ "NEXT-7 merchant belief-formation dynamics (carried).",
+ "NEXT-10 nested-JSON transport guard (carried).",
+ "NEXT-11 unbounded-dt policy plus unknown-type strictness review (carried).",
+ "NEXT-12 handshake determinism review (carried).",
+ "NEXT-13 constructor-only over-credit audit (carried).",
+ "NEXT-14 infinite-loop containment research (carried).",
+ "NEXT-15 FearServer fixed-port production review (carried).",
+ "NEXT-17 richer rally dynamics for specificity guards (carried).",
+ "NEXT-18 hundreds-of-factions scale plus pair-cache evaluation (carried).",
+ "NEXT-21 numeric-field histograms in middle summaries (carried).",
+ "NEXT-29 floor-slope sensitivity exploration (carried).",
+ "NEXT-30 minimum-severity crystallization floor exploration (carried).",
+ "NEXT-31 graded defusal exploration (carried).",
+ "NEXT-32 acute fear spike for social wounds exploration (carried).",
+ "NEXT-34 dashboard BORDER_TRESPASS restraint (carried).",
+ "NEXT-35 unified extortion-gate theory (carried).",
+ "NEXT-71 fine E bisection (-0.50/-0.45 gate-edge localization; marginal).",
+ "NEXT-74 valley misinformation-cascade live exercise (idle rumor/relation paths; objective XXII).",
+ "NEXT-75 rankIntents live-loop integration (affordance learning; breaker wired but idle).",
+ "NEXT-76 priority-queue spread prototype (confidence-ordered vs sorted deferral).",
+ "NEXT-77 price weight calibration plus tiny-cap reference (0.5/0.5 judgment calls).",
+ "NEXT-78 production-axis 2D law (slack except at zero; needs nonzero sweep).",
+ "LATER-20 second external host architecture (gated on external project availability).",
+ "LATER-21 100k/1m-tick full-stack soak (valley path assayed; needs NEXT-65 follow-through).",
+ "LATER-22 human evaluation protocol execution (BLOCKED_EXTERNAL_PARTICIPANTS).",
+ "LATER-23 Unity editor integration (IMPLEMENTED_NOT_VERIFIED until a real editor is available).",
+ "Selected next: NEXT-74 (misinformation cascade is objective XXII with zero live coverage — highest capability gap on the bench)."
+ ],
+ "benchmark_evidence": [
+ "Audit completes in minutes; no benchmark impact"
+ ],
+ "known_gaps": [
+ "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
