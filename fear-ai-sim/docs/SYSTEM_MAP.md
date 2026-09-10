@@ -239,6 +239,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Frontier Audit CCI-19:** 27 ranked candidates (0 NOW, 23 NEXT, 4 LATER); all 8 CCI-18 chunks closed. Red-team hit: throughput law — volume ≈ upkeep × T, counts need only upkeep > 0. Next: upkeep-law formalization (NEXT-72).
 - **Upkeep Law NEXT-72:** steady volume rises with drain rate then saturates at caravan capacity (two regimes, both horizons pinned). Counts need upkeep > 0; volume needs upkeep rate. Pinned in valley battery.
 - **Budget Decay NEXT-73:** tight budgets starve queued rumors that survive unbounded (lifetime 11 ticks either way; budget-2 never delivers). Dashboard suite env-blocked (port bind), pre-existing. Pinned in propagation battery.
+- **Price Channel NEXT-63:** advisory scarcity-plus-danger multiplier (blocked-pass food 1.55 vs safe timber 1.38); hosts own exchange. Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

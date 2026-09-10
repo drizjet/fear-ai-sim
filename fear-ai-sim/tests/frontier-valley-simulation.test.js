@@ -338,3 +338,20 @@ describe('NEXT-41: HighlandPass pin attribution verdict', () => {
         expect(sim.civSystem.routes.get('HighlandPass').perceivedDanger).toBeCloseTo(0.35, 2);
     });
 });
+
+describe('NEXT-63: advisory price channel', () => {
+    test('20. Danger-scarcity prices are deterministic, bounded, and ordered', () => {
+        const a = new FrontierValleySimulation({ seed: 11 });
+        const b = new FrontierValleySimulation({ seed: 11 });
+        // Deterministic at construction and bounded below by base.
+        expect(a.advisoryPrice('food')).toBe(b.advisoryPrice('food'));
+        expect(a.advisoryPrice('food')).toBeGreaterThanOrEqual(1);
+        expect(a.advisoryPrice('timber')).toBeGreaterThanOrEqual(1);
+        expect(a.advisoryPrice('food')).toBeCloseTo(1.508, 3);
+        a.advance(10000);
+        // Blocked-pass food carries a danger premium over safe-route timber.
+        expect(a.advisoryPrice('food')).toBeCloseTo(1.551, 3);
+        expect(a.advisoryPrice('timber')).toBeCloseTo(1.377, 3);
+        expect(a.advisoryPrice('food')).toBeGreaterThan(a.advisoryPrice('timber'));
+    });
+});

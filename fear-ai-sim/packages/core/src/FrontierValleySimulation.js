@@ -431,6 +431,26 @@ export class FrontierValleySimulation {
     }
 
     /**
+     * Advisory commodity price index (NEXT-63: the trade price channel).
+     * Pure read of advisory state: scarcity (sink fill vs cap) plus
+     * inbound-route danger, as a 1.0-based multiplier. Hosts own currency
+     * and exchange; this only advises relative expensiveness. Unknown
+     * commodities read neutral-ish (danger unknown, scarcity from sink).
+     * @param {string} commodity
+     * @returns {number} >= 1.0 price multiplier, NaN-safe
+     */
+    advisoryPrice(commodity) {
+        const sink = this.civSystem.nodes.get('Oakhaven');
+        const cap = Number(this.storageCaps?.Oakhaven?.[commodity]);
+        const stock = Number(sink?.market?.[commodity]) || 0;
+        const scarcity = Number.isFinite(cap) && cap > 0 ? Math.min(1, Math.max(0, 1 - stock / cap)) : 0.5;
+        const routeId = commodity === 'timber' ? FRONTIER_VALLEY_ROUTES.RIVERWAY : FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS;
+        const danger = Number(this.civSystem.routes.get(routeId)?.perceivedDanger);
+        const d = Number.isFinite(danger) ? Math.min(1, Math.max(0, danger)) : 0.5;
+        return 1 + 0.5 * scarcity + 0.5 * d;
+    }
+
+    /**
      * Produces settlement goods each tick up to storage caps (NEXT-45).
      * Bounded by construction: min(cap, qty + rate) can never inflate
      * past cap, and unknown settlements/commodities are skipped, never

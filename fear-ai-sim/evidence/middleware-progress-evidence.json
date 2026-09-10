@@ -6527,6 +6527,27 @@
  "Priority-queue alternative (confidence-ordered spread vs sorted-order deferral) not prototyped — determinism and starvation tradeoffs open"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "PRICE_CHANNEL_NEXT63",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FrontierValleySimulation.advisoryPrice: pure-read scarcity-plus-danger multiplier (1 + 0.5*scarcity + 0.5*danger, NaN-safe, >= 1.0); hosts own currency and exchange"
+ ],
+ "test_evidence": [
+ "Blocked-pass food carries a danger premium over safe-route timber (1.551 vs 1.377 at 10k); deterministic at construction; bounded below by base",
+ "frontier-valley-simulation.test.js +1 (battery 20/20, 2x green)",
+ "Mutation probe (danger term zeroed) fails exactly the new test; restore green",
+ "Full matrix 342/343 suites (2567 pass; 8 dashboard EACCES port-bind failures, known environmental, reproduced on clean tree); guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~10 s; matrix ~37 s"
+ ],
+ "known_gaps": [
+ "Weights 0.5/0.5 are judgment calls; scarcities anchor to current caps (tiny-cap regimes need recalibrated reference)",
+ "No demand side: prices never feed back into caravan or faction decisions (advisory only by constitutional design)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
