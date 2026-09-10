@@ -5623,6 +5623,28 @@
         "A fear-damping mechanism (social buffering) is inferred from gate behavior, not unit-isolated"
       ],
       "next_action": "MAINTAIN"
+    },
+    {
+      "milestone": "SETUP_SWEEP_HARNESS_NEXT43",
+      "status": "VERIFIED",
+      "implementation_evidence": [
+        "FrontierValleySimulation setupStances option plus applySetupStance (faction validation with UNKNOWN_SETUP_FACTION rejection, [0,1] clamping, six patchable pressure fields); applied post-backstory so overrides win; zero behavior change without overrides (default path untouched)",
+        "valley_setup_sweep.mjs: nomad-trust x settler-bandit-grievance x seed grid (12 cells x 2000 ticks, ~0.3 s), outcome classes in the NEXT-22b scheme; fully deterministic"
+      ],
+      "test_evidence": [
+        "Setup splits what seeds could not: 3 classes (NEGOTIATE at trust 0.3, TRADE at 0.6, ALLY+ally=1 at 0.9); both seeds agree within every knob cell; initial grievance 0.3 vs 0.8 washes out within 2000 ticks (decay plus encounters dominate backstory)",
+        "Regression test in frontier-valley-simulation.test.js (battery 10/10): default-untouched, unknown rejection, sweep determinism, exact 3-class split",
+        "Mutation probe (overrides ignored) collapses to 1 class and fails the pin; restore green",
+        "Full matrix 343/343 (2537 tests); guardian:check CLEAN"
+      ],
+      "benchmark_evidence": [
+        "Sweep grid ~0.3 s; valley battery ~2 s; matrix ~51 s"
+      ],
+      "known_gaps": [
+        "Only stance pressures are knobbed; cultures, readiness, geography, and market stocks are unbuilt knobs",
+        "Grievance washout is observed, not explained per-channel; a decay-vs-encounter attribution is open"
+      ],
+      "next_action": "MAINTAIN"
     }
   ]
 }

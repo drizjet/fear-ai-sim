@@ -153,3 +153,25 @@ describe('NEXT-33: autonomous settlement-layer trade flow', () => {
         expect(a.deliveries).toBe(10);
     });
 });
+
+describe('NEXT-43: setup-sweep outcome knobs', () => {
+    test('10. Overrides apply, reject unknowns, and split outcome classes', async () => {
+        const { runSetupSweep, setupSweepDigest } = await import('../benchmarks/behavioral-evaluation/valley_setup_sweep.mjs');
+        const def = new FrontierValleySimulation({ seed: 11 });
+        expect(def.factionSystem.getBilateralStance(
+            FRONTIER_VALLEY_FACTIONS.SETTLERS,
+            FRONTIER_VALLEY_FACTIONS.NOMADS).trust).toBe(0.6);
+        expect(() => def.applySetupStance({ source: 'GHOST', target: FRONTIER_VALLEY_FACTIONS.NOMADS, patch: {} }))
+            .toThrow('UNKNOWN_SETUP_FACTION');
+        // Sweep: deterministic, and setup splits what seeds could not.
+        const full = runSetupSweep();
+        expect(setupSweepDigest(runSetupSweep())).toBe(setupSweepDigest(full));
+        expect(full.cellCount).toBe(12);
+        expect(full.classCount).toBe(3);
+        expect(Object.keys(full.classes).sort()).toEqual([
+            'SHADOW/ALLY/UNAWARE|wars=1|ally=1',
+            'SHADOW/NEGOTIATE/UNAWARE|wars=1|ally=0',
+            'SHADOW/TRADE/UNAWARE|wars=1|ally=0'
+        ]);
+    });
+});

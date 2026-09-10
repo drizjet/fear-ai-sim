@@ -87,10 +87,34 @@ export class FrontierValleySimulation {
             fearSamples: 0
         };
 
-        this._setupFrontierValley();
+        this._setupFrontierValley(options);
     }
 
-    _setupFrontierValley() {
+    /**
+     * Applies one designer setup-stance override (NEXT-43). Both factions
+     * must be registered; numeric patch fields are clamped to [0,1].
+     * @param {object} [override={}]
+     * @param {string} override.source source faction id
+     * @param {string} override.target target faction id
+     * @param {object} [override.patch={}] stance fields to set
+     */
+    applySetupStance(override = {}) {
+        const source = String(override.source ?? '');
+        const target = String(override.target ?? '');
+        if (!this.factionSystem.getFaction(source) || !this.factionSystem.getFaction(target)) {
+            throw new Error('UNKNOWN_SETUP_FACTION');
+        }
+        const stance = this.factionSystem.getBilateralStance(source, target);
+        if (!stance) throw new Error('UNKNOWN_SETUP_FACTION');
+        const clamp = (v) => typeof v !== 'number' || !Number.isFinite(v) ? null : Math.min(1, Math.max(0, v));
+        for (const field of ['grievance', 'trust', 'fear', 'territorialPressure', 'economicPressure', 'informationConfidence']) {
+            const v = clamp(override.patch?.[field]);
+            if (v !== null) stance[field] = v;
+        }
+        return stance;
+    }
+
+    _setupFrontierValley(options = {}) {
         this.settlements = new Map();
 
         // 1. Setup Settlements in CivilizationSystem (Nodes) and Local Map
@@ -193,6 +217,13 @@ export class FrontierValleySimulation {
             nomadStance.trust = 0.60;
             nomadStance.informationConfidence = 0.50;
             nomadStance.stage = ESCALATION_STAGES.TRADE;
+        }
+        // NEXT-43: designer setup overrides for outcome-sweep experiments.
+        // Applied after the canonical backstory so overrides win. Unknown
+        // factions are rejected (same rule as recordValleyTrade): silent
+        // typos must not conjure phantom bilateral state.
+        for (const override of options.setupStances ?? []) {
+            this.applySetupStance(override);
         }
 
         // 4. Setup Roaming Groups in WorldSimulationSystem with seed-based initial deployment
