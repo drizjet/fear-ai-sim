@@ -6659,6 +6659,31 @@
  "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "MISINFORMATION_CASCADE_NEXT74",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit: valley rumor pipe was connected but dry - transmitRumors forwards on every encounter but nothing ever creates rumors in the valley path; no consumer reads knownRumors for behavior",
+ "WorldSimulationSystem._applyHeardThreatPressure: newly heard severe AMBUSH_HOTSPOT/WAR_DECLARED rumors (perceivedSeverity >= 0.5) add credibility-scaled advisory pressure (+0.15 x credibility, extortion precedent; combat is +0.35)",
+ "Wired into _generateSystemicEncounter for both directions; sender pressure untouched; non-threat topics and low-severity rumors are no-ops",
+ "False-rumor cascade now live: seeded WAR_DECLARED (no truthEventId) spreads A->B->C with hop count and fidelity decay, raising receiver pressure at each hop"
+ ],
+ "test_evidence": [
+ "World-simulation battery 19/19 (5 new NEXT-74 pins: severe-false raises receiver-only pressure within (0, 0.15]; non-threat no-op; low-severity no-op; two-hop cascade with hops+1 and fidelity decay; seed determinism)",
+ "Mutation probe 0.15->0.0 fails exactly tests 1 and 4 (negative tests still pass); fix restored",
+ "Full matrix 342/343 suites, 2576 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~36s"
+ ],
+ "known_gaps": [
+ "threatPressure never decays - rumor bumps ratchet permanently like combat/extortion bumps (pre-existing system property, now more reachable)",
+ "truthEventId is metadata only - no correction/retraction path: true and false rumors behave identically once heard; origin credibility loss exists only in InformationPropagationEngine, not WorldSimulationSystem",
+ "Rumor consequence is pressure-only: no reroute, no mobilization, no migration response to heard threats yet"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

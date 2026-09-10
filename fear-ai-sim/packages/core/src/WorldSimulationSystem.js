@@ -355,6 +355,23 @@ export class WorldSimulationSystem {
         }
         return transmitted;
     }
+    /**
+     * NEXT-74: fear-from-information. A group that newly hears a severe
+     * threat-topic rumor gains credibility-scaled advisory threat pressure.
+     * Truth status (truthEventId) is metadata only - no correction path yet.
+     * @param {object} receiver Receiving group
+     * @param {Array<object>} transmitted Instances transmitRumors just delivered
+     */
+    _applyHeardThreatPressure(receiver, transmitted) {
+        if (!receiver?.drivers || !Array.isArray(transmitted)) return;
+        for (const inst of transmitted) {
+            const master = this.rumors.get(inst.rumorId);
+            if (!master) continue;
+            if (master.topic !== RUMOR_TOPICS.AMBUSH_HOTSPOT && master.topic !== RUMOR_TOPICS.WAR_DECLARED) continue;
+            if (inst.perceivedSeverity < 0.5) continue;
+            receiver.drivers.threatPressure = clamp01(receiver.drivers.threatPressure + 0.15 * (inst.credibility ?? 0.5));
+        }
+    }
 
     /**
      * Evaluate bilateral systemic encounters between roaming parties within proximity
@@ -524,9 +541,13 @@ export class WorldSimulationSystem {
             diagnosticRationale = `Peaceful crossing of travel corridors; shared situational intelligence.`;
         }
 
-        // Exchange rumors upon convergence
-        this.transmitRumors(gA.id, gB.id, bilateralTrust);
-        this.transmitRumors(gB.id, gA.id, bilateralTrust);
+        // Exchange rumors upon convergence; hearing a severe threat rumor raises
+        // advisory threat pressure (fear-from-information, credibility-scaled).
+        // Matches the extortion-pressure precedent (+0.15 scale); combat (+0.35).
+        const heardAB = this.transmitRumors(gA.id, gB.id, bilateralTrust);
+        const heardBA = this.transmitRumors(gB.id, gA.id, bilateralTrust);
+        this._applyHeardThreatPressure(gB, heardAB);
+        this._applyHeardThreatPressure(gA, heardBA);
 
         // Record historical ledger entry
         const historyEvent = this.recordHistoryEvent(WORLD_EVENT_TYPES.ENCOUNTER_OCCURRED, {

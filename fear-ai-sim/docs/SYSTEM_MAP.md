@@ -244,6 +244,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Intent Zero NEXT-66:** stuck-actuator feedback degrades gracefully both ways — structural trips a reversible breaker, transient demotes via reliability, missing is a no-op. Live-consumer wiring still open. Pinned in feedback battery.
 - **Retained Soak NEXT-65:** faction/rumor/relation stores all capped exactly (500/500/50) under flood; valley legs flat to 50k. Valley barely exercises rumor/relation paths — noted. Pinned in propagation + pacing batteries.
 - **Frontier Audit CCI-20:** 26 ranked candidates (0 NOW, 22 NEXT, 4 LATER); all 6 CCI-19 chunks closed. Red-team defended: upkeep-law shape seed-invariant (±1% constants). Next: valley misinformation exercise (NEXT-74).
+- **Misinformation Cascade NEXT-74:** valley rumor pipe was dry (forwarding without sources or consumers) - now a false WAR_DECLARED spreads A->B->C with hop/fidelity decay, raising credibility-scaled advisory pressure (+0.15 scale). Gaps: pressure never decays; truthEventId inert (no correction); pressure-only consequence. Pinned in world-sim battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

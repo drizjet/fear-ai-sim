@@ -412,3 +412,84 @@ describe('NEXT-58: relationship trust-NaN review', () => {
         expect(low.diagnosticRationale).not.toContain('indeterminate');
     });
 });
+
+describe('NEXT-74: misinformation cascade live exercise', () => {
+    function caravanPair(seed = 42) {
+        const world = new WorldSimulationSystem({ seed });
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5,
+            wealth: 0.5
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.5,
+            wealth: 0.5
+        });
+        return { world, a, b };
+    }
+    function meet(world, x, y) {
+        return world._generateSystemicEncounter(x, y, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+    }
+    test('1. Hearing a severe false threat rumor raises receiver pressure only', () => {
+        const { world, a, b } = caravanPair();
+        // FALSE rumor: no truthEventId - nobody observed any army.
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'travelers claim an army marches'
+        });
+        meet(world, a, b);
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+        expect(b.drivers.threatPressure).toBeGreaterThan(0);
+        expect(b.drivers.threatPressure).toBeLessThanOrEqual(0.15);
+        expect(a.drivers.threatPressure).toBe(0);
+    });
+    test('2. Non-threat rumors do not raise pressure', () => {
+        const { world, a, b } = caravanPair();
+        world.createRumor('ALLIANCE_FORMED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'merchants signed a pact'
+        });
+        meet(world, a, b);
+        expect(b.knownRumors.size).toBe(1);
+        expect(b.drivers.threatPressure).toBe(0);
+    });
+    test('3. Low-severity threat rumors do not raise pressure', () => {
+        const { world, a, b } = caravanPair();
+        world.createRumor('AMBUSH_HOTSPOT', {
+            sourceEntityId: a.id, severity: 0.2, description: 'vague unease about the north road'
+        });
+        meet(world, a, b);
+        expect(b.knownRumors.size).toBe(1);
+        expect(b.drivers.threatPressure).toBe(0);
+    });
+    test('4. Rumor cascades across a second hop with degraded fidelity', () => {
+        const { world, a, b } = caravanPair();
+        const rumor = world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'false army report'
+        });
+        meet(world, a, b);
+        const c = world.registerGroup('c_far', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 110, y: 0, z: 100 },
+            militaryStrength: 0.5,
+            wealth: 0.5
+        });
+        meet(world, b, c);
+        const first = b.knownRumors.get(rumor.id);
+        const second = c.knownRumors.get(rumor.id);
+        expect(second).toBeDefined();
+        expect(second.hops).toBe(first.hops + 1);
+        expect(second.fidelity).toBeLessThan(first.fidelity);
+        expect(c.drivers.threatPressure).toBeGreaterThan(0);
+    });
+    test('5. Cascade hearing is deterministic for a fixed seed', () => {
+        const run = () => {
+            const { world, a, b } = caravanPair();
+            world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+            meet(world, a, b);
+            return { pressure: b.drivers.threatPressure, sev: b.knownRumors.values().next().value.perceivedSeverity };
+        };
+        expect(run()).toEqual(run());
+    });
+});
