@@ -156,3 +156,18 @@ describe('NEXT-59/60: dense topology and spread budget', () => {
         expect(off.freshHolders).toBe(1);
     });
 });
+
+describe('NEXT-73: budget/decay interaction', () => {
+    test('10. Tight budgets starve queued rumors that survive unbounded', async () => {
+        const { runBudgetDecay } = await import('../benchmarks/behavioral-evaluation/rumor_flood_dynamics.mjs');
+        const a = runBudgetDecay();
+        expect(runBudgetDecay()).toEqual(a);
+        const row = (b) => a.rows.find((r) => String(r.budget) === String(b));
+        // Lifetime is budget-independent (11 ticks at 0.15/0.01 decay).
+        for (const r of a.rows) expect(r.decayedTick).toBe(11);
+        // Open and moderate budgets deliver; budget 2 starves the queued rumor.
+        expect(row('inf').heardByD).toBe(true);
+        expect(row(20).heardByD).toBe(true);
+        expect(row(2).heardByD).toBe(false);
+    });
+});

@@ -147,3 +147,45 @@ export function printDenseFlood(r) {
     console.log(`=== NEXT-59/60: dense flood (budget=${r.config.budget ?? 'none'}) ===`);
     console.log(`  retained=${r.retained} heard=${r.heard} peakPerTick=${r.peakPerTick} freshHolders=${r.freshHolders}/${r.agentCount}`);
 }
+
+// NEXT-73: budget/decay interaction. A mid-confidence rumor behind a flood
+// queue survives unbounded but dies queued under a tight budget: lifetime
+// (confidence/tickDecay) races queue position (sorted-tail deferral).
+export const DECAY_FLOOD = 100;
+export const DECAY_CONF = 0.15;
+export const DECAY_TICKS = 40;
+
+export function runBudgetDecay(options = {}) {
+    const budgets = options.budgets ?? [Infinity, 20, 2];
+    const floodN = options.floodN ?? DECAY_FLOOD;
+    const conf = options.conf ?? DECAY_CONF;
+    const ticks = options.ticks ?? DECAY_TICKS;
+    const seed = options.seed ?? FLOOD_SEED;
+    const rows = budgets.map((budget) => {
+        const eng = new InformationPropagationEngine(
+            { maxRetainedRumors: 500, maxSpreadPerTick: budget }, seed);
+        for (const a of ['a', 'b', 'c', 'd']) eng.registerAgent(a, 0.9);
+        eng.addListenEdge('b', 'a');
+        eng.addListenEdge('c', 'b');
+        eng.addListenEdge('d', 'c');
+        for (let i = 0; i < floodN; i++) eng.injectRumor('ROAD_AMBUSH', `c${i}`, 'a');
+        const fresh = eng.injectRumor('ROAD_AMBUSH', 'z-fresh-mid', 'a', { confidence: conf });
+        let heardByD = false;
+        let decayedTick = null;
+        for (let t = 0; t < ticks; t++) {
+            eng.advanceTick();
+            if (eng.heldBy('d').some((h) => h.rumorId === fresh)) heardByD = true;
+            const r = eng.rumors.get(fresh);
+            if (r && r.status === RUMOR_STATUS.DECAYED && decayedTick === null) decayedTick = t + 1;
+        }
+        return { budget: budget === Infinity ? 'inf' : budget, heardByD, decayedTick };
+    });
+    return { config: { budgets: budgets.map((b) => (b === Infinity ? 'inf' : b)), floodN, conf, ticks, seed }, rows };
+}
+
+export function printBudgetDecay(r) {
+    console.log('=== NEXT-73: budget/decay interaction ===');
+    for (const row of r.rows) {
+        console.log(`  budget=${row.budget}: heardByD=${row.heardByD} decayedTick=${row.decayedTick}`);
+    }
+}

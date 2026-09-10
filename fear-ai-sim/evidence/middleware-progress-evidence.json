@@ -6507,6 +6507,26 @@
  "Production-rate axis of the 2D law unmapped (production slack at tested rates; zero is the only cliff)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "BUDGET_DECAY_NEXT73",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "rumor_flood_dynamics.mjs: runBudgetDecay (chain topology, 100-rumor flood, mid-confidence fresh rumor, lifetime-vs-queue race); measurement only, no behavior change"
+ ],
+ "test_evidence": [
+ "Lifetime is budget-independent (decay tick 11 everywhere at 0.15/0.01); open and budget-20 deliver to d, budget-2 starves the queued rumor (never heard)",
+ "information-propagation.test.js +1 (battery 10/10, 2x green) with rerun-equality",
+ "Mutation probe (5x decay rate) fails exactly the new test; restore green",
+ "Full matrix 342/343 suites: only designer-dashboard fails (8x EACCES on 127.0.0.1:8766 port bind — reproduced on the CLEAN tree, pre-existing sandbox block, unrelated); all 2566 other tests pass; guardian:check CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Decay map <1 s; matrix ~40 s"
+ ],
+ "known_gaps": [
+ "Priority-queue alternative (confidence-ordered spread vs sorted-order deferral) not prototyped — determinism and starvation tradeoffs open"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
