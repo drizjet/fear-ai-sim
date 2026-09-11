@@ -286,6 +286,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Restraint Symmetry NEXT-110:** hearsay bias and relief both run undamped under live trade dependence (restraint cools observed-act retaliation only); audit resolution, no behavior change. Pinned in valley battery.
 - **Identity-Layer Audit 1:** three-layer architecture exists but only harnesses instantiate it; live path uses OCEAN traits plus habituation plus trauma-dread input; crystallization, moral engine, FPS live use, vault live use unwired (wire-or-retire triage next). Audit only.
 - **Settled-Rumor Gate NEXT-111 (CCIR-27 hit):** re-hearing host-refuted rumors biases nothing (ratchet 0.8 to 1.0 proven live first); supersedes the NEXT-108 flinch verdict; confirmed rumors still bias. Pinned in valley battery.
+- **Refresh Coherence NEXT-112:** confirmed-rehearing stacking scare traced to hand-listed synthetic ids; live re-hearings refresh recency without re-bumping (new-or-upgraded gate predates); no production change. Pinned in world battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

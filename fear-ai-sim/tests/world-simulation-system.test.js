@@ -1315,3 +1315,62 @@ describe('NEXT-101: origin-provided flag', () => {
         expect(r.originProvided).toBe(true);
     });
 });
+
+describe('NEXT-112: refresh-only re-hearings bump nothing', () => {
+    function ledPair() {
+        const world = new WorldSimulationSystem({ seed: 11 });
+        const rel = new RelationshipTensorSystem();
+        const a = world.registerGroup('ga_a', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LA'
+        });
+        const b = world.registerGroup('gb_b', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LB'
+        });
+        const meet = () => world._generateSystemicEncounter(a, b,
+            { distance: 5, factionSystem: null, relationshipTensorSystem: rel });
+        return { world, a, b, meet };
+    }
+    test('7. Fresh hearing bumps once with the rumor id', () => {
+        const { world, meet } = ledPair();
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: 'ga_a', severity: 0.9 });
+        const enc = meet();
+        expect(enc.heardThreatRumor).toBe(true);
+        expect(enc.heardThreatRumorIds).toContain(r.id);
+    });
+    test('8. Immediate re-hearings at equal credibility bump nothing', () => {
+        // The earlier confirmed-rehearing scare was a synthetic artifact:
+        // hand-listed ids bypass the new-or-upgraded gate. Live encounters
+        // refresh recency without re-bumping pressure or ids.
+        const { world, b, meet } = ledPair();
+        world.createRumor('WAR_DECLARED', { sourceEntityId: 'ga_a', severity: 0.9 });
+        meet();
+        const before = b.drivers.threatPressure;
+        const e2 = meet();
+        const e3 = meet();
+        expect(e2.heardThreatRumor).toBe(false);
+        expect(e2.heardThreatRumorIds).toEqual([]);
+        expect(e3.heardThreatRumor).toBe(false);
+        expect(b.drivers.threatPressure).toBe(before);
+    });
+    test('9. Refresh still renews recency without strengthening belief', () => {
+        const { world, b, meet } = ledPair();
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: 'ga_a', severity: 0.9 });
+        meet();
+        const cred = b.knownRumors.get(r.id).credibility;
+        world.tickCount += 10;
+        meet();
+        expect(b.knownRumors.get(r.id).credibility).toBe(cred);
+    });
+    test('10. Refresh coherence is deterministic', () => {
+        const run = () => {
+            const { b, meet } = ledPair();
+            meet(); meet();
+            return b.drivers.threatPressure;
+        };
+        expect(run()).toBe(run());
+    });
+});

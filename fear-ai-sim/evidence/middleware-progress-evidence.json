@@ -7932,6 +7932,30 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "REFRESH_COHERENCE_NEXT112",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Red-team scare first: hand-crafted re-hearings of a confirmed rumor stacked +0.10 per hearing (0.1 to 0.7 over 6). Traced to the probe, not the code: hand-listed ids bypass the new-or-upgraded gate. Live encounters refresh recency without re-bumping pressure or ids (proven: 3 consecutive meetings, only the first bumps)",
+ "No production change: the gate predates this chunk (NEXT-79 transmit refresh path). The CCI-27 gap entry claiming per-hearing bias is corrected here - it holds only for synthetic encounters, not live dynamics",
+ "Two test-structure repairs mid-build (duplicated comment and header lines from overlapping ranges); caught by parse check and rebuilt by read-back"
+ ],
+ "test_evidence": [
+ "World battery 4 new NEXT-112 pins (fresh bump with id, silent refreshes with frozen pressure, recency renewal without belief gain, determinism)",
+ "Refresh-forcing probe fails exactly test 8 (fresh, recency, determinism pins correctly unaffected); restored",
+ "Full matrix 343/344 suites, 2712 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World battery ~1s; full matrix ~48s"
+ ],
+ "known_gaps": [
+ "Wire-or-retire triage still open (from identity audit)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Heap-at-scale unmeasured with gc"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
