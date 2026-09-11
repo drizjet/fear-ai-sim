@@ -327,6 +327,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Information Fear NEXT-149:** agents feel heard danger via observations.reportedDanger (full hearsay builds fear past 0.9 threat-free); absent input is legacy exactly; audit candidate 13 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Social Intent NEXT-150:** WARN_GROUP and APPROACH_ALLY target the most trusted visible peer via opt-in peerTrust (legacy peers[0] without it); audit candidate 14 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Social Determinism NEXT-151:** zero randomness sources by audit plus byte-identical replay proofs across the social-trauma stack; reorder-insensitivity recorded as honest linearity finding; audit candidate 16 closed; 5 new tests; full matrix green except known dashboard env failures.
+- **Multirate Cadence NEXT-152:** opt-in social/trauma cadences through HostTimeDiscipline (legacy every-tick by default); slower dynamics converge deterministically; audit candidate 17 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

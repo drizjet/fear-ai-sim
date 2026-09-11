@@ -8927,6 +8927,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "MULTIRATE_SOCIAL_CADENCE"
+ },
+ {
+ "milestone": "MULTIRATE_CADENCE_152",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "RuntimeSimulation owns a HostTimeDiscipline and gates the core-trauma lifecycle plus relationship decay on its due ticks via opt-in socialCadence and traumaCadence (default 1 is every-tick legacy); affect, contagion, pacing, and per-agent feedback stay every-tick",
+ "Documented tradeoff proven: cadence-5 trauma shows zero crystallization at 250 runtime ticks where legacy crystallizes, then converges by 1200 ticks; cadenced grievance forgives slower (0.834 versus 0.770 after 100 ticks)",
+ "Mid-build note: one edit duplicated the trauma block; repaired and re-verified with both runtime paths exercised",
+ "Advisory scheduling only; hosts choose cadences per population tier"
+ ],
+ "test_evidence": [
+ "New tests/multirate-social-cadence.test.js: 5 pass (legacy identity including explicit cadence 1; later-but-convergent crystallization; slower forgiveness; reproducibility; invalid-cadence fallback)",
+ "Full matrix 379/380 suites, 2911 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~37s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 17 closed or verified except ordering note; candidates 18 through 25 carry (next: history compaction preserving causal anchors); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Cadence slows dynamics rather than scaling deltaTicks; scaled-delta parity mode open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "HISTORY_COMPACTION_ANCHORS"
  }
  ]
 }

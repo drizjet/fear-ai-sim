@@ -13,7 +13,8 @@ import {
     PacingDirector,
     RelationshipTensorSystem,
     SocialEventEngine,
-    SOCIAL_EVENTS
+    SOCIAL_EVENTS,
+    HostTimeDiscipline
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -56,6 +57,22 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         this.social = new RelationshipTensorSystem(options.socialConfig || {});
         this.socialEvents = new SocialEventEngine();
         this.enableSocial = options.enableSocial ?? true;
+        // NEXT-152 (audit candidate 17): multi-rate social and trauma
+        // cadences through HostTimeDiscipline. 1 = every runtime tick
+        // (legacy). Higher values step those subsystems less often for
+        // background populations; dynamics run slower but deterministically.
+        const cad = (v) => {
+            const n = Math.floor(Number(v) || 1);
+            return n >= 1 ? n : 1;
+        };
+        this.timeDiscipline = new HostTimeDiscipline({
+            cadences: {
+                affect: 1,
+                social: cad(options.socialCadence),
+                coreTrauma: cad(options.traumaCadence),
+                faction: 20
+            }
+        });
         this.tickCount = 0;
     }
 
@@ -301,15 +318,16 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // first; then crystallized trait drift syncs back onto live agents
         // (their own fear machinery responds: higher N, lower R), the
         // hyper-vigilance floor applies, and calm agents accrue solace that
-        // can defuse traumas inside the sensitization window.
         let coreActive = 0;
         let coreCrystallized = 0;
         // NEXT-148: per-agent crystallized load distribution for telemetry.
         let coreLoadSum = 0;
         let coreLoadMax = 0;
         let coreLoadedAgents = 0;
+        // NEXT-152: trauma lifecycle steps only on due ticks.
+        const dueNow = this.timeDiscipline.dueSubsystems(this.tickCount);
         if (this.enableCoreTrauma) {
-            this.coreTrauma.tick(1);
+            if (dueNow.includes('coreTrauma')) this.coreTrauma.tick(1);
             for (const agent of this.agents.values()) {
                 const rec = this.coreTrauma.agentRecords.get(agent.id);
                 if (!rec) continue;
@@ -344,8 +362,8 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         }
         // Relationship decay (grievance forgiveness, obligation expiry).
         // No-op while the tensor is empty, so observe-only runs are untouched.
-        if (this.enableSocial) this.social.tick(1);
-
+        // NEXT-152: decay steps only on social-due ticks.
+        if (this.enableSocial && dueNow.includes('social')) this.social.tick(1);
         // CVII sink: read-only post-tick metrics; fault-isolated.
         if (hooks && typeof hooks.emit === 'function') {
             try {
