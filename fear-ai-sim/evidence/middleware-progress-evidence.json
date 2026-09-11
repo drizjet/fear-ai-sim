@@ -8566,6 +8566,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "DUTY_TRAUMA_COEVOLUTION"
+ },
+ {
+ "milestone": "DUTY_TRAUMA_COEVO_136",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change needed: anchor-pull recovery already composes with duty and arbitration; probe confirmed monotonic recovery before pinning",
+ "Traumatized dutiful guard (trauma 0.979, crossover 0.55) recovers across 10k safe ticks to trauma below 0.01 with crossover back at exactly 0.80, the fresh-dutiful value; decay and crossover recovery both monotonic, no overshoot",
+ "Identity frozen across the full history (bit-identical) with drift below 0.01: experience shapes the adaptive layer only, as designed"
+ ],
+ "test_evidence": [
+ "New tests/identity-duty-trauma-coevolution.test.js: 4 pass (monotonic trauma decay; monotonic crossover recovery to 0.80; identity invariance plus drift bound; full-history reproducibility)",
+ "Full matrix 364/365 suites, 2827 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~34s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontiers 16 through 20 closed as a run (duty, affinity, two crossover tables, co-evolution); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Recovery pinned for full-trauma single-dose histories; repeated trauma-then-safety cycles open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "FRONTIER_AUDIT_20_PLUS"
  }
  ]
 }
