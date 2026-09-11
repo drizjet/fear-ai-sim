@@ -261,7 +261,8 @@ export {
 } from './src/MoralDissonanceEngine.js';
 export {
     CausalEventGraph,
-    CAUSAL_DOMAINS
+    CAUSAL_DOMAINS,
+    recordDecisionOutcome
 } from './src/CausalEventGraph.js';
 export {
     HostFeedbackLoop,

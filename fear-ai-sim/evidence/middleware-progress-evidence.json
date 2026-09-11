@@ -8815,6 +8815,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "ARBITRATION_CAUSAL_NODES"
+ },
+ {
+ "milestone": "DECISION_NODES_147",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "New recordDecisionOutcome bridge in the causal module: files an arbitrate() result as a GOAL_DECISION node (deterministic id agent:decision:tick:goal, winner payload, fear severity, courage flag) with edges from host-cited antecedents; antecedents validated before any recording, so bad cause ids throw without mutating the graph",
+ "Live proof: rumor injection to dread onset to recorded SURVIVE decision traces back to the rumor as ranked root cause with the mechanism in the narrative",
+ "Bridge lives in the graph module, not the engine: zero new coupling from arbitration to causal code; advisory records only"
+ ],
+ "test_evidence": [
+ "New tests/arbitration-causal-nodes.test.js: 5 pass (recording with edges; root-cause trace; no-mutation on bad causes; loud input failures; reproducibility)",
+ "Full matrix 374/375 suites, 2884 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~42s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4 through 11, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 12 through 14 and 16 through 25 carry (next: crystallized-state telemetry hooks); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Recording is host-invoked per decision; automatic runtime emission open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "TRAUMA_TELEMETRY_HOOKS"
  }
  ]
 }

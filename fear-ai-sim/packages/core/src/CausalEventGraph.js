@@ -485,3 +485,59 @@ export class CausalEventGraph {
         };
     }
 }
+
+/**
+ * NEXT-147 (audit candidate 11): record an arbitration outcome as a
+ * causal node with edges from its cited antecedents. The host calls
+ * this after GoalArbitrationEngine.arbitrate, passing the event ids
+ * that fed the decision (rumor injections, dread onsets, social
+ * events). Antecedents are validated before anything is recorded, so
+ * a bad cause id throws without mutating the graph.
+ * @param {CausalEventGraph} graph
+ * @param {object} decision arbitrate() output
+ * @param {object} [options={}] { tick, domain, eventId,
+ *   causes: [{ id, weight, mechanism }] }
+ * @returns {object} recorded node
+ */
+export function recordDecisionOutcome(graph, decision, options = {}) {
+    if (!graph || typeof graph.recordEvent !== 'function' || typeof graph.linkCausalEdge !== 'function') {
+        throw new Error('DECISION_BRIDGE_NEEDS_GRAPH');
+    }
+    if (!decision || typeof decision.winningGoal !== 'string' || typeof decision.agentId !== 'string') {
+        throw new Error('DECISION_NEEDS_WINNER_AND_AGENT');
+    }
+    const tick = Number(options.tick ?? 0);
+    if (!Number.isFinite(tick) || tick < 0) throw new Error('DECISION_NEEDS_TICK');
+    const causes = Array.isArray(options.causes) ? options.causes : [];
+    for (const c of causes) {
+        if (!c || typeof c.id !== 'string' || !graph.nodes.has(c.id)) {
+            throw new Error(`UNKNOWN_CAUSE: ${c && c.id}`);
+        }
+        if (c.weight !== undefined && (!Number.isFinite(Number(c.weight)) || Number(c.weight) <= 0)) {
+            throw new Error(`BAD_CAUSE_WEIGHT: ${c.id}`);
+        }
+    }
+    const eventId = typeof options.eventId === 'string' && options.eventId
+        ? options.eventId
+        : `${decision.agentId}:decision:${Math.floor(tick)}:${decision.winningGoal}`;
+    const node = graph.recordEvent({
+        id: eventId,
+        tick: Math.floor(tick),
+        domain: options.domain || CAUSAL_DOMAINS.AFFECTIVE,
+        type: 'GOAL_DECISION',
+        entityId: decision.agentId,
+        severity: Math.max(0, Math.min(1, Number(decision.fear) || 0)),
+        description: `${decision.agentId} chose ${decision.winningGoal} (${decision.winningIntent || 'no-intent'}) at score ${decision.winningScore ?? '?'}${decision.courageous ? ' with courage' : ''}`,
+        payload: {
+            winningGoal: decision.winningGoal,
+            winningIntent: decision.winningIntent ?? null,
+            winningScore: decision.winningScore ?? null,
+            fear: decision.fear ?? null,
+            courageous: decision.courageous === true
+        }
+    });
+    for (const c of causes) {
+        graph.linkCausalEdge(c.id, node.id, c.weight ?? 1.0, c.mechanism || 'DECISION_INPUT');
+    }
+    return node;
+}

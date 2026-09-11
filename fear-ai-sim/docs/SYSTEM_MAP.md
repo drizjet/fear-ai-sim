@@ -322,6 +322,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Trauma Relevance NEXT-144:** opt-in trauma load lifts survival-goal relevance (crossover 0.70 at load 0 to 0.55 at load 1); duty relevance flat; audit candidate 8 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Trauma Trust NEXT-145:** crystallization erosion bridge drops trust past event damage (-0.425 to -0.675) with no passive forgiveness while grievance still forgives; audit candidate 9 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Persona Why-Not NEXT-146:** why-not answers name the strongest supporting and dragging traits behind a rejected action (coefficients pinned against decide); margins unchanged without identity; audit candidate 10 closed; 6 new tests; full matrix green except known dashboard env failures.
+- **Decision Nodes NEXT-147:** arbitration outcomes file into the causal graph with cited antecedents (rumor to dread to SURVIVE traces end to end); bad causes throw without mutating; audit candidate 11 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
