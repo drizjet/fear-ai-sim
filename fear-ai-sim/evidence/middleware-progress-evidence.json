@@ -8399,6 +8399,30 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "LONG_HORIZON_WIRES_ON"
+ },
+ {
+ "milestone": "LONG_HORIZON_WIRES_129",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Brave vs coward agents run 10k ticks through alternating threat and calm regimes with CIA blend plus trauma feed attached: onset ordering brave 16 vs coward 3, recovery ordering brave 21 vs coward 115 ticks, both crystallize 2 traumas yet ordering survives, drift bounded near 0.05, end-state calm, zero non-finite fears",
+ "Sustained-threat fear saturates for both personas by design (accumulation ratchet); identity shows in onset, urgency modulation, and recovery rather than level, consistent with situation-strength compression",
+ "No production code touched: measurement-only chunk over shipped wires",
+ "No mid-build failures"
+ ],
+ "test_evidence": [
+ "New tests/long-horizon-wires-on.test.js: 5 pass (onset ordering; recovery ordering; adaptive engagement with surviving order; no-collapse bounds; 10k determinism)",
+ "Full matrix 357/358 suites, 2789 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "20k attached ticks complete in under 1s on this machine; full matrix ~38s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 13 closed; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Frontiers 14 through 20 carry (next: adaptive blend-gain scheduling)",
+ "Urgency saturates at 1.0 for both personas under sustained severe threat (ceiling effect on the modulation readout)",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "ADAPTIVE_BLEND_GAIN"
  }
  ]
 }
