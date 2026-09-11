@@ -7107,6 +7107,29 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "TRUTH_ADJUDICATION_NEXT88",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "adjudicateByTruth(truthEventId, opts): one host truth resolution fans out through the standard correctRumor path to every rumor citing the key (corrections, pressure, trust, gating, history all apply); unknown and null ids return empty, never throw",
+ "truthEventId graduates from decorative metadata to functional link; the host still owns truth (one resolution call per truth event, not per rumor)",
+ "Mid-build failures: method first landed inside correctRumor's docblock (cut and re-pasted after the method); battery initially forgot corrections need encounter delivery (2 failures re-taught the encounter-graph property); four range collisions during repair; all fixed with zero unintended removals (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 58/58 (4 new NEXT-88 pins: fan-out to every linked rumor with per-rumor history, unlinked isolation, safe empties, confirmed pin on delivery)",
+ "Inverted-filter probe fails exactly the 4 new pins; fix restored",
+ "Full matrix 343/344 suites, 2628 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~34s"
+ ],
+ "known_gaps": [
+ "No automatic firing: adjudication still needs one explicit host call per truth event (fully automatic truth detection would require the host to cede truth ownership, which the constitution forbids)",
+ "Gate is binary at 0.4; graded acceptance proportional to trust is an open refinement"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

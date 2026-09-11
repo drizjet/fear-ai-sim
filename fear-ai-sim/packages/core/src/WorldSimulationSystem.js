@@ -427,6 +427,28 @@ export class WorldSimulationSystem {
         return master.correction;
     }
     /**
+     * NEXT-88: truth-event-keyed adjudication. Rumors cite host truth via
+     * truthEventId (decorative until now); the host resolves ONE truth
+     * event and every rumor citing it is adjudicated through the standard
+     * correctRumor path (corrections, pressure, trust, gating all apply).
+     * The host still owns truth - this only fans one resolution out to
+     * every linked belief. Unknown ids are a safe null, never an error.
+     * @param {string} truthEventId Host truth-event key
+     * @param {object} [opts] { confirmed:boolean, byGroupId, relationshipTensorSystem }
+     * @returns {Array<object>} [{ rumorId, correction }] (empty when unknown)
+     */
+    adjudicateByTruth(truthEventId, { confirmed = false, byGroupId = null, relationshipTensorSystem = null } = {}) {
+        if (truthEventId == null) return [];
+        const key = String(truthEventId);
+        const out = [];
+        for (const [id, master] of this.rumors) {
+            if (master.truthEventId !== key) continue;
+            const correction = this.correctRumor(id, { confirmed, byGroupId, relationshipTensorSystem });
+            if (correction) out.push({ rumorId: id, correction });
+        }
+        return out;
+    }
+    /**
      * NEXT-75: apply a master correction to one group's belief.
      * NEXT-76/77: refuted held beliefs cost originator-directed trust;
      * confirmed held beliefs earn it. Unheard groups change no trust.

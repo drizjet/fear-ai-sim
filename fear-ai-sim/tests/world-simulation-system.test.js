@@ -992,3 +992,59 @@ describe('NEXT-87: trust-gated correction acceptance', () => {
         expect(run()).toBe(run());
     });
 });
+
+describe('NEXT-88: truth-keyed adjudication', () => {
+    function truthWorld() {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const meet = () => world._generateSystemicEncounter(a, b,
+            { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+        return { world, a, b, meet };
+    }
+    test('1. One truth resolution adjudicates every linked rumor', () => {
+        const { world, a, b, meet } = truthWorld();
+        const r1 = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9, truthEventId: 'battle_7' });
+        const r2 = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.8, truthEventId: 'battle_7' });
+        world._generateSystemicEncounter(a, b, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+        const out = world.adjudicateByTruth('battle_7', { confirmed: false, byGroupId: a.id });
+        meet();
+        expect(out.map(o => o.rumorId).sort()).toEqual([r1.id, r2.id].sort());
+        expect(out.every(o => o.correction.confirmed === false)).toBe(true);
+        expect(b.knownRumors.has(r1.id)).toBe(false);
+        expect(b.knownRumors.has(r2.id)).toBe(false);
+        expect(world.queryHistory({ eventType: WORLD_EVENT_TYPES.RUMOR_CORRECTED }).length).toBe(2);
+    });
+    test('2. Unlinked rumors survive unrelated adjudication', () => {
+        const { world, a } = truthWorld();
+        const linked = world.createRumor('WAR_DECLARED', { severity: 0.9, truthEventId: 'battle_7' });
+        const free = world.createRumor('WAR_DECLARED', { severity: 0.9 });
+        world.adjudicateByTruth('battle_7', { confirmed: false });
+        expect(world.rumors.get(linked.id).correction.confirmed).toBe(false);
+        expect(world.rumors.get(free.id).correction).toBeNull();
+    });
+    test('3. Unknown and null truth ids are safe empties', () => {
+        const { world } = truthWorld();
+        world.createRumor('WAR_DECLARED', { severity: 0.9, truthEventId: 'battle_7' });
+        expect(world.adjudicateByTruth('no_such_battle', { confirmed: true })).toEqual([]);
+        expect(world.adjudicateByTruth(null)).toEqual([]);
+        expect(world.adjudicateByTruth(undefined)).toEqual([]);
+        expect(world.queryHistory({ eventType: WORLD_EVENT_TYPES.RUMOR_CORRECTED }).length).toBe(0);
+    });
+    test('4. Confirmed adjudication pins believer credibility', () => {
+        const { world, a, b, meet } = truthWorld();
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9, truthEventId: 'battle_7' });
+        world._generateSystemicEncounter(a, b, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+        world.adjudicateByTruth('battle_7', { confirmed: true, byGroupId: a.id });
+        meet();
+        expect(b.knownRumors.get(r.id).credibility).toBe(1.0);
+    });
+});
