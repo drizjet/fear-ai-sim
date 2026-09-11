@@ -7672,6 +7672,75 @@
  "10k and 100k-tick rumor-churn horizons unrun"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_26",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Sixth cadence audit (5 chunks since CCI-25: NEXT-101 through NEXT-105); gap ledger aggregated across all five",
+ "Red-team hit: the NEXT-105 first-window gap was unattributed (stage crossing hypothesized). Twin incident-stream comparison falsified it (identical ATTACK stages, identical 20-raid streams) and regime-contrast probing proved clamp01 ceiling clipping instead (same +0.3 magnitude: hot-regime ratio 0.5275, quiet-regime ratio exactly 0.7937)",
+ "Negative results: pair-ledger over-retract re-hypothesized and re-disproved; cross-route shares re-audited correct; no mid-build failures this chunk",
+ "Guardian CLEAN"
+ ],
+ "test_evidence": [
+ "Regime-sensitivity proof: test-72 assertion passes if and only if the regime is quiet (hot-regime same assertion FAILs)",
+ "Valley battery 74/74; full matrix 343/344 suites, 2693 pass (8 dashboard EACCES env failures, known)"
+ ],
+ "benchmark_evidence": [
+ "Attribution probes ~0.2s; valley battery ~14s; full matrix ~46s"
+ ],
+ "known_gaps": [
+ "10k and 100k-tick rumor-churn horizons unrun",
+ "Psychometric ground truth still external-participant-blocked",
+ "Correction-before-hearing one-tick flinch uncharacterized (refuted rumor heard later biases then instantly retracts)"
+ ],
+ "next_action": "RANKED_CANDIDATES",
+ "candidates": [
+ "10k and 100k-tick rumor-churn horizons",
+ "Correction-before-hearing flinch characterization",
+ "Mixed known-unknown credibility shares (one party holds, other does not)",
+ "Exoneration plus trade-restraint interaction",
+ "Sweep cost at 100k-tick scale",
+ "Long-world save-size tracking",
+ "Living-world soak 10k plus 100k ticks for degeneracy",
+ "Godot correction-trust-exoneration station (Front A playable proof)",
+ "Identity-adaptive-state layer audit (program item 1)",
+ "Functional persona signatures (program item 2)",
+ "Faction governance plus succession (CHUNK 4)",
+ "War exhaustion dynamics",
+ "Security dilemma explicit test",
+ "Faction mergers and federation paths",
+ "Nomadic camps plus return behavior",
+ "Migration pressure feedback on settlements",
+ "Causal-graph intervention ranking (advisory)",
+ "History compaction preserving causal anchors",
+ "Protocol fuzzing for rumor fields (oversized, unknown, stale)",
+ "Second external game integration",
+ "Psychometric timescale validation (BLOCKED_EXTERNAL_PARTICIPANTS)"
+ ],
+ "red_team": "CCIR-26 ceiling attribution - stage hypothesis FALSIFIED, clipping proven, pinned as NEXT-106"
+ },
+ {
+ "milestone": "CEILING_ATTRIBUTION_NEXT106",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change (characterization plus pins); test-70 mechanism comment corrected from regime divergence to ceiling clipping",
+ "Sensitivity proof is scenario-level (the claim is regime-dependence, so the probe varies regime, not code)"
+ ],
+ "test_evidence": [
+ "Valley battery 74/74 (3 new NEXT-106 pins: quiet-regime clean decay, ceiling never breached under inflow, determinism)",
+ "Regime-contrast probe: identical assertion passes quiet and fails hot",
+ "Full matrix 343/344 suites, 2693 pass (8 dashboard EACCES env failures, known); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~14s; full matrix ~46s"
+ ],
+ "known_gaps": [
+ "10k and 100k-tick rumor-churn horizons unrun",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Correction-before-hearing flinch uncharacterized"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

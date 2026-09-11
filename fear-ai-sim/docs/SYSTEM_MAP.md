@@ -279,6 +279,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Exoneration Sensitivity NEXT-103:** disabling the sweep moves posture and trade inputs by exactly 0.10 synchronously (no production change, instance shadowing); gap erasure first read as attractor dampening, corrected in NEXT-105 (ceiling saturation after a raid). Pinned in valley battery.
 - **Rumor-Churn Soak NEXT-104:** 2-seed churn benchmark (2100 ticks, ~0.25s) proves exoneration ledgers stay bounded, snapshots saturate, digests repeat; fills the turnover gap the 5k/100k soaks leave. Pinned in valley battery.
 - **Perturbation Decay NEXT-105:** small grievance gaps decay at exactly the configured half-life (both signs, both seeds); large ones rejoin after one divergent window; corrects NEXT-103 test 63 (erasure was ceiling saturation after a raid, not feedback). Pinned in valley battery.
+- **Ceiling Attribution NEXT-106 (CCIR-26 hit):** first-window extra decay proven to be clamp01 clipping under raid inflow (stage hypothesis falsified by identical twin streams; quiet-regime control decays clean); test-70 comment corrected. Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

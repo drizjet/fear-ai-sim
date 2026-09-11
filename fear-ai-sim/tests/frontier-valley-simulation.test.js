@@ -1126,13 +1126,46 @@ describe('NEXT-105: perturbation decay mapping', () => {
     });
     test('70. Large perturbations rejoin the half-life track after one window', () => {
         const gs = gaps(42, 0.3);
-        // First window sheds extra (regime divergence); afterwards the
-        // configured decay resumes instead of collapsing or exploding.
+        // First window sheds extra (NEXT-106: ceiling clipping under raid
+        // inflow, not stage divergence); afterwards the configured decay
         expect(gs[1]).toBeLessThan(0.3 * HALF_20);
         expect(gs[2] / gs[1]).toBeCloseTo(HALF_20, 2);
         expect(gs[3]).toBeLessThan(gs[2]);
     });
     test('71. Decay mapping is deterministic across reruns', () => {
         expect(gaps(42, 0.1)).toEqual(gaps(42, 0.1));
+    });
+});
+
+describe('NEXT-106: ceiling attribution (CCIR-26)', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    const HALF_20 = Math.pow(2, -20 / 60);
+    function gapsAt(seed, at, perturb) {
+        const a = new FrontierValleySimulation({ seed });
+        const b = new FrontierValleySimulation({ seed });
+        a.advance(at); b.advance(at);
+        const g = (s) => s.factionSystem.getBilateralStance(S, B).grievance;
+        b.factionSystem.getBilateralStance(S, B).grievance += perturb;
+        const out = [Math.abs(g(a) - g(b))];
+        for (let t = 0; t < 40; t++) {
+            a.advance(1); b.advance(1);
+            if ((t + 1) % 20 === 0) out.push(Math.abs(g(a) - g(b)));
+        }
+        return { gaps: out, max: Math.max(g(a), g(b)) };
+    }
+    test('72. Large perturbations decay cleanly in a quiet regime', () => {
+        // Same +0.3 magnitude as test 70, but the simmered baseline leaves
+        // headroom: no clipping, so the half-life holds from window one.
+        // Falsifies stage-divergence (same stages crossed, no extra decay).
+        const { gaps } = gapsAt(42, 600, 0.3);
+        expect(gaps[1] / gaps[0]).toBeCloseTo(HALF_20, 3);
+        expect(gaps[2] / gaps[1]).toBeCloseTo(HALF_20, 3);
+    });
+    test('73. Perturbed grievance never breaches the ceiling under inflow', () => {
+        const { max } = gapsAt(42, 60, 0.3);
+        expect(max).toBeLessThanOrEqual(1.0);
+    });
+    test('74. Ceiling attribution is deterministic', () => {
+        expect(gapsAt(42, 600, 0.3)).toEqual(gapsAt(42, 600, 0.3));
     });
 });
