@@ -114,12 +114,52 @@ export class AffectiveAgent {
         // Subsystems
         this.fearCore = new FearCore(fearCoreConfig);
         this.habituation = new HabituationSystem(options.habituationConfig || {});
+        // NEXT-114: opt-in identity-architecture attachment (wire-or-retire
+        // triage execution). A CharacterIdentityArchitecture instance may be
+        // supplied via options.identityArchitecture with a blend weight in
+        // [0,1] (default 0 = fully detached, bit-identical legacy behavior).
+        // When attached, agent OCEAN+resilience traits seed the CIA identity
+        // (riskTolerance/socialOrientation/loyalty default from fear,
+        // extraversion, agreeableness; options.identityTraits overrides).
+        // CIA output only modulates resolved intent urgency (never movement,
+        // damage, or host state) and is exposed as result.identity_frame.
+        this.identityArch = options.identityArchitecture ?? null;
+        const rawBlend = Number(options.identityBlend ?? 0);
+        this.identityBlend = Number.isFinite(rawBlend)
+            ? Math.max(0, Math.min(1, rawBlend))
+            : 0;
+        if (this.identityArch) {
+            const override = options.identityTraits || {};
+            const identitySeed = {
+                openness: this.traits.openness,
+                conscientiousness: this.traits.conscientiousness,
+                extraversion: this.traits.extraversion,
+                agreeableness: this.traits.agreeableness,
+                neuroticism: this.traits.neuroticism,
+                riskTolerance: 1 - this.traits.fear,
+                socialOrientation: this.traits.extraversion,
+                loyalty: this.traits.agreeableness,
+                leadership: this.traits.leadership,
+                resilience: this.traits.resilience,
+                ...override
+            };
+            try {
+                this.identityArch.registerCharacter(this.id, identitySeed, {
+                    constraints: Array.isArray(options.identityConstraints)
+                        ? options.identityConstraints
+                        : []
+                });
+            } catch (err) {
+                // Shared architecture across re-constructed agents: reuse the
+                // existing registration instead of failing construction.
+                if (!String(err?.message || '').startsWith('CHARACTER_ALREADY_REGISTERED')) throw err;
+            }
+        }
 
         // History trace
         this.tickCount = 0;
         this.lastResult = null;
     }
-
     /**
      * Scale 0..1 fear to FearCore's 0..5 raw fear threshold scale
      * (PANIC threshold is 3.8)
@@ -317,6 +357,37 @@ export class AffectiveAgent {
 
         // 10. Resolve Action Intent & Audio Hints
         const actionIntent = IntentResolver.resolveIntent(this, observations);
+        // 10b. NEXT-114 opt-in identity blend. CIA tendencies bias the urgency
+        // of the already-resolved intent along the matching tendency axis.
+        // Skipped entirely when detached or blend is 0 (legacy path untouched).
+        let identityFrame = null;
+        if (this.identityArch && this.identityBlend > 0) {
+            const frame = this.identityArch.tick(this.id, {}, {
+                fear: this.currentFear,
+                urgency: Number.isFinite(actionIntent.urgency) ? actionIntent.urgency : 0,
+                panic: coreResult.state === 'PANIC' ? 1 : 0,
+                arousal: this.arousal,
+                perceivedDanger: Math.max(0, Math.min(1, totalPerceivedThreat)),
+                fatigue: 1 - this.energy,
+                groupPanic: Math.max(0, Math.min(1, contagionFear)),
+                situationalConfidence: this.currentDominance
+            });
+            identityFrame = frame;
+            const t = frame.tendencies;
+            const axisFor = (type) => {
+                if (type === 'FLEE_FROM' || type === 'SEEK_COVER') return t.flee;
+                if (type === 'CONFRONT_THREAT') return t.stand;
+                if (type === 'APPROACH_ALLY' || type === 'WARN_GROUP') {
+                    return Math.max(t.help, t.rally);
+                }
+                if (type === 'INVESTIGATE_SOUND' || type === 'CAUTIOUS_EXPLORE') return t.investigate;
+                return 0.5;
+            };
+            const axis = axisFor(actionIntent.type);
+            const base = Number.isFinite(actionIntent.urgency) ? actionIntent.urgency : 0;
+            actionIntent.urgency = Math.max(0, Math.min(1,
+                base + this.identityBlend * (axis - 0.5) * 0.3));
+        }
         const audioHints = this.enablePsychoacoustics
             ? PsychoacousticSynthesizer.computeAudioHints({
                 rawFear: this.currentFear,
@@ -369,6 +440,7 @@ export class AffectiveAgent {
                 }
             }
         };
+        if (identityFrame) result.identity_frame = identityFrame;
 
         this.lastResult = result;
         return result;

@@ -7979,6 +7979,31 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "WIRE_CIA_OPT_IN"
+ },
+ {
+ "milestone": "CIA_OPT_IN_WIRE_114",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "AffectiveAgent accepts options.identityArchitecture plus identityBlend in [0,1] (default 0), identityTraits overrides, identityConstraints; agent OCEAN plus resilience traits seed CIA identity (riskTolerance from 1 minus fear, socialOrientation from extraversion, loyalty from agreeableness); shared-architecture re-construction reuses registration",
+ "Per-tick blend feeds live fear, urgency, panic, arousal, perceived danger, fatigue, contagion, dominance into CIA tick and biases resolved intent urgency along the matching tendency axis (flee maps FLEE_FROM and SEEK_COVER, stand maps CONFRONT_THREAT, help and rally map ally and warning intents, investigate maps investigation intents, unmapped intents neutral); frame exposed as result.identity_frame only when blending",
+ "Advisory-only: urgency scalar on an already-resolved semantic intent; no movement, damage, inventory, or host-state writes; host authority intact",
+ "Mid-build repair: initial constructor edit dropped the closing brace (caught by node check, restored); whole-result toEqual risk avoided by attaching identity_frame only when blending"
+ ],
+ "test_evidence": [
+ "New tests/identity-blend-wire.test.js: 6 pass (no frame key by default; blend-0 bit-identical to detached; coward FLEE urgency rises 0.65 to 0.8; brave FLEE urgency falls 0.65 to 0.63; cross-construction determinism; trait seeding plus overrides)",
+ "Full matrix 344/345 suites, 2718 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~45s"
+ ],
+ "known_gaps": [
+ "Triage execution continues: crystallization feed, vault LOD cycle (two wiring chunks remain)",
+ "Blend weight fixed per agent (no adaptive gain scheduling)",
+ "Moral engine EXPERIMENTAL by explicit verdict (revisit on demand)",
+ "FPS live threshold design open",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "WIRE_CRYSTALLIZATION_FEED"
  }
  ]
 }
