@@ -7575,6 +7575,30 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "PAIR_SHARES_NEXT102",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Pair bias restructured into collect-then-fire: contributors gathered per pair per encounter, one incident fired (bias behavior identical), each rumor ledgered a credibility-weighted share via the hoisted credOf reader (routes duplicate removed)",
+ "Sweep posture relief multiplies the share; legacy share-less entries retract in full; genuine zero shares respected via isFinite guards on both ledgers",
+ "Mid-build failures: three mis-anchors ate the loop header, map init, and route call; each caught by parse check plus exact-removal review and restored (recorded, not hidden)",
+ "Caught by test, not reasoning: same-faction hearing parties double-pushed contributor rids (quarter shares); deduped to one entry per rumor per pair"
+ ],
+ "test_evidence": [
+ "Valley battery 60/60 (3 new NEXT-102 pins: single bias with half shares, half-then-full retraction, vivid owns four-fifths)",
+ "Share-forced-to-1 probe fails exactly tests 58, 59, 60 plus 49 (first-wins pin correctly superseded in mechanism but still passing under shares); restored",
+ "Full matrix 343/344 suites, 2679 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~12s; full matrix ~42s"
+ ],
+ "known_gaps": [
+ "Rumor-hearsay thread fully closed (93 through 102): bias, idempotency, posture and route retraction, decay residuals, shared and weighted attribution both ledgers, bounded memory, hearing-site fallback",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

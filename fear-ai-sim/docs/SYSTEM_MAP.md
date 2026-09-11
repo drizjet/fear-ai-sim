@@ -275,6 +275,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Credibility-Weighted Shares NEXT-99:** route-bias shares follow heard credibility (neutral fallback keeps instance-free hearings equal); lone rumors own the whole bias; rumor-hearsay arc (93-99) complete. Pinned in valley battery.
 - **Bounded Exoneration Memory NEXT-100 (CCIR-25 hit):** sweep checks master-vanishing before the exonerated-skip and drops ledger entries plus set ids of evicted rumors; long worlds no longer retain one id per refuted rumor ever. Pinned in valley battery.
 - **Hearing-Site Fallback NEXT-101:** unprovided rumor origins flag absence instead of masquerading as threats at the map origin; unlocated hearings warn the hearing site; explicit zeros still route literally; thread gaps from the rumor arc closed except pair shares. Pinned in world + valley batteries.
+- **Pair Shares NEXT-102:** pair bias fires once per encounter with credibility-weighted shares per contributing rumor (same-faction parties deduped); posture relief mirrors the route side; rumor-hearsay thread fully closed. Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

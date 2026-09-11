@@ -935,3 +935,63 @@ describe('NEXT-101: unlocated rumors warn the hearing site', () => {
         expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeCloseTo(riverBase + 0.10, 9);
     });
 });
+
+describe('NEXT-102: pair-ledger credibility shares', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    function twoSubjects(sim) {
+        const mk = () => sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        return [mk(), mk()];
+    }
+    function hearBoth(sim, r1, r2) {
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [r1.id, r2.id]
+        }]);
+    }
+    function refute(sim, rumor) {
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim._recordEncounterConsequences([]);
+    }
+    const grievance = (sim) => sim.factionSystem.getBilateralStance(S, B).grievance;
+    test('58. One two-rumor hearing biases the pair once with half shares', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const [r1, r2] = twoSubjects(sim);
+        const base = grievance(sim);
+        hearBoth(sim, r1, r2);
+        expect(grievance(sim)).toBeCloseTo(base + 0.10, 9);
+        expect(sim._hearsayLedger.get(r1.id)[0].share).toBe(0.5);
+        expect(sim._hearsayLedger.get(r2.id)[0].share).toBe(0.5);
+    });
+    test('59. Refuting one of two retracts half; both restores baseline', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const [r1, r2] = twoSubjects(sim);
+        const base = grievance(sim);
+        hearBoth(sim, r1, r2);
+        refute(sim, r1);
+        expect(grievance(sim)).toBeCloseTo(base + 0.05, 9);
+        refute(sim, r2);
+        expect(grievance(sim)).toBeCloseTo(base, 9);
+    });
+    test('60. Vivid subject rumor owns most of the pair bias', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const [v, b] = twoSubjects(sim);
+        for (const gid of ['caravan_merchant_1', 'caravan_merchant_2']) {
+            const grp = sim.worldSystem.groups.get(gid);
+            grp.knownRumors.set(v.id, { rumorId: v.id, credibility: 0.8, fidelity: 1.0, perceivedSeverity: 0.9, hops: 1, receivedTick: 0 });
+            grp.knownRumors.set(b.id, { rumorId: b.id, credibility: 0.2, fidelity: 1.0, perceivedSeverity: 0.9, hops: 1, receivedTick: 0 });
+        }
+        const base = grievance(sim);
+        hearBoth(sim, v, b);
+        const share = (r) => sim._hearsayLedger.get(r.id)[0].share;
+        expect(share(v)).toBeCloseTo(0.8, 9);
+        expect(share(b)).toBeCloseTo(0.2, 9);
+        refute(sim, v);
+        expect(grievance(sim)).toBeCloseTo(base + 0.02, 9);
+        refute(sim, b);
+        expect(grievance(sim)).toBeCloseTo(base, 9);
+    });
+});

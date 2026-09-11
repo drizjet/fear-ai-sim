@@ -534,15 +534,17 @@ export class FrontierValleySimulation {
             if (master.correction && master.correction.confirmed === false) {
                 const griefHalf = Number(this.factionSystem.config?.grievanceHalfLifeTicks) || 60;
                 const dangerHalf = Number(this.civSystem.config?.routeDangerHalfLifeTicks) || 80;
-                for (const { perceiver, subject, tick } of this._hearsayLedger.get(rid) ?? []) {
+                for (const { perceiver, subject, tick, share } of this._hearsayLedger.get(rid) ?? []) {
                     const elapsed = Math.max(0, this.currentTick - (tick ?? this.currentTick));
-                    const relief = 0.10 * Math.pow(2, -elapsed / griefHalf);
+                    // NEXT-102: credibility shares, mirroring the route side.
+                    // Legacy entries without a share retract in full.
+                    const relief = 0.10 * (Number.isFinite(Number(share)) ? Number(share) : 1) * Math.pow(2, -elapsed / griefHalf);
                     this.factionSystem.recordIncident(subject, perceiver, INCIDENT_TYPES.RUMOR_EXONERATED, { rumorId: rid, relief });
                 }
                 for (const entry of this._hearsayRoutes.get(rid) ?? []) {
                     const routeId = entry?.routeId ?? entry;
                     const elapsed = Math.max(0, this.currentTick - ((entry?.tick) ?? this.currentTick));
-                    const share = Number(entry?.share) || 1;
+                    const share = Number.isFinite(Number(entry?.share)) ? Number(entry.share) : 1;
                     const relief = 0.10 * share * Math.pow(2, -elapsed / dangerHalf);
                     this.civSystem.recordRouteIncident(routeId, 'RUMOR_EXONERATED', -relief);
                 }
@@ -641,9 +643,19 @@ export class FrontierValleySimulation {
                 const routes = new Set();
                 // NEXT-93: faction-attributed menace also biases posture.
                 // WAR_DECLARED / FACTION_BETRAYAL rumors naming a subject
-                // faction read as hearsay incidents for each hearing party's
-                // faction (own-faction subjects excluded). One pair each.
-                const heardPairs = new Set();
+                // faction (own-faction subjects excluded). One pair bias
+                // per encounter, split into credibility shares per rumor
+                // (NEXT-102: pair key -> { perceiver, subject, rids }).
+                const pairContrib = new Map();
+                // NEXT-99 reader, hoisted for NEXT-102: mean held
+                // credibility across both hearing parties (neutral 0.5
+                // when neither holds the rumor).
+                const credOf = (id) => {
+                    const held = [gA, gB].map((gp) => gp?.knownRumors?.get(id)?.credibility);
+                    const known = held.filter((c) => Number.isFinite(Number(c)));
+                    if (known.length === 0) return 0.5;
+                    return known.reduce((a, b) => a + Number(b), 0) / known.length;
+                };
                 for (const rid of enc.heardThreatRumorIds ?? []) {
                     const master = this.worldSystem.rumors.get(rid);
                     const o = master?.originLocation;
@@ -658,19 +670,31 @@ export class FrontierValleySimulation {
                     if ((master?.topic === RUMOR_TOPICS.WAR_DECLARED || master?.topic === RUMOR_TOPICS.FACTION_BETRAYAL) && subject) {
                         for (const g of [gA, gB]) {
                             const f = g?.factionId;
-                            if (f && f !== subject && !heardPairs.has(f + '>' + subject)) {
-                                heardPairs.add(f + '>' + subject);
-                                this.factionSystem.recordIncident(subject, f, INCIDENT_TYPES.RUMOR_HEARSAY, {
-                                    encounter: enc.encounterId ?? null, rumorId: rid
-                                });
-                                // NEXT-95: remember who was biased by which
-                                // rumor so a later refutation retracts it.
-                                // NEXT-97: stamp the bias tick for
-                                // decay-aware retraction.
-                                if (!this._hearsayLedger.has(rid)) this._hearsayLedger.set(rid, []);
-                                this._hearsayLedger.get(rid).push({ perceiver: f, subject, tick: this.currentTick });
+                            if (f && f !== subject) {
+                                // NEXT-102: every contributing rumor shares
+                                // the pair bias; the incident below still
+                                // fires once per pair per encounter.
+                                if (!pairContrib.has(f + '>' + subject)) {
+                                    pairContrib.set(f + '>' + subject, { perceiver: f, subject, rids: [] });
+                                }
+                                const seen = pairContrib.get(f + '>' + subject).rids;
+                                // Same-faction hearing parties share the pair:
+                                // one entry per rumor, not per party.
+                                if (!seen.includes(rid)) seen.push(rid);
                             }
                         }
+                    }
+                }
+                // NEXT-102: fire each pair bias once, ledgering credibility
+                // shares per contributing rumor (bias behavior unchanged).
+                for (const { perceiver, subject, rids } of pairContrib.values()) {
+                    this.factionSystem.recordIncident(subject, perceiver, INCIDENT_TYPES.RUMOR_HEARSAY, {
+                        encounter: enc.encounterId ?? null, rumorId: rids[0]
+                    });
+                    const total = rids.reduce((a, id) => a + credOf(id), 0) || 1;
+                    for (const rid of rids) {
+                        if (!this._hearsayLedger.has(rid)) this._hearsayLedger.set(rid, []);
+                        this._hearsayLedger.get(rid).push({ perceiver, subject, tick: this.currentTick, share: credOf(rid) / total });
                     }
                 }
                 if (routes.size === 0) routes.add(this._nearestRouteTo(gA?.position));
@@ -684,16 +708,8 @@ export class FrontierValleySimulation {
                         const seen = this._hearsayRoutes.get(rid);
                         // NEXT-98: encounter-level bias is shared across all
                         // rumors heard together (one +0.10, not one each).
-                        // NEXT-99: shares follow heard credibility - a vivid
-                        // rumor owns more of the fear than background
-                        // chatter. Missing instances read neutral (0.5), so
-                        // instance-free hearings stay exactly equal.
-                        const credOf = (id) => {
-                            const held = [gA, gB].map((gp) => gp?.knownRumors?.get(id)?.credibility);
-                            const known = held.filter((c) => Number.isFinite(Number(c)));
-                            if (known.length === 0) return 0.5;
-                            return known.reduce((a, b) => a + Number(b), 0) / known.length;
-                        };
+                        // NEXT-99: shares follow heard credibility (hoisted
+                        // credOf above); missing instances stay equal.
                         const ids = enc.heardThreatRumorIds ?? [];
                         const total = ids.reduce((a, id) => a + credOf(id), 0) || 1;
                         const share = credOf(rid) / total;
