@@ -21,6 +21,8 @@ export {
 
 export { ProtocolValidator } from './src/validator.js';
 
+export { runAdapterConformance, canonicalAdapterSample } from './src/AdapterConformance.js';
+
 export {
     BinaryWireProtocol,
     BinaryFrameReader,

@@ -8324,6 +8324,31 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "SECOND_EXTERNAL_HOST"
+ },
+ {
+ "milestone": "ADAPTER_KIT_126",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "New packages/protocol/src/AdapterConformance.js exported from protocol index: server-free battery over handshake, registration, tick request and response, declared intent and band vocabularies, version-major agreement, unknown-field tolerance, message-type constants, plus canonical reference payloads third parties copy per language",
+ "Harness vocabularies pinned to canonical core sets with a drift-alarm test (INTENT_CODES equal ACTION_INTENTS; every FEAR_BAND accepted)",
+ "Machine survey: no second pre-existing external game on this host (sibling pixel-pets dir holds sprite assets only; Outpost Omega is in-repo by its own honest label); live second integration therefore BLOCKED on host designation, not on middleware readiness",
+ "Advisory protocol surface only; no simulation or host behavior touched",
+ "Mid-build note: helper edit ate the check function (caught by test run, restored)"
+ ],
+ "test_evidence": [
+ "New tests/adapter-conformance.test.js: 5 pass (canonical all-green; broken handshake fails exactly handshake checks; rogue intent fails response plus vocabulary; drift alarm; empty adapter fails without throwing)",
+ "Full matrix 355/356 suites, 2779 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~48s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 10 still open: BLOCKED_EXTERNAL_HOST (no second pre-existing game designated; per project rule the host project must be named before touching another codebase)",
+ "CCI-28 frontiers 1 through 9 closed; frontiers 11 through 20 carry less the kit work",
+ "Shipped engine adapters (node, python, godot, csharp) not yet run through the harness against live payloads (needs loopback bind, denied in this sandbox)",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "DESIGNATE_SECOND_HOST"
  }
  ]
 }
