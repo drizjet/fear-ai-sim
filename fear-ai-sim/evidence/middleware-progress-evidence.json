@@ -9041,6 +9041,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_22"
+ },
+ {
+ "milestone": "DUTY_COLLECTIVE_COURAGE_157",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: joint characterization composing CollectiveCourageHarness morale verdicts with per-member GoalArbitrationEngine duty-vs-survival arbitration at harness fear",
+ "Led squads at moderate loss agree (morale holds plus unanimous duty at 0.5); duty priority alone flips the squad 0/6 to 6/6 while morale is unchanged; high-fear divergence (holds yet flees) restores at duty 0.8",
+ "Honest split documented: arbitration is leadership-blind (identical goal fractions across arms whose morale verdicts differ), so collective courage needs both systems and neither alone suffices"
+ ],
+ "test_evidence": [
+ "New tests/duty-collective-courage.test.js: 6 pass (agreement zone; duty conditioning; divergence plus restoration; leadership blindness; joint break; exact replay)",
+ "Full matrix 384/385 suites, 2937 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~75s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 22 closed or verified; candidates 23 through 25 carry (next: identity-conditioned succession effects); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Joint uses shared squad fear per member; per-member fear heterogeneity open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_23"
  }
  ]
 }
