@@ -182,6 +182,82 @@ export class FunctionalPersonaSignatures {
         }
         return pop;
     }
+    /**
+     * NEXT-124 (CCI-28 frontier 8): full NxN confusion matrix. Each
+     * persona spawns K seeded noisy twins (±noise per trait); every twin
+     * is retrieved against the full archetype set. matrix[trueId]
+     * [predictedId] counts retrievals; the diagonal is correct recall.
+     * Per-trait confusion averages the trait deltas of mistaken pairs
+     * (small delta = the dimension that fails to discriminate).
+     * Deterministic in (archetypes, twins, noise, seed).
+     */
+    confusionMatrix(archetypes, { twins = 5, noise = 0.05, seed = 777 } = {}) {
+        if (!Array.isArray(archetypes) || archetypes.length < 2) throw new Error('POPULATION_TOO_SMALL');
+        const population = archetypes.map((a) => ({ id: a.id, traits: a.traits || a }));
+        let s = (seed >>> 0) || 1;
+        const next = () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 0x100000000; };
+        const matrix = {};
+        for (const a of population) {
+            matrix[a.id] = {};
+            for (const b of population) matrix[a.id][b.id] = 0;
+        }
+        const traitKeys = ['openness', 'conscientiousness', 'extraversion', 'agreeableness', 'neuroticism', 'resilience', 'leadership', 'riskTolerance'];
+        const traitGaps = {};
+        for (const k of traitKeys) traitGaps[k] = { sum: 0, n: 0 };
+        const discriminatorVotes = {};
+        let correct = 0;
+        let total = 0;
+        for (const a of population) {
+            for (let k = 0; k < twins; k++) {
+                const twin = {};
+                for (const key of traitKeys) {
+                    const base = Number.isFinite(a.traits[key]) ? a.traits[key] : 0.5;
+                    twin[key] = clamp01(base + (next() * 2 - 1) * noise);
+                }
+                const res = this.identify(twin, population);
+                matrix[a.id][res.predictedId] += 1;
+                total += 1;
+                if (res.predictedId === a.id) {
+                    correct += 1;
+                    const fn = res.strongestDiscriminator?.function;
+                    if (fn) discriminatorVotes[fn] = (discriminatorVotes[fn] || 0) + 1;
+                } else {
+                    const mistaken = population.find((p) => p.id === res.predictedId);
+                    for (const key of traitKeys) {
+                        const d = Math.abs((a.traits[key] ?? 0.5) - (mistaken.traits[key] ?? 0.5));
+                        traitGaps[key].sum += d;
+                        traitGaps[key].n += 1;
+                    }
+                }
+            }
+        }
+        const perTraitConfusion = {};
+        for (const k of traitKeys) {
+            perTraitConfusion[k] = traitGaps[k].n > 0 ? round4(traitGaps[k].sum / traitGaps[k].n) : null;
+        }
+        const mistakes = [];
+        for (const a of population) {
+            for (const b of population) {
+                if (a.id !== b.id && matrix[a.id][b.id] > 0) {
+                    mistakes.push({ trueId: a.id, mistakenId: b.id, count: matrix[a.id][b.id] });
+                }
+            }
+        }
+        mistakes.sort((x, y) => y.count - x.count || (x.trueId < y.trueId ? -1 : 1));
+        const discriminators = Object.entries(discriminatorVotes)
+            .map(([fn, votes]) => ({ function: fn, votes }))
+            .sort((x, y) => y.votes - x.votes);
+        return {
+            matrix,
+            accuracy: round4(correct / total),
+            correct,
+            total,
+            mistakes,
+            nearestMistaken: mistakes.length > 0 ? mistakes[0] : null,
+            perTraitConfusion,
+            strongestDiscriminators: discriminators
+        };
+    }
 
     auditImmutability() {
         return {

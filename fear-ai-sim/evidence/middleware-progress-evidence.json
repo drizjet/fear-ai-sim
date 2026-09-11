@@ -8275,6 +8275,30 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "PERSONA_CONFUSION_MATRIX"
+ },
+ {
+ "milestone": "PERSONA_CONFUSION_MATRIX_124",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FunctionalPersonaSignatures gains confusionMatrix: K seeded noisy twins per persona retrieved against the full set; NxN counts, accuracy, ranked mistakes with nearest mistaken persona, per-trait confusion gaps, strongest-discriminator votes; deterministic in inputs",
+ "Measured gradient on 12 archetypes plus N-plus-A near-neighbors: accuracy 1.0 at noise 0.05 (cartoons separate), 0.97 at 0.05 with neighbors, 0.59 at 0.10, 0.40 at 0.15; confusions concentrate on the perturbed axes (agreeableness and neuroticism largest gaps), confirming the instrument reads the right dimensions",
+ "Pure-function analysis over trait vectors; no host state; advisory retrieval only",
+ "No mid-build production failures"
+ ],
+ "test_evidence": [
+ "New tests/persona-confusion-matrix.test.js: 6 pass (archetype separation; monotone noise degradation; mistake cells backed by matrix; blurred-dimension identification; discriminator vote conservation; determinism)",
+ "Existing functional-persona-signatures suite unaffected (25/25 combined pass)",
+ "Full matrix 354/355 suites, 2774 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; matrix suite ~16s (signature math dominates); full matrix ~38s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontiers 1 through 8 closed; frontiers 9 through 20 carry (next: Godot stations observe the three new wires)",
+ "Matrix covers trait-noise twins only; scenario-noise and sensor-noise retrieval variants open",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "GODOT_WIRE_STATIONS"
  }
  ]
 }
