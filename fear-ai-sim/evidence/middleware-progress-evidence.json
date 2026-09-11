@@ -9172,6 +9172,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_2"
+ },
+ {
+ "milestone": "MEMORY_CONDITIONED_ARBITRATION_162",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "GoalArbitrationEngine.arbitrate gains opt-in context.memoryLoad (default 0, legacy-exact): hot threat-memory load lifts survival-goal relevance through the same hypervigilance term as traumaLoad, stacking additively to a cap of 1",
+ "Load is computed live in-test as top threat-memory relevance from MemoryRelevanceScorer over LayeredMemorySystem episodes: fresh ambush scores above 0.5 and moves the crossover earlier, unrelated memories score no load, stale memories fade the shift back",
+ "Mid-build note: first probe crashed on rank returning an object instead of an array; fixed by destructuring ranked before iterating, test setup only"
+ ],
+ "test_evidence": [
+ "New tests/memory-conditioned-arbitration.test.js: 7 pass (legacy exactness; ambush shift; unrelated silence; recency fade; trauma-memory stacking cap; malformed safety; exact replay)",
+ "Trauma-relevance and arbitration suites green (13 pass), confirming the additive formula preserves trauma-only behavior",
+ "Full matrix 389/390 suites, 2965 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~86s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 3 through 24 carry (next: causal explanations citing relationships); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Memory load mapping (top threat score) is test-side convention; no canonical memory-to-arbitration bridge function ships, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_3"
  }
  ]
 }

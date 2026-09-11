@@ -86,11 +86,17 @@ function goalRelevance(goalType, fear) {
 // NEXT-144: trauma-loaded relevance. Crystallized trauma makes survival
 // goals salient even at low immediate fear (hypervigilance); duty-goal
 // relevance stays flat. Load 0 reproduces goalRelevance exactly.
+// NEXT-162: hot threat memories do the same through opt-in memoryLoad
+// (e.g. top threat-memory relevance from MemoryRelevanceScorer). The two
+// loads stack additively to a cap of 1: lived memory and crystallized
+// trauma both feed hypervigilance.
 const SURVIVAL_GOALS = new Set([GOAL_TYPES.SURVIVE, GOAL_TYPES.REACH_SAFETY]);
-function traumaRelevance(goalType, fear, traumaLoad) {
+function traumaRelevance(goalType, fear, traumaLoad, memoryLoad) {
     const base = goalRelevance(goalType, fear);
-    if (!(traumaLoad > 0) || !SURVIVAL_GOALS.has(goalType)) return base;
-    return Math.min(1, base + 0.3 * traumaLoad * (1 - base));
+    const rawSum = (traumaLoad > 0 ? traumaLoad : 0) + (memoryLoad > 0 ? memoryLoad : 0);
+    const load = Math.min(1, rawSum);
+    if (!(load > 0) || !SURVIVAL_GOALS.has(goalType)) return base;
+    return Math.min(1, base + 0.3 * load * (1 - base));
 }
 
 // NEXT-118 (CCI-28 frontier 2): CIA tendency axis per goal type. Identity
@@ -183,6 +189,10 @@ export class GoalArbitrationEngine {
         // survival-goal relevance (default 0 = legacy relevance).
         const rawLoad = Number(context.traumaLoad ?? 0);
         const traumaLoad = Number.isFinite(rawLoad) ? Math.max(0, Math.min(1, rawLoad)) : 0;
+        // NEXT-162 (post-25 candidate 2): hot threat-memory load lifts the
+        // same relevance (default 0 = legacy relevance).
+        const rawMem = Number(context.memoryLoad ?? 0);
+        const memoryLoad = Number.isFinite(rawMem) ? Math.max(0, Math.min(1, rawMem)) : 0;
         const vetoed = [];
 
         const scored = [];
@@ -211,7 +221,7 @@ export class GoalArbitrationEngine {
             }
             if (vetoedFlag) vetoed.push({ goal: goal.type, vetoReason, fallbackIntent: intent });
 
-            const relevance = traumaRelevance(goal.type, fear, traumaLoad);
+            const relevance = traumaRelevance(goal.type, fear, traumaLoad, memoryLoad);
             const axis = tendencyAxisFor(goal.type);
             const tWeight = tendencyWeight(axis, tendencies, identityBlend);
             const bWeight = allyBondWeight(goal.type, allyBond, bondBlend);
