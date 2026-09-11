@@ -8657,6 +8657,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "RUMOR_ARBITRATION_CHAIN"
+ },
+ {
+ "milestone": "RUMOR_ARBITRATION_140",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change needed: InformationPropagationEngine, AnticipatoryFearEngine, and GoalArbitrationEngine compose without glue; probe confirmed the flip before pinning",
+ "Six propagations of a false army rumor build dread 0.685 with zero observations; feeding dread as fear flips PROTECT_ALLY (0.45) to SURVIVE (0.6) while sensed-fear-only arbitration holds protect",
+ "Unconnected agents never hold the rumor and keep protect; correction plus 200 quiet ticks extinguishes dread and restores protect",
+ "Advisory state only; hosts choose whether heard dread enters arbitration fear"
+ ],
+ "test_evidence": [
+ "New tests/rumor-arbitration-chain.test.js: 5 pass (actionable hearsay dread; flip at zero sensed fear; unconnected control; correction recovery; reproducibility)",
+ "Full matrix 367/368 suites, 2844 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~37s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 5 through 14 and 16 through 25 carry (next: rumor provenance in causal explanations); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Dread-to-fear mapping is host glue pinned by test, not an engine input; a first-class dread channel in arbitration open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "RUMOR_CAUSAL_PROVENANCE"
  }
  ]
 }
