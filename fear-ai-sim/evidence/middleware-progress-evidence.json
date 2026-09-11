@@ -7599,6 +7599,30 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "EXONERATION_SENSITIVITY_NEXT103",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: sweep cost measured first (300-tick advance ~5 to 9ms total with or without ledgers; early-exit optimization would save nothing - recorded, not built)",
+ "Interaction mutation via instance shadowing (no test-only production flags)",
+ "Key finding: synchronous sweep delta is exactly 0.10, but 50 live ticks converge both twins to 0.8909 - the valley has strong grievance attractors that erase single perturbations (documented, not hidden)",
+ "Mid-build failure: a range edit ate the route constant (caught by immediate run); test-scenario error (decay wash) replaced by controlled synthetic hearing instead of threshold tuning"
+ ],
+ "test_evidence": [
+ "Valley battery 64/64 (4 new NEXT-103 pins: synchronous posture and trade deltas of exactly 0.10, 50-tick attractor dampening, determinism control)",
+ "Relief-neutered probe fails exactly tests 61, 62, 63 (64 correctly unaffected); restored",
+ "Full matrix 343/344 suites, 2683 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~12s; full matrix ~43s"
+ ],
+ "known_gaps": [
+ "Grievance attractor dynamics unmapped (which feedback erases perturbations, at what rate, under which regimes)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

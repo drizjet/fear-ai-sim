@@ -995,3 +995,49 @@ describe('NEXT-102: pair-ledger credibility shares', () => {
         expect(grievance(sim)).toBeCloseTo(base, 9);
     });
 });
+
+describe('NEXT-103: exoneration interaction mutation', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+    function run(exonerate) {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        if (!exonerate) sim._exonerateRefutedRumors = () => {};
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [rumor.id]
+        }]);
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        // Synchronous sweep first: the mutation delta before the living
+        // world reacts. A 50-tick run then measures attractor dampening.
+        sim._recordEncounterConsequences([]);
+        const at = (s) => ({
+            grievance: s.factionSystem.getBilateralStance(S, B).grievance,
+            danger: s.civSystem.routes.get(RIVER).perceivedDanger
+        });
+        const sync = at(sim);
+        sim.advance(50);
+        return { sync, late: at(sim) };
+    }
+    test('61. Disabling exoneration moves posture synchronously', () => {
+        const on = run(true), off = run(false);
+        expect(off.sync.grievance - on.sync.grievance).toBeCloseTo(0.10, 9);
+    });
+    test('62. Disabling exoneration moves trade inputs synchronously', () => {
+        const on = run(true), off = run(false);
+        expect(off.sync.danger - on.sync.danger).toBeCloseTo(0.10, 9);
+    });
+    test('63. The living world dampens the perturbation over 50 ticks', () => {
+        const on = run(true), off = run(false);
+        const syncGap = Math.abs(off.sync.grievance - on.sync.grievance);
+        const lateGap = Math.abs(off.late.grievance - on.late.grievance);
+        expect(lateGap).toBeLessThan(syncGap);
+    });
+    test('64. Mutation twin is deterministic', () => {
+        expect(run(false)).toEqual(run(false));
+    });
+});
