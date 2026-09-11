@@ -9130,6 +9130,48 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "FRONTIER_AUDIT_POST_25"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_POST_25",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Ran InteractionCoverageGraph over 93 core modules: 457 tested edges, 118 composed-only edges, 49 debt pairs, zero isolated modules",
+ "Ranked 24 new candidate frontiers below by capability gap, user impact, evidence gap, leverage, generalization, and cost; red-team pick is the no-flap generalization because it attacks the strongest recent claim",
+ "Ranked candidates: (1) no-flap generalization across goal set with weights on; (2) memory-conditioned goal arbitration; (3) causal explanations citing relationships; (4) causal explanations citing identity; (5) identity-conditioned rumor susceptibility; (6) leader-calming trust scaling; (7) unilateral-rumor spiral dynamics; (8) automatic corridor-to-market coupling; (9) per-member fear heterogeneity in courage joints; (10) bravery and agreeableness succession traits; (11) betrayal-path trauma-safety cycles; (12) ally and escort crossover sweeps; (13) AffectiveAgent x SocialEventEngine joint; (14) why-not answers over arbitration; (15) PacingDirector x RelationshipTensor joint; (16) contagion at its own cadence through HostTimeDiscipline; (17) TraumaZone x TraumaCrystallization joint; (18) crystallized-state observability pin; (19) SocialEventEngine x TraumaZoneSystem joint; (20) DeterministicRng audit sweep over social and trauma paths; (21) RumorMemory x GoalArbitration relevance; (22) Godot station coverage for NEXT-155 through NEXT-161 joints; (23) cognitive LOD identity-restoration soak; (24) perception source-reliability inputs",
+ "Selected next: candidate 1, no-flap generalization, as NEXT-161"
+ ],
+ "test_evidence": [
+ "Coverage graph build is deterministic and gated by tests/interaction-coverage.test.js"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Candidates 2 through 24 carry; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "NO_FLAP_GENERALIZATION_161"
+ },
+ {
+ "milestone": "NO_FLAP_GENERALIZATION_161",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: 360-cell sweep (5 duty goals x 4 priorities x 3 trauma doses x 3 ally bonds x identity on/off) through GoalArbitrationEngine.arbitrate over 21 fear steps",
+ "Red-team attack failed: worst flips equal 1 in every cell including hostile flee-0.9 tendencies; dose monotonicity holds per cell with weights fixed",
+ "Mid-build notes: probe arithmetic first said 720 cells for a 360-cell grid; test file needed three repairs after range-echo damage (duplicated loop, lost describe opener, lost sweep tail); all caught by node --check before rerun"
+ ],
+ "test_evidence": [
+ "New tests/no-flap-generalization.test.js: 4 pass (360-cell bound; dose monotonicity; full-bond ally yield; exact replay)",
+ "Full matrix 388/389 suites, 2958 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~60s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 2 through 24 carry (next: memory-conditioned goal arbitration); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_2"
  }
  ]
 }
