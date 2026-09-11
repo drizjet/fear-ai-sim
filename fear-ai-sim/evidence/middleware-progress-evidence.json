@@ -9019,6 +9019,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_21"
+ },
+ {
+ "milestone": "PRIORITY_DOSE_CROSSOVER_156",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: 7 duty priorities x 3 trauma doses x 21 fear steps mapped through GoalArbitrationEngine.arbitrate with SURVIVE fixed at 0.6",
+ "Every cell flips at most once across the fear ramp; crossover is non-increasing in dose per duty row and non-decreasing in duty priority per dose column",
+ "Corners hold: duty 0.7 never yields at any dose, dosed survival at duty 0.2 owns the whole ramp; pinned ladder rows include 0.45 going 0.7 to 0.65 to 0.55 with dose"
+ ],
+ "test_evidence": [
+ "New tests/priority-dose-crossover.test.js: 6 pass (no-flap grid; dose monotonicity; duty monotonicity; pinned ladder; corners; exact replay)",
+ "Full matrix 383/384 suites, 2931 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~75s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 21 closed or verified; candidates 22 through 25 carry (next: duty-conditioned collective courage at squad level); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Sweep covers HOLD_POST vs SURVIVE only; ally and escort duty goals unmapped, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_22"
  }
  ]
 }
