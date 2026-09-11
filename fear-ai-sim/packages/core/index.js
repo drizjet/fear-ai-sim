@@ -204,6 +204,9 @@ export {
     PHOBIC_CATEGORIES
 } from './src/TraumaCrystallizationEngine.js';
 export {
+    SharedTraumaClock
+} from './src/SharedTraumaClock.js';
+export {
     TradeCaravanSupplyChainSystem,
     CARAVAN_STATUS,
     ESCORT_TIERS
