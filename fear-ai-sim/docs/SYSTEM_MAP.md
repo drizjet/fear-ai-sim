@@ -289,6 +289,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Refresh Coherence NEXT-112:** confirmed-rehearing stacking scare traced to hand-listed synthetic ids; live re-hearings refresh recency without re-bumping (new-or-upgraded gate predates); no production change. Pinned in world battery.
 - **Wire-or-Retire Triage 113:** CIA blend and crystallization feed and vault LOD cycle to wire (opt-in, planned); moral engine explicit EXPERIMENTAL; FPS live use deferred; audit only, no code change.
 - **CIA Opt-In Wire NEXT-114:** AffectiveAgent accepts an optional identity architecture with blend weight defaulting to zero (default path bit-identical); blending biases resolved intent urgency along the matching tendency axis and exposes the frame; 6 new tests; full matrix green except known dashboard env failures.
+- **Trauma Feed Wire NEXT-115:** AffectiveAgent accepts an optional trauma engine; extreme-fear episodes incur one trauma each with hysteresis; crystallized dread, resting floor, and panic offset feed back through existing inputs via max; veteran panics earlier than fresh twin; 6 new tests; parallel harness flakiness noted (serial green).
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

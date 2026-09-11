@@ -8004,6 +8004,36 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "WIRE_CRYSTALLIZATION_FEED"
+ },
+ {
+ "milestone": "TRAUMA_FEED_WIRE_115",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "AffectiveAgent accepts options.traumaEngine plus traumaFearThreshold default 0.85, traumaRearmDelta default 0.2, traumaAdvanceClock default true; agent registers into the engine with live traits (shared-engine reuse guarded)",
+ "Upstream feed: rising crossing of the fear threshold opens one episode with a single incurTrauma (severity from live fear, cues from live threats, betrayal and rival observations select the trauma type); hysteresis re-arm prevents tick-by-tick farming; 210 sustained terror ticks produce exactly 1 trauma",
+ "Downstream feedback: crystallized phobic dread plus resting-fear floor re-enter via max() over host traumaDread; panic-onset offset re-enters via max() over host panicFearBias (same numeric scale as the NOW-17 precedent); host values never reduced",
+ "Closed-loop proof: post-crystallization floor 0.2625 plus offset 0.18; conditioned WOLF cue triggers phobicDread 0.21 with flashback on mild re-exposure; veteran panics earlier than fresh twin on the same probe",
+ "Advisory-only: engine holds internal state, writes no host movement, damage, or inventory; host authority intact",
+ "Mid-build notes: trauma_frame initially omitted panicOffset (added); determinism probes must fix options.seed because construction-order fallback RNG is pre-existing agent behavior, not a wire artifact"
+ ],
+ "test_evidence": [
+ "New tests/trauma-feed-wire.test.js: 6 pass (no frame when detached; attached pre-episode parity modulo frame; single-episode no-farming; crystallized dread plus offset feedback; earlier veteran panic onset; fixed-seed determinism)",
+ "Full matrix 344-345/346 suites serially green with changes (every parallel-only failure reproduced green in-band); 8 dashboard EACCES env failures pre-existing (bind 127.0.0.1:8766 denied); guardian CLEAN",
+ "Parallel full-matrix runs show load-flaky timing-sensitive suites (failing set shifts run to run: world-soak, phase6, conformance, cross-process-determinism); all pass serially; recorded as harness flakiness, not a wire regression"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; serial targeted suites ~17s, full parallel matrix ~43s"
+ ],
+ "known_gaps": [
+ "Triage execution continues: vault LOD cycle (one wiring chunk remains)",
+ "Parallel harness flakiness under worker contention (timing-sensitive suites); serial runs green",
+ "traumaAdvanceClock shared-engine caveat documented in code (one owner per engine clock)",
+ "Blend weight fixed per agent (no adaptive gain scheduling)",
+ "Moral engine EXPERIMENTAL by explicit verdict (revisit on demand)",
+ "FPS live threshold design open",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "WIRE_VAULT_LOD_CYCLE"
  }
  ]
 }

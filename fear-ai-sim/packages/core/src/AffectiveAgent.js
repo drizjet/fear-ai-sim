@@ -155,6 +155,30 @@ export class AffectiveAgent {
                 if (!String(err?.message || '').startsWith('CHARACTER_ALREADY_REGISTERED')) throw err;
             }
         }
+        // NEXT-115: opt-in trauma-engine attachment (wire-or-retire triage
+        // execution). A TraumaCrystallizationEngine supplied via
+        // options.traumaEngine closes the loop both ways: extreme-fear
+        // episodes feed incurTrauma, and crystallized state (phobic dread,
+        // resting-fear floor, panic-onset offset) feeds back as the existing
+        // traumaDread / panicFearBias inputs via max() so host-supplied
+        // values are never reduced. Detached by default (legacy path
+        // bit-identical). traumaAdvanceClock lets one attached agent own the
+        // shared engine clock; set false when several agents share an engine.
+        this.traumaEngine = options.traumaEngine ?? null;
+        const rawThreshold = Number(options.traumaFearThreshold ?? 0.85);
+        this.traumaFearThreshold = Number.isFinite(rawThreshold)
+            ? Math.max(0, Math.min(1, rawThreshold))
+            : 0.85;
+        const rawRearm = Number(options.traumaRearmDelta ?? 0.2);
+        this.traumaRearmDelta = Number.isFinite(rawRearm)
+            ? Math.max(0, Math.min(1, rawRearm))
+            : 0.2;
+        this.traumaAdvanceClock = options.traumaAdvanceClock !== false;
+        this._traumaEpisodeOpen = false;
+        if (this.traumaEngine && typeof this.traumaEngine.registerAgent === 'function'
+            && this.traumaEngine.agentRecords && !this.traumaEngine.agentRecords.has(this.id)) {
+            this.traumaEngine.registerAgent(this.id, { ...this.traits });
+        }
 
         // History trace
         this.tickCount = 0;
@@ -183,7 +207,8 @@ export class AffectiveAgent {
         const pacingIntensity = context.pacingIntensity ?? 1.0;
         const contagionFear = context.contagionFear ?? 0.0;
         const leaderCalm = context.leaderCalm ?? 0.0;
-        const traumaDread = context.traumaDread ?? 0.0;
+        let traumaDread = context.traumaDread ?? 0.0;
+        let traumaEngineState = null;
 
         // 1. Update Spatial Coordinates if supplied by host
         if (typeof observations.x === 'number' && Number.isFinite(observations.x)) this.x = observations.x;
@@ -268,6 +293,28 @@ export class AffectiveAgent {
             const opennessSoundMod = this.enableOCEAN ? (1.5 - (this.traits.openness ?? 0.5)) : 1.0;
             rawThreatSum += habituated * distanceAtten * 0.6 * opennessSoundMod;
         }
+        // 2b. NEXT-115 trauma-engine readback. Crystallized state re-enters
+        // through the pre-existing traumaDread / panicFearBias inputs via
+        // max(), so host-supplied values are never reduced. Skipped when
+        // detached (traumaDread keeps its context value above).
+        let traumaPanicBias = 0;
+        if (this.traumaEngine && typeof this.traumaEngine.evaluateAgentState === 'function') {
+            const cues = [];
+            for (const t of threats) {
+                cues.push({ category: 'PREDATOR_TYPE', cue: t.type || 'PREDATOR', intensity: t.intensity ?? 1.0 });
+            }
+            for (const s of sounds) {
+                cues.push({ category: 'ENVIRONMENT_CUE', cue: s.type || 'SOUND', intensity: s.intensity ?? 0.5 });
+            }
+            traumaEngineState = this.traumaEngine.evaluateAgentState(this.id, {
+                sensoryCues: cues,
+                position: { x: this.x, y: this.y, z: this.z }
+            });
+            const engineDread = (traumaEngineState.phobicDread || 0)
+                + (traumaEngineState.effectiveRestingFear || 0);
+            if (engineDread > traumaDread) traumaDread = engineDread;
+            traumaPanicBias = traumaEngineState.effectivePanicThresholdOffset || 0;
+        }
 
         // 3. OCEAN Trait Modulation & Threat Weighting
         const neuroticismMod = 0.5 + this.traits.neuroticism * 0.9;
@@ -303,6 +350,36 @@ export class AffectiveAgent {
             this.currentFear = Math.min(1.0, Math.max(this.currentFear + 0.05, fearInput));
         } else {
             this.currentFear = Math.max(0, this.currentFear * Math.pow(fearDecayRate, safeDt / 0.016));
+        }
+        // 5b. NEXT-115 trauma-episode feed. A rising crossing of the fear
+        // threshold opens one episode: a single incurTrauma whose severity is
+        // the live fear and whose cues are the live threats. Re-arms only
+        // after fear falls threshold-minus-hysteresis below, so sustained
+        // terror cannot farm traumas tick after tick. Advisory state only.
+        let traumaEpisode = false;
+        if (this.traumaEngine && typeof this.traumaEngine.incurTrauma === 'function') {
+            if (!this._traumaEpisodeOpen && this.currentFear >= this.traumaFearThreshold) {
+                this._traumaEpisodeOpen = true;
+                traumaEpisode = true;
+                const cues = threats.map((t) => ({
+                    category: 'PREDATOR_TYPE',
+                    cue: t.type || 'PREDATOR'
+                }));
+                this.traumaEngine.incurTrauma(this.id, {
+                    traumaType: observations.betrayed
+                        ? 'BETRAYAL_ABANDONMENT'
+                        : (observations.hasRivals ? 'MASSACRE_HORROR' : 'NEAR_DEATH_SURVIVAL'),
+                    severity: this.currentFear,
+                    associatedCues: cues,
+                    description: `Live fear episode at tick ${this.tickCount} (fear ${this.currentFear.toFixed(3)})`
+                });
+            } else if (this._traumaEpisodeOpen
+                && this.currentFear < this.traumaFearThreshold - this.traumaRearmDelta) {
+                this._traumaEpisodeOpen = false;
+            }
+            if (this.traumaAdvanceClock && typeof this.traumaEngine.tick === 'function') {
+                this.traumaEngine.tick(1);
+            }
         }
 
         // 6. Anger / Fight Response Dynamics
@@ -352,7 +429,7 @@ export class AffectiveAgent {
         // while RECOVERing: recovery completion needs near-zero scaled fear,
         // and any floor or bias would lock RECOVER permanently.
         const recovering = this.fearCore.state === 'RECOVER';
-        const panicBias = recovering ? 0 : Math.max(0, Number(context.panicFearBias ?? 0));
+        const panicBias = recovering ? 0 : Math.max(0, Number(context.panicFearBias ?? 0), Number(traumaPanicBias) || 0);
         const coreResult = this.fearCore.update(this._fearScale(this.currentFear) + panicBias * 4.2, fearContext);
 
         // 10. Resolve Action Intent & Audio Hints
@@ -441,6 +518,18 @@ export class AffectiveAgent {
             }
         };
         if (identityFrame) result.identity_frame = identityFrame;
+        if (traumaEngineState) {
+            result.trauma_frame = {
+                episode: traumaEpisode,
+                episodeOpen: this._traumaEpisodeOpen,
+                isTraumatized: traumaEngineState.isTraumatized,
+                phobicDread: traumaEngineState.phobicDread,
+                restingFear: traumaEngineState.effectiveRestingFear,
+                triggeredPhobias: (traumaEngineState.triggeredPhobias || []).length,
+                panicOffset: traumaEngineState.effectivePanicThresholdOffset || 0,
+                hasFlashback: traumaEngineState.hasFlashback
+            };
+        }
 
         this.lastResult = result;
         return result;
