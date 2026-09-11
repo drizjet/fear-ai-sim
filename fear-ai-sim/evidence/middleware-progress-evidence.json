@@ -8588,6 +8588,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "FRONTIER_AUDIT_20_PLUS"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_137",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Ran InteractionCoverageGraph over the tree: 93 modules, 425 tested edges, 109 composed-only edges, 49 debt pairs, zero isolated modules; 48 of 49 debt pairs sit on the social/rumor/memory-vs-decision boundary (dashboard/runtime co-use without a joint test)",
+ "Ranked 25 candidate frontiers below by capability gap, user impact, evidence gap, leverage, generalization, and cost; top cluster is joint interaction tests between already-built systems, not new modules",
+ "Ranked candidates: (1) relationship-weighted goal arbitration joint test; (2) social-event-to-trauma feed (betrayal and abandonment loading trauma); (3) shared-danger events modulating group contagion; (4) rumor-to-arbitration chain (false rumor moving intent choice); (5) rumor provenance in causal explanations; (6) identity-modulated memory relevance; (7) persona-conditioned faction behavior; (8) trauma-weighted goal relevance; (9) trauma eroding relationship trust; (10) why-not answers citing persona traits; (11) arbitration outcomes as causal-graph nodes; (12) crystallized-state telemetry hooks; (13) agent-level anticipatory fear from information; (14) social context in intent resolution; (15) traumatized agents as panic amplifiers; (16) seeded determinism proofs for social and trauma paths; (17) multi-rate social and affect cadences; (18) history compaction preserving causal anchors over long worlds; (19) repeated trauma-safety cycles; (20) peer-trust contagion paths; (21) wider priority and trauma-dose crossover sweeps; (22) duty-conditioned collective courage at squad level; (23) identity-conditioned succession effects; (24) economic-warfare-by-morale joint test; (25) rumor-triggered security-dilemma escalation",
+ "Selected next: candidate 1, relationship-weighted goal arbitration, as NEXT-138"
+ ],
+ "test_evidence": [
+ "Audit only: no new tests; InteractionCoverageGraph build re-run deterministically (425 tested edges confirmed twice)",
+ "Full matrix not re-run for this audit commit; last full matrix 364/365 suites, 2827 pass, guardian CLEAN (NEXT-136)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "25 ranked candidates open with candidate 1 selected next; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Debt pairs co-used only in dashboard/runtime display may overstate integration debt; joint-test ranking already discounts pure display co-use",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "RELATIONSHIP_ARBITRATION_JOINT"
  }
  ]
 }
