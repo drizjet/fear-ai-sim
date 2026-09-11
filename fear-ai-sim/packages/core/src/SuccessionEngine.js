@@ -90,13 +90,21 @@ export class SuccessionEngine {
         // Violent causes wound cohesion; contested outcomes wound it more.
         const violent = (params.cause === 'ASSASSINATION' || params.cause === 'DEATH_IN_BATTLE') ? 0.15 : 0.05;
         const contestPenalty = margin < 0.1 ? 0.2 : margin < 0.25 ? 0.08 : 0;
-        const cohesionDelta = round4s(-(violent + contestPenalty) + winner.score * 0.1);
-        const moraleDelta = round4s(-violent * 0.8 + (winner.score - 0.5) * 0.2);
-        // Policy shift: low-continuity winners break with the past.
+        // NEXT-158 (audit candidate 23): the winner's identity conditions
+        // the aftermath. A high-leadership successor rallies cohesion and
+        // morale and calms splinter risk; a low-leadership one deepens the
+        // wound. Opt-in identityWeight in [0,1]; 0 (default) is legacy.
+        const rawIw = Number(params.identityWeight ?? 0);
+        const iw = Number.isFinite(rawIw) ? clamp01(rawIw) : 0;
         const winnerRaw = candidates.find((c) => String(c.id) === winner.id);
+        const rawLead = Number(winnerRaw?.traits?.leadership ?? 0.5);
+        const lead = Number.isFinite(rawLead) ? clamp01(rawLead) : 0.5;
+        const rally = iw * (lead - 0.5) * 0.3;
+        const cohesionDelta = round4s(-(violent + contestPenalty) + winner.score * 0.1 + rally);
+        const moraleDelta = round4s(-violent * 0.8 + (winner.score - 0.5) * 0.2 + rally * 0.5);
+        // Policy shift: low-continuity winners break with the past.
         const policyShift = round4(1 - clamp01(winnerRaw.continuity ?? 0.5));
-        const splinterRisk = round4(clamp01(0.15 + contestPenalty * 1.5 + policyShift * 0.25 - winner.score * 0.2));
-        this.successions += 1;
+        const splinterRisk = round4(clamp01(0.15 + contestPenalty * 1.5 + policyShift * 0.25 - winner.score * 0.2 - rally * 0.5));
         return {
             factionId,
             successorId: winner.id,

@@ -9063,6 +9063,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_23"
+ },
+ {
+ "milestone": "IDENTITY_SUCCESSION_158",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "SuccessionEngine.resolve gains opt-in identityWeight (default 0, legacy-exact) plus per-candidate traits.leadership: winner identity conditions cohesion, morale, and splinter risk via a bounded rally term while selection scoring is untouched",
+ "Same heir at leadership 0.95 rallies cohesion 0.02 to 0.155 and calms splinter 0.085 to 0.0175; at 0.05 deepens cohesion to -0.115 and raises splinter to 0.1525",
+ "Mid-build note: first edit dropped the policyShift and splinterRisk definitions; caught on re-read and restored with rally conditioning before any test ran"
+ ],
+ "test_evidence": [
+ "New tests/identity-succession.test.js: 6 pass (legacy exactness; selection untouched; rally vs deepen; pinned arithmetic; malformed safety; interregnum)",
+ "Succession suites (succession, nomadic, identity): 17 pass",
+ "Full matrix 385/386 suites, 2943 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~80s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 23 closed or verified; candidates 24 and 25 carry (next: economic-warfare-by-morale joint test); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Only the leadership trait conditions succession; bravery and agreeableness unmapped, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_24"
  }
  ]
 }
