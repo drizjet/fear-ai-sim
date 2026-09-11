@@ -8177,6 +8177,31 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness"
  ],
  "next_action": "RUMOR_TRADE_REROUTE_COMBO"
+ },
+ {
+ "milestone": "RUMOR_TRADE_REROUTE_120",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Canonical BeliefStore bridge now attributes route-belief sources from the evidence ledger: direct witness evidence tags observation, pure trusted-report gossip tags rumor, and later hearsay never downgrades an observation tag",
+ "Blind-hearer proof: accuracy-0 merchant in the witness town never observes the attack (zero observed events) yet its road danger rises past 0.4 on gossip alone and it reroutes off the bandit road; witness keeps the observation tag",
+ "Negative control: with no attack the blind merchant holds its prior route and gains no rumor tag; combined run deterministic across identical inputs",
+ "Advisory-only: belief tags on semantic route danger; host still owns movement and trade execution",
+ "Mid-build notes: witness must stand on the attacked road (canObserve requires selectedRoute match); test setup edit dropped a block close (caught by node check, rebuilt)"
+ ],
+ "test_evidence": [
+ "New tests/rumor-trade-reroute.test.js: 4 pass (gossip reroute with rumor tag; silent-channel control; no observation downgrade; determinism)",
+ "Trade family 43/43 pass (canonical system, observation reroute, rumor memory, bandit heat and recency, merchant tools)",
+ "Full matrix 350/351 suites, 2752 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~47s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontiers 1 through 4 closed; frontiers 5 through 20 carry (next: leader-death by panic by rumor triple pin)",
+ "Rumor audibility still same-town gossip only; cross-town carriers remain unbuilt (pre-existing honest limitation)",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness"
+ ],
+ "next_action": "TRIPLE_COLLISION_PIN"
  }
  ]
 }

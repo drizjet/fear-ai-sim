@@ -518,8 +518,15 @@ export function tickMerchant(world, merchantId, {
     // We bridge them: copy any BeliefStore observations for
     // each route into routeBeliefs. This way the canonical
     // route decision consumes the same belief observations
-    // that the legacy tests use.
+    // that the legacy tests use. NEXT-120 (CCI-28 frontier 4): attribute
+    // the source. Merged BeliefStore values drop sourceId, but the
+    // evidence ledger keeps it: direct witness evidence
+    // (attack/relocation-witness) tags 'observation', pure hearsay
+    // (trusted-report gossip) tags 'rumor'. Never downgrade an existing
+    // 'observation' tag with later hearsay.
+    const DIRECT_EVIDENCE = new Set(['attack-witness', 'relocation-witness']);
     if (merchant.beliefs && typeof merchant.beliefs.get === 'function') {
+        const ledger = Array.isArray(merchant.beliefs.evidence) ? merchant.beliefs.evidence : [];
         for (const route of (world.routes || [])) {
             const belief = merchant.beliefs.get(route.id, 'perceivedDanger');
             if (belief && Number.isFinite(belief.value)) {
@@ -527,6 +534,17 @@ export function tickMerchant(world, merchantId, {
                 if (!merchant.routeBeliefs[route.id]) merchant.routeBeliefs[route.id] = { perceivedDanger: 0.5, confidence: 0.5 };
                 merchant.routeBeliefs[route.id].perceivedDanger = belief.value;
                 merchant.routeBeliefs[route.id].confidence = (belief.confidence || 0.5);
+                let heard = false;
+                let seen = false;
+                for (const ev of ledger) {
+                    if (!ev || ev.subject !== route.id || ev.claim !== 'perceivedDanger') continue;
+                    if (DIRECT_EVIDENCE.has(ev.sourceId)) seen = true;
+                    else if (ev.sourceId === 'trusted-report') heard = true;
+                }
+                if (seen) merchant.routeBeliefs[route.id].source = 'observation';
+                else if (heard && merchant.routeBeliefs[route.id].source !== 'observation') {
+                    merchant.routeBeliefs[route.id].source = 'rumor';
+                }
             }
         }
     }
