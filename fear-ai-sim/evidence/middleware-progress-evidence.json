@@ -8973,6 +8973,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "TRAUMA_SAFETY_CYCLES"
+ },
+ {
+ "milestone": "TRAUMA_SAFETY_CYCLES_154",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: TraumaCrystallizationEngine cycle behavior pinned as-is via incurTrauma plus administerSolace plus tick",
+ "Short-gap unsolaced cycles compound with diminishing marginal damage (first dose displaces N 0.5 to 0.596, fifth adds only 0.002) and 20 max-severity cycles stay inside all published bounds",
+ "Per-cycle solace fully defuses every cycle with zero crystallization; 2000-tick sanctuary restores N and R to baseline within 1e-3, so the engine has saturation but no permanent ratchet",
+ "Mid-build notes: full matrix once wedged at 600s with 20 unrelated suites failing under transient box contention, then reran clean at 31s; isolated reruns of two failed suites passed during the incident, pointing at the harness rather than the change"
+ ],
+ "test_evidence": [
+ "New tests/trauma-safety-cycles.test.js: 5 pass (compounding with saturation; 20-cycle bounds; solace defusal; sanctuary restoration; exact replay)",
+ "Full matrix 381/382 suites, 2920 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~32s on rerun"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 19 closed or verified; candidates 20 through 25 carry; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Cycle pinning covers single-agent NEAR_DEATH cycles; betrayal-path and multi-agent cycle interaction open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_20"
  }
  ]
 }
