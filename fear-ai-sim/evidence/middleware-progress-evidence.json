@@ -7648,6 +7648,30 @@
  "10k and 100k-tick rumor-churn horizons unrun (current soak is 2.1k ticks)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "PERTURBATION_DECAY_MAPPING_NEXT105",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "CORRECTION to NEXT-103: the 50-tick erasure was not attractor feedback. Incident-level tracing shows a +0.65 RAID_CONFIRMED hitting both twins at t1 and clamping both to 1.0 (0.8000 and 0.9000 converge to 0.9885 post-decay). Test 63 renamed to the true mechanism; the NEXT-103 entry stands as historical record",
+ "True mechanism mapped by direct state perturbation: small gaps decay geometrically at exactly the configured grievance half-life (per-20-tick ratio 0.794 on both seeds, both signs); large perturbations shed extra in the first window (regime divergence) then rejoin the half-life track without collapse or explosion",
+ "No production change (measurement plus pins); no mid-build failures"
+ ],
+ "test_evidence": [
+ "Valley battery 71/71 (test 63 renamed to ceiling mechanism; 4 new NEXT-105 pins: half-life ratio both signs, large-perturbation rejoin, determinism)",
+ "Halving the decay rate fails exactly tests 68, 69, 70 (determinism control unaffected); restored",
+ "Full matrix 343/344 suites, 2690 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Decay mapping probes ~0.2s; valley battery ~14s; full matrix ~42s"
+ ],
+ "known_gaps": [
+ "First-window extra decay of large perturbations is characterized but not attributed (stage-threshold crossing hypothesized, unproven)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "10k and 100k-tick rumor-churn horizons unrun"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

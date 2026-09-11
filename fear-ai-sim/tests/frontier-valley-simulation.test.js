@@ -1031,11 +1031,14 @@ describe('NEXT-103: exoneration interaction mutation', () => {
         const on = run(true), off = run(false);
         expect(off.sync.danger - on.sync.danger).toBeCloseTo(0.10, 9);
     });
-    test('63. The living world dampens the perturbation over 50 ticks', () => {
+    test('63. Saturating inflow erases the gap via the ceiling', () => {
+        // Corrected mechanism (NEXT-105): erasure here is clamp01
+        // saturation after a raid-sized inflow, not gradual feedback.
         const on = run(true), off = run(false);
         const syncGap = Math.abs(off.sync.grievance - on.sync.grievance);
         const lateGap = Math.abs(off.late.grievance - on.late.grievance);
-        expect(lateGap).toBeLessThan(syncGap);
+        expect(syncGap).toBeCloseTo(0.10, 9);
+        expect(lateGap).toBe(0);
     });
     test('64. Mutation twin is deterministic', () => {
         expect(run(false)).toEqual(run(false));
@@ -1092,5 +1095,44 @@ describe('NEXT-104: rumor-churn bounds', () => {
     });
     test('67. Churn is deterministic across reruns', () => {
         expect(churn(42)).toEqual(churn(42));
+    });
+});
+
+describe('NEXT-105: perturbation decay mapping', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    const HALF_20 = Math.pow(2, -20 / 60);
+    function gaps(seed, perturb, ticks = 60) {
+        const a = new FrontierValleySimulation({ seed });
+        const b = new FrontierValleySimulation({ seed });
+        a.advance(60); b.advance(60);
+        const g = (s) => s.factionSystem.getBilateralStance(S, B).grievance;
+        b.factionSystem.getBilateralStance(S, B).grievance += perturb;
+        const out = [Math.abs(g(a) - g(b))];
+        for (let t = 0; t < ticks; t++) {
+            a.advance(1); b.advance(1);
+            if ((t + 1) % 20 === 0) out.push(Math.abs(g(a) - g(b)));
+        }
+        return out;
+    }
+    test('68. Small perturbations decay at the configured half-life', () => {
+        const gs = gaps(42, 0.1);
+        expect(gs[1] / gs[0]).toBeCloseTo(HALF_20, 3);
+        expect(gs[2] / gs[1]).toBeCloseTo(HALF_20, 3);
+    });
+    test('69. Negative perturbations decay symmetrically', () => {
+        const gs = gaps(42, -0.2);
+        expect(gs[1] / gs[0]).toBeCloseTo(HALF_20, 3);
+        expect(gs[0]).toBeCloseTo(0.2, 9);
+    });
+    test('70. Large perturbations rejoin the half-life track after one window', () => {
+        const gs = gaps(42, 0.3);
+        // First window sheds extra (regime divergence); afterwards the
+        // configured decay resumes instead of collapsing or exploding.
+        expect(gs[1]).toBeLessThan(0.3 * HALF_20);
+        expect(gs[2] / gs[1]).toBeCloseTo(HALF_20, 2);
+        expect(gs[3]).toBeLessThan(gs[2]);
+    });
+    test('71. Decay mapping is deterministic across reruns', () => {
+        expect(gaps(42, 0.1)).toEqual(gaps(42, 0.1));
     });
 });
