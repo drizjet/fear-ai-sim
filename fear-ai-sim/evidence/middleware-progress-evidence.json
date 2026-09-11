@@ -8837,6 +8837,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "TRAUMA_TELEMETRY_HOOKS"
+ },
+ {
+ "milestone": "TRAUMA_TELEMETRY_148",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Runtime now emits sim_core_trauma_max_load, sim_core_trauma_mean_load, and sim_core_trauma_loaded_agents as read-only post-tick gauges in the existing fault-isolated hooks block, using the same severity-sum normalization as contagion sourcing",
+ "Live proof: two-agent threat run crystallizes on the exposed agent with max load 0.427, mean 0.214, loaded count 1; fresh runs read zeros",
+ "Telemetry stays optional: hooks ON vs OFF batch outputs byte-identical across 50 ticks, and a throwing sink leaves trajectories untouched"
+ ],
+ "test_evidence": [
+ "New tests/trauma-load-telemetry.test.js: 5 pass (gauge tracking; fresh-zero baseline; CVII identity; hostile sink; reproducibility)",
+ "Full matrix 375/376 suites, 2889 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~38s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4 through 12, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 13, 14, and 16 through 25 carry (next: agent-level anticipatory fear from information); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "No per-type breakdown gauges; load normalization halves severity sums, so triple-wound agents saturate at 1",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AGENT_INFORMATION_FEAR"
  }
  ]
 }

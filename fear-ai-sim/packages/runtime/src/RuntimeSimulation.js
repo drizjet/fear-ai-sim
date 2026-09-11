@@ -304,6 +304,10 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // can defuse traumas inside the sensitization window.
         let coreActive = 0;
         let coreCrystallized = 0;
+        // NEXT-148: per-agent crystallized load distribution for telemetry.
+        let coreLoadSum = 0;
+        let coreLoadMax = 0;
+        let coreLoadedAgents = 0;
         if (this.enableCoreTrauma) {
             this.coreTrauma.tick(1);
             for (const agent of this.agents.values()) {
@@ -311,6 +315,16 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 if (!rec) continue;
                 coreActive += rec.activeTraumas.length;
                 coreCrystallized += rec.crystallizedTraumas.length;
+                let sev = 0;
+                for (const t of rec.crystallizedTraumas) {
+                    const s = Number(t?.severity);
+                    if (Number.isFinite(s)) sev += Math.max(0, Math.min(1, s));
+                }
+                // Same normalization as contagion sourcing (NEXT-139).
+                const load = Math.max(0, Math.min(1, sev / 2));
+                coreLoadSum += load;
+                if (load > coreLoadMax) coreLoadMax = load;
+                if (rec.crystallizedTraumas.length > 0) coreLoadedAgents += 1;
                 if (!this.enableTraumaFeedback) continue;
                 const state = this.coreTrauma.evaluateAgentState(agent.id);
                 if (!state.isTraumatized) continue;
@@ -349,6 +363,11 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 // NOW-13: core per-agent trauma memory counts.
                 hooks.emit('sim_core_traumas_active', coreActive, { tick: this.tickCount });
                 hooks.emit('sim_core_traumas_crystallized', coreCrystallized, { tick: this.tickCount });
+                // NEXT-148: crystallized load distribution (who carries
+                // what, not just totals). Read-only post-tick gauges.
+                hooks.emit('sim_core_trauma_max_load', coreLoadMax, { tick: this.tickCount });
+                hooks.emit('sim_core_trauma_mean_load', this.agents.size > 0 ? coreLoadSum / this.agents.size : 0, { tick: this.tickCount });
+                hooks.emit('sim_core_trauma_loaded_agents', coreLoadedAgents, { tick: this.tickCount });
             } catch {
                 // A broken sink must never break the tick.
             }
