@@ -537,7 +537,8 @@ export class FrontierValleySimulation {
                 for (const entry of this._hearsayRoutes.get(rid) ?? []) {
                     const routeId = entry?.routeId ?? entry;
                     const elapsed = Math.max(0, this.currentTick - ((entry?.tick) ?? this.currentTick));
-                    const relief = 0.10 * Math.pow(2, -elapsed / dangerHalf);
+                    const share = Number(entry?.share) || 1;
+                    const relief = 0.10 * share * Math.pow(2, -elapsed / dangerHalf);
                     this.civSystem.recordRouteIncident(routeId, 'RUMOR_EXONERATED', -relief);
                 }
                 this._exoneratedRumors.add(rid);
@@ -672,7 +673,10 @@ export class FrontierValleySimulation {
                     for (const rid of enc.heardThreatRumorIds ?? []) {
                         if (!this._hearsayRoutes.has(rid)) this._hearsayRoutes.set(rid, []);
                         const seen = this._hearsayRoutes.get(rid);
-                        if (!seen.some((e) => e.routeId === routeId)) seen.push({ routeId, tick: this.currentTick });
+                        // NEXT-98: encounter-level bias is shared across all
+                        // rumors heard together (one +0.10, not one each).
+                        const share = 1 / Math.max(1, (enc.heardThreatRumorIds ?? []).length);
+                        if (!seen.some((e) => e.routeId === routeId)) seen.push({ routeId, tick: this.currentTick, share });
                     }
                 }
             }

@@ -745,3 +745,56 @@ describe('NEXT-97: decay-aware retraction', () => {
         expect(run()).toBe(run());
     });
 });
+
+describe('NEXT-98: shared-bias attribution', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+    function twoRumors(sim) {
+        const mk = () => sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        return [mk(), mk()];
+    }
+    function hearBoth(sim, r1, r2) {
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [r1.id, r2.id]
+        }]);
+    }
+    function refute(sim, rumor) {
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim._recordEncounterConsequences([]);
+    }
+    test('47. One two-rumor hearing biases the route once, not twice', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const [r1, r2] = twoRumors(sim);
+        const base = sim.civSystem.routes.get(RIVER).perceivedDanger;
+        hearBoth(sim, r1, r2);
+        expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeCloseTo(base + 0.10, 9);
+        expect(sim._hearsayRoutes.get(r1.id)[0].share).toBe(0.5);
+        expect(sim._hearsayRoutes.get(r2.id)[0].share).toBe(0.5);
+    });
+    test('48. Refuting both rumors retracts exactly the shared bias', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const [r1, r2] = twoRumors(sim);
+        const base = sim.civSystem.routes.get(RIVER).perceivedDanger;
+        hearBoth(sim, r1, r2);
+        refute(sim, r1);
+        expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeCloseTo(base + 0.05, 9);
+        refute(sim, r2);
+        expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeCloseTo(base, 9);
+    });
+    test('49. Pair bias stays first-wins: refuting both restores grievance', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const [r1, r2] = twoRumors(sim);
+        const g = () => sim.factionSystem.getBilateralStance(S, B).grievance;
+        const base = g();
+        hearBoth(sim, r1, r2);
+        expect(g()).toBeCloseTo(base + 0.10, 9);
+        refute(sim, r1);
+        refute(sim, r2);
+        expect(g()).toBeCloseTo(base, 9);
+    });
+});

@@ -7438,6 +7438,31 @@
  "Default (0,0,0) origins route literally with registration-order tie-breaks"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "SHARED_BIAS_ATTRIBUTION_NEXT98",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Red-team probe first: one two-rumor hearing biased +0.10, refuting both retracted -0.20 and drove Riverway to 0.0000 against a 0.1000 baseline - over-retraction manufactures safety",
+ "Route ledger entries carry equal shares (1 over co-heard rumor count); the sweep retracts share times decayed residual; single-rumor behavior unchanged; legacy entries default to share 1",
+ "Pair ledger audited and deliberately untouched: per-encounter heardPairs dedup already ledgers each pair under its first rumor only, so pair retraction is exactly conserving (locked by test, not assumed)",
+ "No mid-build edit failures this chunk (grounded reads before every range after the NEXT-97 streak)"
+ ],
+ "test_evidence": [
+ "Valley battery 49/49 (3 new NEXT-98 pins: single bias with recorded half shares, half-then-full retraction restoring baseline exactly, pair first-wins restoration)",
+ "Share-forced-to-1 probe fails exactly tests 47 and 48 (pair pin correctly unaffected); restored",
+ "Full matrix 343/344 suites, 2666 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~13s; full matrix ~52s"
+ ],
+ "known_gaps": [
+ "Shares are equal by construction; credibility-weighted attribution across co-heard rumors is open (a vivid rumor arguably owns more of the bias than background chatter)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Default (0,0,0) origins route literally with registration-order tie-breaks"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
