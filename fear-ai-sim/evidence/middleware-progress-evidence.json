@@ -7056,6 +7056,32 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "CONFIG_CONFORMANCE_NEXT86",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Canary probe: 14 of 15 sampled systems absorb unknown config keys (EpistemicBeliefEngine whitelists - the good pattern); spread-merge is the universal cause",
+ "Call-site scanner over core, tests, and benchmarks for 11 defaulted systems: zero live unknown keys - both historical bugs already fixed, no third instance exists",
+ "Default-less systems checked manually: EconomicFeedbackSystem call sites use known keys or no args",
+ "Regression pin: tests/config-key-conformance.test.js replays the audit on every run and names file plus line of any offender"
+ ],
+ "test_evidence": [
+ "Conformance suite 1/1 green on current tree",
+ "Reintroduced-rngSeed probe fails exactly, naming WorldSimulationSystem 'rngSeed' with file and line; fix restored",
+ "Full matrix 343/344 suites, 2618 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Conformance test ~1s; full matrix ~41s"
+ ],
+ "known_gaps": [
+ "Conformance covers 11 DEFAULT-exporting systems; future systems must opt into the TARGETS table (documented in-test, unenforced)",
+ "No runtime dev-mode warning on unknown keys (rejected scope: noisy across 15 spread-merge constructors)",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
