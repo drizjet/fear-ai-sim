@@ -7130,6 +7130,55 @@
  "Gate is binary at 0.4; graded acceptance proportional to trust is an open refinement"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_23",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit meets CCI cadence: 5 significant commits since CCI-22 (NEXT-84 anchoring, NEXT-85 hearsay reroute, NEXT-86 config conformance, NEXT-87 trust gating, NEXT-88 truth adjudication)",
+ "Both longest-flagged gaps closed in-batch: correction acceptance (7 milestones) and truthEventId (8 milestones)",
+ "Twin-sim hearsay isolation defended by mechanism audit (pressure moves no groups; trajectories identical; delta is exactly hearsay); neutral-stranger default defended by the green valley suite with gating active",
+ "Red-team hit proven live (rt23 probe): after one exposure (trust -0.215), a later vindicated truth from the same source stays distrusted forever - trust frozen, confirmed belief held at 0.433 unpinned. Distrust is a one-way ratchet with no same-source rehabilitation path",
+ "No benchmark impact; audit is evidence-only"
+ ],
+ "test_evidence": [
+ "Red-team probe executed against current HEAD, not reasoned: trust -0.215 before and after vindication attempt",
+ "No benchmark impact; audit is evidence-only"
+ ],
+ "benchmark_evidence": [
+ "Audit completes in minutes; no benchmark impact"
+ ],
+ "known_gaps": [
+ "Audit is point-in-time; adjacency gaps may close or open as modules evolve"
+ ],
+ "next_action": "MAINTAIN",
+ "candidates_NOW": [
+ "NEXT-89 rehabilitation path (red-team hit): vindication must be able to rebuild messenger trust despite the gate (falsifier: rt23 scenario shows trust movement)",
+ "Graded correction acceptance proportional to trust (binary 0.4 gate refinement)",
+ "Hearsay routing by rumor originLocation (threat-site map instead of hearing-site proximity)"
+ ],
+ "candidates_NEXT": [
+ "Decay-rate and age-window calibration surface (precedent-anchored constants, not behavior-picked)",
+ "Faction-level belief stance: FACTION_BETRAYAL and WAR_DECLARED rumors bias faction grievance and posture",
+ "Conflicting-claim handling: opposite live claims on one topic have no resolution machinery",
+ "Non-threat topic consequences: FAMINE_ALERT into scarcity advisory; TRADE_EMBARGO into route cost",
+ "Priority-queue spread alternative prototype (carried NEXT-73 gap)",
+ "Upkeep-law production-axis mapping (carried NEXT-72 gap)",
+ "Live rankIntents consumer in NPC decision loops (carried NEXT-66 gap)",
+ "Demand-side economy feedback into caravan and faction choice (carried NEXT-63 gap)",
+ "Migration-emitter registration tripwire (carried NEXT-64 gap)",
+ "Morale versus pressure separation audit (XXXII)",
+ "Godot rumor-correction visualization station (integration front)",
+ "RUMOR_CORRECTED surfacing in explanation and debug traces (CLXXX fidelity)",
+ "Leader-death by rumor by correction system-collision test (CXXXIX)",
+ "Cap-eviction trust-write duplication fix if ever observed (residual only)",
+ "Conformance TARGETS opt-in enforcement for future systems",
+ "LATER-21 full-stack 100k and 1m soak gate with correction machinery active"
+ ],
+ "candidates_LATER": [
+ "External-host rumor integration evidence (in-repo valley is not independent adoption)",
+ "Human readability evaluation of cascade behavior (BLOCKED_EXTERNAL_PARTICIPANTS)"
+ ]
  }
  ]
 }
