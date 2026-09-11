@@ -8520,6 +8520,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "DUTY_ARBITRATION_STRESS"
+ },
+ {
+ "milestone": "DUTY_ARBITRATION_134",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change needed: NEXT-132 duty already flows into CIA stand/help/rally tendencies and NEXT-118 tendency weights already bend arbitration, so the stress interaction emerges from composed systems; probe confirmed crossover separation before pinning",
+ "Pinned crossover ladder (equal-priority HOLD_POST vs SURVIVE, fear swept 0 to 1): duty 0.0 crosses at 0.65, 0.25 at 0.70, 0.5 at 0.75, 0.75 and 1.0 at 0.80; high-duty guards hold post deeper into fear",
+ "Interaction is weight-gated: with identityWeight 0 the crossover is duty-invariant (legacy scoring untouched); PROTECT_ALLY shows the same duty-delayed crossover"
+ ],
+ "test_evidence": [
+ "New tests/identity-duty-arbitration.test.js: 5 pass (monotonic crossover; pinned five-level ladder; legacy invariance at weight 0; PROTECT_ALLY crossover; sweep reproducibility)",
+ "Full matrix 362/363 suites, 2818 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~36s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 18 closed; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Frontiers 19 through 20 carry (next: trauma-duty interaction under shared clocks)",
+ "Crossover ladder saturates at 0.80 for duty 0.75 and 1.0 under these priorities; wider priority sweeps open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "TRAUMA_DUTY_CLOCKS"
  }
  ]
 }
