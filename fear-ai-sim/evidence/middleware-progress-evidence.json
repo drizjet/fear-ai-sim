@@ -7304,9 +7304,62 @@
  "Default (0,0,0) origins route literally with registration-order tie-breaks"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_24",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Fifth consecutive cadence audit (5 chunks since CCI-23: NEXT-89 through NEXT-93); gap ledger aggregated across all five",
+ "Red-team hit: stamp-after-aware double counting proved LIVE (distrusted-confirm +0.15, then high-trust retransmit +0.15 again to 0.3575) - one truth vindicated its reporter twice, enough to lift trust over the 0.4 gate on repeats alone",
+ "Probe-construction failure recorded: an inverted (=== false) mutation probe is not a disabled-behavior control; pristine-stash control is the valid experiment (old tests passed pristine, new pins failed exactly)",
+ "Negative results recorded, not hidden: refute-penalty double-charge structurally unreachable (delete-on-first plus NEXT-76 transmit skip); refute retransmit does not re-acquire (holds:false both revisions); dent retransmit never replaces (transmit skip covers refuted corrections)"
+ ],
+ "test_evidence": [
+ "Pristine-stash control: 68 old pass, exactly the 3 new idempotency pins fail",
+ "Full matrix 343/344 suites, 2648 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-sim battery 71 tests ~1s; full matrix ~43s"
+ ],
+ "known_gaps": [
+ "Exoneration path (NEXT-93 gap) unevaluated and ranked first for the next cycle",
+ "Psychometric ground truth still external-participant-blocked",
+ "Default (0,0,0) origins still literal with registration-order tie-breaks"
+ ],
+ "next_action": "RANKED_CANDIDATES",
+ "candidates": [
+ "NEXT-95 exoneration: subject-rumor correction retracts caused faction grievance (fresh NEXT-93 gap, highest information gain)",
+ "Psychometric timescale validation (BLOCKED_EXTERNAL_PARTICIPANTS until human protocol runs)",
+ "Default-origin seeder guidance and documentation",
+ "Godot playable station for rumor-correction-trust loop (Front A proof of CCIR-24 behavior)"
+ ],
+ "red_team": "CCIR-24 correction idempotency - HIT confirmed live, fixed as NEXT-94"
+ },
+ {
+ "milestone": "IDEMPOTENT_CORRECTIONS_NEXT94",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "CCIR-24 fix: _applyCorrection captures alreadyAware before marking and skips all three trust writes on repeats (vindication reward, distrusted vindication reward, false-report penalty) plus dent re-application; belief updates (pin, anchor, delete, relief) still converge",
+ "Mid-build failure recorded: awareness mark accidentally eaten by a range replace, caught by exact-removal review and restored before any test ran (no silent behavior change)",
+ "Stale NEXT-87 docstring (distrusted without marking awareness) corrected to the NEXT-90 one-shot semantics the code implements",
+ "Re-confirmation re-anchor (NEXT-84) deliberately untouched: renewal on genuinely new contact is intended, only the trust accounting is idempotent"
+ ],
+ "test_evidence": [
+ "World-sim battery 71/71 (3 new CCIR-24 pins, each failing pristine and passing fixed: host re-adjudication reward, encounter retransmit freeze at 0.2075, repeat dent freeze)",
+ "Unreachable-vector discipline: refute double-charge probed at both layers, found structurally unreachable, pinned as a comment instead of a vacuous test",
+ "Full matrix 343/344 suites, 2648 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-sim battery ~1s; full matrix ~43s"
+ ],
+ "known_gaps": [
+ "Exoneration path still open (ranked NEXT-95 candidate)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Default (0,0,0) origins route literally with registration-order tie-breaks"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
-
-
-

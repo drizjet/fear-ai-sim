@@ -1238,3 +1238,66 @@ describe('NEXT-92: timescale layering', () => {
         expect(rel.getRelationship('LB', 'LA').trust).toBeGreaterThanOrEqual(0.4);
     });
 });
+
+describe('CCIR-24: idempotent corrections', () => {
+    function ledPair() {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const rel = new RelationshipTensorSystem();
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LA'
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LB'
+        });
+        const meet = () => world._generateSystemicEncounter(a, b,
+            { distance: 5, factionSystem: null, relationshipTensorSystem: rel });
+        const trust = () => rel.getRelationship('LB', 'LA').trust;
+        return { world, rel, a, b, meet, trust };
+    }
+    test('1. Host re-adjudication on the holder pays no second reward', () => {
+        const { world, rel, a, b, meet, trust } = ledPair();
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        world.correctRumor(r.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        const afterFirst = trust();
+        expect(b.knownCorrections.has(r.id)).toBe(true);
+        world.correctRumor(r.id, { confirmed: true, byGroupId: b.id, relationshipTensorSystem: rel });
+        expect(trust()).toBe(afterFirst);
+        expect(b.knownRumors.get(r.id).credibility).toBe(1.0);
+    });
+    test('2. Distrusted-confirm retransmit freezes rehabilitation (red-team replay)', () => {
+        const { world, rel, a, meet, trust } = ledPair();
+        rel.getRelationship('LB', 'LA').trust = 0.1;
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        world.correctRumor(r.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        expect(trust()).toBeCloseTo(0.2075, 4);
+        rel.getRelationship('LA', 'LB').trust = 1.0;
+        meet();
+        expect(trust()).toBeCloseTo(0.2075, 4);
+    });
+    // Refute-penalty double-charge is structurally unreachable: the first
+    // refutation deletes the instance and the NEXT-76 transmit skip blocks
+    // re-acquisition, so the repeat-application guard there is
+    // defense-in-depth with no live vector to pin (probed both layers).
+    test('4. Repeat dent application compounds no second credibility dent', () => {
+        const { world, rel, a, b, meet } = ledPair();
+        rel.getRelationship('LB', 'LA').trust = 0.1;
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        const heard = b.knownRumors.get(r.id).credibility;
+        world.correctRumor(r.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        const dented = b.knownRumors.get(r.id).credibility;
+        expect(dented).toBeLessThan(heard);
+        const master = world.rumors.get(r.id);
+        world._applyCorrection(b, master, { relationshipTensorSystem: rel, senderGroupId: a.id });
+        expect(b.knownRumors.get(r.id).credibility).toBe(dented);
+    });
+});

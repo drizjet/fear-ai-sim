@@ -494,6 +494,11 @@ export class WorldSimulationSystem {
                 }
             }
         }
+        // CCIR-24: idempotent corrections. A group that already holds this
+        // correction was already counted - retransmits refresh belief state
+        // but must not re-pay vindication rewards or re-charge false-report
+        // penalties, or one truth vindicates its reporter without bound.
+        const alreadyAware = group.knownCorrections?.has(master.id) === true;
         if (group.knownCorrections) {
             group.knownCorrections.add(master.id);
             // NEXT-81: hard backstop mirrors the NEXT-38 ledger pattern. Sets
@@ -505,18 +510,20 @@ export class WorldSimulationSystem {
         }
         if (!inst) return 'unheard';
         if (dentTrust !== null) {
-            inst.credibility = Math.max(0.05, inst.credibility * (dentTrust / 0.4));
+            // One shot per correction: retransmits to already-aware groups
+            // report the dent without compounding it (CCIR-24 idempotency).
+            if (!alreadyAware) inst.credibility = Math.max(0.05, inst.credibility * (dentTrust / 0.4));
             return 'dented';
         }
         if (vindicateDespiteDistrust) {
-            // Belief untouched (no pin, no anchor); the originator still
-            // earns the vindication reward. Marked aware above: one shot
-            // per correction, further truths earn further steps.
-            this._recordVindication(group, master, inst, relationshipTensorSystem);
+            // Belief untouched (no pin, no anchor); the originator earns the
+            // vindication reward once. Retransmits to already-aware groups
+            // refresh nothing and pay nothing (CCIR-24 idempotency).
+            if (!alreadyAware) this._recordVindication(group, master, inst, relationshipTensorSystem);
             return 'distrusted';
         }
         if (master.correction.confirmed) {
-            this._recordVindication(group, master, inst, relationshipTensorSystem);
+            if (!alreadyAware) this._recordVindication(group, master, inst, relationshipTensorSystem);
             inst.credibility = 1.0;
             inst.fidelity = 1.0;
             // NEXT-84: host-truth adjudication is a reinforcement event, not
@@ -532,7 +539,7 @@ export class WorldSimulationSystem {
             && inst.perceivedSeverity >= 0.5 && group.drivers) {
             group.drivers.threatPressure = clamp01(group.drivers.threatPressure - 0.15 * (inst.credibility ?? 0.5));
         }
-        if (relationshipTensorSystem && group.leaderId && master.sourceEntityId) {
+        if (!alreadyAware && relationshipTensorSystem && group.leaderId && master.sourceEntityId) {
             const originator = this.groups.get(String(master.sourceEntityId));
             const originLeader = originator?.leaderId;
             if (originLeader && originLeader !== group.leaderId) {
@@ -566,9 +573,9 @@ export class WorldSimulationSystem {
     /**
      * NEXT-75: spread host-truth corrections the sender has applied to a
      * receiver that has not. NEXT-87: each application is gated by the
-     * receiver's earned trust toward the sender (distrusted senders yield
-     * 'distrusted' without marking awareness, so later trusted delivery
-     * can still land).
+     * receiver's earned trust toward the sender. CCIR-24: awareness marks
+     * on every application, and repeat applications to aware groups pay
+     * no further rewards or penalties (idempotent corrections).
      * @param {string} senderGroupId Correcting group
      * @param {string} receiverGroupId Learning group
      * @returns {Array<object>} Applied { rumorId, result } records
