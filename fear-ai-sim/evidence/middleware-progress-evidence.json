@@ -8497,6 +8497,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "STRESS_AFFINITY_NOISE"
+ },
+ {
+ "milestone": "STRESS_AFFINITY_133",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Group-panic susceptibility now scales with socialOrientation: contagion weight 0.25 times (0.5 plus affinity), spanning 0.125 to 0.375; neutral 0.5 reproduces the legacy 0.25 exactly; gain exposed in layers.identityGain",
+ "Under full group panic the high-affinity twin flees harder (0.649 vs 0.536) and stands less; with zero peer panic flee and stand match across affinity; attached agents inherit the modulation automatically since contagionFear already feeds the groupPanic channel",
+ "Advisory arithmetic only; no host writes; engine and agent APIs untouched"
+ ],
+ "test_evidence": [
+ "New tests/identity-stress-affinity.test.js: 6 pass (legacy weight at neutral; gain span; panic ordering; zero-panic irrelevance; near-neighbor 0.55-vs-0.45 ordering preserved across 3 seeded noisy runs; exact reproducibility)",
+ "Full matrix 361/362 suites, 2813 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~43s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 17 closed; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Frontiers 18 through 20 carry (next: duty-arbitration stress interaction)",
+ "Affinity modulates group panic only; peer-trust contagion paths open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "DUTY_ARBITRATION_STRESS"
  }
  ]
 }

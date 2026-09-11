@@ -175,7 +175,11 @@ export class CharacterIdentityArchitecture {
         const trustWeight = 1 + (A.trust - 0.5) * 0.5 + (A.respect - 0.5) * 0.3;
         const dangerMemory = 1 + A.learnedDanger * 0.5;
         // State pressure (immediate): urgency of now.
-        const threatPressure = clamp01(S.fear * 0.6 + S.perceivedDanger * 0.5 + S.urgency * 0.3 + S.groupPanic * 0.25 - A.confidence * 0.2);
+        // NEXT-133: affinity-modulated contagion. Socially attuned characters
+        // catch peer panic harder; loners stay insulated. Neutral (0.5)
+        // reproduces the legacy 0.25 weight exactly.
+        const contagionGain = 0.25 * (0.5 + (I.socialOrientation ?? 0.5));
+        const threatPressure = clamp01(S.fear * 0.6 + S.perceivedDanger * 0.5 + S.urgency * 0.3 + S.groupPanic * contagionGain - A.confidence * 0.2);
         const stand = round4(standGain * (1 + A.confidence * 0.3) * (1 - A.trauma * 0.25) + S.situationalConfidence * 0.1 - threatPressure * 0.35 * traumaWeight);
         const flee = round4(fleeGain * traumaWeight * dangerMemory + threatPressure * 0.45 - S.situationalConfidence * 0.1);
         const help = round4(helpGain * trustWeight * (1 - threatPressure * 0.5) + (A.respect - 0.5) * 0.1);
@@ -191,7 +195,7 @@ export class CharacterIdentityArchitecture {
             rankedIntents: ranked,
             topIntent: ranked[0].action,
             layers: {
-                identityGain: { standGain: round4(standGain), fleeGain: round4(fleeGain), helpGain: round4(helpGain) },
+                identityGain: { standGain: round4(standGain), fleeGain: round4(fleeGain), helpGain: round4(helpGain), contagionGain: round4(contagionGain) },
                 adaptiveModulation: { traumaWeight: round4(traumaWeight), trustWeight: round4(trustWeight), dangerMemory: round4(dangerMemory) },
                 statePressure: round4(threatPressure)
             },
