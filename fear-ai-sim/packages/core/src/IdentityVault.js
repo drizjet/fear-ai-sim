@@ -69,6 +69,12 @@ export class IdentityVault {
         const memory = snapshot.memory && typeof snapshot.memory === 'object'
             ? deepCloneJson(snapshot.memory)
             : null;
+        // NEXT-119 (CCI-28 frontier 3): trauma-engine record plus conditioned
+        // phobias ride along under `trauma`, cloned both ways like memory, so
+        // a sealed-then-restored agent keeps its fears, not just its traits.
+        const trauma = snapshot.trauma && typeof snapshot.trauma === 'object'
+            ? deepCloneJson(snapshot.trauma)
+            : null;
         const rec = {
             agentId: id,
             identity: freezeTraits(snapshot.identity),
@@ -76,11 +82,12 @@ export class IdentityVault {
             bonds: Object.freeze(ranked.slice(0, IMPORTANT_EDGE_K)),
             droppedEdges: ranked.length - Math.min(ranked.length, IMPORTANT_EDGE_K),
             memory,
+            trauma,
             sealedTick: snapshot.tick ?? 0,
             abstractTicks: 0
         };
         this.sealed.set(id, rec);
-        return { agentId: id, bondsKept: rec.bonds.length, droppedEdges: rec.droppedEdges, memorySealed: memory !== null };
+        return { agentId: id, bondsKept: rec.bonds.length, droppedEdges: rec.droppedEdges, memorySealed: memory !== null, traumaSealed: trauma !== null };
     }
 
     /**
@@ -102,7 +109,7 @@ export class IdentityVault {
 
     /**
      * Restore a sealed agent to full simulation.
-     * @returns {{ identity, adaptive, bonds, abstractTicks, fidelity }}
+     * @returns {{ identity, adaptive, bonds, trauma, abstractTicks, fidelity }}
      */
     restore(agentId) {
         const rec = this.sealed.get(String(agentId));
@@ -113,9 +120,10 @@ export class IdentityVault {
             adaptive: { ...rec.adaptive },
             bonds: rec.bonds.map((b) => ({ ...b })),
             memory: rec.memory ? deepCloneJson(rec.memory) : null,
+            trauma: rec.trauma ? deepCloneJson(rec.trauma) : null,
             abstractTicks: rec.abstractTicks,
             droppedEdges: rec.droppedEdges,
-            fidelity: { identityExact: true, adaptiveEpsilon: 1e-9, bondsKept: rec.bonds.length, memoryExact: rec.memory !== null }
+            fidelity: { identityExact: true, adaptiveEpsilon: 1e-9, bondsKept: rec.bonds.length, memoryExact: rec.memory !== null, traumaExact: rec.trauma !== null }
         };
     }
 
@@ -134,6 +142,7 @@ export class IdentityVault {
                 bonds: rec.bonds.map((b) => ({ ...b })),
                 droppedEdges: rec.droppedEdges,
                 memory: rec.memory ? deepCloneJson(rec.memory) : null,
+                trauma: rec.trauma ? deepCloneJson(rec.trauma) : null,
                 sealedTick: rec.sealedTick,
                 abstractTicks: rec.abstractTicks
             };
@@ -152,7 +161,7 @@ export class IdentityVault {
                 adaptive: Object.freeze({ ...(rec.adaptive || {}) }),
                 bonds: Object.freeze((rec.bonds || []).map((b) => ({ ...b }))),
                 droppedEdges: rec.droppedEdges || 0,
-                memory: rec.memory ? deepCloneJson(rec.memory) : null,
+                trauma: rec.trauma ? deepCloneJson(rec.trauma) : null,
                 sealedTick: rec.sealedTick || 0,
                 abstractTicks: rec.abstractTicks || 0
             });

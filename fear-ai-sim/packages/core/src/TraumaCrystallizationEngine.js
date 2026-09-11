@@ -545,6 +545,65 @@ export class TraumaCrystallizationEngine {
     }
 
     /**
+     * NEXT-119 (CCI-28 frontier 3): per-agent trauma snapshot for vault
+     * seal/restore. Returns a JSON-safe clone { record, phobias } or null
+     * when the agent has no trauma history worth preserving.
+     */
+    agentTraumaSnapshot(agentId) {
+        const id = String(agentId);
+        const rec = this.agentRecords.get(id);
+        if (!rec) return null;
+        if (rec.activeTraumas.length === 0 && rec.crystallizedTraumas.length === 0) return null;
+        const phobiaMap = this.phobicRegistry.agentPhobias.get(id);
+        const phobias = {};
+        if (phobiaMap) {
+            for (const [key, p] of phobiaMap.entries()) phobias[key] = { ...p };
+        }
+        return {
+            record: JSON.parse(JSON.stringify({
+                agentId: rec.agentId,
+                baselineTraits: { ...rec.baselineTraits },
+                currentTraits: { ...rec.currentTraits },
+                quiescentFearFloor: rec.quiescentFearFloor,
+                recoveryHalfLifeMultiplier: rec.recoveryHalfLifeMultiplier,
+                panicOnsetOffset: rec.panicOnsetOffset,
+                activeTraumas: rec.activeTraumas,
+                crystallizedTraumas: rec.crystallizedTraumas,
+                solaceAccumulator: rec.solaceAccumulator,
+                calmSanctuaryTicks: rec.calmSanctuaryTicks
+            })),
+            phobias
+        };
+    }
+
+    /**
+     * Restore one agent's trauma snapshot (from agentTraumaSnapshot or a
+     * vault `trauma` blob). Registers the agent when unknown.
+     */
+    restoreAgentTrauma(agentId, snap) {
+        const id = String(agentId);
+        if (!snap || !snap.record) return false;
+        if (!this.agentRecords.has(id)) this.registerAgent(id, snap.record.baselineTraits || {});
+        const rec = this.agentRecords.get(id);
+        const src = snap.record;
+        rec.baselineTraits = { ...src.baselineTraits };
+        rec.currentTraits = { ...src.currentTraits };
+        rec.quiescentFearFloor = src.quiescentFearFloor || 0;
+        rec.recoveryHalfLifeMultiplier = src.recoveryHalfLifeMultiplier || 1.0;
+        rec.panicOnsetOffset = src.panicOnsetOffset || 0;
+        rec.activeTraumas = JSON.parse(JSON.stringify(src.activeTraumas || []));
+        rec.crystallizedTraumas = JSON.parse(JSON.stringify(src.crystallizedTraumas || []));
+        rec.solaceAccumulator = src.solaceAccumulator || 0;
+        rec.calmSanctuaryTicks = src.calmSanctuaryTicks || 0;
+        if (snap.phobias) {
+            const phobiaMap = new Map();
+            for (const [key, p] of Object.entries(snap.phobias)) phobiaMap.set(key, { ...p });
+            this.phobicRegistry.agentPhobias.set(id, phobiaMap);
+        }
+        return true;
+    }
+
+    /**
      * Export complete state for serialization and replay determinism.
      */
     getState() {
