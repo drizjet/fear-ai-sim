@@ -23,6 +23,8 @@
  * Middleware provides deterministic causal graphs, backward queries, and narrative explanations.
  */
 
+import { tendencyAxisFor } from './GoalArbitrationEngine.js';
+
 export const CAUSAL_DOMAINS = Object.freeze({
     AFFECTIVE: 'AFFECTIVE',     // Panic cascades, hero rally, trauma relapse, despair
     ECONOMIC: 'ECONOMIC',       // Stockpile scarcity, price inflation, trade raids, famine
@@ -496,7 +498,9 @@ export class CausalEventGraph {
  * @param {CausalEventGraph} graph
  * @param {object} decision arbitrate() output
  * @param {object} [options={}] { tick, domain, eventId,
- *   causes: [{ id, weight, mechanism }] }
+ *   causes: [{ id, weight, mechanism }],
+ *   identity: { tendencies, blend } (NEXT-164: opt-in identity
+ *   attribution; recorded only when it actually weighed the decision) }
  * @returns {object} recorded node
  */
 export function recordDecisionOutcome(graph, decision, options = {}) {
@@ -520,6 +524,26 @@ export function recordDecisionOutcome(graph, decision, options = {}) {
     const eventId = typeof options.eventId === 'string' && options.eventId
         ? options.eventId
         : `${decision.agentId}:decision:${Math.floor(tick)}:${decision.winningGoal}`;
+    // NEXT-164 (post-25 candidate 4): identity attribution. The winner's
+    // tendency axis and its value/blend are recorded only when identity
+    // actually weighed (finite blend above zero with a finite tendency
+    // for the winning axis); otherwise the payload stays legacy-exact.
+    let identity = null;
+    {
+        const rawBlend = Number(options.identity?.blend ?? 0);
+        const blend = Number.isFinite(rawBlend) ? Math.max(0, Math.min(1, rawBlend)) : 0;
+        const axis = tendencyAxisFor(decision.winningGoal);
+        const rawT = Number(options.identity?.tendencies?.[axis]);
+        if (blend > 0 && axis && Number.isFinite(rawT)) {
+            const tendency = Math.max(0, Math.min(1, rawT));
+            identity = {
+                axis,
+                tendency: Number(tendency.toFixed(4)),
+                blend: Number(blend.toFixed(4)),
+                weight: Number(Math.max(0.5, Math.min(1.5, 1 + blend * (tendency - 0.5))).toFixed(4))
+            };
+        }
+    }
     const node = graph.recordEvent({
         id: eventId,
         tick: Math.floor(tick),
@@ -527,13 +551,14 @@ export function recordDecisionOutcome(graph, decision, options = {}) {
         type: 'GOAL_DECISION',
         entityId: decision.agentId,
         severity: Math.max(0, Math.min(1, Number(decision.fear) || 0)),
-        description: `${decision.agentId} chose ${decision.winningGoal} (${decision.winningIntent || 'no-intent'}) at score ${decision.winningScore ?? '?'}${decision.courageous ? ' with courage' : ''}`,
+        description: `${decision.agentId} chose ${decision.winningGoal} (${decision.winningIntent || 'no-intent'}) at score ${decision.winningScore ?? '?'}${decision.courageous ? ' with courage' : ''}${identity ? ` (identity ${identity.axis} x${identity.weight})` : ''}`,
         payload: {
             winningGoal: decision.winningGoal,
             winningIntent: decision.winningIntent ?? null,
             winningScore: decision.winningScore ?? null,
             fear: decision.fear ?? null,
-            courageous: decision.courageous === true
+            courageous: decision.courageous === true,
+            ...(identity ? { identity } : {})
         }
     });
     for (const c of causes) {

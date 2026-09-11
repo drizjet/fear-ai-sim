@@ -103,7 +103,7 @@ function traumaRelevance(goalType, fear, traumaLoad, memoryLoad) {
 // biases WHO is asked to do WHAT: stand-prone characters weight duty goals,
 // flee-prone characters weight survival goals, help-prone characters weight
 // ally goals, rally-prone characters weight escort duty.
-function tendencyAxisFor(goalType) {
+export function tendencyAxisFor(goalType) {
     if (goalType === GOAL_TYPES.SURVIVE || goalType === GOAL_TYPES.REACH_SAFETY) return 'flee';
     if (goalType === GOAL_TYPES.HOLD_POST) return 'stand';
     if (goalType === GOAL_TYPES.PROTECT_ALLY || goalType === GOAL_TYPES.AID_VICTIM) return 'help';

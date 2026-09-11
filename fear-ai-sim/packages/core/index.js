@@ -280,7 +280,8 @@ export {
     GOAL_TYPES,
     ROLE_CONSTRAINTS,
     COURAGE_FEAR_THRESHOLD,
-    CALM_FEAR_CEILING
+    CALM_FEAR_CEILING,
+    tendencyAxisFor
 } from './src/GoalArbitrationEngine.js';
 export {
     PerceptionRobustnessEngine,

@@ -9218,6 +9218,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_4"
+ },
+ {
+ "milestone": "IDENTITY_CAUSAL_NODES_164",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "tendencyAxisFor exported from GoalArbitrationEngine and re-exported through core index; recordDecisionOutcome gains opt-in options.identity recording axis, tendency, blend, and computed weight on GOAL_DECISION node payload and description only when identity actually weighed",
+ "Legacy nodes stay exact (no identity key); stand-0.9 HOLD_POST records axis stand with weight 1.4 in both payload and description; malformed identity degrades silently",
+ "Mid-build notes: one helper edit ate the graph header comment (restored verbatim via checkout plus narrow re-insert); test file needed four range repairs after echo damage; all caught by node --check before running"
+ ],
+ "test_evidence": [
+ "New tests/identity-causal-nodes.test.js: 6 pass (axis map; legacy exactness; attribution recording; silent non-weighing; malformed safety with clamping; trace plus replay)",
+ "Causal and arbitration interaction suites green (40 pass), confirming bridge and export changes preserve legacy behavior",
+ "Full matrix 391/392 suites, 2977 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~91s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 5 through 24 carry (next: identity-conditioned rumor susceptibility); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Identity attribution covers decision nodes only; threat, trauma, and rumor nodes carry no identity payload, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_5"
  }
  ]
 }
