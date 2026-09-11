@@ -56,6 +56,41 @@ const ADAPTIVE_ANCHORS = Object.freeze({
     respect: 0.5, learnedDanger: 0, routeFamiliarity: 0,
     confidence: 0.5, reputation: 0.5
 });
+// NEXT-146 (audit candidate 10): gain coefficient table mirroring the
+// decide() gain formulas exactly (duty applies to duty-minus-0.5).
+// Single source for trait-level why-not attribution; a consistency test
+// pins table-derived gains against decide()'s exposed identityGain.
+export const IDENTITY_GAIN_WEIGHTS = Object.freeze({
+    stand: Object.freeze({ base: 0.3, resilience: 0.4, conscientiousness: 0.2, loyalty: 0.2, neuroticism: -0.15, duty: 0.3 }),
+    flee: Object.freeze({ base: 0.6, neuroticism: 0.4, riskTolerance: -0.3, resilience: -0.15 }),
+    help: Object.freeze({ base: 0.2, agreeableness: 0.45, socialOrientation: 0.25, neuroticism: -0.1, duty: 0.2 }),
+    investigate: Object.freeze({ base: 0.2, openness: 0.45, extraversion: 0.2, neuroticism: -0.1 }),
+    rally: Object.freeze({ base: 0.15, leadership: 0.5, extraversion: 0.2, duty: 0.2 })
+});
+/** Trait contributions to one action's identity gain (duty centered). */
+export function attributeGain(action, identity = {}) {
+    const weights = IDENTITY_GAIN_WEIGHTS[String(action)];
+    if (!weights) throw new Error(`UNKNOWN_ACTION: ${action}`);
+    const get = (t, fallback = 0.5) => {
+        const v = Number(identity?.[t]);
+        return Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : fallback;
+    };
+    const contributions = {};
+    for (const [trait, w] of Object.entries(weights)) {
+        if (trait === 'base') continue;
+        const value = trait === 'duty' ? get(trait) - 0.5 : get(trait);
+        contributions[trait] = round4(value * w);
+    }
+    const ranked = Object.entries(contributions).sort((a, b) => b[1] - a[1]);
+    return {
+        action: String(action),
+        contributions,
+        supporter: ranked[0][0],
+        supporterValue: ranked[0][1],
+        drag: ranked[ranked.length - 1][0],
+        dragValue: ranked[ranked.length - 1][1]
+    };
+}
 
 /** Max adaptive displacement per tick: prevents single-event collapse. */
 const ADAPTIVE_RATE_LIMIT = 0.05;

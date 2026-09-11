@@ -8792,6 +8792,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "PERSONA_WHY_NOT"
+ },
+ {
+ "milestone": "PERSONA_WHY_NOT_146",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Exported IDENTITY_GAIN_WEIGHTS coefficient table plus attributeGain(action, identity) from the CIA module; table-derived gains reproduce decide()'s exposed stand, flee, and help gains exactly (pinned by test)",
+ "WhyNotExplainer.explainIdentity takes opt-in identity and appends trait attribution (strongest supporter and drag with signed contributions) without changing margins, layers, or default answers; retaliation path untouched",
+ "Mid-build notes: one edit dropped the round4 helper (caught by explainer regression, restored); test expectation corrected when resilience (0.36) beat duty (0.15) as stand supporter for the probe persona",
+ "Flake watch: first full matrix showed 3 transient cli.test.js failures with zero coupling to changed modules; isolated rerun 116/116 green and second full matrix back to baseline"
+ ],
+ "test_evidence": [
+ "New tests/persona-why-not.test.js: 6 pass (table-vs-decide consistency; supporter ranking; opt-in answer text with unchanged margins; coward neuroticism attribution; loud unknown actions; reproducibility)",
+ "Full matrix 373/374 suites, 2879 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~44s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4 through 10, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 11 through 14 and 16 through 25 carry (next: arbitration outcomes as causal nodes); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Attribution covers identity gains only; adaptive and state contributions open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "ARBITRATION_CAUSAL_NODES"
  }
  ]
 }

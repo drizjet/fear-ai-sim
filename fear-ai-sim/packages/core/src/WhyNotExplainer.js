@@ -18,14 +18,18 @@
  */
 
 const round4 = (v) => (typeof v !== 'number' || !Number.isFinite(v) ? 0 : Math.round(v * 10000) / 10000);
+import { attributeGain } from './CharacterIdentityArchitecture.js';
 
 export class WhyNotExplainer {
     /**
      * Why didn't an identity decision pick the asked-about action?
      * @param {object} frame recorded decide() output
      * @param {string} action the rejected action (stand|flee|help|investigate|rally)
+     * @param {object|null} [identity] opt-in CIA identity for trait-level
+     * attribution (NEXT-146): names the strongest supporting and
+     * dragging traits behind the asked-about action's gain.
      */
-    explainIdentity(frame, action) {
+    explainIdentity(frame, action, identity = null) {
         if (!frame || !frame.tendencies || !frame.rankedIntents) throw new Error('FRAME_NEEDS_TENDENCIES_AND_RANKING');
         const asked = String(action);
         if (!(asked in frame.tendencies)) throw new Error(`UNKNOWN_ACTION: ${asked}`);
@@ -49,12 +53,21 @@ export class WhyNotExplainer {
         const flipCondition = fearSided
             ? `Threat pressure would need to rise ~${margin} above current ${statePressure} to flip ${asked} first.`
             : `Calm confidence would need to rise ~${margin} to flip ${asked} first.`;
+        // NEXT-146: opt-in trait attribution names the strongest
+        // supporting and dragging traits behind the asked action's gain.
+        let traitNote = '';
+        let traitAttribution = null;
+        if (identity && typeof identity === 'object') {
+            traitAttribution = attributeGain(asked, identity);
+            traitNote = ` ${traitAttribution.supporter} (${identity[traitAttribution.supporter]}) supports ${asked} most (${traitAttribution.supporterValue}); ${traitAttribution.drag} (${identity[traitAttribution.drag]}) drags it most (${traitAttribution.dragValue}).`;
+        }
         return {
             question: `Why didn't ${frame.agentId} ${asked}?`,
-            answer: `${winner.action} beat ${asked} by ${margin} (${winner.weight} vs ${frame.tendencies[asked]}); ${blockingLayer} layer dominates this frame.`,
+            answer: `${winner.action} beat ${asked} by ${margin} (${winner.weight} vs ${frame.tendencies[asked]}); ${blockingLayer} layer dominates this frame.${traitNote}`,
             margin,
             blockingLayer,
             flipCondition,
+            traitAttribution,
             receipt: { winner: winner.action, winnerWeight: winner.weight, askedWeight: frame.tendencies[asked], statePressure }
         };
     }

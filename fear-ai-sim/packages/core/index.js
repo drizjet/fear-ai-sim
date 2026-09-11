@@ -309,7 +309,9 @@ export {
  CharacterIdentityArchitecture,
  IDENTITY_TRAITS,
  ADAPTIVE_TRACKS,
- STATE_CHANNELS
+ STATE_CHANNELS,
+ IDENTITY_GAIN_WEIGHTS,
+ attributeGain
 } from './src/CharacterIdentityArchitecture.js';
 export {
  FunctionalPersonaSignatures,
