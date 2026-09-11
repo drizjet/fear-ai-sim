@@ -416,13 +416,22 @@ export class FactionSystem {
         }
 
         // Composite hostility pressure
-        // P = 0.40 * grievance + 0.30 * territorial + 0.20 * economic - 0.35 * trust + culture
+        // P = 0.40 * grievance + 0.30 * territorial + 0.20 * economic - 0.35 * trust + culture + leader
+        // NEXT-143 (audit candidate 7): leader temperament conditions the
+        // faction's pressure. Host derives leaderAggression in [-1,1] from
+        // the leader's persona (e.g. CIA stand-vs-flee tendencies or
+        // neuroticism); 0/absent reproduces legacy pressure exactly.
+        const rawAgg = Number(context.leaderAggression);
+        const leaderModifier = Number.isFinite(rawAgg)
+            ? 0.15 * Math.max(-1, Math.min(1, rawAgg))
+            : 0;
         const rawPressure = (
             0.40 * stance.grievance +
             0.30 * stance.territorialPressure +
             0.20 * stance.economicPressure -
             0.35 * stance.trust +
-            cultureAggression
+            cultureAggression +
+            leaderModifier
         );
         const compositePressure = clamp01(rawPressure);
         stance.compositePressure = compositePressure;
@@ -567,6 +576,7 @@ export class FactionSystem {
             fromStage: prevStage,
             toStage: nextStage,
             compositePressure,
+            leaderModifier,
             stageChanged: prevStage !== nextStage,
             capability: {
                 militaryReadiness: sourceFaction.militaryReadiness,

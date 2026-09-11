@@ -8725,6 +8725,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "PERSONA_FACTION_BEHAVIOR"
+ },
+ {
+ "milestone": "PERSONA_FACTION_143",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Opt-in context.leaderAggression in [-1,1] bends composite hostility pressure by up to plus or minus 0.15, the same scale as faction culture; absent or zero input reproduces legacy pressure and stage exactly; finite extremes clamp, NaN degrades to legacy",
+ "Host mapping documented and proven: leader persona stand-vs-flee gap scaled into [-1,1] yields hawk 1.0 versus dove -0.497; at identical grievance the hawkish faction MOBILIZEs while the dovish one WARNs (base THREATEN)",
+ "Modifier exposed as leaderModifier on the stance result; advisory pressure only, capability and uncertainty gates untouched"
+ ],
+ "test_evidence": [
+ "New tests/persona-faction-behavior.test.js: 6 pass (legacy identity; hawk-restrain ladder; monotonic pressure with 0.3 span; end-to-end persona stages; input clamping; reproducibility)",
+ "Full matrix 370/371 suites, 2861 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~35s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4, 5, 6, 7, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 8 through 14 and 16 through 25 carry (next: trauma-weighted goal relevance); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Single scalar temperament only; governance-archetype interaction open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "TRAUMA_GOAL_RELEVANCE"
  }
  ]
 }
