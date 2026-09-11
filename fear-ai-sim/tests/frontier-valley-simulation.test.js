@@ -1336,3 +1336,58 @@ describe('NEXT-109: mixed-holder shares', () => {
         expect(run()).toEqual(run());
     });
 });
+
+describe('NEXT-110: hearsay-restraint symmetry', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    function dependent() {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        for (let k = 0; k < 10; k++) {
+            sim.recordValleyTrade({ sourceFaction: B, destFaction: S, commodity: 'food', amount: 5 });
+        }
+        return sim;
+    }
+    const grievance = (sim) => sim.factionSystem.getBilateralStance(S, B).grievance;
+    test('84. Trade dependence does not damp hearsay bias', () => {
+        // Restraint cools retaliation for observed acts (NEXT-16 paths pass
+        // it); hearsay stays informational and undamped on both legs.
+        const sim = dependent();
+        expect(sim._dependencyRestraint(S, B)).toBeGreaterThan(0.5);
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        const base = grievance(sim);
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [rumor.id]
+        }]);
+        expect(grievance(sim)).toBeCloseTo(base + 0.10, 9);
+    });
+    test('85. Retraction stays symmetric under dependence', () => {
+        const sim = dependent();
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        const base = grievance(sim);
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [rumor.id]
+        }]);
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim._recordEncounterConsequences([]);
+        expect(grievance(sim)).toBeCloseTo(base, 9);
+    });
+    test('86. Restraint symmetry is deterministic', () => {
+        const run = () => {
+            const sim = dependent();
+            const before = grievance(sim);
+            sim.factionSystem.recordIncident(B, S, 'RUMOR_HEARSAY', {});
+            return grievance(sim) - before;
+        };
+        expect(run()).toBe(run());
+        expect(run()).toBeCloseTo(0.10, 9);
+    });
+});

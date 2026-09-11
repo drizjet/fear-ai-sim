@@ -7812,6 +7812,31 @@
  "Heap-at-scale unmeasured with gc"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "RESTRAINT_SYMMETRY_NEXT110",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit resolution, no behavior change: the bridge never passes restraint for hearsay (only combat paths do), and the sweep passes relief without restraint, so both legs run at scale 1. Rationale documented: restraint cools retaliation for observed acts; hearsay stays informational on both legs",
+ "Probed live dependence (restraint 0.70) with undamped hearsay (+0.10 exact)",
+ "First probe was a no-op (single-line replace missed the multi-line details literal); caught by the all-pass smell and re-probed correctly. A probe that changes nothing and passes everything proves nothing",
+ "No mid-build edit failures"
+ ],
+ "test_evidence": [
+ "Valley battery 86/86 (3 new NEXT-110 pins: undamped bias under live dependence, symmetric retraction, determinism)",
+ "Restraint-injected probe fails exactly tests 84 and 85 (determinism control unaffected); restored",
+ "Full matrix 343/344 suites, 2705 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~14s with restraint pins; full matrix ~54s"
+ ],
+ "known_gaps": [
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Heap-at-scale unmeasured with gc",
+ "10k and 100k-tick horizons cover rumor churn only, not correction-heavy regimes"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
