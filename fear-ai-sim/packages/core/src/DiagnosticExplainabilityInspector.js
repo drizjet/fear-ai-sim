@@ -13,6 +13,36 @@ function coord(n) {
     return Number.isFinite(v) ? v.toFixed(1) : '0.0';
 }
 
+// NEXT-163 (post-25 candidate 3): relationship factors. Reads directed
+// trust for observed peers from an opt-in relationship system
+// (duck-typed hasRelationship/getRelationship). hasRelationship guards
+// every read so explaining never fabricates tensor entries. Only the two
+// trusted-peer-resolution intents (APPROACH_ALLY, WARN_GROUP — verified
+// pickTrustedPeer consumers) name a selected target; all other entries
+// are labeled observed landscape, never a causal claim.
+function explainRelationships(agentId, peers, intentType, relSys) {
+    if (!relSys || typeof relSys.hasRelationship !== 'function' || typeof relSys.getRelationship !== 'function') return [];
+    const rows = [];
+    for (const p of Array.isArray(peers) ? peers : []) {
+        const pid = p?.id == null ? null : String(p.id);
+        if (!pid) continue;
+        let rel = null;
+        try {
+            if (relSys.hasRelationship(agentId, pid)) rel = relSys.getRelationship(agentId, pid);
+        } catch {
+            rel = null;
+        }
+        if (!rel) continue;
+        const trust = Number(rel.trust);
+        rows.push({ peer_id: pid, trust: fmt(Number.isFinite(trust) ? trust : 0), role: 'observed' });
+    }
+    rows.sort((a, b) => Number(b.trust) - Number(a.trust) || (a.peer_id < b.peer_id ? -1 : 1));
+    if ((intentType === 'APPROACH_ALLY' || intentType === 'WARN_GROUP') && rows.length > 0) {
+        rows[0].role = 'selected-target';
+    }
+    return rows;
+}
+
 export class DiagnosticExplainabilityInspector {
     static explainAgentDecision(agent, observations = {}, context = {}) {
         if (!agent) throw new Error('Agent is required for diagnostic explanation');
@@ -135,6 +165,7 @@ export class DiagnosticExplainabilityInspector {
             active_intent: activeIntent,
             threat_attribution: threatContributors,
             trait_impacts: traitImpacts,
+            relationship_factors: explainRelationships(agent.id, peers, intentType, context.relationshipSystem),
             rejected_alternatives: rejectedAlternatives,
             habituation_status: {
                 active: agent.enableHabituation ?? true,

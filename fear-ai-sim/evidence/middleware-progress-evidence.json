@@ -9195,6 +9195,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_3"
+ },
+ {
+ "milestone": "RELATIONSHIP_EXPLANATIONS_163",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "DiagnosticExplainabilityInspector.explainAgentDecision gains opt-in context.relationshipSystem with a relationship_factors section: explicit tensor trust per observed peer, top-trust peer named selected-target only for the verified trusted-peer-resolution intents APPROACH_ALLY and WARN_GROUP",
+ "hasRelationship guards every read so explaining never fabricates tensor entries; hostile systems degrade to empty factors; all other intents label entries observed landscape with no causal claim",
+ "Mid-build note: first helper edit ate the class opener line; caught by node --check and restored before wiring the output field"
+ ],
+ "test_evidence": [
+ "New tests/relationship-explanations.test.js: 6 pass (legacy emptiness; selected-target naming; landscape ordering with negative trust; no fabrication; hostile safety; exact replay)",
+ "Explanation suites (designer, persona why-not, why-not) green with the new key present, 16 pass",
+ "Full matrix 390/391 suites, 2971 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~90s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 4 through 24 carry (next: causal explanations citing identity); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Faction-level explanations still cite bilateral stances only, not the directed NPC relationships beneath them, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_4"
  }
  ]
 }
