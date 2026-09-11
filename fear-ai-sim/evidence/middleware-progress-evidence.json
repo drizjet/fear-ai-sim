@@ -9241,6 +9241,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_5"
+ },
+ {
+ "milestone": "IDENTITY_RUMOR_SUSCEPTIBILITY_165",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "InformationPropagationEngine gains opt-in per-listener susceptibility (absent is 1.0, legacy-exact) applied to received confidence, plus exported susceptibilityFromTraits mapping neuroticism and openness to a 1.25/0.75-bounded multiplier that is exactly 1.0 at neutral",
+ "End-to-end through live propagation and dread uptake, the same army rumor lands at dread 0.795 for hot identities versus 0.526 for guarded ones with neutral at 0.685",
+ "Mid-build notes: one spread edit landed on stale line numbers and displaced the loop openers (restored, diff verified minimal); test bound expectations first claimed the unreachable clamp edges 1.5/0.5 and were corrected to the true 1.25/0.75 extremes"
+ ],
+ "test_evidence": [
+ "New tests/identity-rumor-susceptibility.test.js: 6 pass (mapping neutrality and bounds; legacy identical copies; hotter held copies; end-to-end dread ordering; malformed safety; exact replay)",
+ "Rumor interaction suites green (15 plus 14 pass), confirming legacy propagation untouched",
+ "Full matrix 392/393 suites, 2983 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~90s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 6 through 24 carry (next: leader-calming trust scaling); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Susceptibility is set imperatively per listener; no automatic identity-to-network wiring ships, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_6"
  }
  ]
 }

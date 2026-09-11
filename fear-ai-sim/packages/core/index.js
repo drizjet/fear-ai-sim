@@ -327,10 +327,11 @@ export {
  GENERIC_ATTRACTORS
 } from './src/LongHorizonCharacterLife.js';
 export {
- InformationPropagationEngine,
- PROPAGATED_RUMOR_TOPICS,
- RUMOR_STATUS,
- DEFAULT_PROPAGATION_CONFIG
+    InformationPropagationEngine,
+    PROPAGATED_RUMOR_TOPICS,
+    RUMOR_STATUS,
+    DEFAULT_PROPAGATION_CONFIG,
+    susceptibilityFromTraits
 } from './src/InformationPropagationEngine.js';
 export {
  AnticipatoryFearEngine,

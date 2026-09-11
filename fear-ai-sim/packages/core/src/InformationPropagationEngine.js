@@ -50,6 +50,19 @@ export const DEFAULT_PROPAGATION_CONFIG = Object.freeze({
     maxSpreadPerTick: Infinity
 });
 
+// NEXT-165 (post-25 candidate 5): identity-conditioned susceptibility.
+// Open, curious minds take rumors at higher confidence; guarded minds
+// discount them. Neutral identity (0.5) is exactly 1.0; trait extremes
+// reach 1.25/0.75 inside a hard [0.5, 1.5] clamp so no identity can
+// deafen or hypersensitize a listener without bound.
+export function susceptibilityFromTraits(traits = {}) {
+    const n = Number(traits.neuroticism);
+    const o = Number(traits.openness);
+    const nn = Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0.5;
+    const oo = Number.isFinite(o) ? Math.max(0, Math.min(1, o)) : 0.5;
+    return Math.max(0.5, Math.min(1.5, 1 + 0.25 * (nn - 0.5) + 0.25 * (oo - 0.5)));
+}
+
 function makeRng(seed) {
     let s = (seed >>> 0) || 1;
     return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 0x100000000; };
@@ -70,12 +83,26 @@ export class InformationPropagationEngine {
         this.listenEdges = new Map();
         /** agentId -> credibility in [0,1] as a source */
         this.credibility = new Map();
+        /** agentId -> reception multiplier in [0.5,1.5]; absent is 1.0 (legacy) */
+        this.susceptibility = new Map();
         /** agentId -> Map<rumorId, { confidence, hops, tick }> received copies */
         this.inboxes = new Map();
         this.tick = 0;
         this.nextRumorId = 1;
         this.totalInjected = 0;
         this.corrections = 0;
+    }
+
+    /**
+     * Set a listener's identity-conditioned susceptibility, e.g. from
+     * susceptibilityFromTraits. Multiplies received confidence; absent
+     * listeners behave exactly as before.
+     */
+    setSusceptibility(agentId, value) {
+        const id = String(agentId);
+        const v = Number(value);
+        this.susceptibility.set(id, Number.isFinite(v) ? Math.max(0.5, Math.min(1.5, v)) : 1.0);
+        return this.susceptibility.get(id);
     }
 
     /** Register an agent as a potential source/listener. */
@@ -175,7 +202,8 @@ export class InformationPropagationEngine {
                     if (listenerInbox.has(rumorId)) continue;
                     const sourceCred = this.credibility.get(source) ?? 0.5;
                     const held = sourceInbox.get(rumorId);
-                    const conf = round4(held.confidence * this.config.hopDecay * (0.5 + sourceCred * 0.5));
+                    const listenerSusc = this.susceptibility.get(listener) ?? 1.0;
+                    const conf = round4(held.confidence * this.config.hopDecay * (0.5 + sourceCred * 0.5) * listenerSusc);
                     if (conf < this.config.minConfidence) continue;
                     // Mutation roll: claim drifts, confidence drops.
                     let claim = rumor.claim;
