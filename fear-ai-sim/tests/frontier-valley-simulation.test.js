@@ -544,3 +544,45 @@ describe('NEXT-92: hearsay advisory movement', () => {
         expect(route().status).toBe('WATCHFUL');
     });
 });
+
+describe('NEXT-93: faction-attributed hearsay', () => {
+    function grievance(sim) {
+        return sim.factionSystem.getBilateralStance(
+            FRONTIER_VALLEY_FACTIONS.SETTLERS, FRONTIER_VALLEY_FACTIONS.BANDITS
+        )?.grievance;
+    }
+    test('34. Subject-faction rumors bias posture versus the rumor-free twin', () => {
+        const plain = new FrontierValleySimulation({ seed: 42 });
+        plain.advance(150);
+        const rumored = new FrontierValleySimulation({ seed: 42 });
+        rumored.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: FRONTIER_VALLEY_FACTIONS.BANDITS,
+            originLocation: { x: 250, y: 0, z: 175 }
+        });
+        rumored.advance(150);
+        expect(grievance(rumored)).toBeGreaterThan(grievance(plain));
+    });
+    test('35. Subject-less rumors leave posture identical to the twin', () => {
+        const plain = new FrontierValleySimulation({ seed: 42 });
+        plain.advance(150);
+        const rumored = new FrontierValleySimulation({ seed: 42 });
+        rumored.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9
+        });
+        rumored.advance(150);
+        expect(grievance(rumored)).toBe(grievance(plain));
+    });
+    test('36. Faction hearsay is deterministic for a fixed seed', () => {
+        const run = () => {
+            const sim = new FrontierValleySimulation({ seed: 42 });
+            sim.worldSystem.createRumor('FACTION_BETRAYAL', {
+                sourceEntityId: 'nomad_clan_1', severity: 0.9,
+                subjectFactionId: FRONTIER_VALLEY_FACTIONS.BANDITS
+            });
+            sim.advance(150);
+            return grievance(sim);
+        };
+        expect(run()).toBe(run());
+    });
+});

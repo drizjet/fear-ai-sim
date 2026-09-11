@@ -42,6 +42,7 @@ export const INCIDENT_TYPES = Object.freeze({
     TRADE_ESTABLISHED: 'TRADE_ESTABLISHED',
     TREATY_OFFERED: 'TREATY_OFFERED',
     PROVOCATION: 'PROVOCATION',
+    RUMOR_HEARSAY: 'RUMOR_HEARSAY',
     RAID_CONFIRMED: 'RAID_CONFIRMED',
     SKIRMISH_CASUALTY: 'SKIRMISH_CASUALTY',
     TRIBUTE_PAID: 'TRIBUTE_PAID',
@@ -259,6 +260,12 @@ export class FactionSystem {
                 stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.35 * grievanceScale);
                 stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.20);
                 stanceTargetToSource.casusBelli = 'Direct diplomatic provocation';
+                break;
+            case INCIDENT_TYPES.RUMOR_HEARSAY:
+                // NEXT-93: heard-about hostility, not observed hostility.
+                // Small grievance only: no trust loss, no casus belli.
+                // Gossip must not manufacture war causes by itself.
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.10 * grievanceScale);
                 break;
             case INCIDENT_TYPES.RAID_CONFIRMED:
                 // NOW-14: a raid is inherently a territorial violation as

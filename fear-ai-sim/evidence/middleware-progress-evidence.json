@@ -7278,6 +7278,32 @@
  "Stamp-after-aware double-reward residual stands (bounded by 1.0 ceiling)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FACTION_HEARSAY_NEXT93",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "RUMOR_HEARSAY incident type: grievance +0.10 with restraint scaling, no trust loss, no casus belli - gossip cannot manufacture war causes by itself",
+ "Rumor schema gains optional subjectFactionId (marshal-transparent via spreads); nulls never drive posture; own-faction subjects excluded",
+ "Valley bridge converts heard WAR_DECLARED and FACTION_BETRAYAL rumors into per-pair hearsay incidents (deduped); probed twin delta 0.2872 to 0.4657 with subject-less control identical to plain",
+ "Mid-build failures: one wrong enum key, one eaten registration line, one reference-vs-snapshot assertion bug; all repaired (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "Faction battery 14/14 (2 new NEXT-93 pins: exact weight with no trust or war-cause side effects, determinism)",
+ "Valley battery 36/36 (3 new NEXT-93 pins: twin grievance delta, subject-less identity, FACTION_BETRAYAL determinism)",
+ "Subject-wiring probe fails exactly the twin-delta pin; weight probe fails exactly the unit pin; fixes restored",
+ "Full matrix 343/344 suites, 2645 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Faction battery ~1s; valley battery ~11s; full matrix ~35s"
+ ],
+ "known_gaps": [
+ "Correction of a subject rumor does not retract the grievance it caused (no exoneration path from faction memory)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Default (0,0,0) origins route literally with registration-order tie-breaks"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

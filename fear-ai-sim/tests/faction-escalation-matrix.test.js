@@ -367,3 +367,32 @@ describe('NEXT-39: ATTACK-path raid-rate frontier', () => {
         expect(full.singleRaidStage).toBe(ESCALATION_STAGES.THREATEN);
     });
 });
+
+describe('NEXT-93: hearsay incident weight', () => {
+    function twoFactions() {
+        const sys = new FactionSystem();
+        sys.registerFaction({ id: 'settlers', name: 'Settlers', culture: FACTION_CULTURES.HONORABLE });
+        sys.registerFaction({ id: 'bandits', name: 'Bandits', culture: FACTION_CULTURES.MILITARISTIC });
+        return sys;
+    }
+    test('13. Hearsay adds small grievance without trust loss or war cause', () => {
+        const sys = twoFactions();
+        const stanceBefore = sys.getBilateralStance('settlers', 'bandits');
+        const grievanceBefore = stanceBefore.grievance;
+        const trustBefore = stanceBefore.trust;
+        const causeBefore = stanceBefore.casusBelli;
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_HEARSAY, {});
+        const after = sys.getBilateralStance('settlers', 'bandits');
+        expect(after.grievance).toBeCloseTo(grievanceBefore + 0.10, 9);
+        expect(after.trust).toBe(trustBefore);
+        expect(after.casusBelli).toBe(causeBefore);
+    });
+    test('14. Hearsay is deterministic for a fixed seed', () => {
+        const run = () => {
+            const sys = twoFactions();
+            sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_HEARSAY, {});
+            return sys.getBilateralStance('settlers', 'bandits').grievance;
+        };
+        expect(run()).toBe(run());
+    });
+});

@@ -242,6 +242,7 @@ export class WorldSimulationSystem {
         truthEventId = null,
         originLocation = { x: 0, y: 0, z: 0 },
         sourceEntityId = null,
+        subjectFactionId = null,
         severity = 0.5,
         description = ''
     } = {}) {
@@ -256,6 +257,9 @@ export class WorldSimulationSystem {
                 z: Number(originLocation.z) || 0
             },
             sourceEntityId: sourceEntityId ? String(sourceEntityId) : null,
+            // NEXT-93: the faction the rumor is ABOUT (may differ from the
+            // reporting source group). Nulls never drive faction posture.
+            subjectFactionId: subjectFactionId ? String(subjectFactionId) : null,
             severity: clamp01(severity),
             description: String(description || topic),
             correction: null, // NEXT-75: { confirmed, tick, byGroupId } once host truth adjudicates

@@ -22,7 +22,7 @@
 import { DeterministicRng } from './DeterministicRng.js';
 import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES, INCIDENT_TYPES, casualtySeverityScale } from './FactionSystem.js';
 import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
-import { WorldSimulationSystem, ROAMING_PARTY_TYPES, ENCOUNTER_TYPES } from './WorldSimulationSystem.js';
+import { WorldSimulationSystem, ROAMING_PARTY_TYPES, ENCOUNTER_TYPES, RUMOR_TOPICS } from './WorldSimulationSystem.js';
 import { RelationshipTensorSystem } from './RelationshipTensorSystem.js';
 import { TradeDependencyEngine } from './TradeDependencyEngine.js';
 
@@ -589,11 +589,28 @@ export class FrontierValleySimulation {
             // incident per route per encounter (no per-rumor spam).
             if (enc.heardThreatRumor && enc.advisoryResolution !== 'COMBAT_ENGAGEMENT') {
                 const routes = new Set();
+                // NEXT-93: faction-attributed menace also biases posture.
+                // WAR_DECLARED / FACTION_BETRAYAL rumors naming a subject
+                // faction read as hearsay incidents for each hearing party's
+                // faction (own-faction subjects excluded). One pair each.
+                const heardPairs = new Set();
                 for (const rid of enc.heardThreatRumorIds ?? []) {
                     const master = this.worldSystem.rumors.get(rid);
                     const o = master?.originLocation;
                     if (o && Number.isFinite(Number(o.x)) && Number.isFinite(Number(o.z))) {
                         routes.add(this._nearestRouteTo(o));
+                    }
+                    const subject = master?.subjectFactionId;
+                    if ((master?.topic === RUMOR_TOPICS.WAR_DECLARED || master?.topic === RUMOR_TOPICS.FACTION_BETRAYAL) && subject) {
+                        for (const g of [gA, gB]) {
+                            const f = g?.factionId;
+                            if (f && f !== subject && !heardPairs.has(f + '>' + subject)) {
+                                heardPairs.add(f + '>' + subject);
+                                this.factionSystem.recordIncident(subject, f, INCIDENT_TYPES.RUMOR_HEARSAY, {
+                                    encounter: enc.encounterId ?? null, rumorId: rid
+                                });
+                            }
+                        }
                     }
                 }
                 if (routes.size === 0) routes.add(this._nearestRouteTo(gA?.position));
