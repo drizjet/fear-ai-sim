@@ -7956,6 +7956,29 @@
  "Heap-at-scale unmeasured with gc"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "WIRE_OR_RETIRE_TRIAGE_113",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Interface audit per satellite: CIA tick(agentId, experience, situation) returns ranked advisory intents with plain-data I/O (214 lines); crystallization exposes registerAgent/incurTrauma/administerSolace plus phobia registry (604 lines, tested); moral engine exposes profiles/transgressions/attonement tables (542 lines, tested); FPS exposes signature curves (benchmark use); vault exposes seal/restore (harness use); LodDirector tracks fear history only with no identity store; AffectiveAgent.tick takes traits at construction plus traumaDread numeric context; GoalArbitration has role-constraint vetoes but no dissonance input",
+ "Verdicts: CIA composition WIRE opt-in (advisory blend in AffectiveAgent, default-off, no default-path change); crystallization WIRE (extreme-fear episodes feed incurTrauma when attached; dread output already consumed live); moral engine RETIRE to explicit EXPERIMENTAL (no consumer slot, wiring needs demand plus design); FPS live use DEFER as IMPLEMENTED_NOT_VERIFIED (threshold design open); vault WIRE into LodDirector demote/promote cycle",
+ "VI checklist mapping: CIA IDENTITY_TRAITS cover personality (OCEAN), risk tolerance, social orientation, loyalty, leadership, resilience; values and role identity live only as opaque constraints strings; grudges/respect/route familiarity present as adaptive tracks; no new gaps beyond triage execution",
+ "No production, test, benchmark, or map-structural changes; no mid-build failures"
+ ],
+ "test_evidence": [
+ "No new tests: triage is a decision record; existing satellite suites stay green by untouched code (full matrix re-run at next wiring chunk)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; audit only"
+ ],
+ "known_gaps": [
+ "Triage execution open: CIA opt-in blend, crystallization feed, vault LOD cycle (three wiring chunks)",
+ "Moral engine EXPERIMENTAL by explicit verdict (revisit on demand)",
+ "FPS live threshold design open",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "WIRE_CIA_OPT_IN"
  }
  ]
 }
