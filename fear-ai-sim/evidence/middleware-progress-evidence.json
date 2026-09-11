@@ -8100,6 +8100,33 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked"
  ],
  "next_action": "WIRE_PERSISTENCE_ROUND_TRIPS"
+ },
+ {
+ "milestone": "WIRE_PERSISTENCE_117",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "CIA gains getState and setState (identity, adaptive, constraints, per-character and total ticks; volatile immediate state resets by design, persistent layers round-trip exactly)",
+ "Trauma engine state extended with the conditioned phobic registry (previously dropped on save, which would have zeroed dread reads); setState rebuilds both record and phobia maps",
+ "IdentityVault gains getState and setState (sealed identity, adaptive, bonds, memory, sealed and abstract ticks; frozen wrappers rebuilt on load)",
+ "AffectiveAgent state extended with wire config (identityBlend, trauma thresholds, clock ownership) plus the trauma episode latch, so a restored mid-episode agent cannot incur a duplicate trauma; engine instances stay host-owned and re-attached",
+ "All snapshots JSON-stable plain data; no host movement, damage, or inventory writes; host authority intact",
+ "Mid-build notes: three edits dropped closing braces (caught by node check each time, restored); CIA decide() parity holds only after feeding the same situation because volatile state is intentionally not persisted"
+ ],
+ "test_evidence": [
+ "New tests/wire-persistence.test.js: 6 pass (CIA layers plus drift; trauma records plus phobias with live dread value 0.35; sealed vault with drift and bonds; no duplicate trauma after mid-episode restore; wire config round-trip; JSON stability)",
+ "Affected suites 55/55 pass (trauma engine, feedback sweep, vault, CIA, LOD restoration, director, vault cycle, both wire suites)",
+ "Full matrix 347/348 suites, 2736 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~44s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 1 closed; frontiers 2 through 20 carry (next: CIA tendency weights into goal arbitration)",
+ "Volatile CIA immediate state intentionally not persisted (re-fed per tick by the live agent)",
+ "Parallel harness flakiness under worker contention; serial runs green",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked"
+ ],
+ "next_action": "CIA_GOAL_ARBITRATION_WEIGHTS"
  }
  ]
 }

@@ -563,13 +563,23 @@ export class TraumaCrystallizationEngine {
                 calmSanctuaryTicks: rec.calmSanctuaryTicks
             };
         }
+        // NEXT-117: conditioned phobic triggers round-trip too; without them
+        // a restored engine forgets every cue association (dread reads zero).
+        const serializedPhobias = {};
+        for (const [id, phobiaMap] of this.phobicRegistry.agentPhobias.entries()) {
+            serializedPhobias[id] = {};
+            for (const [key, p] of phobiaMap.entries()) {
+                serializedPhobias[id][key] = { ...p };
+            }
+        }
 
         return {
             currentTick: this.currentTick,
             sensitizationWindowTicks: this.sensitizationWindowTicks,
             solaceThreshold: this.solaceThreshold,
             extinctionRate: this.extinctionRate,
-            agentRecords: serializedRecords
+            agentRecords: serializedRecords,
+            agentPhobias: serializedPhobias
         };
     }
 
@@ -598,6 +608,16 @@ export class TraumaCrystallizationEngine {
                     solaceAccumulator: rec.solaceAccumulator || 0,
                     calmSanctuaryTicks: rec.calmSanctuaryTicks || 0
                 });
+            }
+        }
+        this.phobicRegistry.agentPhobias = new Map();
+        if (state.agentPhobias) {
+            for (const [id, keys] of Object.entries(state.agentPhobias)) {
+                const phobiaMap = new Map();
+                for (const [key, p] of Object.entries(keys || {})) {
+                    phobiaMap.set(key, { ...p });
+                }
+                this.phobicRegistry.agentPhobias.set(id, phobiaMap);
             }
         }
     }

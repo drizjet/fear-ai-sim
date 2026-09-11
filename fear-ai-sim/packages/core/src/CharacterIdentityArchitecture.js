@@ -200,6 +200,52 @@ export class CharacterIdentityArchitecture {
         }
         return round4(Math.sqrt(sum / ADAPTIVE_TRACKS.length));
     }
+    /**
+     * NEXT-117: JSON-safe snapshot of all characters (identity, adaptive,
+     * immediate-tick count) for host save/load round-trips.
+     */
+    getState() {
+        const characters = {};
+        for (const [id, c] of this.characters.entries()) {
+            characters[id] = {
+                identity: { ...c.identity },
+                adaptive: { ...c.adaptive },
+                constraints: [...c.constraints],
+                tick: c.tick
+            };
+        }
+        return { characters, totalTicks: this.totalTicks };
+    }
+
+    /** Restore a snapshot from getState. Replaces current contents. */
+    setState(state) {
+        this.characters = new Map();
+        this.totalTicks = 0;
+        if (!state) return;
+        this.totalTicks = state.totalTicks || 0;
+        if (state.characters) {
+            for (const [id, c] of Object.entries(state.characters)) {
+                const ident = {};
+                for (const t of IDENTITY_TRAITS) ident[t] = clamp01(c.identity?.[t] ?? 0.5);
+                const adaptive = {};
+                for (const t of ADAPTIVE_TRACKS) {
+                    adaptive[t] = typeof c.adaptive?.[t] === 'number' && Number.isFinite(c.adaptive[t])
+                        ? Math.max(0, Math.min(1, c.adaptive[t]))
+                        : ADAPTIVE_ANCHORS[t];
+                }
+                const liveState = {};
+                for (const ch of STATE_CHANNELS) liveState[ch] = 0;
+                liveState.situationalConfidence = 0.5;
+                this.characters.set(String(id), {
+                    identity: Object.freeze({ ...ident }),
+                    adaptive: { ...adaptive },
+                    state: liveState,
+                    constraints: Object.freeze([...(c.constraints || [])]),
+                    tick: c.tick || 0
+                });
+            }
+        }
+    }
 
     auditImmutability() {
         return {

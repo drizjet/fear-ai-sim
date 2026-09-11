@@ -556,7 +556,16 @@ export class AffectiveAgent {
             currentAnger: this.currentAnger,
             tickCount: this.tickCount,
             fearCore: this.fearCore.getState(),
-            habituation: this.habituation.getState()
+            habituation: this.habituation.getState(),
+            // NEXT-117: wire-attachment state. Engine instances stay
+            // host-owned; config round-trips so a re-attached agent resumes
+            // identically (episode latch included: without it a restored
+            // mid-episode agent would incur a duplicate trauma).
+            identityBlend: this.identityBlend ?? 0,
+            traumaFearThreshold: this.traumaFearThreshold ?? 0.85,
+            traumaRearmDelta: this.traumaRearmDelta ?? 0.2,
+            traumaAdvanceClock: this.traumaAdvanceClock !== false,
+            traumaEpisodeOpen: this._traumaEpisodeOpen === true
         };
     }
 
@@ -582,6 +591,13 @@ export class AffectiveAgent {
         this.tickCount = snapshot.tickCount ?? 0;
         if (snapshot.fearCore) this.fearCore.setState(snapshot.fearCore);
         if (snapshot.habituation) this.habituation.setState(snapshot.habituation);
+        // NEXT-117: wire config plus the trauma episode latch. Instances
+        // (identityArch, traumaEngine) are re-attached by the host.
+        if (typeof snapshot.identityBlend === 'number') this.identityBlend = snapshot.identityBlend;
+        if (typeof snapshot.traumaFearThreshold === 'number') this.traumaFearThreshold = snapshot.traumaFearThreshold;
+        if (typeof snapshot.traumaRearmDelta === 'number') this.traumaRearmDelta = snapshot.traumaRearmDelta;
+        if (typeof snapshot.traumaAdvanceClock === 'boolean') this.traumaAdvanceClock = snapshot.traumaAdvanceClock;
+        this._traumaEpisodeOpen = snapshot.traumaEpisodeOpen === true;
     }
 }
 

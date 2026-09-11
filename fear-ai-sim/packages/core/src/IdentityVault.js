@@ -119,6 +119,46 @@ export class IdentityVault {
         };
     }
 
+    /**
+     * NEXT-117: JSON-safe snapshot of sealed records for host save/load.
+     * Frozen wrappers are rebuilt by setState, so the snapshot itself is
+     * plain data.
+     */
+    getState() {
+        const sealed = {};
+        for (const [id, rec] of this.sealed.entries()) {
+            sealed[id] = {
+                agentId: rec.agentId,
+                identity: { ...rec.identity },
+                adaptive: { ...rec.adaptive },
+                bonds: rec.bonds.map((b) => ({ ...b })),
+                droppedEdges: rec.droppedEdges,
+                memory: rec.memory ? deepCloneJson(rec.memory) : null,
+                sealedTick: rec.sealedTick,
+                abstractTicks: rec.abstractTicks
+            };
+        }
+        return { sealed };
+    }
+
+    /** Restore a snapshot from getState. Replaces current contents. */
+    setState(state) {
+        this.sealed = new Map();
+        if (!state || !state.sealed) return;
+        for (const [id, rec] of Object.entries(state.sealed)) {
+            this.sealed.set(String(id), {
+                agentId: String(id),
+                identity: freezeTraits(rec.identity || {}),
+                adaptive: Object.freeze({ ...(rec.adaptive || {}) }),
+                bonds: Object.freeze((rec.bonds || []).map((b) => ({ ...b }))),
+                droppedEdges: rec.droppedEdges || 0,
+                memory: rec.memory ? deepCloneJson(rec.memory) : null,
+                sealedTick: rec.sealedTick || 0,
+                abstractTicks: rec.abstractTicks || 0
+            });
+        }
+    }
+
     isSealed(agentId) {
         return this.sealed.has(String(agentId));
     }
