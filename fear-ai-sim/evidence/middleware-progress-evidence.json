@@ -7179,6 +7179,31 @@
  "External-host rumor integration evidence (in-repo valley is not independent adoption)",
  "Human readability evaluation of cascade behavior (BLOCKED_EXTERNAL_PARTICIPANTS)"
  ]
+ },
+ {
+ "milestone": "REHABILITATION_NEXT89",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Distrusted confirmations rebuild originator trust while leaving the belief untouched: one vindication step per host-confirmed truth (+0.15 x believed weight each), marked aware so each truth pays once; distrusted refutations still change nothing and stay retryable",
+ "Shared _recordVindication helper serves full confirmation and rehabilitation paths (confirmed branch refactored onto it with zero behavior change: 58/58 green mid-refactor)",
+ "Probed arc (seed 42): -0.2150 exposure, +0.1075 per vindicated truth, gate reopens at round 6 (0.4299), full confirmation resumes at round 7 - consistent truth-telling re-earns acceptance rumor by rumor",
+ "Semantics: the reward credits the ORIGINATOR (whose claim the host vouched), gated by the MESSENGER channel - host truth rehabilitates reputation even through distrusted delivery"
+ ],
+ "test_evidence": [
+ "World-simulation battery 62/62 (4 new NEXT-89 pins: reward-without-pin with exact trust math, six-step gate reopening with resumed full confirmation, distrusted result string, seed determinism)",
+ "Rehab-reward-off probe fails exactly the 3 rehabilitation pins (result-string pin still passes); fix restored",
+ "Full matrix 343/344 suites, 2632 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~35s"
+ ],
+ "known_gaps": [
+ "Rehabilitation rate inherits the uncalibrated +0.15 scale (six truths to recover from one lie at probed weights - ratio undocumented by design)",
+ "Gate stays binary at 0.4; graded acceptance proportional to trust is still open",
+ "Distrusted refutations still leave pressure to decay and aging (unchanged)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

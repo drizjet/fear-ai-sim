@@ -467,13 +467,20 @@ export class WorldSimulationSystem {
     _applyCorrection(group, master, { relationshipTensorSystem = null, senderGroupId = null } = {}) {
         if (!group || !master?.correction) return 'no-correction';
         const inst = group.knownRumors?.get(master.id);
+        // NEXT-89: rehabilitation. A distrusted CONFIRMATION still rebuilds
+        // originator trust (the host vouched the originator's claim) while
+        // leaving the belief itself untouched - consistent truth-telling
+        // re-earns full acceptance rumor by rumor. Distrusted refutations
+        // change nothing and stay unmarked, retryable later.
+        let vindicateDespiteDistrust = false;
         if (inst && relationshipTensorSystem && senderGroupId && group.leaderId) {
             const sender = this.groups.get(String(senderGroupId));
             const senderLeader = sender?.leaderId;
             if (senderLeader && senderLeader !== group.leaderId
                 && relationshipTensorSystem.hasRelationship(group.leaderId, senderLeader)
                 && relationshipTensorSystem.getRelationship(group.leaderId, senderLeader).trust < 0.4) {
-                return 'distrusted';
+                if (!master.correction.confirmed) return 'distrusted';
+                vindicateDespiteDistrust = true;
             }
         }
         if (group.knownCorrections) {
@@ -486,8 +493,15 @@ export class WorldSimulationSystem {
             }
         }
         if (!inst) return 'unheard';
+        if (vindicateDespiteDistrust) {
+            // Belief untouched (no pin, no anchor); the originator still
+            // earns the vindication reward. Marked aware above: one shot
+            // per correction, further truths earn further steps.
+            this._recordVindication(group, master, inst, relationshipTensorSystem);
+            return 'distrusted';
+        }
         if (master.correction.confirmed) {
-            const vindicatedWeight = 0.5 + 0.5 * (inst.credibility ?? 0.5);
+            this._recordVindication(group, master, inst, relationshipTensorSystem);
             inst.credibility = 1.0;
             inst.fidelity = 1.0;
             // NEXT-84: host-truth adjudication is a reinforcement event, not
@@ -495,15 +509,6 @@ export class WorldSimulationSystem {
             // correction tick, so vindicated truth outlives idle hearsay
             // without becoming immortal (re-confirmation re-anchors).
             inst.receivedTick = master.correction.tick;
-            if (relationshipTensorSystem && group.leaderId && master.sourceEntityId) {
-                const originator = this.groups.get(String(master.sourceEntityId));
-                const originLeader = originator?.leaderId;
-                if (originLeader && originLeader !== group.leaderId) {
-                    relationshipTensorSystem.recordInteraction(
-                        group.leaderId, originLeader,
-                        INTERACTION_TYPES.TRUE_REPORT_VINDICATED, { weight: vindicatedWeight });
-                }
-            }
             return 'confirmed';
         }
         const believedWeight = 0.5 + 0.5 * (inst.credibility ?? 0.5);
@@ -522,6 +527,26 @@ export class WorldSimulationSystem {
             }
         }
         return 'refuted';
+    }
+    /**
+     * NEXT-89: shared vindication writer. Rewards the rumor ORIGINATOR
+     * (whose claim the host vouched), scaled by how strongly the falsehood
+     * had been believed. Used both by full confirmation and by
+     * distrusted-but-confirmed delivery (rehabilitation steps).
+     * @returns {number} applied weight (for callers that need it)
+     */
+    _recordVindication(group, master, inst, relationshipTensorSystem) {
+        const weight = 0.5 + 0.5 * (inst.credibility ?? 0.5);
+        if (relationshipTensorSystem && group.leaderId && master.sourceEntityId) {
+            const originator = this.groups.get(String(master.sourceEntityId));
+            const originLeader = originator?.leaderId;
+            if (originLeader && originLeader !== group.leaderId) {
+                relationshipTensorSystem.recordInteraction(
+                    group.leaderId, originLeader,
+                    INTERACTION_TYPES.TRUE_REPORT_VINDICATED, { weight });
+            }
+        }
+        return weight;
     }
     /**
      * NEXT-75: spread host-truth corrections the sender has applied to a

@@ -1048,3 +1048,78 @@ describe('NEXT-88: truth-keyed adjudication', () => {
         expect(b.knownRumors.get(r.id).credibility).toBe(1.0);
     });
 });
+
+describe('NEXT-89: rehabilitation through vindication', () => {
+    function ledPair() {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const rel = new RelationshipTensorSystem();
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LA'
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LB'
+        });
+        const meet = () => world._generateSystemicEncounter(a, b,
+            { distance: 5, factionSystem: null, relationshipTensorSystem: rel });
+        const trust = () => rel.getRelationship('LB', 'LA').trust;
+        return { world, rel, a, b, meet, trust };
+    }
+    function expose(world, rel, a, meet) {
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        world.correctRumor(r.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        return r;
+    }
+    function vindicate(world, rel, a, meet) {
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        world.correctRumor(r.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        return r;
+    }
+    test('1. Distrusted confirmation rebuilds trust without pinning belief', () => {
+        const { world, rel, a, b, meet, trust } = ledPair();
+        expose(world, rel, a, meet);
+        expect(trust()).toBeCloseTo(-0.215, 3);
+        const r = vindicate(world, rel, a, meet);
+        expect(trust()).toBeCloseTo(-0.1075, 4);
+        expect(b.knownRumors.has(r.id)).toBe(true);
+        expect(b.knownRumors.get(r.id).credibility).toBeLessThan(1.0);
+    });
+    test('2. Consistent truth-telling reopens the gate', () => {
+        const { world, rel, a, b, meet, trust } = ledPair();
+        expose(world, rel, a, meet);
+        for (let i = 0; i < 6; i++) vindicate(world, rel, a, meet);
+        expect(trust()).toBeGreaterThanOrEqual(0.4);
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        world.correctRumor(r.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        expect(b.knownRumors.get(r.id).credibility).toBe(1.0);
+    });
+    test('3. Distrusted delivery reports distrusted, not silent success', () => {
+        const { world, rel, a, meet } = ledPair();
+        expose(world, rel, a, meet);
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        world.correctRumor(r.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        const applied = world.transmitCorrections(a.id, 'b_dst', { relationshipTensorSystem: rel });
+        expect(applied).toEqual([{ rumorId: r.id, result: 'distrusted' }]);
+    });
+    test('4. Rehabilitation is deterministic for a fixed seed', () => {
+        const run = () => {
+            const { world, rel, a, meet, trust } = ledPair();
+            expose(world, rel, a, meet);
+            vindicate(world, rel, a, meet);
+            vindicate(world, rel, a, meet);
+            return trust();
+        };
+        expect(run()).toBeCloseTo(0, 4);
+        expect(run()).toBe(run());
+    });
+});
