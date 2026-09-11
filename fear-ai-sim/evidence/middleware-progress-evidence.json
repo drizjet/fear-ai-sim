@@ -8059,6 +8059,47 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "FRONTIER_AUDIT_CCI_28"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_28",
+ "implementation_evidence": [
+ "Seventh cadence audit (5 chunks since CCI-27: NEXT-112 refresh pins, triage-113 verdicts, NEXT-114 CIA blend, NEXT-115 trauma feed, NEXT-116 vault cycle); two read-only scouts swept frontier statuses with file-level evidence",
+ "External standing confirmed: Godot 10-station showcase VERIFIED (station_controller.gd 723 lines, 10/10 conformance); Pixel Pets external host VERIFIED; in-repo reference game plus Outpost Omega PARTIAL; Unity and Unreal adapters IMPLEMENTED_NOT_VERIFIED by editor-gate policy; Rust is accelerator shell, not canonical sim",
+ "Dashboard PARTIAL at 5 of 9 workbench pages (missing Memory, Relationships, Causal, full Trade, Performance); CLI flat single-file PARTIAL; human protocol BLOCKED_EXTERNAL_PARTICIPANTS",
+ "New-wire interaction edges open: CIA by GoalArbitration untested, trauma-engine by vault-cycle untested, rumor by trade-reroute uncombined, leader-death by panic by rumor triple unpinned, FPS live thresholds unconsumed, moral engine EXPERIMENTAL with no live consumer",
+ "Persistence gap spans all three new wires: identityBlend, trauma records, and sealed vault have zero saveWorld and loadWorld round-trip coverage",
+ "No production, test, benchmark, or map-structural changes; audit only"
+ ],
+ "test_evidence": [
+ "No new tests: scout file-presence plus grep inventory only (FABE holdouts VERIFIED in fabe_v2 plus 12-family LOSO battery; confusion analysis runner-up-only, no NxN matrix)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; audit only"
+ ],
+ "known_gaps": [
+ "Ranked frontier 1: persistence round-trips for identityBlend plus trauma records plus sealed vault (all three new wires volatile-only)",
+ "Ranked frontier 2: CIA tendency weights into GoalArbitration fear-vs-duty arbitration",
+ "Ranked frontier 3: trauma-engine state preserved across vault seal and restore",
+ "Ranked frontier 4: rumor-driven trade-reroute combined test (halves exist uncombined)",
+ "Ranked frontier 5: leader-death by crowd-panic by rumor triple collision pin",
+ "Ranked frontier 6: dashboard Memory, Relationships, Causal Graph, full Trade pages (5 of 9 today)",
+ "Ranked frontier 7: CLI hierarchical commands (single 3831-line flat file)",
+ "Ranked frontier 8: NxN persona confusion matrix (runner-up analysis only today)",
+ "Ranked frontier 9: Godot stations observe the three new wires (blend, trauma, vault)",
+ "Ranked frontier 10: second external host of a different architecture (Pixel Pets is first VERIFIED)",
+ "Ranked frontier 11: parallel harness flake mitigation for timing-sensitive suites",
+ "Ranked frontier 12: per-subsystem performance deltas for blend, feed, cycle",
+ "Ranked frontier 13: long-horizon identity visibility at 10k ticks with all three wires on",
+ "Ranked frontier 14: adaptive blend-gain scheduling (weight fixed per agent today)",
+ "Ranked frontier 15: multi-agent trauma clock ownership test (one-owner caveat today)",
+ "Ranked frontier 16: values and role identity as first-class CIA traits (opaque constraint strings today)",
+ "Ranked frontier 17: false-alarm cascade over a traumatized population (rumor by trauma)",
+ "Ranked frontier 18: Outpost Omega partial record toward verified",
+ "Ranked frontier 19: FPS live threshold design (deferred by triage verdict)",
+ "Ranked frontier 20: moral engine revisit on demand (EXPERIMENTAL by verdict)",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked"
+ ],
+ "next_action": "WIRE_PERSISTENCE_ROUND_TRIPS"
  }
  ]
 }
