@@ -649,3 +649,51 @@ describe('NEXT-95: exoneration unwinds hearsay', () => {
         expect(grievance(forked)).toBe(grievance(sim));
     });
 });
+
+describe('NEXT-96: route danger exoneration', () => {
+    const B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    function riverway(sim) {
+        return sim.civSystem.routes.get(FRONTIER_VALLEY_ROUTES.RIVERWAY).perceivedDanger;
+    }
+    function rumored() {
+        const sim = new FrontierValleySimulation({ seed: 42 });
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        sim.advance(150);
+        return { sim, rumor };
+    }
+    test('41. Refuted rumor leaves its route safer than the unrefuted twin', () => {
+        const a = rumored();
+        a.sim.worldSystem.correctRumor(a.rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        a.sim.advance(50);
+        const b = rumored();
+        b.sim.advance(50);
+        expect(riverway(a.sim)).toBeLessThan(riverway(b.sim));
+        expect(a.sim._hearsayRoutes.get(a.rumor.id)).toContain(FRONTIER_VALLEY_ROUTES.RIVERWAY);
+    });
+    test('42. Confirmed rumor keeps its route danger (no retraction)', () => {
+        const a = rumored();
+        a.sim.worldSystem.correctRumor(a.rumor.id, { confirmed: true, byGroupId: 'bandit_warband_1' });
+        a.sim.advance(50);
+        const b = rumored();
+        b.sim.advance(50);
+        expect(riverway(a.sim)).toBe(riverway(b.sim));
+    });
+    test('43. Route exoneration is deterministic and survives fork', () => {
+        const run = () => {
+            const { sim, rumor } = rumored();
+            sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+            sim.advance(50);
+            return riverway(sim);
+        };
+        expect(run()).toBe(run());
+        const { sim, rumor } = rumored();
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim.advance(50);
+        const forked = sim.fork();
+        expect(forked._hearsayRoutes.get(rumor.id)).toEqual(sim._hearsayRoutes.get(rumor.id));
+        expect(riverway(forked)).toBe(riverway(sim));
+    });
+});

@@ -80,6 +80,9 @@ export class FrontierValleySimulation {
         // retracted, so a refuted subject rumor unwinds exactly what it
         // caused (once). Serialized with the snapshot for fork fidelity.
         this._hearsayLedger = new Map();
+        // NEXT-96: route-danger exoneration. Maps rumorId -> [routeIds]
+        // biased by RUMOR_THREAT hearsay, retracted on refutation.
+        this._hearsayRoutes = new Map();
         this._exoneratedRumors = new Set();
         this.macroMetrics = {
             warsDeclared: 0,
@@ -508,20 +511,27 @@ export class FrontierValleySimulation {
     }
 
     /**
-     * NEXT-95: exoneration sweep. Runs once per tick before encounter
-     * consequences. A subject rumor the host refuted retracts the hearsay
-     * grievance it caused, once per rumor. Confirmed rumors keep their
-     * bias (vindicated menace is real). Vanished masters are dropped
-     * from the ledger so it cannot grow without bound.
+     * NEXT-95: exoneration sweep. NEXT-96: also retracts route danger.
+     * Runs once per tick before encounter consequences. A heard rumor the
+     * host refuted retracts the hearsay grievance and route danger it
+     * caused, once per rumor. Confirmed rumors keep their bias
+     * (vindicated menace is real). Vanished masters are dropped
+     * from both ledgers so they cannot grow without bound.
      */
     _exonerateRefutedRumors() {
-        for (const [rid, pairs] of this._hearsayLedger) {
+        // NEXT-96: union of faction-pair and route ledgers. Any refuted
+        // heard rumor retracts both its posture bias and its route danger.
+        const rids = new Set([...this._hearsayLedger.keys(), ...this._hearsayRoutes.keys()]);
+        for (const rid of rids) {
             if (this._exoneratedRumors.has(rid)) continue;
             const master = this.worldSystem.rumors.get(rid);
-            if (!master) { this._hearsayLedger.delete(rid); continue; }
+            if (!master) { this._hearsayLedger.delete(rid); this._hearsayRoutes.delete(rid); continue; }
             if (master.correction && master.correction.confirmed === false) {
-                for (const { perceiver, subject } of pairs) {
+                for (const { perceiver, subject } of this._hearsayLedger.get(rid) ?? []) {
                     this.factionSystem.recordIncident(subject, perceiver, INCIDENT_TYPES.RUMOR_EXONERATED, { rumorId: rid });
+                }
+                for (const routeId of this._hearsayRoutes.get(rid) ?? []) {
+                    this.civSystem.recordRouteIncident(routeId, 'RUMOR_EXONERATED', -0.10);
                 }
                 this._exoneratedRumors.add(rid);
             }
@@ -647,6 +657,13 @@ export class FrontierValleySimulation {
                 if (routes.size === 0) routes.add(this._nearestRouteTo(gA?.position));
                 for (const routeId of routes) {
                     this.civSystem.recordRouteIncident(routeId, 'RUMOR_THREAT', 0.10);
+                    // NEXT-96: remember which routes this hearing biased,
+                    // per rumor, so refutation retracts them (once each).
+                    for (const rid of enc.heardThreatRumorIds ?? []) {
+                        if (!this._hearsayRoutes.has(rid)) this._hearsayRoutes.set(rid, []);
+                        const seen = this._hearsayRoutes.get(rid);
+                        if (!seen.includes(routeId)) seen.push(routeId);
+                    }
                 }
             }
         }
@@ -908,6 +925,7 @@ export class FrontierValleySimulation {
             })),
             factionSystem: this.factionSystem.getState(),
             hearsayLedger: Array.from(this._hearsayLedger.entries()),
+            hearsayRoutes: Array.from(this._hearsayRoutes.entries()),
             exoneratedRumors: Array.from(this._exoneratedRumors),
             civSystem: this.civSystem.getState(),
             relationshipSystem: this.relationshipSystem.getState(),
@@ -944,6 +962,9 @@ export class FrontierValleySimulation {
         }
         if (Array.isArray(snapshot.hearsayLedger)) {
             this._hearsayLedger = new Map(snapshot.hearsayLedger);
+        }
+        if (Array.isArray(snapshot.hearsayRoutes)) {
+            this._hearsayRoutes = new Map(snapshot.hearsayRoutes);
         }
         if (Array.isArray(snapshot.exoneratedRumors)) {
             this._exoneratedRumors = new Set(snapshot.exoneratedRumors);

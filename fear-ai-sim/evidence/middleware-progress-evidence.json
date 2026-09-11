@@ -7386,6 +7386,32 @@
  "Default (0,0,0) origins route literally with registration-order tie-breaks"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "ROUTE_EXONERATION_NEXT96",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Group threat-pressure needed no work: the world layer already bumps on hearing and relieves symmetrically on refutation (audited, not rebuilt)",
+ "Valley _hearsayRoutes ledger maps rumorId to biased routeIds at hearing time; the exoneration sweep retracts -0.10 per route on refutation via the existing generic recordRouteIncident path (no civ-layer change); confirmed rumors keep danger; vanished masters pruned; ledger serialized for fork fidelity",
+ "Mid-build failures: three edit-range mis-anchors ate live lines or docstrings again (routes closers, getState head, civ test lines); each caught by parse check plus exact-removal review and restored (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "Civ battery new pin: negative severity retracts symmetrically and floors at zero with SAFE status",
+ "Valley battery 43/43 (3 new NEXT-96 pins: refuted twin route safer, confirmed twin identical, determinism plus fork survival)",
+ "Retraction-zeroed probe fails exactly test 41 (confirmed-control and determinism pins correctly unaffected); restored",
+ "Full matrix 343/344 suites, 2658 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~11s; full matrix ~43s"
+ ],
+ "known_gaps": [
+ "Multi-rumor same-encounter same-route attribution is approximate (per-rumor ledger entries share one encounter-level +0.10 bias; refuting all over-retracts)",
+ "Retraction is symmetric-full rather than decay-aware (matches the NEXT-95 grievance approximation by design)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Default (0,0,0) origins route literally with registration-order tie-breaks"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

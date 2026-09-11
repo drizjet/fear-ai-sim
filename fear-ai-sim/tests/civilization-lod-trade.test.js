@@ -218,3 +218,25 @@ describe('Milestone G: Civilization Simulation & Cognitive LOD Engine', () => {
         expect(origCaravan.routeProgress).toBeCloseTo(cloneCaravan.routeProgress, 6);
     });
 });
+
+describe('NEXT-96: route exoneration mechanics', () => {
+    let civ;
+    beforeEach(() => {
+        civ = new CivilizationSimulationSystem();
+    });
+    test('8. Negative severity retracts danger symmetrically and floors at zero', () => {
+        civ.registerNode('n1', { market: {} });
+        civ.registerNode('n2', { market: {} });
+        civ.registerRoute('quiet_road', { fromNodeId: 'n1', toNodeId: 'n2', distance: 100, baseSecurity: 0.90 });
+        const route = civ.routes.get('quiet_road');
+        const base = route.perceivedDanger;
+        civ.recordRouteIncident('quiet_road', 'RUMOR_THREAT', 0.10);
+        expect(route.perceivedDanger).toBeCloseTo(base + 0.10, 9);
+        civ.recordRouteIncident('quiet_road', 'RUMOR_EXONERATED', -0.10);
+        expect(route.perceivedDanger).toBeCloseTo(base, 9);
+        civ.recordRouteIncident('quiet_road', 'RUMOR_EXONERATED', -0.10);
+        civ.recordRouteIncident('quiet_road', 'RUMOR_EXONERATED', -0.10);
+        expect(route.perceivedDanger).toBe(0);
+        expect(route.status).toBe(ROUTE_STATUS.SAFE);
+    });
+});
