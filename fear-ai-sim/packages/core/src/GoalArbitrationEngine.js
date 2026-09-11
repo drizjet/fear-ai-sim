@@ -103,6 +103,17 @@ function tendencyWeight(axis, tendencies, blend) {
     const t = tendencies && Number.isFinite(tendencies[axis]) ? tendencies[axis] : 0.5;
     return Math.max(0.5, Math.min(1.5, 1 + blend * (t - 0.5)));
 }
+// NEXT-138: ally-bond weight for ally-directed goals (PROTECT_ALLY,
+// AID_VICTIM). The host derives bond in [0,1] from the directed
+// relationship (e.g. scoreSocialDecisions(rel).help); 0.5 is neutral and
+// exactly 1.0, full trust bends toward the ally goal, grievance-laden
+// bonds bend away. Blend 0 (default) is legacy scoring.
+const ALLY_GOALS = new Set([GOAL_TYPES.PROTECT_ALLY, GOAL_TYPES.AID_VICTIM]);
+function allyBondWeight(goalType, bond, blend) {
+    if (!ALLY_GOALS.has(goalType) || !(blend > 0)) return 1.0;
+    const b = Number.isFinite(bond) ? Math.max(0, Math.min(1, bond)) : 0.5;
+    return Math.max(0.5, Math.min(1.5, 1 + blend * (b - 0.5)));
+}
 
 export class GoalArbitrationEngine {
      constructor(options = {}) {
@@ -154,6 +165,11 @@ export class GoalArbitrationEngine {
         const tendencies = context.identityTendencies || null;
         const rawBlend = Number(context.identityWeight ?? 0);
         const identityBlend = Number.isFinite(rawBlend) ? Math.max(0, Math.min(1, rawBlend)) : 0;
+        // NEXT-138 opt-in ally-bond weight (default 0 = legacy scoring).
+        const rawBond = Number(context.allyBond ?? 0.5);
+        const allyBond = Number.isFinite(rawBond) ? rawBond : 0.5;
+        const rawBondBlend = Number(context.allyBondWeight ?? 0);
+        const bondBlend = Number.isFinite(rawBondBlend) ? Math.max(0, Math.min(1, rawBondBlend)) : 0;
         const vetoed = [];
 
         const scored = [];
@@ -185,15 +201,17 @@ export class GoalArbitrationEngine {
             const relevance = goalRelevance(goal.type, fear);
             const axis = tendencyAxisFor(goal.type);
             const tWeight = tendencyWeight(axis, tendencies, identityBlend);
+            const bWeight = allyBondWeight(goal.type, allyBond, bondBlend);
             const entry = {
                 goal: goal.type,
                 intent,
                 priority: goal.priority,
                 relevance: round4(relevance),
-                score: round4(goal.priority * relevance * tWeight),
+                score: round4(goal.priority * relevance * tWeight * bWeight),
                 vetoed: vetoedFlag
             };
             if (identityBlend > 0) entry.tendencyWeight = round4(tWeight);
+            if (bondBlend > 0) entry.allyBondWeight = round4(bWeight);
             scored.push(entry);
         }
 

@@ -8611,6 +8611,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "RELATIONSHIP_ARBITRATION_JOINT"
+ },
+ {
+ "milestone": "RELATIONSHIP_ARBITRATION_138",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Opt-in allyBond and allyBondWeight arbitration context bends PROTECT_ALLY and AID_VICTIM scores through a bounded [0.5, 1.5] weight (neutral 0.5 is exactly 1.0); blend 0 default keeps legacy scoring bit-identical; SURVIVE and other goals untouched",
+ "Host-side mapping documented: bond derives from the directed relationship via scoreSocialDecisions(rel).help; end-to-end chain tensor events to arbitration proven in-test",
+ "Pinned bond crossover ladder (protect 0.45 vs survive 0.6): bond 0.0 crosses at 0.20, 0.1 at 0.30, 0.5 at 0.70, 1.0 holds through all fear; trusted ally (bond 0.925) held while betrayed ally (bond 0.073) abandoned at identical fear 0.5",
+ "Mid-build notes: help willingness calibrates modestly (5 shared survivals yield 0.51, not 0.7); SURVIVE entries transparently carry weight 1 when blending is on"
+ ],
+ "test_evidence": [
+ "New tests/relationship-arbitration.test.js: 6 pass (bond construction extremes; monotonic crossover; pinned ladder; end-to-end trust vs betrayal divergence; legacy invariance at blend 0; AID_VICTIM bend with SURVIVE at 1)",
+ "Full matrix 365/366 suites, 2833 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~38s"
+ ],
+ "known_gaps": [
+ "Audit candidate 1 closed; candidates 2 through 25 carry (next: social-event-to-trauma feed); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Bond is host-supplied per arbitration call; per-goal-target bond lookup inside the engine open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "SOCIAL_EVENT_TRAUMA_FEED"
  }
  ]
 }

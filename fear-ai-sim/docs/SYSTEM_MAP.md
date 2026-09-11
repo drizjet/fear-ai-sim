@@ -313,6 +313,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Trauma Duty NEXT-135:** crystallized trauma erodes the duty advantage without erasing within-stratum ordering (fresh 0.65/0.80, traumatized 0.40/0.55); severe trauma can outweigh duty, pinned honestly; CCI-28 frontier 19 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Duty-Trauma Co-evolution NEXT-136:** 10k safe ticks recover trauma 0.979 to below 0.01 with crossover back at exactly 0.80, identity bit-identical; CCI-28 frontier 20 closed; 4 new tests; full matrix green except known dashboard env failures.
 - **Frontier Audit NEXT-137:** coverage graph mines 93 modules, 425 tested edges, 49 debt pairs (48 on the social/rumor/memory-vs-decision boundary); 25 candidates ranked, relationship-weighted arbitration selected next.
+- **Relationship Arbitration NEXT-138:** opt-in ally bond bends PROTECT_ALLY/AID_VICTIM scoring (crossover 0.20 at bond 0 to never at bond 1); trusted ally held while betrayed ally abandoned at identical fear; audit candidate 1 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
