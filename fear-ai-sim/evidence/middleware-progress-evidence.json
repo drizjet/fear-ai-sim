@@ -8202,6 +8202,30 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness"
  ],
  "next_action": "TRIPLE_COLLISION_PIN"
+ },
+ {
+ "milestone": "TRIPLE_COLLISION_PIN_121",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Three real systems composed with no new production code: GroupContagionSystem squad, six AffectiveAgent members with contagion plus leader-calm plus rumor-dread inputs, WorldSimulationSystem threat rumor via live encounter; timeline rumor tick 8, leader casualty tick 10 with no successor, physical threat ticks 12 plus",
+ "Ordered outcomes pinned: control holds (zero panic, cohesion 1); leader death collapses (SCATTERED_STAMPEDE, cohesion 0.4, full panic by 24); rumor alone informs without collapsing (dread 0.112 present, zero panic, cohesion 1); combined full panic at 18 while death-alone reads zero (rumor accelerates leaderless collapse)",
+ "Probes that shaped the pin: transmitRumors alone moves no pressure (encounter delivery required); arm-name substring bug masked the rumor arm (renamed death_rumor); threat window tuned off saturation so arms discriminate",
+ "Advisory-only composition; host owns casualties, movement, and encounters",
+ "No mid-build production failures; one test-setup class of errors (observation requires road presence, arm naming)"
+ ],
+ "test_evidence": [
+ "New tests/leader-panic-rumor-triple.test.js: 5 pass (control holds; death collapses; rumor sub-threshold honesty; combined acceleration; determinism with finite-state check)",
+ "Full matrix 351/352 suites, 2757 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~45s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontiers 1 through 5 closed; frontiers 6 through 20 carry (next: dashboard Memory, Relationships, Causal, Trade pages)",
+ "Triple pin covers one casualty timing and one rumor severity; sweep over timings and severities open",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness"
+ ],
+ "next_action": "DASHBOARD_WORKBENCH_PAGES"
  }
  ]
 }
