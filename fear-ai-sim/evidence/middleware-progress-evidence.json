@@ -7741,6 +7741,31 @@
  "Correction-before-hearing flinch uncharacterized"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "DEEP_HORIZON_CHURN_NEXT107",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Benchmark parameterized (cycles, perCycle, ticksPerCycle) with byte-identical defaults; 10k ticks in 0.65s, 100k ticks in 6.2s",
+ "10k trajectory oscillates 800 to 970KB with no trend (bounded oscillation, not a leak); 100k ends at 776KB with ledgers 150/150/0 (turnover evicted everything, CCIR-25 holds at scale); heap 109MB at 100k measured without gc (transient JSON garbage included, not asserted)",
+ "One benchmark edit mis-anchored (duplicated loop); caught by parse check and rebuilt",
+ "No production change"
+ ],
+ "test_evidence": [
+ "Valley battery 77/77 (3 new NEXT-107 pins: 10k ledger bounds with zero nonfinite, 1k-to-10k snapshot non-growth under 1MB envelope, deep determinism)",
+ "Prune-disabled probe fails exactly tests 75 and 76 (determinism control unaffected); restored",
+ "Full matrix 343/344 suites, 2696 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "10k churn ~0.7s; 100k churn ~6.2s single seed; valley battery ~28s with deep pins; full matrix ~51s"
+ ],
+ "known_gaps": [
+ "Correction-before-hearing flinch uncharacterized",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Heap-at-scale unmeasured with gc (100k figure includes transient garbage)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

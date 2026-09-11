@@ -23,27 +23,27 @@ export const CHURN_CYCLES = 40;
 export const CHURN_PER_CYCLE = 25;
 export const CHURN_TICKS = 50;
 
-export function runChurnSoak({ seeds = CHURN_SEEDS } = {}) {
+export function runChurnSoak({ seeds = CHURN_SEEDS, cycles = CHURN_CYCLES, perCycle = CHURN_PER_CYCLE, ticksPerCycle = CHURN_TICKS } = {}) {
     const runs = [];
     for (const seed of seeds) {
         const sim = new FrontierValleySimulation({ seed });
         const sizes = [];
         const t0 = Date.now();
-        for (let c = 0; c < CHURN_CYCLES; c++) {
+        for (let c = 0; c < cycles; c++) {
             const batch = [];
-            for (let k = 0; k < CHURN_PER_CYCLE; k++) {
+            for (let k = 0; k < perCycle; k++) {
                 batch.push(sim.worldSystem.createRumor('WAR_DECLARED', {
                     sourceEntityId: 'bandit_warband_1', severity: 0.9,
                     subjectFactionId: FRONTIER_VALLEY_FACTIONS.BANDITS,
                     originLocation: { x: 250, y: 0, z: 175 }
                 }).id);
             }
-            sim.advance(CHURN_TICKS);
+            sim.advance(ticksPerCycle);
             // Refute after hearings so ledgers fill before retraction.
             if (c % 2 === 0) {
                 for (const id of batch) sim.worldSystem.correctRumor(id, { confirmed: false, byGroupId: 'bandit_warband_1' });
             }
-            if (c === Math.floor(CHURN_CYCLES / 2) - 1) sizes.push(JSON.stringify(sim.getState()).length);
+            if (c === Math.floor(cycles / 2) - 1) sizes.push(JSON.stringify(sim.getState()).length);
         }
         sim.advance(100);
         sizes.push(JSON.stringify(sim.getState()).length);

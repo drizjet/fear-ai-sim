@@ -1169,3 +1169,59 @@ describe('NEXT-106: ceiling attribution (CCIR-26)', () => {
         expect(gapsAt(42, 600, 0.3)).toEqual(gapsAt(42, 600, 0.3));
     });
 });
+
+describe('NEXT-107: deep-horizon churn', () => {
+    function deepChurn(seed) {
+        const sim = new FrontierValleySimulation({ seed });
+        const sizes = [];
+        // 200 cycles x 50 ticks: samples show bounded oscillation, not
+        // monotonic growth, so the pin compares 10k against 1k.
+        for (let c = 0; c < 200; c++) {
+            const batch = [];
+            for (let k = 0; k < 25; k++) {
+                batch.push(sim.worldSystem.createRumor('WAR_DECLARED', {
+                    sourceEntityId: 'bandit_warband_1', severity: 0.9,
+                    subjectFactionId: FRONTIER_VALLEY_FACTIONS.BANDITS,
+                    originLocation: { x: 250, y: 0, z: 175 }
+                }).id);
+            }
+            sim.advance(50);
+            if (c % 2 === 0) {
+                for (const id of batch) sim.worldSystem.correctRumor(id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+            }
+            if (c === 19) sizes.push(JSON.stringify(sim.getState()).length);
+        }
+        sizes.push(JSON.stringify(sim.getState()).length);
+        let nonfinite = 0;
+        for (const [, m] of sim.factionSystem.stances ?? []) {
+            for (const [, s] of m) {
+                for (const k of ['grievance', 'trust', 'fear']) {
+                    if (!Number.isFinite(s[k])) nonfinite++;
+                }
+            }
+        }
+        return {
+            tick: sim.currentTick,
+            live: sim.worldSystem.rumors.size,
+            ledger: sim._hearsayLedger.size, routes: sim._hearsayRoutes.size, exon: sim._exoneratedRumors.size,
+            sizes, nonfinite
+        };
+    }
+    test('75. Ledgers stay bounded at 10k ticks', () => {
+        const r = deepChurn(42);
+        expect(r.tick).toBe(10000);
+        expect(r.live).toBeLessThanOrEqual(500);
+        expect(r.ledger).toBeLessThanOrEqual(r.live);
+        expect(r.routes).toBeLessThanOrEqual(r.live);
+        expect(r.exon).toBeLessThanOrEqual(r.live);
+        expect(r.nonfinite).toBe(0);
+    });
+    test('76. Snapshots do not grow between 1k and 10k ticks', () => {
+        const r = deepChurn(42);
+        expect(r.sizes[1]).toBeLessThanOrEqual(r.sizes[0]);
+        expect(r.sizes[1]).toBeLessThan(1048576);
+    });
+    test('77. Deep churn is deterministic', () => {
+        expect(deepChurn(42)).toEqual(deepChurn(42));
+    });
+});
