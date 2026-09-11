@@ -512,11 +512,11 @@ export class FrontierValleySimulation {
 
     /**
      * NEXT-95: exoneration sweep. NEXT-96: also retracts route danger.
-     * Runs once per tick before encounter consequences. A heard rumor the
-     * host refuted retracts the hearsay grievance and route danger it
-     * caused, once per rumor. Confirmed rumors keep their bias
-     * (vindicated menace is real). Vanished masters are dropped
-     * from both ledgers so they cannot grow without bound.
+     * NEXT-97: decay-aware residuals. A refuted rumor retracts only the
+     * undecayed remainder of its bias (grievance half-life 60 ticks,
+     * route-danger half-life 80), so late refutations cannot manufacture
+     * safety below the never-biased baseline. Legacy ledger entries
+     * without a tick read as fresh (full retraction, pre-97 behavior).
      */
     _exonerateRefutedRumors() {
         // NEXT-96: union of faction-pair and route ledgers. Any refuted
@@ -527,11 +527,18 @@ export class FrontierValleySimulation {
             const master = this.worldSystem.rumors.get(rid);
             if (!master) { this._hearsayLedger.delete(rid); this._hearsayRoutes.delete(rid); continue; }
             if (master.correction && master.correction.confirmed === false) {
-                for (const { perceiver, subject } of this._hearsayLedger.get(rid) ?? []) {
-                    this.factionSystem.recordIncident(subject, perceiver, INCIDENT_TYPES.RUMOR_EXONERATED, { rumorId: rid });
+                const griefHalf = Number(this.factionSystem.config?.grievanceHalfLifeTicks) || 60;
+                const dangerHalf = Number(this.civSystem.config?.routeDangerHalfLifeTicks) || 80;
+                for (const { perceiver, subject, tick } of this._hearsayLedger.get(rid) ?? []) {
+                    const elapsed = Math.max(0, this.currentTick - (tick ?? this.currentTick));
+                    const relief = 0.10 * Math.pow(2, -elapsed / griefHalf);
+                    this.factionSystem.recordIncident(subject, perceiver, INCIDENT_TYPES.RUMOR_EXONERATED, { rumorId: rid, relief });
                 }
-                for (const routeId of this._hearsayRoutes.get(rid) ?? []) {
-                    this.civSystem.recordRouteIncident(routeId, 'RUMOR_EXONERATED', -0.10);
+                for (const entry of this._hearsayRoutes.get(rid) ?? []) {
+                    const routeId = entry?.routeId ?? entry;
+                    const elapsed = Math.max(0, this.currentTick - ((entry?.tick) ?? this.currentTick));
+                    const relief = 0.10 * Math.pow(2, -elapsed / dangerHalf);
+                    this.civSystem.recordRouteIncident(routeId, 'RUMOR_EXONERATED', -relief);
                 }
                 this._exoneratedRumors.add(rid);
             }
@@ -648,8 +655,10 @@ export class FrontierValleySimulation {
                                 });
                                 // NEXT-95: remember who was biased by which
                                 // rumor so a later refutation retracts it.
+                                // NEXT-97: stamp the bias tick for
+                                // decay-aware retraction.
                                 if (!this._hearsayLedger.has(rid)) this._hearsayLedger.set(rid, []);
-                                this._hearsayLedger.get(rid).push({ perceiver: f, subject });
+                                this._hearsayLedger.get(rid).push({ perceiver: f, subject, tick: this.currentTick });
                             }
                         }
                     }
@@ -659,10 +668,11 @@ export class FrontierValleySimulation {
                     this.civSystem.recordRouteIncident(routeId, 'RUMOR_THREAT', 0.10);
                     // NEXT-96: remember which routes this hearing biased,
                     // per rumor, so refutation retracts them (once each).
+                    // NEXT-97: stamp the bias tick for decay-aware retraction.
                     for (const rid of enc.heardThreatRumorIds ?? []) {
                         if (!this._hearsayRoutes.has(rid)) this._hearsayRoutes.set(rid, []);
                         const seen = this._hearsayRoutes.get(rid);
-                        if (!seen.includes(routeId)) seen.push(routeId);
+                        if (!seen.some((e) => e.routeId === routeId)) seen.push({ routeId, tick: this.currentTick });
                     }
                 }
             }

@@ -7412,6 +7412,32 @@
  "Default (0,0,0) origins route literally with registration-order tie-breaks"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "DECAY_AWARE_RETRACTION_NEXT97",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Red-team probe first: 400-tick-delayed refutation drove Riverway to 0.0063 against a 0.1000 never-biased baseline (16x too safe) - symmetric-full retraction manufactures safety after decay",
+ "Ledger entries stamped with bias ticks; sweep retracts residuals (0.10 times 2 to the minus elapsed over half-life) with half-lives read from live config (grievance 60, route danger 80); explicit details.relief parameter with full-retraction default; zero relief retracts nothing; legacy entries without ticks read as fresh",
+ "Calibrated window: 60-tick-delayed refutation restores the never-biased grievance trajectory to 12 digits (0.0806 both); stale-only absolute check was too weak (floor absorbs grievance overshoot) and was replaced by exact restoration",
+ "Mid-build failures: four edit-range mis-anchors ate live lines or helpers again (bridge block, test helper, test header); each caught by parse check or exact-removal review and restored (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "Faction battery 18/18 (2 new relief pins: explicit residual, zero relief; zero-relief fallback bug caught and fixed during implementation)",
+ "Valley battery 46/46 (3 new NEXT-97 pins: exact trajectory restoration, route no-overshoot band, determinism)",
+ "Pristine-stash control fails exactly the decay pins (44, 45, 17, 18); restored",
+ "Full matrix 343/344 suites, 2663 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley plus faction batteries ~14s; full matrix ~43s"
+ ],
+ "known_gaps": [
+ "Multi-rumor same-encounter same-route attribution still approximate (per-rumor ledger entries share one encounter-level bias)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Default (0,0,0) origins route literally with registration-order tie-breaks"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

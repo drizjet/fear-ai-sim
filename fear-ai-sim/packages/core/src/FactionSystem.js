@@ -269,9 +269,10 @@ export class FactionSystem {
                 break;
             case INCIDENT_TYPES.RUMOR_EXONERATED:
                 // NEXT-95: a refuted subject rumor retracts the hearsay it
-                // caused. Symmetric relief: no trust or fear movement (the
-                // hearsay never touched them), floored at zero by clamp01.
-                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance - 0.10 * grievanceScale);
+                // caused. NEXT-97: decay-aware relief. details.relief carries
+                // the undecayed residual (bias decayed since); default 0.10
+                // preserves the symmetric case. Floored at zero by clamp01.
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance - (Number.isFinite(Number(details.relief)) ? Number(details.relief) : 0.10) * grievanceScale);
                 break;
             case INCIDENT_TYPES.RAID_CONFIRMED:
                 // NOW-14: a raid is inherently a territorial violation as

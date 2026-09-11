@@ -425,4 +425,18 @@ describe('NEXT-95: exoneration incident weight', () => {
         sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_EXONERATED, {});
         expect(sys.getBilateralStance('settlers', 'bandits').grievance).toBe(0);
     });
+    test('17. Explicit relief retracts the undecayed residual only', () => {
+        const sys = twoFactions();
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_HEARSAY, {});
+        const grievanceBefore = sys.getBilateralStance('settlers', 'bandits').grievance;
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_EXONERATED, { relief: 0.03 });
+        expect(sys.getBilateralStance('settlers', 'bandits').grievance).toBeCloseTo(grievanceBefore - 0.03, 9);
+    });
+    test('18. Zero relief retracts nothing (genuinely stale bias)', () => {
+        const sys = twoFactions();
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_HEARSAY, {});
+        const grievanceBefore = sys.getBilateralStance('settlers', 'bandits').grievance;
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_EXONERATED, { relief: 0 });
+        expect(sys.getBilateralStance('settlers', 'bandits').grievance).toBe(grievanceBefore);
+    });
 });

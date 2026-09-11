@@ -671,7 +671,7 @@ describe('NEXT-96: route danger exoneration', () => {
         const b = rumored();
         b.sim.advance(50);
         expect(riverway(a.sim)).toBeLessThan(riverway(b.sim));
-        expect(a.sim._hearsayRoutes.get(a.rumor.id)).toContain(FRONTIER_VALLEY_ROUTES.RIVERWAY);
+        expect(a.sim._hearsayRoutes.get(a.rumor.id).map((e) => e.routeId)).toContain(FRONTIER_VALLEY_ROUTES.RIVERWAY);
     });
     test('42. Confirmed rumor keeps its route danger (no retraction)', () => {
         const a = rumored();
@@ -695,5 +695,53 @@ describe('NEXT-96: route danger exoneration', () => {
         const forked = sim.fork();
         expect(forked._hearsayRoutes.get(rumor.id)).toEqual(sim._hearsayRoutes.get(rumor.id));
         expect(riverway(forked)).toBe(riverway(sim));
+    });
+});
+
+describe('NEXT-97: decay-aware retraction', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    function stale() {
+        const sim = new FrontierValleySimulation({ seed: 42 });
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        sim.advance(150);
+        sim.advance(400);
+        return { sim, rumor };
+    }
+    test('44. Retraction restores the never-biased trajectory', () => {
+        const sim = new FrontierValleySimulation({ seed: 42 });
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        sim.advance(150);
+        sim.advance(60);
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim.advance(50);
+        const plain = new FrontierValleySimulation({ seed: 42 });
+        plain.advance(260);
+        const g = (s) => s.factionSystem.getBilateralStance(S, B).grievance;
+        expect(g(sim)).toBeCloseTo(g(plain), 12);
+    });
+    test('45. Late refutation cannot manufacture route safety below baseline', () => {
+        const { sim, rumor } = stale();
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim.advance(50);
+        const plain = new FrontierValleySimulation({ seed: 42 });
+        plain.advance(600);
+        const d = (s) => s.civSystem.routes.get(FRONTIER_VALLEY_ROUTES.RIVERWAY).perceivedDanger;
+        expect(d(sim)).toBeGreaterThanOrEqual(d(plain) - 0.02);
+        expect(d(sim)).toBeLessThanOrEqual(d(plain) + 0.02);
+    });
+    test('46. Residual retraction is deterministic', () => {
+        const run = () => {
+            const { sim, rumor } = stale();
+            sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+            sim.advance(50);
+            return sim.civSystem.routes.get(FRONTIER_VALLEY_ROUTES.RIVERWAY).perceivedDanger;
+        };
+        expect(run()).toBe(run());
     });
 });
