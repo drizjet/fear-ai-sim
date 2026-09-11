@@ -282,6 +282,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Ceiling Attribution NEXT-106 (CCIR-26 hit):** first-window extra decay proven to be clamp01 clipping under raid inflow (stage hypothesis falsified by identical twin streams; quiet-regime control decays clean); test-70 comment corrected. Pinned in valley battery.
 - **Deep-Horizon Churn NEXT-107:** parameterized churn benchmark to 10k/100k ticks (6.2s); ledgers bounded, snapshots oscillate without trend, 100k ends cleaner than it starts; no production change. Pinned in valley battery.
 - **Flinch Characterization NEXT-108:** hearing a refuted rumor flinches full bias then fully retracts next sweep (coherent belief lag, no production change); rejected skip-bias alternative documented. Pinned in valley battery.
+- **Mixed-Holder Shares NEXT-109:** joint hearings follow known readings only (ignorance does not dilute, the NEXT-101 parallel); no production change. Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

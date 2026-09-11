@@ -7789,6 +7789,29 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "MIXED_HOLDER_SHARES_NEXT109",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: probed behavior (mean over known holders only) judged principled before pinning - absence of belief is not neutral belief, the NEXT-101 parallel. Ignorant parties contribute no information and do not drag the joint reading toward neutral",
+ "No mid-build failures"
+ ],
+ "test_evidence": [
+ "Valley battery 83/83 (3 new NEXT-109 pins: informed readings stand at 0.8 over 0.2, staged retraction follows recorded shares to baseline, determinism)",
+ "Equal-share probe fails exactly tests 81 and 82 (determinism control unaffected); restored",
+ "Full matrix 343/344 suites, 2702 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~13s with mixed pins; full matrix ~51s"
+ ],
+ "known_gaps": [
+ "Exoneration plus trade-restraint interaction unpinned",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Heap-at-scale unmeasured with gc"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

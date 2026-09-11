@@ -1280,3 +1280,59 @@ describe('NEXT-108: correction-before-hearing flinch', () => {
         expect(run()).toEqual(run());
     });
 });
+
+describe('NEXT-109: mixed-holder shares', () => {
+    const B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+    function halfInformed(sim, vividCred, backCred) {
+        const mk = () => sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        const vivid = mk(), back = mk();
+        // Only merchant_1 holds instances; merchant_2 holds nothing.
+        const grp = sim.worldSystem.groups.get('caravan_merchant_1');
+        grp.knownRumors.set(vivid.id, { rumorId: vivid.id, credibility: vividCred, fidelity: 1.0, perceivedSeverity: 0.9, hops: 1, receivedTick: 0 });
+        grp.knownRumors.set(back.id, { rumorId: back.id, credibility: backCred, fidelity: 1.0, perceivedSeverity: 0.9, hops: 1, receivedTick: 0 });
+        return { vivid, back };
+    }
+    function hear(sim, rumors) {
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: rumors.map((r) => r.id)
+        }]);
+    }
+    function refute(sim, rumor) {
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim._recordEncounterConsequences([]);
+    }
+    test('81. Ignorance does not dilute the informed reading', () => {
+        // NEXT-101 parallel: absence of belief is not neutral belief.
+        // The joint hearing follows the only readings available.
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const { vivid, back } = halfInformed(sim, 0.8, 0.2);
+        hear(sim, [vivid, back]);
+        expect(sim._hearsayRoutes.get(vivid.id)[0].share).toBeCloseTo(0.8, 9);
+        expect(sim._hearsayRoutes.get(back.id)[0].share).toBeCloseTo(0.2, 9);
+    });
+    test('82. Retraction follows the recorded mixed shares', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const { vivid, back } = halfInformed(sim, 0.8, 0.2);
+        const base = sim.civSystem.routes.get(RIVER).perceivedDanger;
+        hear(sim, [vivid, back]);
+        refute(sim, vivid);
+        expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeCloseTo(base + 0.02, 9);
+        refute(sim, back);
+        expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeCloseTo(base, 9);
+    });
+    test('83. Mixed shares are deterministic', () => {
+        const run = () => {
+            const sim = new FrontierValleySimulation({ seed: 11 });
+            const { vivid, back } = halfInformed(sim, 0.8, 0.2);
+            hear(sim, [vivid, back]);
+            return [sim._hearsayRoutes.get(vivid.id)[0].share, sim._hearsayRoutes.get(back.id)[0].share];
+        };
+        expect(run()).toEqual(run());
+    });
+});
