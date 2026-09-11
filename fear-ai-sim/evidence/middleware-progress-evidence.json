@@ -7623,6 +7623,31 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "RUMOR_CHURN_SOAK_NEXT104",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audited before building: 5k war-degeneracy soak and 100k compaction soak exist but correct almost nothing, so exoneration memory was unsoaked - new benchmark fills exactly that gap, no duplication",
+ "rumor_churn_soak.mjs: 2 seeds, 2100 ticks, 1000-rumor churn with post-hearing refutes; ~0.25s, ~14MB heap; both seeds bounded with shrinking snapshots and distinct per-seed digests",
+ "Calibration honesty: small-scale saturation pin failed first (mid 341KB to end 537KB still filling); test horizon extended to the benchmark scale instead of weakening the bar",
+ "One mid-build benchmark edit mis-anchored (duplicated loop); caught by parse check and rebuilt cleanly"
+ ],
+ "test_evidence": [
+ "Valley battery 67/67 (3 new NEXT-104 pins: ledgers bounded by live count with zero nonfinite fields, snapshot saturation, churn determinism)",
+ "Prune-disabled probe fails exactly test 66 (65 holds at this horizon since dead entries stay under live count - recorded weak pin, 66 carries leak detection); restored",
+ "Full matrix 343/344 suites, 2686 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Churn soak ~0.25s for 2100 ticks across 2 seeds; valley battery ~14s; full matrix ~41s"
+ ],
+ "known_gaps": [
+ "Grievance attractor dynamics still unmapped",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "10k and 100k-tick rumor-churn horizons unrun (current soak is 2.1k ticks)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

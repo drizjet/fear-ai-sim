@@ -277,6 +277,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Hearing-Site Fallback NEXT-101:** unprovided rumor origins flag absence instead of masquerading as threats at the map origin; unlocated hearings warn the hearing site; explicit zeros still route literally; thread gaps from the rumor arc closed except pair shares. Pinned in world + valley batteries.
 - **Pair Shares NEXT-102:** pair bias fires once per encounter with credibility-weighted shares per contributing rumor (same-faction parties deduped); posture relief mirrors the route side; rumor-hearsay thread fully closed. Pinned in valley battery.
 - **Exoneration Sensitivity NEXT-103:** disabling the sweep moves posture and trade inputs by exactly 0.10 synchronously (no production change, instance shadowing); 50 live ticks erase the gap via grievance attractors (mapped gap); sweep early-exit measured unnecessary. Pinned in valley battery.
+- **Rumor-Churn Soak NEXT-104:** 2-seed churn benchmark (2100 ticks, ~0.25s) proves exoneration ledgers stay bounded, snapshots saturate, digests repeat; fills the turnover gap the 5k/100k soaks leave. Pinned in valley battery.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

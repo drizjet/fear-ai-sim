@@ -1041,3 +1041,56 @@ describe('NEXT-103: exoneration interaction mutation', () => {
         expect(run(false)).toEqual(run(false));
     });
 });
+
+describe('NEXT-104: rumor-churn bounds', () => {
+    function churn(seed) {
+        const sim = new FrontierValleySimulation({ seed });
+        const sizes = [];
+        // Same horizon as the rumor_churn_soak benchmark: saturation is
+        // only visible past ~1000 ticks (shorter runs still fill).
+        for (let c = 0; c < 40; c++) {
+            const batch = [];
+            for (let k = 0; k < 25; k++) {
+                batch.push(sim.worldSystem.createRumor('WAR_DECLARED', {
+                    sourceEntityId: 'bandit_warband_1', severity: 0.9,
+                    subjectFactionId: FRONTIER_VALLEY_FACTIONS.BANDITS,
+                    originLocation: { x: 250, y: 0, z: 175 }
+                }).id);
+            }
+            sim.advance(50);
+            if (c % 2 === 0) {
+                for (const id of batch) sim.worldSystem.correctRumor(id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+            }
+            if (c === 19) sizes.push(JSON.stringify(sim.getState()).length);
+        }
+        sim.advance(100);
+        sizes.push(JSON.stringify(sim.getState()).length);
+        let nonfinite = 0;
+        for (const [, m] of sim.factionSystem.stances ?? []) {
+            for (const [, s] of m) {
+                for (const k of ['grievance', 'trust', 'fear']) {
+                    if (!Number.isFinite(s[k])) nonfinite++;
+                }
+            }
+        }
+        return {
+            live: sim.worldSystem.rumors.size,
+            ledger: sim._hearsayLedger.size, routes: sim._hearsayRoutes.size, exon: sim._exoneratedRumors.size,
+            sizes, nonfinite
+        };
+    }
+    test('65. Exoneration ledgers stay bounded by live rumor count', () => {
+        const r = churn(42);
+        expect(r.ledger).toBeLessThanOrEqual(r.live);
+        expect(r.routes).toBeLessThanOrEqual(r.live);
+        expect(r.exon).toBeLessThanOrEqual(r.live);
+        expect(r.nonfinite).toBe(0);
+    });
+    test('66. Snapshots stop growing under steady churn', () => {
+        const r = churn(42);
+        expect(r.sizes[1]).toBeLessThanOrEqual(r.sizes[0]);
+    });
+    test('67. Churn is deterministic across reruns', () => {
+        expect(churn(42)).toEqual(churn(42));
+    });
+});
