@@ -7862,6 +7862,76 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "WIRE_OR_RETIRE_TRIAGE"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_27",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Sixth cadence audit (5 chunks since CCI-26: NEXT-107 through NEXT-110 plus identity-layer audit); gap ledger aggregated",
+ "Red-team hit: re-hearing ratchet proved live (refuted rumor reheard 3 times drove grievance 0.8 to 1.0 with exonerated-once blocking retraction); the NEXT-108 flinch-coherence verdict it relied on is superseded",
+ "Negative results: pair-ledger over-retract re-hypothesized and re-disproved; world-layer transmit skip confirmed as the consistent precedent for the gate",
+ "Guardian CLEAN"
+ ],
+ "test_evidence": [
+ "Valley battery 89/89 with rewritten flinch pins; gate-off probe fails exactly tests 78 and 79 after closing a fallback hole the first probe exposed",
+ "Full matrix 343/344 suites, 2708 pass (8 dashboard EACCES env failures, known)"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~29s with ratchet pins; full matrix ~52s"
+ ],
+ "known_gaps": [
+ "Confirmed-rumor rehearing still biases per hearing (decay-bounded, lower priority)",
+ "Wire-or-retire triage still open (from identity audit)",
+ "Psychometric ground truth still external-participant-blocked"
+ ],
+ "next_action": "RANKED_CANDIDATES",
+ "candidates": [
+ "Confirmed-rumor rehearing ratchet review (decay-bounded true-claim replay)",
+ "Wire-or-retire triage: CIA composition into live path or explicit satellite status",
+ "Wire-or-retire: trauma crystallization engine",
+ "Wire-or-retire: moral dissonance engine",
+ "Wire-or-retire: FPS live decisions",
+ "Wire-or-retire: identity vault in LodDirector",
+ "VI checklist mapping: values, role identity, loyalty, grudges, respect, route familiarity",
+ "Godot correction-trust-exoneration station (Front A playable proof)",
+ "Identity-adaptive-state layer audit follow-up (program item 1 closure)",
+ "Functional persona signatures live use (program item 2)",
+ "Faction governance plus succession (CHUNK 4)",
+ "War exhaustion dynamics",
+ "Security dilemma explicit test",
+ "Long-world save-size tracking",
+ "Heap-at-scale measurement with gc",
+ "Sweep cost at 100k-tick scale",
+ "Protocol fuzzing for rumor fields",
+ "Second external game integration",
+ "History compaction preserving causal anchors",
+ "Causal-graph intervention ranking (advisory)",
+ "Psychometric timescale validation (BLOCKED_EXTERNAL_PARTICIPANTS)"
+ ],
+ "red_team": "CCIR-27 re-hearing ratchet - HIT confirmed live, fixed as NEXT-111 with NEXT-108 verdict superseded"
+ },
+ {
+ "milestone": "SETTLED_RUMOR_GATE_NEXT111",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "CCIR-27 fix: block-level all-settled skip plus per-rid live filtering in pair, route, and share-denominator paths; unknown masters count as live (old path); confirmed rumors still bias",
+ "Mid-build failures: two missing closers from the gate insert (caught by parse check); test-structure damage across three edits from overlapping ranges (caught by read-back, rebuilt stepwise)",
+ "Probe discipline held: a no-op first probe (missed multi-line literal) was caught by the all-pass smell; a passing probe then exposed a fallback hole in the new tests (settled-only hearings biased the hearing site), which the gate design already covered but the assertions did not"
+ ],
+ "test_evidence": [
+ "Valley battery 89/89 (NEXT-108 tests 78/79 rewritten to the gate invariant with supersede notes; 3 new NEXT-111 pins: live owns whole mixed bias, refute restores, determinism)",
+ "Gate-off probe fails exactly tests 78 and 79 (mixed and determinism pins correctly unaffected); restored",
+ "Full matrix 343/344 suites, 2708 pass (8 dashboard EACCES env failures, known); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~29s; full matrix ~52s"
+ ],
+ "known_gaps": [
+ "Confirmed-rumor rehearing still biases per hearing (decay-bounded, lower priority)",
+ "Wire-or-retire triage still open",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

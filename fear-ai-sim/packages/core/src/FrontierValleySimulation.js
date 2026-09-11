@@ -641,6 +641,18 @@ export class FrontierValleySimulation {
             // incident per route per encounter (no per-rumor spam).
             if (enc.heardThreatRumor && enc.advisoryResolution !== 'COMBAT_ENGAGEMENT') {
                 const routes = new Set();
+                // CCIR-27: settled rumors (host-refuted) contribute nothing.
+                // Re-hearing known-false claims biased again with no further
+                // retraction (exonerated-once), ratcheting posture and danger
+                // without bound. Unknown masters count as live (old path).
+                const isSettled = (id) => {
+                    const m = this.worldSystem.rumors.get(id);
+                    return m?.correction != null && m.correction.confirmed === false;
+                };
+                const heardIds = enc.heardThreatRumorIds ?? [];
+                const liveIds = heardIds.filter((id) => !isSettled(id));
+                const allSettled = heardIds.length > 0 && liveIds.length === 0;
+                if (!allSettled) {
                 // NEXT-93: faction-attributed menace also biases posture.
                 // WAR_DECLARED / FACTION_BETRAYAL rumors naming a subject
                 // faction (own-faction subjects excluded). One pair bias
@@ -656,7 +668,7 @@ export class FrontierValleySimulation {
                     if (known.length === 0) return 0.5;
                     return known.reduce((a, b) => a + Number(b), 0) / known.length;
                 };
-                for (const rid of enc.heardThreatRumorIds ?? []) {
+                for (const rid of liveIds) {
                     const master = this.worldSystem.rumors.get(rid);
                     const o = master?.originLocation;
                     // NEXT-101: unprovided origins are missing data, not a
@@ -703,19 +715,20 @@ export class FrontierValleySimulation {
                     // NEXT-96: remember which routes this hearing biased,
                     // per rumor, so refutation retracts them (once each).
                     // NEXT-97: stamp the bias tick for decay-aware retraction.
-                    for (const rid of enc.heardThreatRumorIds ?? []) {
+                    for (const rid of liveIds) {
                         if (!this._hearsayRoutes.has(rid)) this._hearsayRoutes.set(rid, []);
                         const seen = this._hearsayRoutes.get(rid);
                         // NEXT-98: encounter-level bias is shared across all
                         // rumors heard together (one +0.10, not one each).
                         // NEXT-99: shares follow heard credibility (hoisted
                         // credOf above); missing instances stay equal.
-                        const ids = enc.heardThreatRumorIds ?? [];
+                        const ids = liveIds;
                         const total = ids.reduce((a, id) => a + credOf(id), 0) || 1;
                         const share = credOf(rid) / total;
                         if (!seen.some((e) => e.routeId === routeId)) seen.push({ routeId, tick: this.currentTick, share });
                     }
                 }
+            }
             }
         }
     }

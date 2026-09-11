@@ -1247,35 +1247,45 @@ describe('NEXT-108: correction-before-hearing flinch', () => {
     }
     const grievance = (sim) => sim.factionSystem.getBilateralStance(S, B).grievance;
     const danger = (sim) => sim.civSystem.routes.get(RIVER).perceivedDanger;
-    test('78. Hearing a refuted rumor flinches full bias on both layers', () => {
-        // Coherent information lag: the hearing parties do not hold the
-        // correction, so the bias mirrors their belief state that tick.
+    test('78. Hearing a settled rumor biases nothing on either layer', () => {
+        // SUPERSEDED by CCIR-27 (NEXT-111): the old flinch verdict stood
+        // until re-hearing proved a ratchet. Host-settled claims generate
+        // no fresh posture or danger, matching the transmit layer skip.
+        // PASS is asserted too: the hearing-site fallback must not fire
+        // for settled-only hearings either.
         const { sim, rumor } = refutedUnheard();
+        const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY, PASS = FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS;
         const g0 = grievance(sim), d0 = danger(sim);
+        const p0 = sim.civSystem.routes.get(PASS).perceivedDanger;
         hear(sim, rumor);
-        expect(grievance(sim)).toBeCloseTo(g0 + 0.10, 9);
-        expect(danger(sim)).toBeCloseTo(d0 + 0.10, 9);
-        expect(sim._exoneratedRumors.has(rumor.id)).toBe(false);
+        expect(grievance(sim)).toBe(g0);
+        expect(danger(sim)).toBe(d0);
+        expect(sim.civSystem.routes.get(PASS).perceivedDanger).toBe(p0);
+        expect(sim._hearsayLedger.has(rumor.id)).toBe(false);
+        expect(sim._hearsayRoutes.has(rumor.id)).toBe(false);
     });
-    test('79. The next sweep fully retracts the flinch and holds steady', () => {
+    test('79. Repeated hearings of a settled rumor cannot ratchet', () => {
         const { sim, rumor } = refutedUnheard();
+        const PASS = FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS;
         const g0 = grievance(sim), d0 = danger(sim);
+        const p0 = sim.civSystem.routes.get(PASS).perceivedDanger;
         hear(sim, rumor);
         sim._recordEncounterConsequences([]);
-        expect(grievance(sim)).toBeCloseTo(g0, 9);
-        expect(danger(sim)).toBeCloseTo(d0, 9);
-        expect(sim._exoneratedRumors.has(rumor.id)).toBe(true);
+        hear(sim, rumor);
         sim._recordEncounterConsequences([]);
-        expect(grievance(sim)).toBeCloseTo(g0, 9);
-        expect(danger(sim)).toBeCloseTo(d0, 9);
+        hear(sim, rumor);
+        sim._recordEncounterConsequences([]);
+        expect(grievance(sim)).toBe(g0);
+        expect(danger(sim)).toBe(d0);
+        expect(sim.civSystem.routes.get(PASS).perceivedDanger).toBe(p0);
     });
-    test('80. Flinch characterization is deterministic', () => {
+    test('80. Settled-gate behavior is deterministic', () => {
         const run = () => {
             const { sim, rumor } = refutedUnheard();
             hear(sim, rumor);
-            const flinch = [grievance(sim), danger(sim)];
             sim._recordEncounterConsequences([]);
-            return [...flinch, grievance(sim), danger(sim)];
+            hear(sim, rumor);
+            return [grievance(sim), danger(sim)];
         };
         expect(run()).toEqual(run());
     });
@@ -1389,5 +1399,68 @@ describe('NEXT-110: hearsay-restraint symmetry', () => {
         };
         expect(run()).toBe(run());
         expect(run()).toBeCloseTo(0.10, 9);
+    });
+});
+
+describe('NEXT-111: settled-rumor gate (CCIR-27)', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+    const grievance = (sim) => sim.factionSystem.getBilateralStance(S, B).grievance;
+    const danger = (sim) => sim.civSystem.routes.get(RIVER).perceivedDanger;
+    test('87. Live rumor owns the whole bias beside a settled one', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const mk = () => sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        const settled = mk(), live = mk();
+        sim.worldSystem.correctRumor(settled.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        const g0 = grievance(sim), d0 = danger(sim);
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [settled.id, live.id]
+        }]);
+        expect(grievance(sim)).toBeCloseTo(g0 + 0.10, 9);
+        expect(danger(sim)).toBeCloseTo(d0 + 0.10, 9);
+        expect(sim._hearsayLedger.has(settled.id)).toBe(false);
+        expect(sim._hearsayLedger.get(live.id)[0].share).toBe(1);
+        expect(sim._hearsayRoutes.get(live.id)[0].share).toBe(1);
+    });
+    test('88. Refuting the live rumor afterwards restores baseline', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const mk = () => sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        const settled = mk(), live = mk();
+        sim.worldSystem.correctRumor(settled.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        const g0 = grievance(sim), d0 = danger(sim);
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [settled.id, live.id]
+        }]);
+        sim.worldSystem.correctRumor(live.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim._recordEncounterConsequences([]);
+        expect(grievance(sim)).toBeCloseTo(g0, 9);
+        expect(danger(sim)).toBeCloseTo(d0, 9);
+    });
+    test('89. Settled gate is deterministic', () => {
+        const run = () => {
+            const sim = new FrontierValleySimulation({ seed: 11 });
+            const r = sim.worldSystem.createRumor('WAR_DECLARED', {
+                sourceEntityId: 'bandit_warband_1', severity: 0.9,
+                subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+            });
+            sim.worldSystem.correctRumor(r.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+            sim._recordEncounterConsequences([{
+                partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+                advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+                heardThreatRumorIds: [r.id]
+            }]);
+            return [grievance(sim), danger(sim)];
+        };
+        expect(run()).toEqual(run());
     });
 });
