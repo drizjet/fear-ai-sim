@@ -1301,3 +1301,17 @@ describe('CCIR-24: idempotent corrections', () => {
         expect(b.knownRumors.get(r.id).credibility).toBe(dented);
     });
 });
+
+describe('NEXT-101: origin-provided flag', () => {
+    test('5. Unprovided origins store zeros but flag absence', () => {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: null, severity: 0.9 });
+        expect(r.originProvided).toBe(false);
+        expect(r.originLocation).toEqual({ x: 0, y: 0, z: 0 });
+    });
+    test('6. Explicit origins flag presence, even at the map origin', () => {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const r = world.createRumor('WAR_DECLARED', { originLocation: { x: 0, y: 0, z: 0 } });
+        expect(r.originProvided).toBe(true);
+    });
+});

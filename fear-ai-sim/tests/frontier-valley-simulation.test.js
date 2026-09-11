@@ -898,3 +898,40 @@ describe('NEXT-100: bounded exoneration memory (CCIR-25)', () => {
         expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeLessThan(0.2);
     });
 });
+
+describe('NEXT-101: unlocated rumors warn the hearing site', () => {
+    const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+    const PASS = FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS;
+    function hearAtRiver(sim, origin) {
+        const opts = { sourceEntityId: 'bandit_warband_1', severity: 0.9 };
+        if (origin !== undefined) opts.originLocation = origin;
+        const rumor = sim.worldSystem.createRumor('AMBUSH_HOTSPOT', opts);
+        sim.worldSystem.groups.get('caravan_merchant_2').position = { x: 250, y: 0, z: 175 };
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_2', partyBId: 'caravan_merchant_1',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [rumor.id]
+        }]);
+        return rumor;
+    }
+    test('55. Missing origin biases the hearing site, not the map origin', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const riverBase = sim.civSystem.routes.get(RIVER).perceivedDanger;
+        const passBase = sim.civSystem.routes.get(PASS).perceivedDanger;
+        hearAtRiver(sim);
+        expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeCloseTo(riverBase + 0.10, 9);
+        expect(sim.civSystem.routes.get(PASS).perceivedDanger).toBe(passBase);
+    });
+    test('56. Explicit map-origin threats still route literally', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const passBase = sim.civSystem.routes.get(PASS).perceivedDanger;
+        hearAtRiver(sim, { x: 0, y: 0, z: 0 });
+        expect(sim.civSystem.routes.get(PASS).perceivedDanger).toBeCloseTo(passBase + 0.10, 9);
+    });
+    test('57. Located threats still route by threat site', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const riverBase = sim.civSystem.routes.get(RIVER).perceivedDanger;
+        hearAtRiver(sim, { x: 250, y: 0, z: 175 });
+        expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeCloseTo(riverBase + 0.10, 9);
+    });
+});

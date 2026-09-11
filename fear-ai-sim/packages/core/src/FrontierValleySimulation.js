@@ -647,7 +647,11 @@ export class FrontierValleySimulation {
                 for (const rid of enc.heardThreatRumorIds ?? []) {
                     const master = this.worldSystem.rumors.get(rid);
                     const o = master?.originLocation;
-                    if (o && Number.isFinite(Number(o.x)) && Number.isFinite(Number(o.z))) {
+                    // NEXT-101: unprovided origins are missing data, not a
+                    // threat at the map origin. Skip them here; the empty
+                    // routes set below falls back to the hearing site.
+                    // Legacy masters without the flag keep literal routing.
+                    if (o && master?.originProvided !== false && Number.isFinite(Number(o.x)) && Number.isFinite(Number(o.z))) {
                         routes.add(this._nearestRouteTo(o));
                     }
                     const subject = master?.subjectFactionId;

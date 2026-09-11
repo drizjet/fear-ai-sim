@@ -7551,6 +7551,30 @@
  "Pair-ledger credibility shares open"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "HEARING_SITE_FALLBACK_NEXT101",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "createRumor defaults origin to null and stores originProvided; unprovided origins keep (0,0,0) storage but flag absence; rumor spread serialization carries the flag automatically",
+ "Valley bridge skips unlocated origins so the empty routes set falls back to the hearing site (pre-91 behavior for missing data); explicit zeros still route literally; legacy masters without the flag keep literal routing",
+ "No mid-build edit failures (grounded reads held for the fifth straight chunk)"
+ ],
+ "test_evidence": [
+ "World battery 2 new flag pins (absence flagged with zero storage, explicit zeros flagged present)",
+ "Valley battery 57/57 (3 new NEXT-101 pins: missing origin warns hearing site leaving the pass untouched, explicit zeros route literally, located threats unaffected)",
+ "Literal-forcing probe fails exactly test 55 (56 and 57 correctly unaffected as preserved-behavior pins); restored",
+ "Full matrix 343/344 suites, 2676 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley plus world batteries ~12s; full matrix ~48s"
+ ],
+ "known_gaps": [
+ "Pair-ledger credibility shares open (routes weighted, pairs first-wins)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

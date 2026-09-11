@@ -240,7 +240,7 @@ export class WorldSimulationSystem {
      */
     createRumor(topic, {
         truthEventId = null,
-        originLocation = { x: 0, y: 0, z: 0 },
+        originLocation = null,
         sourceEntityId = null,
         subjectFactionId = null,
         severity = 0.5,
@@ -251,10 +251,14 @@ export class WorldSimulationSystem {
             topic: RUMOR_TOPICS[topic] || topic,
             truthEventId: truthEventId ? String(truthEventId) : null,
             originTick: this.tickCount,
+            // NEXT-101: absence of location is not location at the map
+            // origin. Unprovided origins store (0,0,0) but flag it, so
+            // hosts never bias geography on missing data by accident.
+            originProvided: originLocation != null,
             originLocation: {
-                x: Number(originLocation.x) || 0,
-                y: Number(originLocation.y) || 0,
-                z: Number(originLocation.z) || 0
+                x: Number(originLocation?.x) || 0,
+                y: Number(originLocation?.y) || 0,
+                z: Number(originLocation?.z) || 0
             },
             sourceEntityId: sourceEntityId ? String(sourceEntityId) : null,
             // NEXT-93: the faction the rumor is ABOUT (may differ from the
