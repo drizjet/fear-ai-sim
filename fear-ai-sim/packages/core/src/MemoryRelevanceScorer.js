@@ -46,7 +46,14 @@ function dist3(a, b) {
 function normStr(v) {
     return String(v ?? '').toLowerCase();
 }
-
+// NEXT-142 (audit candidate 6): identity-tinted salience gain.
+// Neurotic agents relive hot memories; calm agents file them away.
+// Absent/invalid identity or neutral 0.5 returns exactly 1.0 (legacy).
+function identitySalienceGain(identity) {
+    const n = Number(identity?.neuroticism);
+    if (!Number.isFinite(n)) return 1.0;
+    return Math.max(0, Math.min(2, 0.5 + Math.max(0, Math.min(1, n))));
+}
 export class MemoryRelevanceScorer {
     /**
      * @param {object} [weights={}] - override frozen defaults (recorded in output)
@@ -58,14 +65,18 @@ export class MemoryRelevanceScorer {
     /**
      * Score one episodic entry against context.
      * @param {object} mem - episodic entry
-     * @param {object} ctx - { nowTick, entityIds, position, locationRadius, goalTags }
+     * @param {object} ctx - { nowTick, entityIds, position, locationRadius, goalTags, identity }
+     * identity (opt-in { neuroticism }): high-neuroticism agents uprank
+     * emotionally hot memories, calm agents downrank them; absent or
+     * neutral (0.5) identity reproduces legacy scores exactly.
      * @returns {{ score: number, factors: object }}
      */
     scoreEpisodic(mem, ctx = {}) {
         const now = Number(ctx.nowTick ?? mem.tick ?? 0);
         const age = Math.max(0, now - (Number(mem.tick) || 0));
         const recency = Math.pow(0.5, age / RELEVANCE_HALF_LIFE_TICKS);
-        const emotionalSalience = clamp01(mem.arousal) * Math.min(1, Math.abs(Number(mem.valence) || 0));
+        const rawSalience = clamp01(mem.arousal) * Math.min(1, Math.abs(Number(mem.valence) || 0));
+        const emotionalSalience = rawSalience * identitySalienceGain(ctx.identity);
         const importance = clamp01(mem.salience);
         const entityMatch = this._entityMatch(
             ctx.entityIds,
