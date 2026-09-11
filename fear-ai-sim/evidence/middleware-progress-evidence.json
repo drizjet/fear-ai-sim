@@ -8680,6 +8680,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "RUMOR_CAUSAL_PROVENANCE"
+ },
+ {
+ "milestone": "RUMOR_PROVENANCE_141",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Added INFORMATION as a seventh causal domain (rumor injection, propagation, correction); only consumers are the index re-export and named-domain tests, so the additive key changes no existing behavior",
+ "Live chain proven and pinned: false army rumor injection (INFORMATION, payload truthful false) to hearsay dread onset (AFFECTIVE, RUMOR_HEARSAY 0.8) to PROTECT_ALLY-to-SURVIVE flip (DREAD_MEDIATED_FLIP 0.9); root-cause analysis names the injection, the narrative prints both mechanisms, and intervention analysis fingers the injection node",
+ "Correction appends a CORRECTION_SUPERSEDES node without touching the original edges: the flip still traces to the injection afterward"
+ ],
+ "test_evidence": [
+ "New tests/rumor-causal-provenance.test.js: 5 pass (domain exists; root-cause naming with truth payload; narrative mechanisms; correction append-only; intervention targeting)",
+ "Full matrix 368/369 suites, 2849 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~36s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4, 5, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 6 through 14 and 16 through 25 carry (next: identity-modulated memory relevance); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Domain is intake-only; no dashboard causal-graph filter exposes it yet",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "IDENTITY_MEMORY_RELEVANCE"
  }
  ]
 }

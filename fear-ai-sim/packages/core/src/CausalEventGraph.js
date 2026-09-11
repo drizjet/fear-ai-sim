@@ -29,7 +29,8 @@ export const CAUSAL_DOMAINS = Object.freeze({
     DEMOGRAPHIC: 'DEMOGRAPHIC', // Migration surges, refugee displacement, casualties
     DIPLOMATIC: 'DIPLOMATIC',   // Escalation shifts, treaty violations, espionage, war declarations
     ROAMING: 'ROAMING',         // Band encounters, highway ambushes, extortion tolls
-    MORAL: 'MORAL'              // Transgression, guilt surges, moral injury, moral defiance
+    MORAL: 'MORAL',             // Transgression, guilt surges, moral injury, moral defiance
+    INFORMATION: 'INFORMATION'  // Rumor injection, propagation, correction, misinformation provenance
 });
 
 export class CausalEventGraph {
