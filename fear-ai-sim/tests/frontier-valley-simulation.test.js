@@ -1225,3 +1225,58 @@ describe('NEXT-107: deep-horizon churn', () => {
         expect(deepChurn(42)).toEqual(deepChurn(42));
     });
 });
+
+describe('NEXT-108: correction-before-hearing flinch', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+    function refutedUnheard() {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        return { sim, rumor };
+    }
+    function hear(sim, rumor) {
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [rumor.id]
+        }]);
+    }
+    const grievance = (sim) => sim.factionSystem.getBilateralStance(S, B).grievance;
+    const danger = (sim) => sim.civSystem.routes.get(RIVER).perceivedDanger;
+    test('78. Hearing a refuted rumor flinches full bias on both layers', () => {
+        // Coherent information lag: the hearing parties do not hold the
+        // correction, so the bias mirrors their belief state that tick.
+        const { sim, rumor } = refutedUnheard();
+        const g0 = grievance(sim), d0 = danger(sim);
+        hear(sim, rumor);
+        expect(grievance(sim)).toBeCloseTo(g0 + 0.10, 9);
+        expect(danger(sim)).toBeCloseTo(d0 + 0.10, 9);
+        expect(sim._exoneratedRumors.has(rumor.id)).toBe(false);
+    });
+    test('79. The next sweep fully retracts the flinch and holds steady', () => {
+        const { sim, rumor } = refutedUnheard();
+        const g0 = grievance(sim), d0 = danger(sim);
+        hear(sim, rumor);
+        sim._recordEncounterConsequences([]);
+        expect(grievance(sim)).toBeCloseTo(g0, 9);
+        expect(danger(sim)).toBeCloseTo(d0, 9);
+        expect(sim._exoneratedRumors.has(rumor.id)).toBe(true);
+        sim._recordEncounterConsequences([]);
+        expect(grievance(sim)).toBeCloseTo(g0, 9);
+        expect(danger(sim)).toBeCloseTo(d0, 9);
+    });
+    test('80. Flinch characterization is deterministic', () => {
+        const run = () => {
+            const { sim, rumor } = refutedUnheard();
+            hear(sim, rumor);
+            const flinch = [grievance(sim), danger(sim)];
+            sim._recordEncounterConsequences([]);
+            return [...flinch, grievance(sim), danger(sim)];
+        };
+        expect(run()).toEqual(run());
+    });
+});

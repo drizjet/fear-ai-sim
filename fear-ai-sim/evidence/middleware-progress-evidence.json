@@ -7766,6 +7766,29 @@
  "Heap-at-scale unmeasured with gc (100k figure includes transient garbage)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FLINCH_CHARACTERIZATION_NEXT108",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: measured behavior is coherent (bias mirrors holder belief lag, sweep applies master truth next tick, exonerated-once, stable after). A skip-bias-on-corrected alternative was considered and rejected: perceivers genuinely lack the correction, so flinching is the honest belief-tracking response",
+ "No mid-build failures"
+ ],
+ "test_evidence": [
+ "Valley battery 80/80 (3 new NEXT-108 pins: full flinch on both layers pre-exoneration, full retraction plus second-sweep stability, determinism)",
+ "Relief-neutered probe fails exactly test 79 (78 pins the intact bias path, 80 the control); restored",
+ "Full matrix 343/344 suites, 2699 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~12s with flinch pins; full matrix ~50s"
+ ],
+ "known_gaps": [
+ "Mixed known-unknown credibility shares unpinned (one party holds, other does not)",
+ "Exoneration plus trade-restraint interaction unpinned",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
