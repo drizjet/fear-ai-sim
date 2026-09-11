@@ -473,7 +473,8 @@ describe('NEXT-85: hearsay route danger', () => {
     function twinRumored() {
         const sim = new FrontierValleySimulation({ seed: SEED });
         sim.worldSystem.createRumor('WAR_DECLARED', {
-            sourceEntityId: 'bandit_warband_1', severity: 0.9, description: 'false army report'
+            sourceEntityId: 'bandit_warband_1', severity: 0.9, description: 'false army report',
+            originLocation: { x: 250, y: 0, z: 175 }
         });
         sim.advance(150);
         return sim;
@@ -505,5 +506,23 @@ describe('NEXT-85: hearsay route danger', () => {
             advisoryResolution: 'COMBAT_ENGAGEMENT', heardThreatRumor: true
         }]);
         expect(danger(sim, PASS)).toBeCloseTo(0.35 + 0.25, 9);
+    });
+    test('32. NEXT-91: danger follows the threat site, not the hearing site', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const rumor = sim.worldSystem.createRumor('AMBUSH_HOTSPOT', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            originLocation: { x: 250, y: 0, z: 175 }
+        });
+        // Hearing parties stand on the pass; the reported threat is riverway.
+        sim.worldSystem.groups.get('caravan_merchant_1').position = { x: 50, y: 0, z: 200 };
+        const passBase = danger(sim, PASS);
+        const riverBase = danger(sim, RIVER);
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [rumor.id]
+        }]);
+        expect(danger(sim, RIVER)).toBeCloseTo(riverBase + 0.10, 9);
+        expect(danger(sim, PASS)).toBe(passBase);
     });
 });

@@ -383,8 +383,10 @@ export class WorldSimulationSystem {
      * @param {Array<object>} transmitted Instances transmitRumors just delivered
      */
     _applyHeardThreatPressure(receiver, transmitted) {
-        if (!receiver?.drivers || !Array.isArray(transmitted)) return 0;
-        let bumps = 0;
+        if (!receiver?.drivers || !Array.isArray(transmitted)) return [];
+        // NEXT-91: returns bumped rumor ids (not just a count) so hosts can
+        // route hearsay by threat site instead of hearing site.
+        const bumped = [];
         for (const inst of transmitted) {
             const master = this.rumors.get(inst.rumorId);
             if (!master) continue;
@@ -392,9 +394,9 @@ export class WorldSimulationSystem {
             if (master.topic !== RUMOR_TOPICS.AMBUSH_HOTSPOT && master.topic !== RUMOR_TOPICS.WAR_DECLARED) continue;
             if (inst.perceivedSeverity < 0.5) continue;
             receiver.drivers.threatPressure = clamp01(receiver.drivers.threatPressure + 0.15 * (inst.credibility ?? 0.5));
-            bumps++;
+            bumped.push(inst.rumorId);
         }
-        return bumps;
+        return bumped;
     }
     /**
      * NEXT-75: host-truth adjudication of a rumor (world truth vs belief).
@@ -756,8 +758,11 @@ export class WorldSimulationSystem {
         const heardBA = this.transmitRumors(gB.id, gA.id, bilateralTrust, { relationshipTensorSystem });
         // NEXT-85: count live threat hearings so hosts (valley bridge) can
         // turn hearsay into advisory route danger without re-deriving it.
-        const heardThreatBumps =
-            this._applyHeardThreatPressure(gB, heardAB) + this._applyHeardThreatPressure(gA, heardBA);
+        // NEXT-91: keep the heard ids so hosts route by threat site.
+        const heardThreatIds = [...new Set([
+            ...this._applyHeardThreatPressure(gB, heardAB),
+            ...this._applyHeardThreatPressure(gA, heardBA)
+        ])];
         this.transmitCorrections(gA.id, gB.id, { relationshipTensorSystem });
         this.transmitCorrections(gB.id, gA.id, { relationshipTensorSystem });
 
@@ -781,10 +786,10 @@ export class WorldSimulationSystem {
             encounterType,
             advisoryResolution,
             urgency,
-            distance,
+            heardThreatRumor: heardThreatIds.length > 0,
+            heardThreatRumorIds: heardThreatIds,
             diagnosticRationale,
             suggestedTribute,
-            heardThreatRumor: heardThreatBumps > 0,
             historyEventId: historyEvent.id
         };
     }

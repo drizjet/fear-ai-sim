@@ -580,12 +580,26 @@ export class FrontierValleySimulation {
                 }
             }
             // NEXT-85: heard (not fought) threats raise ADVISORY route danger
-            // at hearsay weight on the route nearest the hearing site (routes
-            // carry waypoint geometry). Combat already logged 0.25 on the
-            // pass above, so combat encounters skip this branch. Hearsay
-            // danger decays without reinforcement via the civ danger decay.
+            // at hearsay weight. Combat already logged 0.25 on the pass
+            // above, so combat encounters skip this branch. Hearsay danger
+            // decays without reinforcement via the civ danger decay.
+            // NEXT-91: danger lands on routes nearest each heard rumor's
+            // originLocation (threat site), not the hearing site. Rumors
+            // without usable origins fall back to the hearing site; one
+            // incident per route per encounter (no per-rumor spam).
             if (enc.heardThreatRumor && enc.advisoryResolution !== 'COMBAT_ENGAGEMENT') {
-                this.civSystem.recordRouteIncident(this._nearestRouteTo(gA?.position), 'RUMOR_THREAT', 0.10);
+                const routes = new Set();
+                for (const rid of enc.heardThreatRumorIds ?? []) {
+                    const master = this.worldSystem.rumors.get(rid);
+                    const o = master?.originLocation;
+                    if (o && Number.isFinite(Number(o.x)) && Number.isFinite(Number(o.z))) {
+                        routes.add(this._nearestRouteTo(o));
+                    }
+                }
+                if (routes.size === 0) routes.add(this._nearestRouteTo(gA?.position));
+                for (const routeId of routes) {
+                    this.civSystem.recordRouteIncident(routeId, 'RUMOR_THREAT', 0.10);
+                }
             }
         }
     }

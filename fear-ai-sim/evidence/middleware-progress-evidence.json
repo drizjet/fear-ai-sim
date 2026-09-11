@@ -7228,6 +7228,32 @@
  "Hearsay routing still keys on hearing site, not rumor originLocation"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "THREAT_SITE_ROUTING_NEXT91",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Encounters name heard threat rumors (heardThreatRumorIds, deduped); pressure method returns bumped ids instead of a count (only consumer is the encounter flow)",
+ "Valley bridge resolves each heard rumor's originLocation to its nearest route (one incident per route per encounter); missing origins fall back to the hearing site, preserving old coverage",
+ "Probed twin (seed 42, riverway origin): river 0.100 to 0.303 with pass saturated - threat-site routing strengthens the observable versus hearing-site scatter",
+ "Mid-build failures: one duplicate encounter-record line (ReferenceError-grade, caught by import), one helper mis-landing with brace damage, five test-range collisions; all repaired with zero unintended removals (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 66/66 (1 new NEXT-91 pin: encounter names exactly the threat rumor among distractors)",
+ "Valley battery 32/32 (1 new NEXT-91 pin: fabricated pass-site hearing with riverway-origin rumor raises only the riverway - falsifies hearing-site routing)",
+ "Origin-blind probe fails exactly the discrimination pin; fix restored",
+ "Full matrix 343/344 suites, 2637 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; valley battery ~11s; full matrix ~34s"
+ ],
+ "known_gaps": [
+ "Default (0,0,0) origins route literally and can tie-break arbitrarily by registration order (seeders should set origins; documented)",
+ "Dent scale and gate threshold still uncalibrated (standing calibration surface)",
+ "Stamp-after-aware double-reward residual stands (bounded by 1.0 ceiling)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

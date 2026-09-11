@@ -902,9 +902,17 @@ describe('NEXT-85: heard-threat encounter signal', () => {
         tame.world.createRumor('ALLIANCE_FORMED', { sourceEntityId: tame.a.id, severity: 0.9 });
         expect(tame.meet().heardThreatRumor).toBe(false);
     });
+    test('4. NEXT-91: the encounter names the heard threat rumors', () => {
+        const { world, a, meet } = caravanPair();
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        world.createRumor('ALLIANCE_FORMED', { sourceEntityId: a.id, severity: 0.9 });
+        const enc = meet();
+        expect(enc.heardThreatRumor).toBe(true);
+        expect(enc.heardThreatRumorIds).toEqual([r.id]);
+    });
 });
-
 describe('NEXT-87: trust-gated correction acceptance', () => {
+
     function ledPair() {
         const world = new WorldSimulationSystem({ seed: 42 });
         const rel = new RelationshipTensorSystem();
