@@ -7254,6 +7254,30 @@
  "Stamp-after-aware double-reward residual stands (bounded by 1.0 ceiling)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "CALIBRATION_SURFACE_NEXT92",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Measured surface (seed 42 unless noted): pressure half-life 175 ticks at 0.001 (350/88/35 at 0.0005/0.002/0.005); belief persistence equals window+1 ticks (500/2000/8000 all exact); rehab reopens in 6 vindicated truths from -0.215; 2-3 clustered hearings flip a quiet route SAFE to WATCHFUL",
+ "KEEP verdicts with regimes: alarm outlives its encounter but clears within multi-run horizons (no behavior change); beliefs stable across standard 100-1000 tick valley runs, forgetting only on long horizons (no change); 1:6 lie-to-truth rehab ratio documented without ground truth to declare it right or wrong (no change); hearsay flips advisories only clustered, never solo (no change)",
+ "No source changes: measurement-plus-pins chunk; constants stay precedent-anchored but are now regime-described instead of bare"
+ ],
+ "test_evidence": [
+ "World-simulation battery 67/67 (2 new NEXT-92 pins: alarm clears strictly before beliefs expire; rehabilitation terminates within ten truths)",
+ "Valley battery 33/33 (1 new NEXT-92 pin: two clustered hearings flip riverway SAFE to WATCHFUL at exactly 0.30)",
+ "Full matrix 343/344 suites, 2640 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Calibration probe <1s; world-simulation battery ~1s; valley battery ~11s; full matrix ~38s"
+ ],
+ "known_gaps": [
+ "Ratios still lack psychometric ground truth (lie-to-truth 1:6, alarm-to-memory 1:6 horizons) - documented regimes, not validated timescales",
+ "Default (0,0,0) origins route literally with registration-order tie-breaks",
+ "Stamp-after-aware double-reward residual stands (bounded by 1.0 ceiling)"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

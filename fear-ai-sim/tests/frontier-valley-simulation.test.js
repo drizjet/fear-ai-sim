@@ -526,3 +526,21 @@ describe('NEXT-85: hearsay route danger', () => {
         expect(danger(sim, PASS)).toBe(passBase);
     });
 });
+
+describe('NEXT-92: hearsay advisory movement', () => {
+    test('33. Two clustered hearings flip a quiet route SAFE to WATCHFUL', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+        const route = () => sim.civSystem.routes.get(RIVER);
+        expect(route().status).toBe('SAFE');
+        sim.worldSystem.groups.get('caravan_merchant_2').position = { x: 250, y: 0, z: 175 };
+        const enc = {
+            partyAId: 'caravan_merchant_2', partyBId: 'caravan_merchant_1',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true
+        };
+        sim._recordEncounterConsequences([enc]);
+        sim._recordEncounterConsequences([enc]);
+        expect(route().perceivedDanger).toBeCloseTo(0.30, 9);
+        expect(route().status).toBe('WATCHFUL');
+    });
+});

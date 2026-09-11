@@ -1184,3 +1184,57 @@ describe('NEXT-90: graded correction acceptance', () => {
         expect(b.knownRumors.has(r.id)).toBe(false);
     });
 });
+
+describe('NEXT-92: timescale layering', () => {
+    function quietPair(config = {}) {
+        const world = new WorldSimulationSystem({ seed: 42, ...config });
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LA'
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 5000, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LB'
+        });
+        return { world, a, b };
+    }
+    function tick(world, n) {
+        for (let i = 0; i < n; i++) world.tick();
+    }
+    test('1. Alarm clears strictly before beliefs expire', () => {
+        const { world, a, b } = quietPair();
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        b.position.x = 105;
+        world._generateSystemicEncounter(a, b, { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+        b.position.x = 5000;
+        b.drivers.threatPressure = 0.35;
+        tick(world, 400);
+        expect(b.drivers.threatPressure).toBe(0);
+        expect(b.knownRumors.has(r.id)).toBe(true);
+    });
+    test('2. Rehabilitation terminates within ten vindicated truths', () => {
+        const { world, a, b } = quietPair();
+        const rel = new RelationshipTensorSystem();
+        const meet = () => {
+            b.position.x = 105;
+            world._generateSystemicEncounter(a, b,
+                { distance: 5, factionSystem: null, relationshipTensorSystem: rel });
+            b.position.x = 5000;
+        };
+        const r0 = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        world.correctRumor(r0.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        let rounds = 0;
+        while (rel.getRelationship('LB', 'LA').trust < 0.4 && rounds < 10) {
+            const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+            meet();
+            world.correctRumor(r.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
+            meet();
+            rounds++;
+        }
+        expect(rel.getRelationship('LB', 'LA').trust).toBeGreaterThanOrEqual(0.4);
+    });
+});
