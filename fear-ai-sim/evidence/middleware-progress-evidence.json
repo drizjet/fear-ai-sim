@@ -8374,6 +8374,31 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "PERF_REGRESSION_BUDGETS"
+ },
+ {
+ "milestone": "PERF_BUDGETS_128",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "SubsystemOverheadHarness grows 13 to 19 measured subsystems: identity.blend, identity.decide, trauma.feed, vault.cycle, arbitration.weighted, fps.identify, each with a generous regression ceiling in OVERHEAD_BUDGETS_US",
+ "Measured medians on this machine in microseconds: affect.tick 8.9, identity.blend 7.5, identity.decide 3.4, trauma.feed 6.5, vault.cycle 2.0, arbitration.weighted 1.9, fps.identify 171.5; attached paths cost the same order as the detached tick, not a multiple",
+ "New interaction-budget test pins attached cost under 10x the detached tick on the same run (machine-independent ratio form)",
+ "Advisory measurement only; no behavior touched",
+ "Mid-build notes: two edits duplicated budget lines and one measurement line (caught by node check, rebuilt)"
+ ],
+ "test_evidence": [
+ "Subsystem overhead suite 7/7 pass (contracted set, headroom rule, determinism, newcomer coverage, relevance scale, rumor flood, wire multiple)",
+ "Full matrix 356/357 suites, 2784 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Harness itself is the benchmark: 19 subsystems all within budget with headroom; full matrix ~40s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 12 closed; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Frontiers 13 through 20 carry (next: long-horizon identity visibility at 10k ticks with all wires on)",
+ "Budgets are blowup catchers by design, not performance targets; tightening needs fleet data, not one machine",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "LONG_HORIZON_WIRES_ON"
  }
  ]
 }

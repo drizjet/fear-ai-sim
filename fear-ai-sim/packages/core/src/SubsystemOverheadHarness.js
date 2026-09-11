@@ -25,7 +25,11 @@ import { WorldSimulationSystem, ROAMING_PARTY_TYPES } from './WorldSimulationSys
 import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
 import { EpistemicBeliefEngine } from './EpistemicBeliefEngine.js';
 import { InformationPropagationEngine } from './InformationPropagationEngine.js';
-
+import { CharacterIdentityArchitecture } from './CharacterIdentityArchitecture.js';
+import { TraumaCrystallizationEngine } from './TraumaCrystallizationEngine.js';
+import { IdentityVault } from './IdentityVault.js';
+import { GoalArbitrationEngine } from './GoalArbitrationEngine.js';
+import { FunctionalPersonaSignatures } from './FunctionalPersonaSignatures.js';
 /** Regression ceilings in microseconds per call (generous; catch blowups). */
 export const OVERHEAD_BUDGETS_US = Object.freeze({
     'affect.tick': 5000,
@@ -40,7 +44,15 @@ export const OVERHEAD_BUDGETS_US = Object.freeze({
     'world.tick': 50000,
     'civ.routeRank': 20000,
     'belief.observe': 5000,
-    'rumor.spread': 50000
+    'rumor.spread': 50000,
+    // NEXT-128 (CCI-28 frontier 12): wire-era subsystems get measured
+    // ceilings too. Generous by design: catch 100x blowups, not noise.
+    'identity.blend': 20000,
+    'identity.decide': 5000,
+    'trauma.feed': 20000,
+    'vault.cycle': 20000,
+    'arbitration.weighted': 5000,
+    'fps.identify': 20000
 });
 
 function nowUs() {
@@ -155,6 +167,55 @@ export class SubsystemOverheadHarness {
         net.addListenEdge('e', 'd');
         net.injectRumor('ROAD_AMBUSH', 'ambush ahead', 'a', { confidence: 0.9 });
         rows['rumor.spread'] = this.time(() => net.advanceTick());
+
+        // NEXT-128 wire-era measurements on representative attached workloads.
+        const cia = new CharacterIdentityArchitecture();
+        cia.registerCharacter('perf', { neuroticism: 0.6, resilience: 0.4 });
+        rows['identity.decide'] = this.time(() => {
+            cia.tick('perf', {}, { fear: 0.6, perceivedDanger: 0.5 });
+        });
+
+        const blended = new AffectiveAgent('perf-blend', { neuroticism: 0.6, fear: 0.6 }, {
+            seed: 'perf-blend', identityArchitecture: cia, identityBlend: 1
+        });
+        rows['identity.blend'] = this.time(() => {
+            blended.tick(0.016, { threats: [threat] }, {});
+        });
+
+        const traumaEng = new TraumaCrystallizationEngine();
+        const traumaAgent = new AffectiveAgent('perf-trauma', { neuroticism: 0.8, fear: 0.9 }, {
+            seed: 'perf-trauma', traumaEngine: traumaEng, traumaAdvanceClock: false
+        });
+        rows['trauma.feed'] = this.time((i) => {
+            traumaAgent.tick(0.016, i % 2 === 0 ? { threats: [threat] } : {}, {});
+        });
+
+        const vault = new IdentityVault();
+        rows['vault.cycle'] = this.time((i) => {
+            const id = `v${i % 20}`;
+            if (!vault.isSealed(id)) {
+                vault.seal(id, { identity: { neuroticism: 0.5 }, adaptive: { trust: 0.6 } });
+            } else {
+                vault.restore(id);
+            }
+        });
+
+        const arb = new GoalArbitrationEngine();
+        arb.registerGoal('perf-g', { type: 'HOLD_POST', priority: 0.5 });
+        arb.registerGoal('perf-g', { type: 'SURVIVE', priority: 0.7 });
+        const tend = { stand: 0.9, flee: 0.4, help: 0.5, investigate: 0.3, rally: 0.6 };
+        rows['arbitration.weighted'] = this.time(() => {
+            arb.arbitrate('perf-g', { fear: 0.7 }, { identityTendencies: tend, identityWeight: 1 });
+        });
+
+        const fps = new FunctionalPersonaSignatures();
+        const pop = [
+            { id: 'a', traits: { neuroticism: 0.9, resilience: 0.1 } },
+            { id: 'b', traits: { neuroticism: 0.1, resilience: 0.9 } }
+        ];
+        rows['fps.identify'] = this.time((i) => {
+            fps.identify({ neuroticism: 0.5 + (i % 5) * 0.1, resilience: 0.5 }, pop);
+        });
 
         const report = { rows: {}, overBudget: [] };
         for (const [k, v] of Object.entries(rows)) {

@@ -16,7 +16,10 @@ import { RumorMemory } from '../packages/core/src/RumorMemory.js';
 const EXPECTED_SUBSYSTEMS = [
     'affect.tick', 'memory.episodic', 'memory.relevance', 'memory.rumor',
     'memory.route', 'social.interaction', 'group.evaluate', 'group.contagion',
-    'faction.incident', 'world.tick', 'civ.routeRank', 'belief.observe', 'rumor.spread'
+    'faction.incident', 'world.tick', 'civ.routeRank', 'belief.observe', 'rumor.spread',
+    // NEXT-128 wire-era subsystems (CCI-28 frontier 12).
+    'identity.blend', 'identity.decide', 'trauma.feed', 'vault.cycle',
+    'arbitration.weighted', 'fps.identify'
 ];
 
 describe('Sections LXXIX/CCXXI: SubsystemOverheadHarness', () => {
@@ -82,5 +85,17 @@ describe('Sections LXXIX/CCXXI: SubsystemOverheadHarness', () => {
         expect(rm.size).toBeLessThanOrEqual(50);
         // Generous: 5000 flood inserts in under 5 s (measured single-digit ms).
         expect(ms).toBeLessThan(5000);
+    });
+    it('7. Wire-era attachments cost a small multiple of the detached tick', () => {
+        // CCXXI interaction-budget form: the price of wiring identity and
+        // trauma into the live path must stay a bounded multiple of the
+        // plain affect tick, on this machine in this run.
+        const report = new SubsystemOverheadHarness(2, 10).measureAll();
+        const base = report.rows['affect.tick'].medianUs;
+        expect(base).toBeGreaterThan(0);
+        for (const key of ['identity.blend', 'trauma.feed']) {
+            const med = report.rows[key].medianUs;
+            expect(med).toBeLessThan(base * 10);
+        }
     });
 });
