@@ -7030,6 +7030,32 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "HEARSAY_REROUTE_NEXT85",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit: individual-level rumor-to-reroute already existed (AnticipatoryFearEngine absorb plus rankRoutes, chain-tested); the missing link was group-level belief reaching the trade network",
+ "WorldSim encounters expose heardThreatRumor (bump-counted, no shape break for readers); valley bridge turns non-combat hearings into RUMOR_THREAT incidents at 0.10 hearsay weight (below combat 0.25) on the route nearest the hearing site by waypoint geometry",
+ "Hearsay danger decays without reinforcement through the existing civ danger decay; combat encounters skip the branch (no double count)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 48/48 (3 new NEXT-85 signal pins: flag true on severe hearing, false when quiet, false on weak and non-threat rumors)",
+ "Valley battery 31/31 (4 new NEXT-85 pins: twin-sim riverway strictly higher with rumor, determinism, exact 0.10 single-hearing weight, combat skips hearsay)",
+ "Weight 0.10->0.0 probe fails exactly the two weight pins; fix restored",
+ "Full matrix 342/343 suites, 2617 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; valley battery ~11s; full matrix ~41s"
+ ],
+ "known_gaps": [
+ "Hearsay route selection keys on hearing site, not rumor originLocation (threat-site routing needs a rumor-to-route map)",
+ "Saturated routes (Highland Pass at 1.0) hide hearsay contribution; observable on Riverway-class routes only",
+ "Correction acceptance still unconditional regardless of source trust",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

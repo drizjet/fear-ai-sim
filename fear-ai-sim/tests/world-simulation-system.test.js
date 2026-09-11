@@ -868,3 +868,38 @@ describe('NEXT-84: confirmed-belief anchoring', () => {
         expect(run()).toBe(run());
     });
 });
+
+describe('NEXT-85: heard-threat encounter signal', () => {
+    function caravanPair(seed = 42) {
+        const world = new WorldSimulationSystem({ seed });
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5
+        });
+        const meet = () => world._generateSystemicEncounter(a, b,
+            { distance: 5, factionSystem: null, relationshipTensorSystem: null });
+        return { world, a, b, meet };
+    }
+    test('1. Severe threat hearing flags the encounter', () => {
+        const { world, a, meet } = caravanPair();
+        world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        expect(meet().heardThreatRumor).toBe(true);
+    });
+    test('2. Quiet encounters leave the flag false', () => {
+        expect(caravanPair().meet().heardThreatRumor).toBe(false);
+    });
+    test('3. Weak and non-threat rumors leave the flag false', () => {
+        const low = caravanPair();
+        low.world.createRumor('AMBUSH_HOTSPOT', { sourceEntityId: low.a.id, severity: 0.2 });
+        expect(low.meet().heardThreatRumor).toBe(false);
+        const tame = caravanPair();
+        tame.world.createRumor('ALLIANCE_FORMED', { sourceEntityId: tame.a.id, severity: 0.9 });
+        expect(tame.meet().heardThreatRumor).toBe(false);
+    });
+});

@@ -462,3 +462,48 @@ describe('NEXT-82: valley seed plumbing', () => {
         expect(run()).toEqual(first);
     });
 });
+
+describe('NEXT-85: hearsay route danger', () => {
+    const SEED = 42;
+    const PASS = FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS;
+    const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+    function danger(sim, routeId) {
+        return sim.civSystem.routes.get(routeId).perceivedDanger;
+    }
+    function twinRumored() {
+        const sim = new FrontierValleySimulation({ seed: SEED });
+        sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9, description: 'false army report'
+        });
+        sim.advance(150);
+        return sim;
+    }
+    test('28. Heard threats raise route danger versus the rumor-free twin', () => {
+        const plain = new FrontierValleySimulation({ seed: SEED });
+        plain.advance(150);
+        const rumored = twinRumored();
+        expect(danger(rumored, RIVER)).toBeGreaterThan(danger(plain, RIVER));
+        expect(danger(rumored, PASS)).toBeGreaterThanOrEqual(danger(plain, PASS));
+    });
+    test('29. Hearsay danger is deterministic for a fixed seed', () => {
+        expect(danger(twinRumored(), RIVER)).toBe(danger(twinRumored(), RIVER));
+    });
+    test('30. One peaceful hearing adds exactly hearsay weight on the nearest route', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        sim.worldSystem.groups.get('caravan_merchant_2').position = { x: 250, y: 0, z: 175 };
+        const base = danger(sim, RIVER);
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_2', partyBId: 'caravan_merchant_1',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true
+        }]);
+        expect(danger(sim, RIVER)).toBeCloseTo(base + 0.10, 9);
+    });
+    test('31. Combat encounters skip the hearsay branch', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        sim._recordEncounterConsequences([{
+            partyAId: 'bandit_warband_1', partyBId: 'caravan_merchant_1',
+            advisoryResolution: 'COMBAT_ENGAGEMENT', heardThreatRumor: true
+        }]);
+        expect(danger(sim, PASS)).toBeCloseTo(0.35 + 0.25, 9);
+    });
+});

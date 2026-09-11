@@ -579,7 +579,38 @@ export class FrontierValleySimulation {
                     this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.PROVOCATION, { encounter: enc.encounterId ?? null, restraint });
                 }
             }
+            // NEXT-85: heard (not fought) threats raise ADVISORY route danger
+            // at hearsay weight on the route nearest the hearing site (routes
+            // carry waypoint geometry). Combat already logged 0.25 on the
+            // pass above, so combat encounters skip this branch. Hearsay
+            // danger decays without reinforcement via the civ danger decay.
+            if (enc.heardThreatRumor && enc.advisoryResolution !== 'COMBAT_ENGAGEMENT') {
+                this.civSystem.recordRouteIncident(this._nearestRouteTo(gA?.position), 'RUMOR_THREAT', 0.10);
+            }
         }
+    }
+    /**
+     * NEXT-85: route nearest a hearing site by waypoint geometry.
+     * Falls back to Highland Pass when positions or waypoints are missing
+     * (matches the pre-existing combat coarseness instead of crashing).
+     */
+    _nearestRouteTo(position) {
+        let best = FRONTIER_VALLEY_ROUTES.HIGHLAND_PASS;
+        let bestDist = Infinity;
+        const px = Number(position?.x);
+        const pz = Number(position?.z);
+        if (!Number.isFinite(px) || !Number.isFinite(pz)) return best;
+        for (const route of this.civSystem.routes.values()) {
+            if (!Array.isArray(route.waypoints)) continue;
+            for (const wp of route.waypoints) {
+                const dx = Number(wp?.x) - px;
+                const dz = Number(wp?.z) - pz;
+                if (!Number.isFinite(dx) || !Number.isFinite(dz)) continue;
+                const d = dx * dx + dz * dz;
+                if (d < bestDist) { bestDist = d; best = route.id; }
+            }
+        }
+        return best;
     }
 
     /**

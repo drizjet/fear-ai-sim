@@ -383,7 +383,8 @@ export class WorldSimulationSystem {
      * @param {Array<object>} transmitted Instances transmitRumors just delivered
      */
     _applyHeardThreatPressure(receiver, transmitted) {
-        if (!receiver?.drivers || !Array.isArray(transmitted)) return;
+        if (!receiver?.drivers || !Array.isArray(transmitted)) return 0;
+        let bumps = 0;
         for (const inst of transmitted) {
             const master = this.rumors.get(inst.rumorId);
             if (!master) continue;
@@ -391,7 +392,9 @@ export class WorldSimulationSystem {
             if (master.topic !== RUMOR_TOPICS.AMBUSH_HOTSPOT && master.topic !== RUMOR_TOPICS.WAR_DECLARED) continue;
             if (inst.perceivedSeverity < 0.5) continue;
             receiver.drivers.threatPressure = clamp01(receiver.drivers.threatPressure + 0.15 * (inst.credibility ?? 0.5));
+            bumps++;
         }
+        return bumps;
     }
     /**
      * NEXT-75: host-truth adjudication of a rumor (world truth vs belief).
@@ -671,8 +674,10 @@ export class WorldSimulationSystem {
         // Matches the extortion-pressure precedent (+0.15 scale); combat (+0.35).
         const heardAB = this.transmitRumors(gA.id, gB.id, bilateralTrust, { relationshipTensorSystem });
         const heardBA = this.transmitRumors(gB.id, gA.id, bilateralTrust, { relationshipTensorSystem });
-        this._applyHeardThreatPressure(gB, heardAB);
-        this._applyHeardThreatPressure(gA, heardBA);
+        // NEXT-85: count live threat hearings so hosts (valley bridge) can
+        // turn hearsay into advisory route danger without re-deriving it.
+        const heardThreatBumps =
+            this._applyHeardThreatPressure(gB, heardAB) + this._applyHeardThreatPressure(gA, heardBA);
         this.transmitCorrections(gA.id, gB.id, { relationshipTensorSystem });
         this.transmitCorrections(gB.id, gA.id, { relationshipTensorSystem });
 
@@ -699,6 +704,7 @@ export class WorldSimulationSystem {
             distance,
             diagnosticRationale,
             suggestedTribute,
+            heardThreatRumor: heardThreatBumps > 0,
             historyEventId: historyEvent.id
         };
     }
