@@ -9086,6 +9086,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_24"
+ },
+ {
+ "milestone": "ECONOMIC_WARFARE_MORALE_159",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: joint composes BlockadeEngine throttleTable with EconomicFeedbackSystem recordTradeTransaction and ScarcityPressureHarness unrestMorale through existing methods only",
+ "Held STRANGLEHOLD blockade drives a fed city from STABLE and unrest 1.0 to CRITICAL_MIGRATE_OR_AID with unrest below 0.2 while blockader upkeep accrues; lifting recovers to STABLE at 0.8 within 120 ticks",
+ "Mid-build note: first probe starved both arms because lowercase food missed the FOOD commodity key; caught from the symmetric failure pattern and fixed in the harness setup, production code untouched"
+ ],
+ "test_evidence": [
+ "New tests/economic-warfare-morale.test.js: 6 pass (open stability; blockade starvation with STRANGLEHOLD; priced denial over time; lift recovery; advisory-only audits; exact replay)",
+ "Full matrix 386/387 suites, 2949 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~85s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 24 closed or verified; candidate 25 carries (next: rumor-triggered security-dilemma escalation); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Blockade-to-economy link is host-enforced throttle scaling in the test; no automatic corridor-to-market coupling exists, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_25"
  }
  ]
 }
