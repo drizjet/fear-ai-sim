@@ -8996,6 +8996,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_20"
+ },
+ {
+ "milestone": "PEER_TRUST_CONTAGION_155",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "ContagionGraph gains opt-in trustGain (default 0, legacy byte-identical): focal trust in peer scales fear transmission by (1 + trustGain * trust * 0.5) with trust clamped from RelationshipTensor [-1, 1] and non-finite reading as neutral",
+ "At trustGain 0.6 a fully trusted panicker transmits x1.3 and a fully distrusted one x0.7, composes multiplicatively with the NEXT-139 trauma amplifier, and decides dominantSourceId on otherwise equal impact",
+ "Mid-build note: one new-test expectation wrongly clamped Infinity instead of reading neutral; fixed in the test, production code untouched"
+ ],
+ "test_evidence": [
+ "New tests/peer-trust-contagion.test.js: 5 pass (legacy default; trusted-up plus distrusted-down with exact ratios; dominant source; malformed trust; trauma-amplifier composition)",
+ "Contagion interaction suites (group contagion, rally, leader-rumor, trauma-amplified, panic-split): 32 pass, legacy behavior unchanged",
+ "Full matrix 382/383 suites, 2925 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~60s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 20 closed or verified; candidates 21 through 25 carry (next: wider priority and trauma-dose crossover sweeps); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Trust modulation covers fear transmission only; leader-calming path unscaled by trust, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_21"
  }
  ]
 }

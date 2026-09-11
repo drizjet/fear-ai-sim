@@ -17,7 +17,9 @@ export class ContagionGraph {
             // NEXT-139 (audit candidate 15): crystallized-trauma peers
             // transmit harder. 0 (default) is legacy transmission.
             traumaAmplifier: config.traumaAmplifier || 0,
-            ...config
+            // NEXT-155 (audit candidate 20): focal-agent trust in the peer
+            // scales transmission. 0 (default) is legacy transmission.
+            trustGain: config.trustGain || 0,
         };
 
         // Active panic/calm contagion transmission events
@@ -79,11 +81,15 @@ export class ContagionGraph {
                 }
 
                 if (sourceFear > 0.2) {
-                    // NEXT-139: peers carrying crystallized trauma load
-                    // transmit harder (opt-in peer.traumaLoad in [0,1]).
                     const rawLoad = Number(peer.traumaLoad ?? 0);
                     const load = Number.isFinite(rawLoad) ? Math.max(0, Math.min(1, rawLoad)) : 0;
                     sourceFear = sourceFear * (1 + this.config.traumaAmplifier * load);
+                    // NEXT-155: focal trust in this peer (RelationshipTensor
+                    // trust in [-1, 1]; absent/non-finite reads as neutral 0).
+                    // Trusted panickers transmit harder, distrusted ones weaker.
+                    const rawTrust = Number(peer.trust ?? 0);
+                    const trust = Number.isFinite(rawTrust) ? Math.max(-1, Math.min(1, rawTrust)) : 0;
+                    sourceFear = sourceFear * (1 + this.config.trustGain * trust * 0.5);
                     let screamBonus = peer.isScreaming ? this.config.screamMultiplier : 1.0;
                     const impact = sourceFear * distanceFalloff * this.config.baseContagionStrength * screamBonus * susceptibility;
                     totalContagion += impact;
