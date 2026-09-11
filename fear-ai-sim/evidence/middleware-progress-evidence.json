@@ -7837,6 +7837,31 @@
  "10k and 100k-tick horizons cover rumor churn only, not correction-heavy regimes"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "IDENTITY_LAYER_AUDIT_1",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Program item 1 audited with a read-only scout inventory plus caller-tracing verification (not rebuilt): the three-layer architecture exists as CharacterIdentityArchitecture (214 lines, unit-verified) but no live decision path instantiates it - only harnesses, benchmarks, and tests do",
+ "Wired live today: OCEAN traits in AffectiveAgent (identity), HabituationSystem fusion (adaptive), trauma dread as numeric context input (adaptive), FearCore plus PAD bands (state), trust via RelationshipTensorSystem (adaptive)",
+ "Unwired satellites: TraumaCrystallizationEngine (604 lines, zero live callers), MoralDissonanceEngine (542 lines, zero live callers), FunctionalPersonaSignatures (benchmarks only), IdentityVault (harnesses and tests only; LodDirector does not call it)",
+ "Statuses: OCEAN traits VERIFIED live; habituation VERIFIED live; trauma dread VERIFIED live as input; CIA composition IMPLEMENTED_NOT_VERIFIED for live path; crystallization EXPERIMENTAL; moral engine EXPERIMENTAL; FPS live use IMPLEMENTED_NOT_VERIFIED; vault live use IMPLEMENTED_NOT_VERIFIED",
+ "Identity batteries re-run green (character-identity, functional-persona-signatures, identity-vault 29 tests; long-horizon-character-life, lod-identity-restoration 9 tests) - unit claims hold, integration is the gap",
+ "No production, test, or benchmark changes; no mid-build failures"
+ ],
+ "test_evidence": [
+ "Caller tracing by grep across packages, adapters, runtime, benchmarks, tests (caller lists recorded in milestone)",
+ "38 existing identity tests re-run green without modification"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; audit only"
+ ],
+ "known_gaps": [
+ "Wire-or-retire decision open for each satellite (CIA composition, crystallization, moral engine, FPS live use, vault live use)",
+ "Values, role identity, loyalty disposition, grudges, respect, route familiarity unmapped against CIA IDENTITY_TRAITS (checklist coverage unknown)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "WIRE_OR_RETIRE_TRIAGE"
  }
  ]
 }

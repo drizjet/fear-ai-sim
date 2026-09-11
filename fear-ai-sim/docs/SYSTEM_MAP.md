@@ -284,6 +284,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Flinch Characterization NEXT-108:** hearing a refuted rumor flinches full bias then fully retracts next sweep (coherent belief lag, no production change); rejected skip-bias alternative documented. Pinned in valley battery.
 - **Mixed-Holder Shares NEXT-109:** joint hearings follow known readings only (ignorance does not dilute, the NEXT-101 parallel); no production change. Pinned in valley battery.
 - **Restraint Symmetry NEXT-110:** hearsay bias and relief both run undamped under live trade dependence (restraint cools observed-act retaliation only); audit resolution, no behavior change. Pinned in valley battery.
+- **Identity-Layer Audit 1:** three-layer architecture exists but only harnesses instantiate it; live path uses OCEAN traits plus habituation plus trauma-dread input; crystallization, moral engine, FPS live use, vault live use unwired (wire-or-retire triage next). Audit only.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
