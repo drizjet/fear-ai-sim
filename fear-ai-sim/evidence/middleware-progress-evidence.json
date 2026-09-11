@@ -8543,6 +8543,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "TRAUMA_DUTY_CLOCKS"
+ },
+ {
+ "milestone": "TRAUMA_DUTY_135",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change needed: adaptive trauma modulation already scales stand down and threat pressure up, composing with duty gains and arbitration weights; probe confirmed separation before pinning",
+ "Pinned interaction table (HOLD_POST vs SURVIVE crossover fear): fresh lax 0.65, fresh dutiful 0.80, traumatized lax 0.40, traumatized dutiful 0.55",
+ "Honest negative recorded in-test: severe trauma outweighs duty (traumatized dutiful 0.55 crosses before fresh lax 0.65); experience narrows the identity gap without closing it within strata"
+ ],
+ "test_evidence": [
+ "New tests/identity-trauma-duty.test.js: 5 pass (trauma saturation deterministic; trauma moves dutiful crossover earlier; duty orders within traumatized stratum; pinned 2x2 table; trauma-can-outweigh-duty direction)",
+ "Full matrix 363/364 suites, 2823 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~37s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 19 closed; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Frontier 20 carries (next: long-horizon duty-trauma co-evolution)",
+ "Table pinned at equal priorities only; wider priority and trauma-dose sweeps open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "DUTY_TRAUMA_COEVOLUTION"
  }
  ]
 }
