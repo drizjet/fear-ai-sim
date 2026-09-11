@@ -8250,6 +8250,31 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness"
  ],
  "next_action": "CLI_HIERARCHY"
+ },
+ {
+ "milestone": "CLI_HIERARCHY_123",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "bin/fear-ai.js gains four group tables (npc, world, debug, bench) covering all 170 flat case labels with zero missing and zero unmapped (programmatically verified against the switch)",
+ "Group invocations resolve onto flat handlers: npc explain --json is byte-identical to explain --json; bench verify matches verify; unknown subs exit 1 with the group listing; bare group and group --help print the listing",
+ "Global --help behavior preserved except group-prefixed help now routes to the group (flat help assertions in cli.test.js unaffected); no handler code moved",
+ "Advisory CLI surface only; no simulation or host behavior touched",
+ "Mid-build notes: one help-range edit risked duplicating lines (verified clean); test initially targeted verify under world instead of bench (group membership corrected)"
+ ],
+ "test_evidence": [
+ "New tests/cli-groups.test.js: 5 pass (group help; unknown sub exit 1; byte parity npc explain; byte parity bench verify; global help advertises groups)",
+ "Existing cli.test.js spawn suite passes unchanged inside the matrix (flat backward compat proven by both suites)",
+ "Full matrix 353/354 suites, 2768 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~38s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontiers 1 through 7 closed; frontiers 8 through 20 carry (next: NxN persona confusion matrix)",
+ "Group tables duplicate flat names as data (single source would need handler-table refactor; deferred as speculative)",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "PERSONA_CONFUSION_MATRIX"
  }
  ]
 }

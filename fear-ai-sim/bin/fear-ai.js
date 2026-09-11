@@ -347,6 +347,12 @@ function printHelp() {
     console.log(`                     Options: --headless --test`);
     console.log(`  verify             Run canonical conformance scenarios (1-8)`);
     console.log(`  help               Show this help message\n`);
+    console.log(`Command groups (hierarchical aliases; flat commands keep working):`);
+    console.log(`  npc                Individual character: explain, persona, memory, trauma, courage, goals, tuning, ...`);
+    console.log(`  world              Living world: frontier-valley, trade, encounter, migration, sim, godot, ...`);
+    console.log(`  debug              Diagnostics: causal-graph, counterfactual, resilience, metrics, perceive, ...`);
+    console.log(`  bench              Benchmarks: fabe, verify, moral, succession, retaliate, rumor, social, ...`);
+    console.log(`  Usage: fear-ai <group> <subcommand> [options]  (e.g. fear-ai npc explain --json)`);
     console.log(`Documentation & System Map: docs/SYSTEM_MAP.md`);
 }
 
@@ -3482,16 +3488,76 @@ function handleEpistemicFog(options) {
     console.log(`Host Authority Check:         ✓ Strictly advisory (0 host game state mutations)\n`);
 }
 
+// NEXT-123 (CCI-28 frontier 7): hierarchical command groups. Each group
+// maps subcommands onto the pre-existing flat commands, so every flat
+// invocation keeps working byte-for-byte. `fear-ai <group> --help`
+// lists the group; unknown subs fail with the group listing.
+const COMMAND_GROUPS = {
+    npc: ['explain', 'character', 'character-life', 'life', 'persona', 'persona-layers', 'identity',
+        'signatures', 'reaction-norm', 'behavior-effects', 'memory', 'memory-relevance', 'relevance',
+        'trauma', 'crystallization', 'dread', 'courage', 'goals', 'arbitrate', 'stabilize', 'chatter',
+        'tuning', 'validate-tuning', 'presets', 'why', 'why-not', 'explain-why-not', 'motives', 'motive', 'why-move'],
+    world: ['frontier-valley', 'valley', 'scenario', 'encounter', 'consequences', 'chain', 'cascade',
+        'migration', 'refuge', 'refugee', 'arrivals', 'famine', 'scarcity', 'economy', 'trade', 'trade-chains',
+        'blockade', 'embargo', 'denial', 'caravans', 'roaming', 'ambush', 'anticipate', 'anticipatory',
+        'sim', 'step', 'stepper', 'snapshot', 'restore', 'seeds', 'dashboard', 'ui', 'server', 'godot', 'showcase'],
+    debug: ['explain-faction', 'causal', 'causal-graph', 'root-cause', 'counterfactual', 'counterfactual-world',
+        'diff-replay', 'intervene', 'intervention', 'coverage', 'interaction-coverage', 'metamorphic',
+        'adversarial', 'resilience', 'degrade', 'failover', 'feedback', 'execution-aware', 'host-feedback',
+        'metrics', 'observe', 'telemetry', 'fidelity', 'verify-explanations', 'clock', 'host-time', 'multirate',
+        'sensor', 'perceive', 'perception', 'epistemic', 'epistemic-fog', 'fog', 'catch-lies', 'witness',
+        'false-alarm', 'event', 'stream', 'streaming', 'binary-wire', 'budget', 'cognitive-lod', 'lod', 'tiers',
+        'identity-vault', 'vault', 'compactor', 'parallel-batch', 'parallel', 'distribution', 'population',
+        'scale', 'benchmark-scale', 'validate-safety', 'collision', 'emergent-collision', 'outcomes'],
+    bench: ['fabe', 'fabe-world', 'fabe-chunk', 'fabe-chunks', 'benchmark', 'verify', 'quickstart',
+        'moral', 'guilt', 'dissonance', 'coalition', 'alliances', 'succession', 'governance', 'heir',
+        'dilemma', 'security-dilemma', 'retaliate', 'retaliation', 'proportional', 'social', 'social-event',
+        'relationships-matter', 'leader-loss', 'morale', 'casualties', 'collective-courage', 'rumor',
+        'misinformation', 'propagate', 'information', 'pareto', 'steady', 'spiral', 'spatial-3d',
+        'runaway-loops', 'deprivation', 'depend', 'dependency', 'response-surface', 'bands',
+        'situation-strength', 'long-horizon', 'consolidation', 'restraint', 'extensions', 'plugins', 'addons']
+};
+
+function printGroupHelp(group) {
+    console.log(`\n=== Fear AI CLI — '${group}' command group ===\n`);
+    console.log(`Usage: fear-ai ${group} <subcommand> [options]\n`);
+    console.log('Subcommands (each mirrors the flat command of the same name):');
+    for (const sub of COMMAND_GROUPS[group]) {
+        console.log(`  ${sub}`);
+    }
+    console.log(`\nFlat invocations keep working: 'fear-ai ${COMMAND_GROUPS[group][0]}' === 'fear-ai ${group} ${COMMAND_GROUPS[group][0]}'`);
+}
+
 async function main() {
     const rawArgs = process.argv.slice(2);
-    if (rawArgs.length === 0 || rawArgs.includes('--help') || rawArgs.includes('-h') || rawArgs[0] === 'help') {
+    if (rawArgs.length === 0 || rawArgs[0] === 'help') {
+        printHelp();
+        return;
+    }
+    // Group-prefixed help (e.g. `fear-ai npc --help`) resolves to the
+    // group listing instead of the global help.
+    if ((rawArgs.includes('--help') || rawArgs.includes('-h')) && !COMMAND_GROUPS[rawArgs[0]]) {
         printHelp();
         return;
     }
 
-    const command = rawArgs[0];
-    const options = parseArgs(rawArgs.slice(1));
-
+    let command = rawArgs[0];
+    let rest = rawArgs.slice(1);
+    if (COMMAND_GROUPS[command]) {
+        const sub = rest[0];
+        if (!sub || sub === 'help' || sub === '--help' || sub === '-h') {
+            printGroupHelp(command);
+            return;
+        }
+        if (!COMMAND_GROUPS[command].includes(sub)) {
+            console.error(`Unknown '${command}' subcommand: "${sub}".`);
+            printGroupHelp(command);
+            process.exit(1);
+        }
+        command = sub;
+        rest = rest.slice(1);
+    }
+    const options = parseArgs(rest);
     switch (command) {
         case 'presets':
             handlePresets(options);

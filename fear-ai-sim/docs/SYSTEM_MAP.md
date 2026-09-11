@@ -298,6 +298,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Rumor Trade Reroute NEXT-120:** belief bridge attributes rumor vs observation sources; blind merchant reroutes on gossip alone with the rumor tag; silent-channel control holds prior; CCI-28 frontier 4 closed; 4 new tests; full matrix green except known dashboard env failures.
 - **Triple Collision Pin NEXT-121:** leader death plus crowd panic plus threat rumor composed from real systems with no new production code; death collapses, rumor alone informs, combined panics earliest; CCI-28 frontier 5 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Dashboard Workbench NEXT-122:** five new live pages (Memory, Relationships, Causal, Trade Map, Performance) bring the dashboard to 10/10 workbench coverage; all endpoints run real subsystems; CCI-28 frontier 6 closed; 6 bind-free tests; full matrix green except known dashboard env failures.
+- **CLI Hierarchy NEXT-123:** npc/world/debug/bench groups cover all 170 flat commands with byte-identical resolution; flat invocations untouched; CCI-28 frontier 7 closed; 5 spawn tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
