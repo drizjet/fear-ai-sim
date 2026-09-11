@@ -8034,6 +8034,31 @@
  "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
  ],
  "next_action": "WIRE_VAULT_LOD_CYCLE"
+ },
+ {
+ "milestone": "VAULT_LOD_CYCLE_116",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "New packages/core/src/LodVaultCycle.js (exported from core index): consumes LodDirector direct() demotions and promotions; demotions into LOD3 and LOD4 seal via host snapshotProvider; promotions restore via vault into host restoreConsumer; abstract tiers configurable",
+ "Host-authority design: coordinator never reaches into game objects; null or identity-less snapshots skip without throwing (counted as skipped); provider and consumer exceptions contained per-agent; vault writes are advisory-internal only",
+ "Round-trip proof: demoted scout seals at LOD4; promoted scout restores identity exactly (neuroticism 0.6), adaptive trust 0.7, captain bond kept; abstract drift mid-seal visible post-restore with abstractTicks counted",
+ "Mid-build notes: export edit used a stale cross-session tag (re-grounded); test helper edit dropped a brace (caught by node check, restored); promotion assertion must accumulate across steps because only the transition step reports the event"
+ ],
+ "test_evidence": [
+ "New tests/lod-vault-cycle.test.js: 6 pass (seal on abstract demotion; exact restore of identity plus adaptive plus bonds; drift visibility; null-snapshot skip; intermediate tiers never seal; determinism)",
+ "Full matrix 346/347 suites, 2730 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~40s"
+ ],
+ "known_gaps": [
+ "Wire-or-retire triage fully executed: CIA blend live, crystallization feed live, vault cycle live; moral EXPERIMENTAL; FPS live deferred",
+ "Parallel harness flakiness under worker contention (timing-sensitive suites); serial runs green",
+ "traumaAdvanceClock shared-engine caveat documented in code (one owner per engine clock)",
+ "Blend weight fixed per agent (no adaptive gain scheduling)",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)"
+ ],
+ "next_action": "FRONTIER_AUDIT_CCI_28"
  }
  ]
 }

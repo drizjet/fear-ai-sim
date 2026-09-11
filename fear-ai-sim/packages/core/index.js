@@ -401,6 +401,10 @@ export {
  DEFAULT_LOD_CONFIG
 } from './src/LodDirector.js';
 export {
+ LodVaultCycle,
+ ABSTRACT_TIERS
+} from './src/LodVaultCycle.js';
+export {
  IdentityVault
 } from './src/IdentityVault.js';
 export {
