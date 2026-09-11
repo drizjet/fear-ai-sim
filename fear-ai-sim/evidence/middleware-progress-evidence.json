@@ -7360,6 +7360,32 @@
  "Default (0,0,0) origins route literally with registration-order tie-breaks"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "EXONERATION_NEXT95",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "RUMOR_EXONERATED incident type: grievance -0.10 with restraint scaling, no trust or fear movement, floored at zero - symmetric retraction of the hearsay it caused",
+ "Valley exoneration ledger maps rumorId to biased perceiver-subject pairs at hearsay time; per-tick sweep retracts refuted subject rumors once each; confirmed rumors keep their bias; vanished masters pruned so the ledger cannot grow without bound",
+ "Ledger and exonerated set serialized in getState and restored in setState for fork fidelity",
+ "Mid-build failures: three edit-range mis-anchors ate live lines (bridge condition, dependency init, macro-summary tail); each caught by exact-removal review against git diff and restored (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "Faction battery 16/16 (2 new NEXT-95 pins: symmetric retraction with no side effects, zero floor)",
+ "Valley battery 40/40 (4 new NEXT-95 pins: refuted twin falls below unrefuted, confirmed twin identical, once-per-rumor across time, determinism plus fork survival)",
+ "Sweep-disabled probe fails exactly tests 37, 39, 40 (38 confirmed-control unaffected); weight probe fails exactly test 15; both restored",
+ "Full matrix 343/344 suites, 2654 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Faction battery ~1s; valley battery ~12s; full matrix ~41s"
+ ],
+ "known_gaps": [
+ "Exoneration covers faction posture only; group threat-pressure and route danger biased by the same rumor are not retracted on refutation",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Default (0,0,0) origins route literally with registration-order tie-breaks"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

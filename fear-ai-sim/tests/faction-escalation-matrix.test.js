@@ -396,3 +396,33 @@ describe('NEXT-93: hearsay incident weight', () => {
         expect(run()).toBe(run());
     });
 });
+
+describe('NEXT-95: exoneration incident weight', () => {
+    function twoFactions() {
+        const sys = new FactionSystem();
+        sys.registerFaction({ id: 'settlers', name: 'Settlers', culture: FACTION_CULTURES.HONORABLE });
+        sys.registerFaction({ id: 'bandits', name: 'Bandits', culture: FACTION_CULTURES.MILITARISTIC });
+        return sys;
+    }
+    test('15. Exoneration symmetrically retracts hearsay without side effects', () => {
+        const sys = twoFactions();
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_HEARSAY, {});
+        const stanceBefore = sys.getBilateralStance('settlers', 'bandits');
+        const grievanceBefore = stanceBefore.grievance;
+        const trustBefore = stanceBefore.trust;
+        const fearBefore = stanceBefore.fear;
+        const causeBefore = stanceBefore.casusBelli;
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_EXONERATED, {});
+        const after = sys.getBilateralStance('settlers', 'bandits');
+        expect(after.grievance).toBeCloseTo(grievanceBefore - 0.10, 9);
+        expect(after.trust).toBe(trustBefore);
+        expect(after.fear).toBe(fearBefore);
+        expect(after.casusBelli).toBe(causeBefore);
+    });
+    test('16. Exoneration floors at zero instead of indebting goodwill', () => {
+        const sys = twoFactions();
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_EXONERATED, {});
+        sys.recordIncident('bandits', 'settlers', INCIDENT_TYPES.RUMOR_EXONERATED, {});
+        expect(sys.getBilateralStance('settlers', 'bandits').grievance).toBe(0);
+    });
+});

@@ -43,6 +43,7 @@ export const INCIDENT_TYPES = Object.freeze({
     TREATY_OFFERED: 'TREATY_OFFERED',
     PROVOCATION: 'PROVOCATION',
     RUMOR_HEARSAY: 'RUMOR_HEARSAY',
+    RUMOR_EXONERATED: 'RUMOR_EXONERATED',
     RAID_CONFIRMED: 'RAID_CONFIRMED',
     SKIRMISH_CASUALTY: 'SKIRMISH_CASUALTY',
     TRIBUTE_PAID: 'TRIBUTE_PAID',
@@ -264,8 +265,13 @@ export class FactionSystem {
             case INCIDENT_TYPES.RUMOR_HEARSAY:
                 // NEXT-93: heard-about hostility, not observed hostility.
                 // Small grievance only: no trust loss, no casus belli.
-                // Gossip must not manufacture war causes by itself.
                 stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.10 * grievanceScale);
+                break;
+            case INCIDENT_TYPES.RUMOR_EXONERATED:
+                // NEXT-95: a refuted subject rumor retracts the hearsay it
+                // caused. Symmetric relief: no trust or fear movement (the
+                // hearsay never touched them), floored at zero by clamp01.
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance - 0.10 * grievanceScale);
                 break;
             case INCIDENT_TYPES.RAID_CONFIRMED:
                 // NOW-14: a raid is inherently a territorial violation as

@@ -586,3 +586,66 @@ describe('NEXT-93: faction-attributed hearsay', () => {
         expect(run()).toBe(run());
     });
 });
+
+describe('NEXT-95: exoneration unwinds hearsay', () => {
+    const S = FRONTIER_VALLEY_FACTIONS.SETTLERS, B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    function grievance(sim) {
+        return sim.factionSystem.getBilateralStance(S, B)?.grievance;
+    }
+    function rumored() {
+        const sim = new FrontierValleySimulation({ seed: 42 });
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        sim.advance(150);
+        return { sim, rumor };
+    }
+    test('37. Refuted rumor falls below the unrefuted twin', () => {
+        const a = rumored();
+        a.sim.worldSystem.correctRumor(a.rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        a.sim.advance(50);
+        const b = rumored();
+        b.sim.advance(50);
+        expect(grievance(a.sim)).toBeLessThan(grievance(b.sim));
+        expect(a.sim._exoneratedRumors.has(a.rumor.id)).toBe(true);
+    });
+    test('38. Confirmed rumor keeps its bias (no exoneration)', () => {
+        const a = rumored();
+        a.sim.worldSystem.correctRumor(a.rumor.id, { confirmed: true, byGroupId: 'bandit_warband_1' });
+        a.sim.advance(50);
+        const b = rumored();
+        b.sim.advance(50);
+        expect(grievance(a.sim)).toBe(grievance(b.sim));
+        expect(a.sim._exoneratedRumors.has(a.rumor.id)).toBe(false);
+    });
+    test('39. Exoneration fires once per rumor', () => {
+        const { sim, rumor } = rumored();
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim.advance(50);
+        // Incident history is capped per pair, so the pin compares counts
+        // across time (no second wave) rather than against the ledger.
+        const count = () => sim.factionSystem.getBilateralStance(S, B).incidents
+            .filter((i) => i.type === 'RUMOR_EXONERATED').length;
+        expect(sim._exoneratedRumors.has(rumor.id)).toBe(true);
+        expect(count()).toBeGreaterThan(0);
+        const first = count();
+        sim.advance(100);
+        expect(count()).toBe(first);
+    });
+    test('40. Exoneration is deterministic and survives fork', () => {
+        const run = () => {
+            const { sim, rumor } = rumored();
+            sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+            sim.advance(50);
+            return grievance(sim);
+        };
+        expect(run()).toBe(run());
+        const { sim, rumor } = rumored();
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim.advance(50);
+        const forked = sim.fork();
+        expect(forked._exoneratedRumors.has(rumor.id)).toBe(true);
+        expect(grievance(forked)).toBe(grievance(sim));
+    });
+});

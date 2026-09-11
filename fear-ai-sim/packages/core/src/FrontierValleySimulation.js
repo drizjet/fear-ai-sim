@@ -75,6 +75,12 @@ export class FrontierValleySimulation {
         // trade-dependent victims cool their conflict grievances below.
         this.tradeLedger = [];
         this.dependency = new TradeDependencyEngine();
+        // NEXT-95: exoneration ledger. Maps rumorId -> [{ perceiver, subject }]
+        // pairs biased by RUMOR_HEARSAY, plus the set of rumorIds already
+        // retracted, so a refuted subject rumor unwinds exactly what it
+        // caused (once). Serialized with the snapshot for fork fidelity.
+        this._hearsayLedger = new Map();
+        this._exoneratedRumors = new Set();
         this.macroMetrics = {
             warsDeclared: 0,
             alliancesFormed: 0,
@@ -502,6 +508,26 @@ export class FrontierValleySimulation {
     }
 
     /**
+     * NEXT-95: exoneration sweep. Runs once per tick before encounter
+     * consequences. A subject rumor the host refuted retracts the hearsay
+     * grievance it caused, once per rumor. Confirmed rumors keep their
+     * bias (vindicated menace is real). Vanished masters are dropped
+     * from the ledger so it cannot grow without bound.
+     */
+    _exonerateRefutedRumors() {
+        for (const [rid, pairs] of this._hearsayLedger) {
+            if (this._exoneratedRumors.has(rid)) continue;
+            const master = this.worldSystem.rumors.get(rid);
+            if (!master) { this._hearsayLedger.delete(rid); continue; }
+            if (master.correction && master.correction.confirmed === false) {
+                for (const { perceiver, subject } of pairs) {
+                    this.factionSystem.recordIncident(subject, perceiver, INCIDENT_TYPES.RUMOR_EXONERATED, { rumorId: rid });
+                }
+                this._exoneratedRumors.add(rid);
+            }
+        }
+    }
+    /**
      * Maps live encounters to route danger, group threat pressure, and
      * faction incidents. Extracted (NOW-16) so the mapping is unit-testable
      * with synthetic encounters; advance() calls it once per tick.
@@ -510,6 +536,7 @@ export class FrontierValleySimulation {
      * @param {Array<object>} encounters
      */
     _recordEncounterConsequences(encounters) {
+        this._exonerateRefutedRumors();
         for (const enc of encounters) {
             const gA = this.worldSystem.groups.get(enc.partyAId);
             const gB = this.worldSystem.groups.get(enc.partyBId);
@@ -609,6 +636,10 @@ export class FrontierValleySimulation {
                                 this.factionSystem.recordIncident(subject, f, INCIDENT_TYPES.RUMOR_HEARSAY, {
                                     encounter: enc.encounterId ?? null, rumorId: rid
                                 });
+                                // NEXT-95: remember who was biased by which
+                                // rumor so a later refutation retracts it.
+                                if (!this._hearsayLedger.has(rid)) this._hearsayLedger.set(rid, []);
+                                this._hearsayLedger.get(rid).push({ perceiver: f, subject });
                             }
                         }
                     }
@@ -876,6 +907,8 @@ export class FrontierValleySimulation {
                 resources: { ...s.resources }
             })),
             factionSystem: this.factionSystem.getState(),
+            hearsayLedger: Array.from(this._hearsayLedger.entries()),
+            exoneratedRumors: Array.from(this._exoneratedRumors),
             civSystem: this.civSystem.getState(),
             relationshipSystem: this.relationshipSystem.getState(),
             worldSystem: this.worldSystem.exportState()
@@ -908,6 +941,12 @@ export class FrontierValleySimulation {
         }
         if (snapshot.factionSystem) {
             this.factionSystem.setState(snapshot.factionSystem);
+        }
+        if (Array.isArray(snapshot.hearsayLedger)) {
+            this._hearsayLedger = new Map(snapshot.hearsayLedger);
+        }
+        if (Array.isArray(snapshot.exoneratedRumors)) {
+            this._exoneratedRumors = new Set(snapshot.exoneratedRumors);
         }
         if (snapshot.civSystem) {
             this.civSystem.setState(snapshot.civSystem);
