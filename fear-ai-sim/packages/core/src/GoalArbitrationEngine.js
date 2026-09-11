@@ -84,8 +84,28 @@ function goalRelevance(goalType, fear) {
     return 1.0;
 }
 
+// NEXT-118 (CCI-28 frontier 2): CIA tendency axis per goal type. Identity
+// biases WHO is asked to do WHAT: stand-prone characters weight duty goals,
+// flee-prone characters weight survival goals, help-prone characters weight
+// ally goals, rally-prone characters weight escort duty.
+function tendencyAxisFor(goalType) {
+    if (goalType === GOAL_TYPES.SURVIVE || goalType === GOAL_TYPES.REACH_SAFETY) return 'flee';
+    if (goalType === GOAL_TYPES.HOLD_POST) return 'stand';
+    if (goalType === GOAL_TYPES.PROTECT_ALLY || goalType === GOAL_TYPES.AID_VICTIM) return 'help';
+    if (goalType === GOAL_TYPES.ESCORT_CARAVAN) return 'rally';
+    return null;
+}
+
+// Bounded multiplicative weight in [0.5, 1.5]: identity bends arbitration,
+// never inverts it. Neutral tendency (0.5) is exactly 1.0.
+function tendencyWeight(axis, tendencies, blend) {
+    if (!axis || blend <= 0) return 1.0;
+    const t = tendencies && Number.isFinite(tendencies[axis]) ? tendencies[axis] : 0.5;
+    return Math.max(0.5, Math.min(1.5, 1 + blend * (t - 0.5)));
+}
+
 export class GoalArbitrationEngine {
-    constructor(options = {}) {
+     constructor(options = {}) {
         this.courageThreshold = options.courageThreshold ?? COURAGE_FEAR_THRESHOLD;
         this.agents = new Map();
     }
@@ -130,6 +150,10 @@ export class GoalArbitrationEngine {
         const rec = this.ensureAgent(agentId);
         const fear = clamp01(fearState.fear ?? 0.2);
         const targetIsCivilian = context.targetIsCivilian === true;
+        // NEXT-118 opt-in identity weights (default 0 = legacy scoring).
+        const tendencies = context.identityTendencies || null;
+        const rawBlend = Number(context.identityWeight ?? 0);
+        const identityBlend = Number.isFinite(rawBlend) ? Math.max(0, Math.min(1, rawBlend)) : 0;
         const vetoed = [];
 
         const scored = [];
@@ -159,14 +183,18 @@ export class GoalArbitrationEngine {
             if (vetoedFlag) vetoed.push({ goal: goal.type, vetoReason, fallbackIntent: intent });
 
             const relevance = goalRelevance(goal.type, fear);
-            scored.push({
+            const axis = tendencyAxisFor(goal.type);
+            const tWeight = tendencyWeight(axis, tendencies, identityBlend);
+            const entry = {
                 goal: goal.type,
                 intent,
                 priority: goal.priority,
                 relevance: round4(relevance),
-                score: round4(goal.priority * relevance),
+                score: round4(goal.priority * relevance * tWeight),
                 vetoed: vetoedFlag
-            });
+            };
+            if (identityBlend > 0) entry.tendencyWeight = round4(tWeight);
+            scored.push(entry);
         }
 
         scored.sort((a, b) => b.score - a.score || (a.goal < b.goal ? -1 : 1));

@@ -8127,6 +8127,31 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked"
  ],
  "next_action": "CIA_GOAL_ARBITRATION_WEIGHTS"
+ },
+ {
+ "milestone": "CIA_ARBITRATION_WEIGHTS_118",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "GoalArbitrationEngine.arbitrate accepts context.identityTendencies plus context.identityWeight in [0,1] default 0; per-goal axis mapping (survival goals from flee, HOLD_POST from stand, ally goals from help, escort from rally); bounded multiplicative weight in [0.5, 1.5] so identity bends arbitration without inverting it",
+ "Fear-vs-duty proof: at fear 0.75 with SURVIVE priority 0.7 over HOLD_POST 0.5, plain winner SURVIVE; stand-prone guard frame flips the winner to HOLD_POST with courageous true; flee-prone coward keeps SURVIVE",
+ "Neutral tendencies (all 0.5) reproduce legacy winner and score exactly; tendencyWeight key appears only when blending, so default result shape is unchanged",
+ "Advisory-only: goal scores on semantic goals; role-constraint vetoes run before weighting and are unaffected; no host state writes",
+ "Mid-build note: helper insertion dropped the class opening line (caught by node check, restored)"
+ ],
+ "test_evidence": [
+ "New tests/cia-goal-arbitration.test.js: 6 pass (default shape; stand flip to duty; flee keeps survival; bounds; neutral parity; live-frame feed weakening the ally goal)",
+ "Existing goal-arbitration suite unaffected (no exact-shape assertions; 13/13 combined pass)",
+ "Full matrix 348/349 suites, 2742 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~40s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontiers 1 and 2 closed; frontiers 3 through 20 carry (next: trauma state across vault seal and restore)",
+ "Arbitration weights consume a plain-tendency snapshot; no live CIA instance binding (host passes frame.tendencies)",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness"
+ ],
+ "next_action": "TRAUMA_VAULT_PRESERVATION"
  }
  ]
 }
