@@ -305,6 +305,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Closed-World Forks NEXT-127:** fork/advance runner brings deterministic counterfactuals to the canonical world; disabling route danger flips routing through legal observation; CCI-28 frontier 11 closed; 4 new tests; full matrix green except known dashboard env failures.
 - **Perf Budgets NEXT-128:** overhead harness grows to 19 subsystems with wire-era ceilings; attached paths cost the same order as detached ticks; CCI-28 frontier 12 closed; full matrix green except known dashboard env failures.
 - **Long-Horizon Wires NEXT-129:** 10k-tick brave-vs-coward run with all wires on keeps identity visible (onset 16 vs 3, recovery 21 vs 115) with bounded drift and no collapse; CCI-28 frontier 13 closed; 5 new tests; full matrix green except known dashboard env failures.
+- **Adaptive Blend Gain NEXT-130:** threat-compression scheduling scales identity influence down as state pressure rises (gain 1.0 calm, 0.2 severe); base fear persistence repaired in passing; CCI-28 frontier 14 closed; 7 new tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

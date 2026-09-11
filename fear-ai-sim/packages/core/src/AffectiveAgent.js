@@ -128,6 +128,17 @@ export class AffectiveAgent {
         this.identityBlend = Number.isFinite(rawBlend)
             ? Math.max(0, Math.min(1, rawBlend))
             : 0;
+        // NEXT-130 (CCI-28 frontier 14): adaptive gain scheduling. 'fixed'
+        // (default) holds the blend weight constant; 'threat-compression'
+        // scales it down as immediate state pressure rises, so identity
+        // speaks loudest in weak/ambiguous situations and yields to
+        // survival pressure under extreme threat (situation-strength).
+        const sched = options.identityGainSchedule ?? 'fixed';
+        this.identityGainSchedule = sched === 'threat-compression' ? 'threat-compression' : 'fixed';
+        const rawComp = Number(options.identityCompression ?? 0.8);
+        this.identityCompression = Number.isFinite(rawComp)
+            ? Math.max(0, Math.min(1, rawComp))
+            : 0.8;
         if (this.identityArch) {
             const override = options.identityTraits || {};
             const identitySeed = {
@@ -447,7 +458,6 @@ export class AffectiveAgent {
                 perceivedDanger: Math.max(0, Math.min(1, totalPerceivedThreat)),
                 fatigue: 1 - this.energy,
                 groupPanic: Math.max(0, Math.min(1, contagionFear)),
-                situationalConfidence: this.currentDominance
             });
             identityFrame = frame;
             const t = frame.tendencies;
@@ -462,8 +472,18 @@ export class AffectiveAgent {
             };
             const axis = axisFor(actionIntent.type);
             const base = Number.isFinite(actionIntent.urgency) ? actionIntent.urgency : 0;
+            let appliedGain = this.identityBlend;
+            if (this.identityGainSchedule === 'threat-compression') {
+                const pressure = frame.layers && Number.isFinite(frame.layers.statePressure)
+                    ? frame.layers.statePressure
+                    : 0;
+                appliedGain = Math.max(0, Math.min(1,
+                    this.identityBlend * (1 - pressure * this.identityCompression)));
+            }
             actionIntent.urgency = Math.max(0, Math.min(1,
-                base + this.identityBlend * (axis - 0.5) * 0.3));
+                base + appliedGain * (axis - 0.5) * 0.3));
+            identityFrame.appliedGain = Math.round(appliedGain * 10000) / 10000;
+            identityFrame.gainSchedule = this.identityGainSchedule;
         }
         const audioHints = this.enablePsychoacoustics
             ? PsychoacousticSynthesizer.computeAudioHints({
@@ -557,11 +577,13 @@ export class AffectiveAgent {
             tickCount: this.tickCount,
             fearCore: this.fearCore.getState(),
             habituation: this.habituation.getState(),
-            // NEXT-117: wire-attachment state. Engine instances stay
+            // NEXT-117/NEXT-130: wire-attachment state. Engine instances stay
             // host-owned; config round-trips so a re-attached agent resumes
             // identically (episode latch included: without it a restored
             // mid-episode agent would incur a duplicate trauma).
             identityBlend: this.identityBlend ?? 0,
+            identityGainSchedule: this.identityGainSchedule ?? 'fixed',
+            identityCompression: this.identityCompression ?? 0.8,
             traumaFearThreshold: this.traumaFearThreshold ?? 0.85,
             traumaRearmDelta: this.traumaRearmDelta ?? 0.2,
             traumaAdvanceClock: this.traumaAdvanceClock !== false,
@@ -594,6 +616,10 @@ export class AffectiveAgent {
         // NEXT-117: wire config plus the trauma episode latch. Instances
         // (identityArch, traumaEngine) are re-attached by the host.
         if (typeof snapshot.identityBlend === 'number') this.identityBlend = snapshot.identityBlend;
+        if (snapshot.identityGainSchedule === 'threat-compression' || snapshot.identityGainSchedule === 'fixed') {
+            this.identityGainSchedule = snapshot.identityGainSchedule;
+        }
+        if (typeof snapshot.identityCompression === 'number') this.identityCompression = snapshot.identityCompression;
         if (typeof snapshot.traumaFearThreshold === 'number') this.traumaFearThreshold = snapshot.traumaFearThreshold;
         if (typeof snapshot.traumaRearmDelta === 'number') this.traumaRearmDelta = snapshot.traumaRearmDelta;
         if (typeof snapshot.traumaAdvanceClock === 'boolean') this.traumaAdvanceClock = snapshot.traumaAdvanceClock;

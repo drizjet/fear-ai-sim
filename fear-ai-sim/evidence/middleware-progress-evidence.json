@@ -8423,6 +8423,32 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "ADAPTIVE_BLEND_GAIN"
+ },
+ {
+ "milestone": "ADAPTIVE_BLEND_GAIN_130",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "AffectiveAgent gains identityGainSchedule (fixed default, threat-compression) plus identityCompression strength default 0.8; effective gain equals base times one minus state pressure times strength, clamped to [0,1]; applied gain and schedule exposed on identity_frame",
+ "Measured scheduling: gain 1.0 in calm, 0.2 under severe threat; scheduled urgency converges toward legacy output as pressure rises; strength 0, 0.5, 1 steps gains down monotonically",
+ "Base agent persistence repaired in passing: getState omitted currentFear, currentAnger, tickCount, and fearCore while setState already read them; all four now round-trip (caught by grounding read, pinned by test)",
+ "Schedule choice and strength persist through getState and setState; default fixed path bit-identical (existing blend suites green)",
+ "Advisory urgency scalar only; no host writes",
+ "Mid-build note: one edit ate the frame assignment plus axis mapper (existing suite caught it on rerun, restored)"
+ ],
+ "test_evidence": [
+ "New tests/identity-gain-schedule.test.js: 7 pass (fixed constancy; compression drop and restore; convergence to legacy; monotonic strength; schedule persistence; base-state persistence; determinism)",
+ "Full matrix 358/359 suites, 2796 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~37s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 14 closed; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Frontiers 15 through 20 carry (next: multi-agent trauma clock ownership)",
+ "Threat-compression is the only schedule; confidence- or time-based schedules open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "TRAUMA_CLOCK_OWNERSHIP"
  }
  ]
 }
