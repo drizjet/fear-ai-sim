@@ -8950,6 +8950,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "HISTORY_COMPACTION_ANCHORS"
+ },
+ {
+ "milestone": "COMPACTION_ANCHORS_153",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change needed: pruneBeyondHorizon already protects causal ancestry and compactEventLog already enforces anchor closure; probe confirmed five-system pruning before pinning",
+ "Live five-system chain (rumor injection to hearsay dread to SURVIVE decision to MOBILIZE to migration plus 30 noise events): prune cuts 35 nodes to 5 while the root-cause trace still names the false rumor with its truth payload",
+ "Parallel event log compacts 65 events keeping all 5 anchors with bulk summarized and verifyAnchorClosure closed",
+ "Mid-build notes: test file needed three repairs (lost assembly case, wrong return-shape assumptions, duplicated test); conformance flaked once in the full matrix with zero coupling and passed isolated plus on full rerun"
+ ],
+ "test_evidence": [
+ "New tests/history-compaction-anchors.test.js: 4 pass (chain assembly; prune with trace; log compaction with closure; reproducibility)",
+ "Full matrix 380/381 suites, 2915 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~40s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 18 closed or verified; candidates 19 through 25 carry (next: repeated trauma-safety cycles); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Prune and compaction proven on a 35-node chain; thousand-node soak behavior open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "TRAUMA_SAFETY_CYCLES"
  }
  ]
 }
