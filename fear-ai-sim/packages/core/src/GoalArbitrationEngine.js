@@ -83,6 +83,15 @@ function goalRelevance(goalType, fear) {
     if (goalType === GOAL_TYPES.REACH_SAFETY) return 0.2 + 0.8 * fear;
     return 1.0;
 }
+// NEXT-144: trauma-loaded relevance. Crystallized trauma makes survival
+// goals salient even at low immediate fear (hypervigilance); duty-goal
+// relevance stays flat. Load 0 reproduces goalRelevance exactly.
+const SURVIVAL_GOALS = new Set([GOAL_TYPES.SURVIVE, GOAL_TYPES.REACH_SAFETY]);
+function traumaRelevance(goalType, fear, traumaLoad) {
+    const base = goalRelevance(goalType, fear);
+    if (!(traumaLoad > 0) || !SURVIVAL_GOALS.has(goalType)) return base;
+    return Math.min(1, base + 0.3 * traumaLoad * (1 - base));
+}
 
 // NEXT-118 (CCI-28 frontier 2): CIA tendency axis per goal type. Identity
 // biases WHO is asked to do WHAT: stand-prone characters weight duty goals,
@@ -170,6 +179,10 @@ export class GoalArbitrationEngine {
         const allyBond = Number.isFinite(rawBond) ? rawBond : 0.5;
         const rawBondBlend = Number(context.allyBondWeight ?? 0);
         const bondBlend = Number.isFinite(rawBondBlend) ? Math.max(0, Math.min(1, rawBondBlend)) : 0;
+        // NEXT-144 (audit candidate 8): crystallized-trauma load lifts
+        // survival-goal relevance (default 0 = legacy relevance).
+        const rawLoad = Number(context.traumaLoad ?? 0);
+        const traumaLoad = Number.isFinite(rawLoad) ? Math.max(0, Math.min(1, rawLoad)) : 0;
         const vetoed = [];
 
         const scored = [];
@@ -198,7 +211,7 @@ export class GoalArbitrationEngine {
             }
             if (vetoedFlag) vetoed.push({ goal: goal.type, vetoReason, fallbackIntent: intent });
 
-            const relevance = goalRelevance(goal.type, fear);
+            const relevance = traumaRelevance(goal.type, fear, traumaLoad);
             const axis = tendencyAxisFor(goal.type);
             const tWeight = tendencyWeight(axis, tendencies, identityBlend);
             const bWeight = allyBondWeight(goal.type, allyBond, bondBlend);

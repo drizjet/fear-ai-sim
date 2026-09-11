@@ -319,6 +319,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Rumor Provenance NEXT-141:** INFORMATION joins the causal domains; rumor injection to dread onset to goal flip traces end to end with truth payload, narrative mechanisms, and intervention targeting; corrections append without rewriting; audit candidate 5 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Identity Relevance NEXT-142:** opt-in neuroticism tints memory salience (legacy exact when absent); neurotic readers recall old trauma before recent calm, calm readers the reverse; audit candidate 6 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Persona Faction NEXT-143:** opt-in leader aggression bends faction pressure ±0.15; hawk persona MOBILIZEs where dove WARNs at identical grievance; audit candidate 7 closed; 6 new tests; full matrix green except known dashboard env failures.
+- **Trauma Relevance NEXT-144:** opt-in trauma load lifts survival-goal relevance (crossover 0.70 at load 0 to 0.55 at load 1); duty relevance flat; audit candidate 8 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

@@ -8747,6 +8747,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "TRAUMA_GOAL_RELEVANCE"
+ },
+ {
+ "milestone": "TRAUMA_RELEVANCE_144",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Opt-in context.traumaLoad in [0,1] lifts SURVIVE and REACH_SAFETY relevance by 0.3 times load times headroom (hypervigilance); duty-goal relevance stays flat; load 0, absent, NaN, or non-numeric reproduces legacy relevance exactly; finite extremes clamp",
+ "Pinned ladder (hold 0.45 vs survive 0.6): load 0 crosses at 0.70, load 0.5 at 0.65, load 1 at 0.55; at fear 0.3 full load lifts survival relevance 0.475 to 0.6325",
+ "Additive on relevance, orthogonal to the multiplicative tendency and bond weights; advisory scoring only"
+ ],
+ "test_evidence": [
+ "New tests/trauma-goal-relevance.test.js: 6 pass (legacy identity; directional lift with pinned values; earlier crossover; pinned ladder; invalid-load handling; reproducibility)",
+ "Full matrix 371/372 suites, 2867 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~39s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4 through 8, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 9 through 14 and 16 through 25 carry (next: trauma-eroded trust); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Load is host-supplied per call; automatic crystallized-load lookup inside arbitration open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "TRAUMA_ERODED_TRUST"
  }
  ]
 }
