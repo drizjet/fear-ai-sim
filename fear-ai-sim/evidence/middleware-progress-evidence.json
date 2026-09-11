@@ -9108,6 +9108,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_25"
+ },
+ {
+ "milestone": "RUMOR_SECURITY_DILEMMA_160",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: bilateral false-army rumor composes InformationPropagationEngine plus AnticipatoryFearEngine dread into SecurityDilemmaHarness fear and misperception through existing inputs only",
+ "Identical setup runs STABLE_DETERRENCE quiet but SPIRAL under rumor with higher peaks on both sides; trust 0.7 absorbs the same climate back to STABLE; correction plus 200 quiet ticks walks dread down and restores STABLE",
+ "Mid-build finding recorded honestly: one-sided rumor plus fear alone cannot spiral the default harness (the unrumored arm caps at 0.7), so the canonical case is bilateral hearsay, which matches the dilemma's mutual-misperception premise"
+ ],
+ "test_evidence": [
+ "New tests/rumor-security-dilemma.test.js: 5 pass (symmetric dread; quiet-stable vs rumor-spiral; trust absorption; correction recovery; exact replay)",
+ "Full matrix 387/388 suites, 2954 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~85s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 through 25 all closed or verified; fresh frontier audit required before further ranked work; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "One-sided rumor escalation caps at ASYMMETRIC under default threshold; unilateral-rumor spiral dynamics open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "FRONTIER_AUDIT_POST_25"
  }
  ]
 }
