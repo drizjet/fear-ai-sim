@@ -7082,6 +7082,31 @@
  "truthEventId still inert as an automatic adjudicator"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "TRUST_GATED_ACCEPTANCE_NEXT87",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Testimony gated by earned messenger trust: explicit sub-0.4 receiver-to-sender entries reject corrections ('distrusted') without marking awareness, so later trusted delivery can still land; no reputation entry means neutral stranger (0.5) and corrections apply; host-direct application (correctRumor byGroupId, no sender) always applies",
+ "Gate covers refutation and confirmation symmetrically; trust reads never create relationship entries (hasRelationship guard); sender identity threaded through transmitCorrections and transmit-time stamping",
+ "Restructure also unified awareness marking with the NEXT-81 cap (one add-plus-cap site) and fixed two stale doc lines",
+ "Mid-build failures: one duplicated-method mis-anchor and one dropped cap block (caught by the NEXT-81 battery), plus three docblock collisions; all repaired with zero unintended removals (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 54/54 (6 new NEXT-87 pins: distrust rejects and retains, trusted delivery applies with trust cost, neutral stranger applies, host-direct bypass, confirmation gated symmetrically, seed determinism)",
+ "Gate-disabled probe (< 0.4 to < -1.0) fails exactly the 3 distrust pins; fix restored",
+ "Full matrix 343/344 suites, 2624 pass including valley suite WITH gating active (neutral default preserves behavior; 8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~41s"
+ ],
+ "known_gaps": [
+ "Gate is binary at 0.4 (valley aid-threshold precedent); graded acceptance proportional to trust is an open refinement",
+ "Distrusted refutations leave pressure unrelieved until a trusted correction lands (pressure still fades via decay and aging)",
+ "truthEventId still inert as an automatic adjudicator"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

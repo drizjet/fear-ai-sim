@@ -354,7 +354,7 @@ export class WorldSimulationSystem {
                     passedBy: sender.id
                 };
                 receiver.knownRumors.set(rId, newInstance);
-                if (masterRumor.correction) this._applyCorrection(receiver, masterRumor, { relationshipTensorSystem });
+                if (masterRumor.correction) this._applyCorrection(receiver, masterRumor, { relationshipTensorSystem, senderGroupId: sender.id });
                 transmitted.push(newInstance);
 
                 // Record historical event for significant rumor spread
@@ -428,27 +428,41 @@ export class WorldSimulationSystem {
     }
     /**
      * NEXT-75: apply a master correction to one group's belief.
-     * NEXT-76: a group whose HELD belief is refuted loses directed trust
-     * toward the rumor originator (later loss of trust). Unheard groups and
-     * confirmations change no trust. Weight scales with how strongly the
-     * falsehood was believed (0.5 + 0.5 x credibility).
+     * NEXT-76/77: refuted held beliefs cost originator-directed trust;
+     * confirmed held beliefs earn it. Unheard groups change no trust.
+     * NEXT-87: testimony is gated by messenger trust. A receiver that has
+     * EARNED distrust (explicit sub-0.4 entry) toward the correcting sender
+     * rejects the correction ('distrusted') without marking awareness, so a
+     * later trusted delivery can still land. No reputation entry means a
+     * neutral stranger (0.5): corrections apply. Host-direct application
+     * (correctRumor byGroupId, no sender) always applies - the host is
+     * ground truth, not testimony. Reads never create relationship entries.
      * @param {object} group Receiving group
      * @param {object} master Master rumor carrying .correction
-     * @param {object} [opts] { relationshipTensorSystem }
-     * @returns {string} 'refuted' | 'confirmed' | 'unheard' | 'no-correction'
+     * @param {object} [opts] { relationshipTensorSystem, senderGroupId }
+     * @returns {string} 'refuted' | 'confirmed' | 'unheard' | 'distrusted' | 'no-correction'
      */
-    _applyCorrection(group, master, { relationshipTensorSystem = null } = {}) {
+    _applyCorrection(group, master, { relationshipTensorSystem = null, senderGroupId = null } = {}) {
         if (!group || !master?.correction) return 'no-correction';
-        if (group.knownCorrections) group.knownCorrections.add(master.id);
-        // NEXT-81: hard backstop mirrors the NEXT-38 ledger pattern. Sets
-        // iterate insertion-first, so eviction drops oldest awareness first.
+        const inst = group.knownRumors?.get(master.id);
+        if (inst && relationshipTensorSystem && senderGroupId && group.leaderId) {
+            const sender = this.groups.get(String(senderGroupId));
+            const senderLeader = sender?.leaderId;
+            if (senderLeader && senderLeader !== group.leaderId
+                && relationshipTensorSystem.hasRelationship(group.leaderId, senderLeader)
+                && relationshipTensorSystem.getRelationship(group.leaderId, senderLeader).trust < 0.4) {
+                return 'distrusted';
+            }
+        }
         if (group.knownCorrections) {
+            group.knownCorrections.add(master.id);
+            // NEXT-81: hard backstop mirrors the NEXT-38 ledger pattern. Sets
+            // iterate insertion-first, so eviction drops oldest awareness first.
             const awareCap = this.config.maxKnownCorrections ?? 500;
             while (group.knownCorrections.size > awareCap) {
                 group.knownCorrections.delete(group.knownCorrections.values().next().value);
             }
         }
-        const inst = group.knownRumors?.get(master.id);
         if (!inst) return 'unheard';
         if (master.correction.confirmed) {
             const vindicatedWeight = 0.5 + 0.5 * (inst.credibility ?? 0.5);
@@ -487,6 +501,16 @@ export class WorldSimulationSystem {
         }
         return 'refuted';
     }
+    /**
+     * NEXT-75: spread host-truth corrections the sender has applied to a
+     * receiver that has not. NEXT-87: each application is gated by the
+     * receiver's earned trust toward the sender (distrusted senders yield
+     * 'distrusted' without marking awareness, so later trusted delivery
+     * can still land).
+     * @param {string} senderGroupId Correcting group
+     * @param {string} receiverGroupId Learning group
+     * @returns {Array<object>} Applied { rumorId, result } records
+     */
     transmitCorrections(senderGroupId, receiverGroupId, { relationshipTensorSystem = null } = {}) {
         const sender = this.groups.get(String(senderGroupId));
         const receiver = this.groups.get(String(receiverGroupId));
@@ -496,7 +520,7 @@ export class WorldSimulationSystem {
             if (receiver.knownCorrections?.has(cid)) continue;
             const master = this.rumors.get(cid);
             if (!master?.correction) continue;
-            applied.push({ rumorId: cid, result: this._applyCorrection(receiver, master, { relationshipTensorSystem }) });
+            applied.push({ rumorId: cid, result: this._applyCorrection(receiver, master, { relationshipTensorSystem, senderGroupId: sender.id }) });
         }
         return applied;
     }

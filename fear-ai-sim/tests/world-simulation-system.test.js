@@ -903,3 +903,92 @@ describe('NEXT-85: heard-threat encounter signal', () => {
         expect(tame.meet().heardThreatRumor).toBe(false);
     });
 });
+
+describe('NEXT-87: trust-gated correction acceptance', () => {
+    function ledPair() {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const rel = new RelationshipTensorSystem();
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LA'
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LB'
+        });
+        const meet = () => world._generateSystemicEncounter(a, b,
+            { distance: 5, factionSystem: null, relationshipTensorSystem: rel });
+        return { world, rel, a, b, meet };
+    }
+    function seedFalse(world, a) {
+        return world.createRumor('WAR_DECLARED', {
+            sourceEntityId: a.id, severity: 0.9, description: 'false army report'
+        });
+    }
+    test('1. Earned distrust rejects the correction and keeps the belief', () => {
+        const { world, rel, a, b, meet } = ledPair();
+        const rumor = seedFalse(world, a);
+        meet();
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+        rel.getRelationship('LB', 'LA').trust = 0.1;
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        const applied = meet();
+        expect(b.knownRumors.has(rumor.id)).toBe(true);
+        expect(b.knownCorrections.has(rumor.id)).toBe(false);
+        expect(applied).toBeDefined();
+    });
+    test('2. Trusted delivery applies the refutation', () => {
+        const { world, rel, a, b, meet } = ledPair();
+        const rumor = seedFalse(world, a);
+        meet();
+        rel.getRelationship('LB', 'LA').trust = 0.9;
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+        expect(b.knownCorrections.has(rumor.id)).toBe(true);
+        expect(rel.getRelationship('LB', 'LA').trust).toBeLessThan(0.9);
+    });
+    test('3. No reputation means neutral stranger: corrections apply', () => {
+        const { world, rel, a, b, meet } = ledPair();
+        const rumor = seedFalse(world, a);
+        meet();
+        expect(rel.hasRelationship('LB', 'LA')).toBe(false);
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+    });
+    test('4. Host-direct application bypasses messenger distrust', () => {
+        const { world, rel, a, b, meet } = ledPair();
+        const rumor = seedFalse(world, a);
+        meet();
+        rel.getRelationship('LB', 'LA').trust = 0.1;
+        world.correctRumor(rumor.id, { confirmed: false, byGroupId: b.id, relationshipTensorSystem: rel });
+        expect(b.knownRumors.has(rumor.id)).toBe(false);
+    });
+    test('5. Distrust gates confirmations the same way', () => {
+        const { world, rel, a, b, meet } = ledPair();
+        const rumor = seedFalse(world, a);
+        meet();
+        rel.getRelationship('LB', 'LA').trust = 0.1;
+        world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        const inst = b.knownRumors.get(rumor.id);
+        expect(inst).toBeDefined();
+        expect(inst.credibility).toBeLessThan(1.0);
+    });
+    test('6. Gating is deterministic for a fixed seed', () => {
+        const run = () => {
+            const { world, rel, a, b, meet } = ledPair();
+            const rumor = seedFalse(world, a);
+            meet();
+            rel.getRelationship('LB', 'LA').trust = 0.1;
+            world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+            meet();
+            return b.knownRumors.has(rumor.id);
+        };
+        expect(run()).toBe(true);
+        expect(run()).toBe(run());
+    });
+});
