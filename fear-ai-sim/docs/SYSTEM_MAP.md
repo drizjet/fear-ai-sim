@@ -300,6 +300,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Dashboard Workbench NEXT-122:** five new live pages (Memory, Relationships, Causal, Trade Map, Performance) bring the dashboard to 10/10 workbench coverage; all endpoints run real subsystems; CCI-28 frontier 6 closed; 6 bind-free tests; full matrix green except known dashboard env failures.
 - **CLI Hierarchy NEXT-123:** npc/world/debug/bench groups cover all 170 flat commands with byte-identical resolution; flat invocations untouched; CCI-28 frontier 7 closed; 5 spawn tests; full matrix green except known dashboard env failures.
 - **Persona Confusion Matrix NEXT-124:** seeded-twin retrieval over archetypes plus near-neighbors with accuracy gradient 1.0 to 0.40 across noise; mistakes name the blurred dimensions; CCI-28 frontier 8 closed; 6 new tests; full matrix green except known dashboard env failures.
+- **Godot Wire Stations NEXT-125:** three headless observatory stations mirror the identity, trauma, and vault wires in GDScript with real-engine 13/13 conformance; CCI-28 frontier 9 closed; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
@@ -308,9 +309,8 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 ## Engine gates (do not upgrade without a real editor run)
 
 | Adapter | Status | Active work? |
-|---|---|---|
+| Godot 4.6 | Headless binary on host. Native binary wire loopback (< 7ms roundtrip). 13-station interactive showcase verified (13/13 stations, incl. Valley Advisory Chain Monitor with link-down fail-safe plus identity/trauma/vault wire observatories). Adapter is advisory (`get_movement_hint()`). | Ready / verified interactive showcase & binary loopback |
 | Node / Python / C# library | Runnable against the local server | Yes — language clients for the protocol |
-| Godot 4.6 | Headless binary on host. Native binary wire loopback (< 7ms roundtrip). 10-station interactive showcase verified (10/10 stations, incl. Valley Advisory Chain Monitor with link-down fail-safe). Adapter is advisory (`get_movement_hint()`). | Ready / verified interactive showcase & binary loopback |
 | Unity UPM | `IMPLEMENTED_NOT_VERIFIED` — Editor not installed. Adapter is advisory (`RecommendedVector`). | Only if a Unity host is actually wanted |
 | Unreal 5 plugin | `DEFERRED_KEEP_ADAPTER` / `IMPLEMENTED_NOT_VERIFIED` | Not now. Keep the plugin so Unreal games can connect later. Do not install UE5 today. |
 

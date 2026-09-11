@@ -8299,6 +8299,31 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "GODOT_WIRE_STATIONS"
+ },
+ {
+ "milestone": "GODOT_WIRE_STATIONS_125",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "New tests/godot_project/addons/fear_ai/wire_mirrors.gd: labeled GDScript mirrors of the three JS wires (identity tendencies plus urgency blend, trauma episode plus crystallization plus dread, vault seal plus restore with trauma blob), each citing its canonical JS source; mirrors are advisory numbers only, consistent with the existing showcase port architecture",
+ "Conformance grows 10 to 13 stations: station 11 pins blend direction (coward flee 1.00 with urgency 0.80 vs brave 0.42 with 0.62), station 12 pins one episode across 210 terror ticks with floor 0.25 plus offset 0.18 plus dread 0.20, station 13 pins trust and trauma-floor round-trip with the identity gate holding",
+ "Real Godot 4.6 console binary headless: 13/13 PASSED; CLI godot path and showcase jest assertions updated to 13; stale duplicate Godot gate row removed from map",
+ "Host authority intact: mirrors compute advisory state, Godot keeps movement and collision; authority test untouched and passing",
+ "Mid-build notes: first station-11 state saturated both personas (pressure too high at fear 0.75; retuned to moderate threat with per-persona confidence); one edit ate the coward urgency line (engine parse error, restored)"
+ ],
+ "test_evidence": [
+ "Real-engine conformance 13/13 via the Godot 4.6 console binary (not a mock); CLI godot spawn case asserts 13/13 plus the station-11 marker",
+ "Full matrix 354/355 suites, 2774 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; engine conformance ~0.4s; full matrix ~47s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontiers 1 through 9 closed; frontiers 10 through 20 carry (next: second external host of a different architecture)",
+ "Wire mirrors are behavioral analogues, not formula-identical ports; JS core remains canonical and its suites pin exact values",
+ "Visual 2D station nodes for wires 11-13 not added to station_controller (headless-verifiable only)",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "SECOND_EXTERNAL_HOST"
  }
  ]
 }

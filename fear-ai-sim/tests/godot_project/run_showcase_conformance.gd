@@ -12,6 +12,7 @@
 extends SceneTree
 
 const ShowcaseAgent = preload("res://showcase_agent.gd")
+const Wires = preload("res://addons/fear_ai/wire_mirrors.gd")
 
 func _init() -> void:
 	print("\n================================================================================")
@@ -21,7 +22,7 @@ func _init() -> void:
 
 	var all_pass = true
 	var pass_count = 0
-	var total_count = 10
+	var total_count = 13
 
 	# --------------------------------------------------------------------------
 	# STATION 1: Individual Threat Appraisal & FLEE_FROM
@@ -308,6 +309,55 @@ func _init() -> void:
 		print("[FAIL] Station 10: applied=%s danger_ok=%s fail_safe=%s" % [applied, danger_ok, fail_safe])
 		all_pass = false
 	monitor.queue_free()
+	# --------------------------------------------------------------------------
+	# STATION 11: Identity Blend Observatory (NEXT-114 mirror)
+	# --------------------------------------------------------------------------
+	print("\n--- Testing Station 11: Identity Blend Observatory ---")
+	var coward_state = { "fear": 0.35, "perceived_danger": 0.35, "confidence": 0.3 }
+	var brave_state = { "fear": 0.35, "perceived_danger": 0.35, "confidence": 0.8 }
+	var coward_t = Wires.identity_tendencies({ "neuroticism": 0.9, "resilience": 0.2, "risk_tolerance": 0.15 }, coward_state)
+	var brave_t = Wires.identity_tendencies({ "neuroticism": 0.15, "resilience": 0.9, "leadership": 0.8, "risk_tolerance": 0.7 }, brave_state)
+	var coward_u = Wires.blend_urgency(0.65, float(coward_t["flee"]), 1.0)
+	var brave_u = Wires.blend_urgency(0.65, float(brave_t["flee"]), 1.0)
+	if float(coward_t["flee"]) > 0.5 and float(brave_t["flee"]) < 0.5 and coward_u > 0.65 and brave_u < 0.65:
+		print("[PASS] Station 11: coward flee=%.2f urgency=%.2f vs brave flee=%.2f urgency=%.2f" % [coward_t["flee"], coward_u, brave_t["flee"], brave_u])
+		pass_count += 1
+	else:
+		print("[FAIL] Station 11: blend direction wrong: %s vs %s" % [coward_t, brave_t])
+		all_pass = false
+
+	# --------------------------------------------------------------------------
+	# STATION 12: Trauma Feed Observatory (NEXT-115 mirror)
+	# --------------------------------------------------------------------------
+	print("\n--- Testing Station 12: Trauma Feed Observatory ---")
+	var tstate = Wires.new_trauma_state()
+	var episodes := 0
+	var last: Dictionary = {}
+	for i in range(210):
+		last = Wires.trauma_tick(tstate, 1.0, "WOLF")
+		if bool(last["episode"]):
+			episodes += 1
+	var dread_probe = Wires.trauma_tick(tstate, 0.2, "WOLF")
+	if episodes == 1 and bool(last["crystallized"]) and float(dread_probe["dread"]) > 0.0:
+		print("[PASS] Station 12: one episode in 210 terror ticks, crystallized floor=%.2f offset=%.2f dread=%.2f" % [last["floor"], last["offset"], dread_probe["dread"]])
+		pass_count += 1
+	else:
+		print("[FAIL] Station 12: episodes=%d crystallized=%s dread=%.2f" % [episodes, last.get("crystallized", false), dread_probe.get("dread", -1.0)])
+		all_pass = false
+
+	# --------------------------------------------------------------------------
+	# STATION 13: Vault Seal/Restore Observatory (NEXT-116/119 mirror)
+	# --------------------------------------------------------------------------
+	print("\n--- Testing Station 13: Vault Seal/Restore Observatory ---")
+	var sealed = Wires.vault_seal({ "identity": { "neuroticism": 0.8 }, "adaptive": { "trust": 0.7 }, "trauma": { "floor": 0.26, "offset": 0.18 } })
+	var back = Wires.vault_restore(sealed)
+	var no_id = Wires.vault_seal({ "adaptive": {} })
+	if bool(back["ok"]) and is_equal_approx(float(back["adaptive"]["trust"]), 0.7) and bool(back["trauma_exact"]) and is_equal_approx(float(back["trauma"]["floor"]), 0.26) and not bool(no_id["ok"]):
+		print("[PASS] Station 13: trust=%.2f trauma floor=%.2f round-trip exact, identity gate holds" % [back["adaptive"]["trust"], back["trauma"]["floor"]])
+		pass_count += 1
+	else:
+		print("[FAIL] Station 13: vault round-trip broken: %s" % back)
+		all_pass = false
 	# --------------------------------------------------------------------------
 	# FINAL REPORT
 	# --------------------------------------------------------------------------
