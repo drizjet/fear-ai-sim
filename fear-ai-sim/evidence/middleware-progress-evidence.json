@@ -8634,6 +8634,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "SOCIAL_EVENT_TRAUMA_FEED"
+ },
+ {
+ "milestone": "TRAUMA_CONTAGION_139",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "ContagionGraph accepts opt-in traumaAmplifier (default 0 is legacy transmission exactly) scaling panicking-peer source fear by one plus amplifier times peer traumaLoad in [0,1]; runtime peers carry traumaLoad from crystallized severity sums halved into [0,1], zero when core trauma is off",
+ "Grounding correction recorded: audit candidates 2 and 3 were already implemented (betrayal and abandonment incur BETRAYAL_ABANDONMENT trauma with social repair as solace; group rally already consumes relationship bonds), so this chunk took candidate 15 instead",
+ "Runtime proof: betrayed-then-crystallized panicking source raises a calm neighbor to fear 0.279 over four threat ticks versus 0.000 from an untraumatized source",
+ "Advisory state only; no host writes; amplifier off by default so existing hosts see zero behavior change"
+ ],
+ "test_evidence": [
+ "New tests/trauma-amplified-contagion.test.js: 6 pass (legacy invariance; doubling at full load; monotonic load scaling; invalid-load clamping; runtime crystallized-vs-fresh divergence; reproducibility)",
+ "Full matrix 366/367 suites, 2839 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~39s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1 and 15 closed; candidates 2 and 3 verified already-implemented; candidates 4 through 14 and 16 through 25 carry (next: rumor-to-arbitration chain); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Amplifier is source-side only; focal-side trauma susceptibility open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "RUMOR_ARBITRATION_CHAIN"
  }
  ]
 }

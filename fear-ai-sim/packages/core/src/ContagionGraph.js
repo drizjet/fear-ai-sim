@@ -14,6 +14,9 @@ export class ContagionGraph {
             screamMultiplier: config.screamMultiplier || 1.8,
             leaderDampingStrength: config.leaderDampingStrength || 0.35,
             leaderRadius: config.leaderRadius || 250,
+            // NEXT-139 (audit candidate 15): crystallized-trauma peers
+            // transmit harder. 0 (default) is legacy transmission.
+            traumaAmplifier: config.traumaAmplifier || 0,
             ...config
         };
 
@@ -76,6 +79,11 @@ export class ContagionGraph {
                 }
 
                 if (sourceFear > 0.2) {
+                    // NEXT-139: peers carrying crystallized trauma load
+                    // transmit harder (opt-in peer.traumaLoad in [0,1]).
+                    const rawLoad = Number(peer.traumaLoad ?? 0);
+                    const load = Number.isFinite(rawLoad) ? Math.max(0, Math.min(1, rawLoad)) : 0;
+                    sourceFear = sourceFear * (1 + this.config.traumaAmplifier * load);
                     let screamBonus = peer.isScreaming ? this.config.screamMultiplier : 1.0;
                     const impact = sourceFear * distanceFalloff * this.config.baseContagionStrength * screamBonus * susceptibility;
                     totalContagion += impact;

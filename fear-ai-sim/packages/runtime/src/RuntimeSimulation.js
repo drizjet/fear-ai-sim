@@ -15,8 +15,21 @@ import {
     SocialEventEngine,
     SOCIAL_EVENTS
 } from '../../core/index.js';
-
-export class RuntimeSimulation {
+// NEXT-139: normalized crystallized-trauma load for contagion sourcing.
+// Severity sums across crystallized traumas, halved into [0,1] so a
+// single full-severity trauma reads 0.5 and two read as saturated.
+function traumaLoadFor(coreTrauma, enabled, agentId) {
+    if (!enabled || !coreTrauma) return 0;
+    const rec = coreTrauma.agentRecords?.get(String(agentId));
+    if (!rec || !Array.isArray(rec.crystallizedTraumas)) return 0;
+    let sum = 0;
+    for (const t of rec.crystallizedTraumas) {
+        const s = Number(t?.severity);
+        if (Number.isFinite(s)) sum += Math.max(0, Math.min(1, s));
+    }
+    return Math.max(0, Math.min(1, sum / 2));
+}
+ export class RuntimeSimulation {
     /**
      * @param {object} [options={}]
      */
@@ -207,7 +220,10 @@ export class RuntimeSimulation {
                     isPanicking,
                     isScreaming,
                     rawFear: agent.currentFear,
-                    leadership: agent.traits.leadership
+                    leadership: agent.traits.leadership,
+                    // NEXT-139: crystallized-trauma load amplifies this
+                    // peer as a contagion source (0 when core trauma off).
+                    traumaLoad: traumaLoadFor(this.coreTrauma, this.enableCoreTrauma, agent.id)
                 });
                 totalFear += agent.currentFear;
                 if (isPanicking) panickingCount++;
