@@ -24,7 +24,7 @@ export {
     PacingDirector,
     SESSION_PHASES
 } from './src/PacingDirector.js';
-export { IntentResolver, ACTION_INTENTS } from './src/IntentResolver.js';
+export { IntentResolver, ACTION_INTENTS, pickTrustedPeer, warnGroupUrgency, approachAllyUrgency, WARN_AGREEABLENESS_GATE } from './src/IntentResolver.js';
 export { PsychoacousticSynthesizer } from './src/PsychoacousticSynthesizer.js';
 export {
     LayeredMemorySystem,

@@ -8882,6 +8882,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "SOCIAL_INTENT_CONTEXT"
+ },
+ {
+ "milestone": "SOCIAL_INTENT_150",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Exported pickTrustedPeer helper plus opt-in observations.peerTrust ({ peerId: trust }); WARN_GROUP and APPROACH_ALLY target the most trusted visible peer instead of peers[0]; absent map reproduces legacy targets exactly with urgency, posture, and type untouched",
+ "Live proof: anxious agreeable agent with betrayer listed first warns the betrayer under legacy but the trusted friend with the map; tensor-derived trust (betrayal versus rescue) steers the same way end to end",
+ "Advisory targeting only; no movement, scoring, or gating changes"
+ ],
+ "test_evidence": [
+ "New tests/social-intent-targets.test.js: 6 pass (legacy targets; warn steering; approach steering with vector; tensor end-to-end; urgency invariance; helper guards)",
+ "Full matrix 377/378 suites, 2901 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~39s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4 through 15 closed; candidates 2 and 3 verified already-implemented; candidates 16 through 25 carry (next: seeded determinism proofs for social and trauma paths); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Only WARN_GROUP and APPROACH_ALLY consult trust; flee-target and cover selection open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "SEEDED_SOCIAL_DETERMINISM"
  }
  ]
 }

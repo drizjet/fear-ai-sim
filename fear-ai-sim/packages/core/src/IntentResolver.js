@@ -33,6 +33,25 @@ export function approachAllyUrgency(agreeableness) {
     const a = Number.isFinite(agreeableness) ? agreeableness : 0.5;
     return Math.min(1.0, 0.45 + a * 0.2);
 }
+// NEXT-150 (audit candidate 14): trusted-peer selection. Host passes
+// observations.peerTrust as { peerId: trustInAgent } (e.g. from the
+// relationship tensor); WARN_GROUP and APPROACH_ALLY target the most
+// trusted visible peer instead of peers[0]. Absent map: peers[0] exactly.
+export function pickTrustedPeer(peers = [], peerTrust = null) {
+    if (!Array.isArray(peers) || peers.length === 0) return null;
+    if (!peerTrust || typeof peerTrust !== 'object') return peers[0];
+    let best = peers[0];
+    let bestTrust = -Infinity;
+    for (const p of peers) {
+        const t = Number(peerTrust?.[p?.id]);
+        const trust = Number.isFinite(t) ? t : 0;
+        if (trust > bestTrust) {
+            bestTrust = trust;
+            best = p;
+        }
+    }
+    return best;
+}
 
 export class IntentResolver {
     /**
@@ -200,9 +219,10 @@ export class IntentResolver {
 
             // Highly agreeable agents prioritize warning nearby peers under threat
             if (peers.length > 0 && threats.length > 0 && agreeableness > WARN_AGREEABLENESS_GATE) {
+                const warned = pickTrustedPeer(peers, observations.peerTrust);
                 return {
                     type: 'WARN_GROUP',
-                    target_id: peers[0].id,
+                    target_id: warned.id,
                     urgency: warnGroupUrgency(agreeableness),
                     vector_hint: { x: 0, y: 0, z: 0 },
                     suggested_posture: 'DEFENSIVE_STANCE'
@@ -226,10 +246,9 @@ export class IntentResolver {
                     suggested_posture: 'CROUCHING'
                 };
             }
-
             // If allies are nearby, seek safety in numbers
             if (peers.length > 0) {
-                const ally = peers[0];
+                const ally = pickTrustedPeer(peers, observations.peerTrust);
                 const towardsAlly = IntentResolver._normalizeVector({
                     x: (ally.x ?? 0) - (agent.x ?? 0),
                     y: (ally.y ?? 0) - (agent.y ?? 0),
