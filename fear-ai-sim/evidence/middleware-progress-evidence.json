@@ -8349,6 +8349,31 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "DESIGNATE_SECOND_HOST"
+ },
+ {
+ "milestone": "CLOSED_WORLD_FORKS_127",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "New closed-world-counterfactual.js ClosedWorldRunner adapts the canonical closed-world to WorldCounterfactualEngine: fork via saveWorld and loadWorld, advance with symmetric staged-attack scripts, engine-contract summaries with documented mappings (route dread for fear; zero constants where the world has no wars, alliances, or panics)",
+ "CCXXXII interaction mutation closed: disabling ground-truth route danger makes the factual merchant flee to road-c at belief 0.89 while the pacified twin holds road-a at 0.02, from identical staged attacks through legal observation only",
+ "Probes that shaped the design: emergent bandit attacks never fire in short horizons (staging required); fork-after-learning freezes identical beliefs (fork must precede observation); the canonical 0.7 event-presence signal is correctly overridden by the belief bridge with ground-truth-scaled values",
+ "Advisory fork analysis only; host owns the live world",
+ "No mid-build production failures"
+ ],
+ "test_evidence": [
+ "New tests/closed-world-counterfactual.test.js: 4 pass (zero-intervention ATE 0 with null divergence; danger-disable diverges with negative fear diff; factual flees while pacified holds; runner determinism)",
+ "Full matrix 356/357 suites, 2783 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~43s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 11 closed (replay and counterfactual workbench on the canonical world); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Frontiers 12 through 20 carry (next: per-subsystem performance regression budgets)",
+ "Runner stages attacks by script; fully emergent attack counterfactuals need longer-horizon encounter tuning",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "PERF_REGRESSION_BUDGETS"
  }
  ]
 }
