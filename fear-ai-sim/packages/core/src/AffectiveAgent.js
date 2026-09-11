@@ -158,7 +158,8 @@ export class AffectiveAgent {
                 this.identityArch.registerCharacter(this.id, identitySeed, {
                     constraints: Array.isArray(options.identityConstraints)
                         ? options.identityConstraints
-                        : []
+                        : [],
+                    role: typeof options.identityRole === 'string' ? options.identityRole : ''
                 });
             } catch (err) {
                 // Shared architecture across re-constructed agents: reuse the

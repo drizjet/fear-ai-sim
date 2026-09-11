@@ -307,6 +307,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Long-Horizon Wires NEXT-129:** 10k-tick brave-vs-coward run with all wires on keeps identity visible (onset 16 vs 3, recovery 21 vs 115) with bounded drift and no collapse; CCI-28 frontier 13 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Adaptive Blend Gain NEXT-130:** threat-compression scheduling scales identity influence down as state pressure rises (gain 1.0 calm, 0.2 severe); base fear persistence repaired in passing; CCI-28 frontier 14 closed; 7 new tests; full matrix green except known dashboard env failures.
 - **Shared Trauma Clock NEXT-131:** single-owner idempotent stepping for trauma engines shared by many agents (200 world ticks advance 200, not 600); CCI-28 frontier 15 closed; 5 new tests; full matrix green except known dashboard env failures.
+- **Values and Role NEXT-132:** duty as neutral-centered eleventh identity trait (0.5 reproduces legacy exactly) plus advisory role tags with snapshot round-trip; CCI-28 frontier 16 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

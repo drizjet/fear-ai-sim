@@ -37,7 +37,7 @@ const round4 = (v) => Math.round(clamp01(v) * 10000) / 10000;
 export const IDENTITY_TRAITS = Object.freeze([
     'openness', 'conscientiousness', 'extraversion', 'agreeableness',
     'neuroticism', 'riskTolerance', 'socialOrientation', 'loyalty',
-    'leadership', 'resilience'
+    'leadership', 'resilience', 'duty'
 ]);
 
 export const ADAPTIVE_TRACKS = Object.freeze([
@@ -88,11 +88,16 @@ export class CharacterIdentityArchitecture {
         const state = {};
         for (const c of STATE_CHANNELS) state[c] = 0;
         state.situationalConfidence = 0.5;
+        // NEXT-132: role identity tag (e.g. 'GUARD', 'MEDIC'). Advisory label
+        // only — it never gates behavior by itself; continuous duty and hard
+        // arbitration constraints do the work. Round-trips via snapshots.
+        const role = typeof options.role === 'string' ? options.role.slice(0, 64) : '';
         this.characters.set(id, {
             identity: Object.freeze({ ...ident }),
             adaptive: { ...adaptive },
             state: { ...state },
             constraints: Object.freeze([...(options.constraints || [])]),
+            role,
             tick: 0
         });
         return id;
@@ -102,6 +107,11 @@ export class CharacterIdentityArchitecture {
     identityFor(agentId) {
         const c = this.characters.get(String(agentId));
         return c ? { ...c.identity } : null;
+    }
+    /** Advisory role identity tag ('' when unset). */
+    roleFor(agentId) {
+        const c = this.characters.get(String(agentId));
+        return c ? (c.role ?? '') : null;
     }
 
     /** Read-only adaptive snapshot. */
@@ -152,11 +162,14 @@ export class CharacterIdentityArchitecture {
         if (!c) throw new Error(`UNKNOWN_CHARACTER: ${agentId}`);
         const { identity: I, adaptive: A, state: S } = c;
         // Identity tendency gains (stable): who this character is.
-        const standGain = clamp01(0.3 + I.resilience * 0.4 + I.conscientiousness * 0.2 + I.loyalty * 0.2 - I.neuroticism * 0.15);
+        // NEXT-132: duty is neutral-centered (0.5 = legacy output bit-identical).
+        // High duty stiffens stand/help/rally; low duty relaxes them.
+        const dutyDelta = (I.duty ?? 0.5) - 0.5;
+        const standGain = clamp01(0.3 + I.resilience * 0.4 + I.conscientiousness * 0.2 + I.loyalty * 0.2 - I.neuroticism * 0.15 + dutyDelta * 0.3);
         const fleeGain = clamp01(0.3 + I.neuroticism * 0.4 + (1 - I.riskTolerance) * 0.3 - I.resilience * 0.15);
-        const helpGain = clamp01(0.2 + I.agreeableness * 0.45 + I.socialOrientation * 0.25 - I.neuroticism * 0.1);
+        const helpGain = clamp01(0.2 + I.agreeableness * 0.45 + I.socialOrientation * 0.25 - I.neuroticism * 0.1 + dutyDelta * 0.2);
         const investigateGain = clamp01(0.2 + I.openness * 0.45 + I.extraversion * 0.2 - I.neuroticism * 0.1);
-        const rallyGain = clamp01(0.15 + I.leadership * 0.5 + I.extraversion * 0.2);
+        const rallyGain = clamp01(0.15 + I.leadership * 0.5 + I.extraversion * 0.2 + dutyDelta * 0.2);
         // Adaptive modulation (learned): scales gains without replacing them.
         const traumaWeight = 1 + A.trauma * 0.6 - A.habituation * 0.5;
         const trustWeight = 1 + (A.trust - 0.5) * 0.5 + (A.respect - 0.5) * 0.3;
@@ -182,7 +195,8 @@ export class CharacterIdentityArchitecture {
                 adaptiveModulation: { traumaWeight: round4(traumaWeight), trustWeight: round4(trustWeight), dangerMemory: round4(dangerMemory) },
                 statePressure: round4(threatPressure)
             },
-            constraints: [...c.constraints]
+            constraints: [...c.constraints],
+            role: c.role ?? ''
         };
     }
 
@@ -211,6 +225,7 @@ export class CharacterIdentityArchitecture {
                 identity: { ...c.identity },
                 adaptive: { ...c.adaptive },
                 constraints: [...c.constraints],
+                role: c.role ?? '',
                 tick: c.tick
             };
         }
@@ -241,6 +256,7 @@ export class CharacterIdentityArchitecture {
                     adaptive: { ...adaptive },
                     state: liveState,
                     constraints: Object.freeze([...(c.constraints || [])]),
+                    role: typeof c.role === 'string' ? c.role.slice(0, 64) : '',
                     tick: c.tick || 0
                 });
             }

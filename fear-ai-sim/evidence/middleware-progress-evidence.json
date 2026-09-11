@@ -8473,6 +8473,30 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "VALUES_ROLE_TRAITS"
+ },
+ {
+ "milestone": "VALUES_ROLE_132",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Duty added as eleventh CIA identity trait: neutral-centered continuous scalar stiffening stand, help, and rally (duty 0.5 reproduces legacy decide values exactly; duty 1.0 vs 0.0 shifts stand 0.745 vs 0.475-class gains while flee and investigate stay untouched)",
+ "Role identity tag (options.role, e.g. GUARD or MEDIC) stored per character, exposed in decide frames and via roleFor, round-trips through snapshots; advisory label only, never gates behavior by itself",
+ "AffectiveAgent forwards options.identityRole and duty overrides into registration; identity_frame carries role",
+ "Mid-build note: two edit-tool boundary repairs needed (decide layers block, getState body); both restored and parse-verified"
+ ],
+ "test_evidence": [
+ "New tests/identity-values-role.test.js: 6 pass (legacy identity at duty 0.5; monotonic stiffening with untouched channels; role label without behavior change; snapshot round-trip; agent passthrough; determinism)",
+ "Full matrix 360/361 suites, 2807 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~37s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontier 16 closed; frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Frontiers 17 through 20 carry (next: stress-affinity interplay under state noise)",
+ "Duty is the only value scalar; further values (sanctity, fairness) open on designer demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "STRESS_AFFINITY_NOISE"
  }
  ]
 }
