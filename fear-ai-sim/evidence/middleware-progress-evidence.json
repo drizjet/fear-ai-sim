@@ -8769,6 +8769,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "TRAUMA_ERODED_TRUST"
+ },
+ {
+ "milestone": "TRAUMA_TRUST_145",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "New recordTraumaErosion bridge on the tensor: host calls once per crystallized betrayal wound; trust drops 0.25 per severity, grievance rises 0.15, affection falls 0.10 (aftershock scale versus fresh betrayal at 0.85); self-pairs rejected, invalid severity degrades to no-op",
+ "Live path proven: betrayal at weight 0.5 leaves trust at -0.425; crystallization plus erosion takes it to -0.675; 2000 peaceful ticks forgive grievance to zero while trust stays at -0.675 (trust has no passive decay); downstream helping willingness falls accordingly",
+ "Decoupled by design: tensor takes no engine reference; advisory state only",
+ "Mid-build note: one edit-tool boundary repair needed (purgeAgent docstring); restored and parse-verified"
+ ],
+ "test_evidence": [
+ "New tests/trauma-eroded-trust.test.js: 6 pass (erosion depth; severity scaling; persistence versus forgiveness; helping-willingness consequence; input guards; reproducibility)",
+ "Full matrix 372/373 suites, 2873 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~39s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4 through 9, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 10 through 14 and 16 through 25 carry (next: persona-trait why-not answers); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Erosion is host-invoked per crystallization; automatic engine-to-tensor callback open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "PERSONA_WHY_NOT"
  }
  ]
 }

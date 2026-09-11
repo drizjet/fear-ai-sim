@@ -313,6 +313,30 @@ export class RelationshipTensorSystem {
     }
 
     /**
+     * NEXT-145 (audit candidate 9): crystallized-trauma erosion bridge.
+     * The host calls this once when a betrayal/abandonment trauma
+     * crystallizes: the wound deepens distrust toward the perpetrator
+     * beyond the original event's damage. An aftershock, not a new
+     * event — deltas are roughly a third of a fresh BETRAYAL. Trust
+     * has no passive decay, so erosion lasts until repaired by
+     * prosocial events; grievance still forgives on the normal clock.
+     * @param {string} sourceId - Wounded agent
+     * @param {string} targetId - Perpetrator
+     * @param {number} [severity=0.8] - crystallized trauma severity [0,1]
+     * @returns {object} updated relationship
+     */
+    recordTraumaErosion(sourceId, targetId, severity = 0.8) {
+        const rel = this.getRelationship(sourceId, targetId);
+        if (!rel) return null;
+        const sev = Math.max(0, Math.min(1, Number(severity) || 0));
+        rel.trust = Math.max(-1.0, rel.trust - 0.25 * sev);
+        rel.grievance = Math.min(1.0, rel.grievance + 0.15 * sev);
+        rel.affection = Math.max(-1.0, rel.affection - 0.10 * sev);
+        rel.lastInteractionTick = this.tickCount;
+        return rel;
+    }
+
+    /**
      * Completely remove an agent and all directed edges to/from them upon despawn
      * @param {string} agentId
      */
