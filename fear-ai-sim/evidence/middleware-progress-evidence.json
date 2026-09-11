@@ -7463,6 +7463,29 @@
  "Default (0,0,0) origins route literally with registration-order tie-breaks"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "CREDIBILITY_WEIGHTED_SHARES_NEXT99",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Route-bias shares follow heard credibility (mean of hearing parties held credibilities, neutral 0.5 fallback); vivid rumor owns proportionally more of the shared bias; lone rumors own the whole bias at any credibility; instance-free hearings stay exactly equal (NEXT-98 behavior preserved)",
+ "No mid-build edit failures (grounded reads held for the third straight chunk)"
+ ],
+ "test_evidence": [
+ "Valley battery 52/52 (3 new NEXT-99 pins: vivid owns 0.9 over 1.1 with staged partial retraction to baseline, lone-rumor whole share, determinism)",
+ "Equal-share probe fails exactly test 50 (degenerate and determinism pins correctly unaffected); restored",
+ "Full matrix 343/344 suites, 2669 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~13s; full matrix ~46s"
+ ],
+ "known_gaps": [
+ "Rumor-hearsay arc complete (93 through 99): bias, idempotency, posture retraction, route retraction, decay residuals, shared attribution, credibility weights",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Default (0,0,0) origins route literally with registration-order tie-breaks"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

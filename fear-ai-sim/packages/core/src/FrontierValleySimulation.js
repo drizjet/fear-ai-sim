@@ -675,7 +675,19 @@ export class FrontierValleySimulation {
                         const seen = this._hearsayRoutes.get(rid);
                         // NEXT-98: encounter-level bias is shared across all
                         // rumors heard together (one +0.10, not one each).
-                        const share = 1 / Math.max(1, (enc.heardThreatRumorIds ?? []).length);
+                        // NEXT-99: shares follow heard credibility - a vivid
+                        // rumor owns more of the fear than background
+                        // chatter. Missing instances read neutral (0.5), so
+                        // instance-free hearings stay exactly equal.
+                        const credOf = (id) => {
+                            const held = [gA, gB].map((gp) => gp?.knownRumors?.get(id)?.credibility);
+                            const known = held.filter((c) => Number.isFinite(Number(c)));
+                            if (known.length === 0) return 0.5;
+                            return known.reduce((a, b) => a + Number(b), 0) / known.length;
+                        };
+                        const ids = enc.heardThreatRumorIds ?? [];
+                        const total = ids.reduce((a, id) => a + credOf(id), 0) || 1;
+                        const share = credOf(rid) / total;
                         if (!seen.some((e) => e.routeId === routeId)) seen.push({ routeId, tick: this.currentTick, share });
                     }
                 }
