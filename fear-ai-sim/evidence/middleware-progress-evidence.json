@@ -7486,6 +7486,71 @@
  "Default (0,0,0) origins route literally with registration-order tie-breaks"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_CCI_25",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Fifth cadence audit (5 chunks since CCI-24: NEXT-95 through NEXT-99, closing the rumor-hearsay arc); gap ledger aggregated across all five",
+ "Red-team hit: exonerated-set leak proved by code reading plus bound mechanics (monotonic ids, 500-rumor bound, prune branch never touching the set); every refuted rumor ever would retain one set id plus dead ledger entries in long worlds",
+ "Negative results recorded: pair-ledger over-retract hypothesized but disproved (first-wins dedup already conserving); cross-route shares audited as correct (bias applies per route independently); stale-snapshot exonerated ids harmless (pruned on next sweep); faction incidents confirmed serialized",
+ "Guardian CLEAN"
+ ],
+ "test_evidence": [
+ "Set-prune probe fails exactly the new pin; restored",
+ "Valley battery 54/54; full matrix 343/344 suites, 2671 pass (8 dashboard EACCES env failures, known)"
+ ],
+ "known_gaps": [
+ "Default (0,0,0) origins route literally with registration-order tie-breaks (last standing thread gap)",
+ "Psychometric ground truth still external-participant-blocked",
+ "Pair-ledger credibility shares open (routes weighted, pairs first-wins)"
+ ],
+ "next_action": "RANKED_CANDIDATES",
+ "candidates": [
+ "Default-origin tie-break fix (small, concrete, last thread gap)",
+ "Pair-ledger credibility shares for symmetry with routes",
+ "Sweep early-exit when no corrections exist (measure first)",
+ "Interaction mutation: disable exoneration, trade counterfactual must differ",
+ "Long-world save-size tracking (hearsay ledgers in snapshots)",
+ "Living-world soak 10k plus 100k ticks (degeneracy plus leak detection at scale)",
+ "Godot correction-trust-exoneration station (Front A playable proof)",
+ "Identity-adaptive-state layer audit (program item 1)",
+ "Functional persona signatures (program item 2)",
+ "Faction governance plus succession (CHUNK 4)",
+ "War exhaustion dynamics",
+ "Security dilemma explicit test",
+ "Faction mergers and federation paths",
+ "Nomadic camps plus return behavior",
+ "Migration pressure feedback on settlements",
+ "Causal-graph intervention ranking (advisory)",
+ "History compaction preserving causal anchors",
+ "Protocol fuzzing for rumor fields (oversized, unknown, stale)",
+ "Second external game integration",
+ "Psychometric timescale validation (BLOCKED_EXTERNAL_PARTICIPANTS)"
+ ],
+ "red_team": "CCIR-25 exoneration memory leak - HIT confirmed, fixed as NEXT-100"
+ },
+ {
+ "milestone": "BOUNDED_EXONERATION_MEMORY_NEXT100",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "CCIR-25 fix: sweep iterates the exonerated set and checks master-vanishing before the exonerated-skip, dropping ledger entries and set ids of evicted rumors (ids monotonic and never reused, so dropping is safe)",
+ "No mid-build edit failures (grounded reads held)"
+ ],
+ "test_evidence": [
+ "Valley battery 54/54 (2 new NEXT-100 pins: evicted rumors leave no entries or ids, live exonerated ids retained)",
+ "Set-prune probe fails exactly test 53; restored",
+ "Full matrix 343/344 suites, 2671 pass (8 dashboard EACCES env failures, known); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Valley battery ~11s"
+ ],
+ "known_gaps": [
+ "Default (0,0,0) origins route literally with registration-order tie-breaks",
+ "Ratios still lack psychometric ground truth (documented regimes, not validated timescales)",
+ "Pair-ledger credibility shares open"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }

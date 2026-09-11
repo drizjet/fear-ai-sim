@@ -521,11 +521,16 @@ export class FrontierValleySimulation {
     _exonerateRefutedRumors() {
         // NEXT-96: union of faction-pair and route ledgers. Any refuted
         // heard rumor retracts both its posture bias and its route danger.
-        const rids = new Set([...this._hearsayLedger.keys(), ...this._hearsayRoutes.keys()]);
+        // CCIR-25: iterate the exonerated set too, and check vanishing
+        // BEFORE the exonerated-skip. Otherwise an exonerated-then-evicted
+        // rumor keeps its ledger entries and its set id forever (rumor ids
+        // are monotonic and never reused, so dropping is safe). Without
+        // this, long worlds leak one set id per refuted rumor ever.
+        const rids = new Set([...this._hearsayLedger.keys(), ...this._hearsayRoutes.keys(), ...this._exoneratedRumors]);
         for (const rid of rids) {
-            if (this._exoneratedRumors.has(rid)) continue;
             const master = this.worldSystem.rumors.get(rid);
-            if (!master) { this._hearsayLedger.delete(rid); this._hearsayRoutes.delete(rid); continue; }
+            if (!master) { this._hearsayLedger.delete(rid); this._hearsayRoutes.delete(rid); this._exoneratedRumors.delete(rid); continue; }
+            if (this._exoneratedRumors.has(rid)) continue;
             if (master.correction && master.correction.confirmed === false) {
                 const griefHalf = Number(this.factionSystem.config?.grievanceHalfLifeTicks) || 60;
                 const dangerHalf = Number(this.civSystem.config?.routeDangerHalfLifeTicks) || 80;

@@ -858,3 +858,43 @@ describe('NEXT-99: credibility-weighted shares', () => {
         expect(run()).toBe(run());
     });
 });
+
+describe('NEXT-100: bounded exoneration memory (CCIR-25)', () => {
+    const B = FRONTIER_VALLEY_FACTIONS.BANDITS;
+    const RIVER = FRONTIER_VALLEY_ROUTES.RIVERWAY;
+    function heard(sim) {
+        const rumor = sim.worldSystem.createRumor('WAR_DECLARED', {
+            sourceEntityId: 'bandit_warband_1', severity: 0.9,
+            subjectFactionId: B, originLocation: { x: 250, y: 0, z: 175 }
+        });
+        sim._recordEncounterConsequences([{
+            partyAId: 'caravan_merchant_1', partyBId: 'caravan_merchant_2',
+            advisoryResolution: 'MUTUAL_AVOIDANCE', heardThreatRumor: true,
+            heardThreatRumorIds: [rumor.id]
+        }]);
+        return rumor;
+    }
+    test('53. Evicted rumors leave no ledger entries and no set ids', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const rumor = heard(sim);
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim._recordEncounterConsequences([]);
+        expect(sim._exoneratedRumors.has(rumor.id)).toBe(true);
+        expect(sim._hearsayLedger.has(rumor.id)).toBe(true);
+        // Host-side eviction (bound turnover): the sweep must drop everything.
+        sim.worldSystem.rumors.delete(rumor.id);
+        sim._recordEncounterConsequences([]);
+        expect(sim._hearsayLedger.has(rumor.id)).toBe(false);
+        expect(sim._hearsayRoutes.has(rumor.id)).toBe(false);
+        expect(sim._exoneratedRumors.has(rumor.id)).toBe(false);
+    });
+    test('54. Live exonerated rumors keep their ids (no premature drop)', () => {
+        const sim = new FrontierValleySimulation({ seed: 11 });
+        const rumor = heard(sim);
+        sim.worldSystem.correctRumor(rumor.id, { confirmed: false, byGroupId: 'bandit_warband_1' });
+        sim._recordEncounterConsequences([]);
+        sim._recordEncounterConsequences([]);
+        expect(sim._exoneratedRumors.has(rumor.id)).toBe(true);
+        expect(sim.civSystem.routes.get(RIVER).perceivedDanger).toBeLessThan(0.2);
+    });
+});
