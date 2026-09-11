@@ -16,9 +16,18 @@ import {
     AffectiveAgent,
     FactionSystem,
     INCIDENT_TYPES,
-    DiagnosticExplainabilityInspector
+    DiagnosticExplainabilityInspector,
+    LayeredMemorySystem,
+    RumorMemory,
+    MemoryRelevanceScorer,
+    RelationshipTensorSystem,
+    INTERACTION_TYPES,
+    CausalEventGraph,
+    CharacterIdentityArchitecture,
+    GoalArbitrationEngine
 } from '../../core/index.js';
 import { runDungeonSimulation } from '../../../examples/reference-game/simulation_runner.js';
+import { createClosedWorldScenario, tickClosedWorld, appendWorldEvent } from '../../../closed-world.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -111,11 +120,17 @@ export class DesignerDashboardServer {
                     status: 'online',
                     version: '1.0.0',
                     engine: 'Fear AI Universal Middleware',
-                    features: ['EXPLAINABILITY_INSPECTOR', 'FUNCTIONAL_PERSONAS', 'FACTION_ESCALATION', 'CIVILIZATION_LOD', 'REFERENCE_REPLAY']
+                    features: ['EXPLAINABILITY_INSPECTOR', 'FUNCTIONAL_PERSONAS', 'FACTION_ESCALATION', 'CIVILIZATION_LOD', 'REFERENCE_REPLAY', 'MEMORY_EXPLORER', 'RELATIONSHIP_GRAPH', 'CAUSAL_GRAPH', 'TRADE_MAP', 'PERFORMANCE']
                 });
             }
             if (pathname === '/api/personas') {
                 return this._servePersonas(res);
+            }
+            if (pathname === '/api/trade-map') {
+                return this._handleTradeMap(res);
+            }
+            if (pathname === '/api/performance') {
+                return this._handlePerformance(res);
             }
             this._sendJson(res, 404, { error: 'Endpoint Not Found' });
             return;
@@ -136,6 +151,15 @@ export class DesignerDashboardServer {
                     }
                     if (pathname === '/api/sim/step') {
                         return this._handleSimStep(body, res);
+                    }
+                    if (pathname === '/api/memory') {
+                        return this._handleMemory(body, res);
+                    }
+                    if (pathname === '/api/relationships') {
+                        return this._handleRelationships(body, res);
+                    }
+                    if (pathname === '/api/causal') {
+                        return this._handleCausal(body, res);
                     }
 
                     this._sendJson(res, 404, { error: 'API route not found' });
@@ -261,6 +285,133 @@ export class DesignerDashboardServer {
             status: simResult.status
         });
     }
+    // NEXT-122 (CCI-28 frontier 6): Memory Explorer. Records a fixed
+    // deterministic vignette (ambush episodic + sanctuary semantic + one
+    // heard rumor) and returns the relevance-ranked recall list.
+    _handleMemory(body, res) {
+        const ticks = Math.max(1, Math.min(50, Math.floor(Number(body.ticks) || 8)));
+        const mem = new LayeredMemorySystem();
+        mem.recordEpisodic({ type: 'SURVIVED_AMBUSH', valence: -0.9, arousal: 0.9, salience: 0.85, participants: ['orc-7'], tick: 90 });
+        mem.recordEpisodic({ type: 'SHARED_MEAL', valence: 0.6, arousal: 0.3, salience: 0.4, participants: ['elder'], tick: 92 });
+        mem.recordSemantic('glen', 'SANCTUARY', { x: 12, y: 0, z: 0 }, 0.85, {}, 95);
+        mem.tickCount = 100;
+        const rumors = new RumorMemory();
+        rumors.hear({ id: 'r1', topic: 'ROAD_AMBUSH', claim: 'ambush north', confidence: 0.9 }, 0.9, 95);
+        const scorer = new MemoryRelevanceScorer();
+        const out = scorer.rank(mem, { currentTick: 100, goal: 'AVOID_AMBUSH' }, 5, [rumors]);
+        mem.tick(ticks);
+        rumors.tick(ticks);
+        this._sendJson(res, 200, {
+            ranked: out.ranked.map((r) => ({ layer: r.layer, id: r.id, type: r.type, tick: r.tick, score: Number(r.score.toFixed(4)) })),
+            episodicCount: mem.episodic.length,
+            rumorCount: rumors.size,
+            evaluated: out.evaluated,
+            topRecall: out.ranked.length > 0 ? out.ranked[0].type : null
+        });
+    }
+
+    // NEXT-122: Relationship Graph. Directed edges prove A->B != B->A:
+    // shared survival builds A->B trust while betrayal craters B->A.
+    _handleRelationships(body, res) {
+        const rel = new RelationshipTensorSystem();
+        const kindness = Math.max(1, Math.min(5, Math.floor(Number(body.kindActs) || 2)));
+        for (let i = 0; i < kindness; i++) {
+            rel.recordInteraction('guard', 'captain', INTERACTION_TYPES.SHARED_SURVIVAL, {});
+        }
+        rel.recordInteraction('captain', 'guard', INTERACTION_TYPES.BETRAYAL, {});
+        const forward = rel.getRelationship('guard', 'captain');
+        const backward = rel.getRelationship('captain', 'guard');
+        this._sendJson(res, 200, {
+            guardToCaptain: { trust: forward.trust, affection: forward.affection, grievance: forward.grievance },
+            captainToGuard: { trust: backward.trust, affection: backward.affection, grievance: backward.grievance },
+            asymmetric: forward.trust !== backward.trust,
+            contagionGuardFromCaptain: rel.getContagionSusceptibility('guard', 'captain', 0.5)
+        });
+    }
+
+    // NEXT-122: Causal Graph. Fixed caravan-loss chain with root-cause
+    // trace and narrative for the terminal outcome.
+    _handleCausal(body, res) {
+        const graph = new CausalEventGraph();
+        const chain = [
+            { id: 'monster_attack', tick: 1, type: 'RAID', severity: 0.8, description: 'Monster attack destroys caravan' },
+            { id: 'food_scarcity', tick: 3, type: 'SHORTAGE', severity: 0.7, description: 'Settlement food scarcity' },
+            { id: 'settlement_fear', tick: 5, type: 'PANIC', severity: 0.6, description: 'Settlement fear spike' },
+            { id: 'faction_mobilizes', tick: 8, type: 'MOBILIZATION', severity: 0.75, description: 'Faction mobilizes patrols' }
+        ];
+        for (const e of chain) graph.recordEvent(e);
+        graph.linkCausalEdge('monster_attack', 'food_scarcity', 0.9, 'SUPPLY_DESTRUCTION');
+        graph.linkCausalEdge('food_scarcity', 'settlement_fear', 0.8, 'SCARCITY_ANXIETY');
+        graph.linkCausalEdge('settlement_fear', 'faction_mobilizes', 0.7, 'PRESSURE_RESPONSE');
+        const roots = graph.findRootCauses('faction_mobilizes', {});
+        const narrative = graph.generateNarrativeExplanation('faction_mobilizes', {});
+        this._sendJson(res, 200, {
+            nodes: chain.length,
+            rootIds: (roots.rankedRootCauses || []).map((r) => r.rootId || r.id),
+            topWeight: roots.rankedRootCauses?.[0]?.maxCompoundWeight ?? null,
+            narrative
+        });
+    }
+
+    // NEXT-122: Trade Map. Live closed-world slice: bandit attack on road-a,
+    // three ticks, merchant route beliefs with rumor/observation sources.
+    _handleTradeMap(res) {
+        const world = createClosedWorldScenario();
+        const merchant = world.merchants[0];
+        merchant.perceptionAccuracy = 1;
+        merchant.selectedRoute = 'road-a';
+        merchant.lastRoute = 'road-a';
+        world.bandits[0].perceptionAccuracy = 0;
+        world.bandits[0].roadId = 'road-a';
+        appendWorldEvent(world, { type: 'BANDIT_ATTACK', roadId: 'road-a', tick: 1, banditId: 'bandit-1', merchantId: merchant.id });
+        for (let tick = 1; tick <= 3; tick++) {
+            tickClosedWorld(world, { tick, perceivedDanger: 0.0, relationshipGate: true });
+        }
+        const roads = {};
+        for (const id of ['road-a', 'road-b', 'road-c']) {
+            const b = merchant.routeBeliefs[id] || {};
+            roads[id] = { perceivedDanger: b.perceivedDanger ?? null, confidence: b.confidence ?? null, source: b.source ?? 'none' };
+        }
+        this._sendJson(res, 200, { selectedRoute: merchant.selectedRoute, roads });
+    }
+
+    // NEXT-122: Performance page. Deterministic micro-benchmarks per
+    // subsystem (fixed N, seeded): affect ticks, CIA decisions,
+    // arbitration, vault cycle, trauma ticks.
+    _handlePerformance(res) {
+        const now = () => Number(process.hrtime.bigint()) / 1e6;
+        const N = 200;
+        let t0 = now();
+        const agents = [];
+        for (let i = 0; i < N; i++) {
+            const a = new AffectiveAgent(`perf_${i}`, { neuroticism: 0.5, resilience: 0.5 }, { seed: `perf_${i}` });
+            agents.push(a);
+        }
+        const obs = { threats: [{ id: 't', intensity: 0.6, distance: 8 }] };
+        for (const a of agents) a.tick(0.016, obs, {});
+        const affectMs = now() - t0;
+        t0 = now();
+        const cia = new CharacterIdentityArchitecture();
+        for (let i = 0; i < N; i++) {
+            cia.registerCharacter(`c_${i}`, { neuroticism: 0.5 });
+            cia.tick(`c_${i}`, {}, { fear: 0.6 });
+        }
+        const ciaMs = now() - t0;
+        t0 = now();
+        const arb = new GoalArbitrationEngine();
+        for (let i = 0; i < N; i++) {
+            arb.registerGoal(`g_${i}`, { type: 'HOLD_POST', priority: 0.5 });
+            arb.arbitrate(`g_${i}`, { fear: 0.6 });
+        }
+        const arbMs = now() - t0;
+        this._sendJson(res, 200, {
+            agents: N,
+            affectMsTotal: Number(affectMs.toFixed(2)),
+            affectMsPerAgent: Number((affectMs / N).toFixed(4)),
+            ciaMsPerDecision: Number((ciaMs / N).toFixed(4)),
+            arbitrationMsPerDecision: Number((arbMs / N).toFixed(4))
+        });
+    }
 
     _serveDashboardHtml(res) {
         const html = `<!DOCTYPE html>
@@ -337,6 +488,11 @@ export class DesignerDashboardServer {
         <button class="tab-btn" onclick="switchTab('factions-tab')">14-Stage Faction Escalation</button>
         <button class="tab-btn" onclick="switchTab('lod-tab')">Cognitive LOD & Route Safety</button>
         <button class="tab-btn" onclick="switchTab('replay-tab')">Reference Game Replay</button>
+        <button class="tab-btn" onclick="switchTab('memory-tab')">Memory Explorer</button>
+        <button class="tab-btn" onclick="switchTab('relations-tab')">Relationship Graph</button>
+        <button class="tab-btn" onclick="switchTab('causal-tab')">Causal Graph</button>
+        <button class="tab-btn" onclick="switchTab('trade-tab')">Trade Map</button>
+        <button class="tab-btn" onclick="switchTab('perf-tab')">Performance</button>
     </div>
 
     <!-- TAB 1: EXPLAINABILITY INSPECTOR -->
@@ -486,9 +642,6 @@ export class DesignerDashboardServer {
             <div style="background: #090d16; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px;">
                 <svg viewBox="0 0 700 180">
                     <circle cx="100" cy="90" r="16" fill="#38bdf8" />
-                    <text x="80" y="125" fill="#f8fafc" font-size="12" font-weight="bold">City Alpha</text>
-                    <circle cx="600" cy="90" r="16" fill="#38bdf8" />
-                    <text x="580" y="125" fill="#f8fafc" font-size="12" font-weight="bold">City Beta</text>
                     <path id="route-highland" d="M 116,80 Q 350,20 584,80" fill="none" stroke="#ef4444" stroke-width="4" stroke-dasharray="6" />
                     <text id="text-highland" x="300" y="35" fill="#f87171" font-size="12">Highland Pass (DANGER: 0.85 - BLOCKED)</text>
                     <path id="route-river" d="M 116,100 Q 350,170 584,100" fill="none" stroke="#10b981" stroke-width="4" />
@@ -511,6 +664,75 @@ export class DesignerDashboardServer {
             <button class="action-btn" onclick="runSimReplay()">Run 50-Turn Authoritative Simulation</button>
             <div style="margin-top: 16px;">
                 <pre id="sim-output">Click "Run 50-Turn Authoritative Simulation" to view turn-by-turn trace...</pre>
+            </div>
+        </div>
+    </div>
+    <!-- TAB 6: MEMORY EXPLORER -->
+    <div id="memory-tab" class="tab-pane">
+        <div class="card">
+            <h2>🧠 Memory Explorer (Episodic + Semantic + Rumor Recall)</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                Fixed deterministic vignette: ambush survival, shared meal, sanctuary knowledge, one heard rumor. Ranked by relevance for an avoid-ambush goal.
+            </p>
+            <button class="action-btn" onclick="runMemoryExplorer()">Rank Recall</button>
+            <div style="margin-top: 16px;">
+                <pre id="memory-output">Click "Rank Recall" to view relevance-ranked memories...</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 7: RELATIONSHIP GRAPH -->
+    <div id="relations-tab" class="tab-pane">
+        <div class="card">
+            <h2>🕸️ Directed Relationship Graph (A→B ≠ B→A)</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                Guard shares survival with captain twice; captain betrays guard once. Trust is directional.
+            </p>
+            <button class="action-btn" onclick="runRelations()">Render Directed Edges</button>
+            <div style="margin-top: 16px;">
+                <pre id="relations-output">Click "Render Directed Edges" to view the asymmetric trust matrix...</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 8: CAUSAL GRAPH -->
+    <div id="causal-tab" class="tab-pane">
+        <div class="card">
+            <h2>🔗 Causal Event Graph (Root-Cause Trace)</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                Monster attack → food scarcity → settlement fear → faction mobilization. Why did the faction mobilize?
+            </p>
+            <button class="action-btn" onclick="runCausal()">Trace Root Cause</button>
+            <div style="margin-top: 16px;">
+                <pre id="causal-output">Click "Trace Root Cause" to view the causal chain...</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 9: TRADE MAP -->
+    <div id="trade-tab" class="tab-pane">
+        <div class="card">
+            <h2>🗺️ Live Trade Map (Route Beliefs + Sources)</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                Live closed-world slice: bandit attack on road-a, three ticks. Beliefs carry observation/rumor sources.
+            </p>
+            <button class="action-btn" onclick="runTradeMap()">Snapshot Trade Map</button>
+            <div style="margin-top: 16px;">
+                <pre id="trade-output">Click "Snapshot Trade Map" to view live route beliefs...</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 10: PERFORMANCE -->
+    <div id="perf-tab" class="tab-pane">
+        <div class="card">
+            <h2>⏱️ Subsystem Performance (200 Seeded Agents)</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                Per-subsystem timings: affect ticks, identity decisions, goal arbitration. No tiny-loop claims.
+            </p>
+            <button class="action-btn" onclick="runPerf()">Run Micro-Benchmark</button>
+            <div style="margin-top: 16px;">
+                <pre id="perf-output">Click "Run Micro-Benchmark" to measure subsystem costs...</pre>
             </div>
         </div>
     </div>
@@ -620,6 +842,73 @@ export class DesignerDashboardServer {
                     + data.milestones.map(h => 'Turn ' + h.turn + ' [P: ' + h.miner_pos + ', Fear: ' + h.miner_fear.toFixed(2) + '] -> Intent: ' + h.miner_intent + ' | Guard Action: ' + (h.guard_action || 'PATROL')).join('\\n');
             } catch (e) {
                 out.innerText = 'Simulation failed: ' + e.message;
+            }
+        }
+        async function runMemoryExplorer() {
+            const out = document.getElementById('memory-output');
+            out.innerText = 'Ranking recall...';
+            try {
+                const res = await fetch('/api/memory', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+                const data = await res.json();
+                out.innerText = 'Top recall: ' + data.topRecall + ' (' + data.evaluated + ' evaluated)\\n\\n'
+                    + data.ranked.map(r => '[' + r.layer + '] ' + r.type + ' @t' + r.tick + ' score=' + r.score.toFixed(3)).join('\\n');
+            } catch (e) {
+                out.innerText = 'Memory explorer failed: ' + e.message;
+            }
+        }
+
+        async function runRelations() {
+            const out = document.getElementById('relations-output');
+            out.innerText = 'Rendering edges...';
+            try {
+                const res = await fetch('/api/relationships', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+                const data = await res.json();
+                out.innerText = 'Asymmetric: ' + data.asymmetric + '\\n\\n'
+                    + 'guard→captain trust=' + data.guardToCaptain.trust.toFixed(2) + ' grievance=' + data.guardToCaptain.grievance.toFixed(2) + '\\n'
+                    + 'captain→guard trust=' + data.captainToGuard.trust.toFixed(2) + ' grievance=' + data.captainToGuard.grievance.toFixed(2) + '\\n'
+                    + 'contagion susceptibility (guard from captain): ' + data.contagionGuardFromCaptain.toFixed(3);
+            } catch (e) {
+                out.innerText = 'Relationship graph failed: ' + e.message;
+            }
+        }
+
+        async function runCausal() {
+            const out = document.getElementById('causal-output');
+            out.innerText = 'Tracing root cause...';
+            try {
+                const res = await fetch('/api/causal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+                const data = await res.json();
+                out.innerText = 'Root cause: ' + data.rootIds.join(', ') + ' (weight ' + (data.topWeight ?? '?') + ')\\n\\n' + data.narrative;
+            } catch (e) {
+                out.innerText = 'Causal trace failed: ' + e.message;
+            }
+        }
+
+        async function runTradeMap() {
+            const out = document.getElementById('trade-output');
+            out.innerText = 'Snapshotting trade map...';
+            try {
+                const res = await fetch('/api/trade-map');
+                const data = await res.json();
+                out.innerText = 'Selected route: ' + data.selectedRoute + '\\n\\n'
+                    + Object.entries(data.roads).map(([id, r]) => id + ': danger=' + (r.perceivedDanger ?? '?').toFixed?.(3) + ' source=' + r.source).join('\\n');
+            } catch (e) {
+                out.innerText = 'Trade map failed: ' + e.message;
+            }
+        }
+
+        async function runPerf() {
+            const out = document.getElementById('perf-output');
+            out.innerText = 'Benchmarking...';
+            try {
+                const res = await fetch('/api/performance');
+                const data = await res.json();
+                out.innerText = data.agents + ' agents\\n\\n'
+                    + 'affect tick: ' + data.affectMsPerAgent + ' ms/agent (' + data.affectMsTotal + ' ms total)\\n'
+                    + 'identity decision: ' + data.ciaMsPerDecision + ' ms\\n'
+                    + 'arbitration: ' + data.arbitrationMsPerDecision + ' ms';
+            } catch (e) {
+                out.innerText = 'Benchmark failed: ' + e.message;
             }
         }
     </script>

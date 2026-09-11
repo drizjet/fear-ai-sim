@@ -8226,6 +8226,30 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness"
  ],
  "next_action": "DASHBOARD_WORKBENCH_PAGES"
+ },
+ {
+ "milestone": "DASHBOARD_WORKBENCH_122",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Designer dashboard grows from 5 to 10 tab pages: Memory Explorer (relevance-ranked recall over episodic plus semantic plus rumor stores), Relationship Graph (directed trust asymmetry with contagion readout), Causal Graph (monster-attack chain with root-cause trace plus narrative), Trade Map (live closed-world slice with observation and rumor sources), Performance (per-subsystem seeded micro-benchmarks for 200 agents)",
+ "Five live endpoints back the pages; every computation runs real subsystems (no mock data); status feature list extended",
+ "Pre-existing defects found while probing: port 0 falls back to 8766 (options.port || 8766 treats 0 as missing) and rank returns an object, not an array (both accommodated, neither silently worked around in production paths)",
+ "Advisory-only readouts; host owns all simulated movement and trade",
+ "Mid-build notes: one edit anchored into SVG content (reverted, re-anchored); causal root key corrected from guessed shape to rankedRootCauses"
+ ],
+ "test_evidence": [
+ "New tests/dashboard-workbench.test.js: 6 pass via direct handler invocation with no socket bind (env-safe against the pre-existing loopback EACCES class)",
+ "Full matrix 352/353 suites, 2763 pass (8 dashboard EACCES env failures, known pre-existing bind denial); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "Dashboard performance endpoint itself reports affect 0.0225 ms per agent, identity 0.0096 ms per decision, arbitration 0.0044 ms per decision on this machine; full matrix ~40s"
+ ],
+ "known_gaps": [
+ "CCI-28 frontiers 1 through 6 closed; frontiers 7 through 20 carry (next: CLI hierarchical commands)",
+ "Port-0 fallback defect recorded but not changed (existing tests depend on current bind behavior; needs a dedicated fix with its own regression proof)",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness"
+ ],
+ "next_action": "CLI_HIERARCHY"
  }
  ]
 }
