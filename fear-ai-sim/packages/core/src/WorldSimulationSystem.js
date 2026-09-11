@@ -452,35 +452,40 @@ export class WorldSimulationSystem {
      * NEXT-75: apply a master correction to one group's belief.
      * NEXT-76/77: refuted held beliefs cost originator-directed trust;
      * confirmed held beliefs earn it. Unheard groups change no trust.
-     * NEXT-87: testimony is gated by messenger trust. A receiver that has
-     * EARNED distrust (explicit sub-0.4 entry) toward the correcting sender
-     * rejects the correction ('distrusted') without marking awareness, so a
-     * later trusted delivery can still land. No reputation entry means a
-     * neutral stranger (0.5): corrections apply. Host-direct application
+     * NEXT-87: testimony is gated by messenger trust; NEXT-90 grades it.
+     * Earned distrust (explicit sub-0.4 entry) toward the correcting sender
+     * dents refuted credibility proportionally (trust/0.4, floored 0.05,
+     * one shot per correction) instead of deleting; confirmations still
+     * rehabilitate via NEXT-89. No reputation entry means a neutral
+     * stranger (0.5): corrections apply. Host-direct application
      * (correctRumor byGroupId, no sender) always applies - the host is
      * ground truth, not testimony. Reads never create relationship entries.
      * @param {object} group Receiving group
      * @param {object} master Master rumor carrying .correction
      * @param {object} [opts] { relationshipTensorSystem, senderGroupId }
-     * @returns {string} 'refuted' | 'confirmed' | 'unheard' | 'distrusted' | 'no-correction'
+     * @returns {string} 'refuted' | 'confirmed' | 'unheard' | 'distrusted' | 'dented' | 'no-correction'
      */
     _applyCorrection(group, master, { relationshipTensorSystem = null, senderGroupId = null } = {}) {
         if (!group || !master?.correction) return 'no-correction';
         const inst = group.knownRumors?.get(master.id);
-        // NEXT-89: rehabilitation. A distrusted CONFIRMATION still rebuilds
-        // originator trust (the host vouched the originator's claim) while
-        // leaving the belief itself untouched - consistent truth-telling
-        // re-earns full acceptance rumor by rumor. Distrusted refutations
-        // change nothing and stay unmarked, retryable later.
+        // NEXT-90: graded acceptance. Earned distrust no longer means total
+        // immunity: a distrusted REFUTATION dents credibility proportional
+        // to trust (factor trust/0.4, floored at 0.05) instead of deleting.
+        // One shot per correction (marked aware below); no pressure relief,
+        // no trust write - the belief was not overturned. Distrusted
+        // confirmations still rehabilitate via NEXT-89.
+        let dentTrust = null;
         let vindicateDespiteDistrust = false;
         if (inst && relationshipTensorSystem && senderGroupId && group.leaderId) {
             const sender = this.groups.get(String(senderGroupId));
             const senderLeader = sender?.leaderId;
             if (senderLeader && senderLeader !== group.leaderId
-                && relationshipTensorSystem.hasRelationship(group.leaderId, senderLeader)
-                && relationshipTensorSystem.getRelationship(group.leaderId, senderLeader).trust < 0.4) {
-                if (!master.correction.confirmed) return 'distrusted';
-                vindicateDespiteDistrust = true;
+                && relationshipTensorSystem.hasRelationship(group.leaderId, senderLeader)) {
+                const t = relationshipTensorSystem.getRelationship(group.leaderId, senderLeader).trust;
+                if (t < 0.4) {
+                    if (master.correction.confirmed) vindicateDespiteDistrust = true;
+                    else dentTrust = t;
+                }
             }
         }
         if (group.knownCorrections) {
@@ -493,6 +498,10 @@ export class WorldSimulationSystem {
             }
         }
         if (!inst) return 'unheard';
+        if (dentTrust !== null) {
+            inst.credibility = Math.max(0.05, inst.credibility * (dentTrust / 0.4));
+            return 'dented';
+        }
         if (vindicateDespiteDistrust) {
             // Belief untouched (no pin, no anchor); the originator still
             // earns the vindication reward. Marked aware above: one shot

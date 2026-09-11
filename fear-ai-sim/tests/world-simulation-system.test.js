@@ -927,17 +927,17 @@ describe('NEXT-87: trust-gated correction acceptance', () => {
             sourceEntityId: a.id, severity: 0.9, description: 'false army report'
         });
     }
-    test('1. Earned distrust rejects the correction and keeps the belief', () => {
+    test('1. Earned distrust dents (NEXT-90) instead of deleting the belief', () => {
         const { world, rel, a, b, meet } = ledPair();
         const rumor = seedFalse(world, a);
         meet();
-        expect(b.knownRumors.has(rumor.id)).toBe(true);
+        const before = b.knownRumors.get(rumor.id).credibility;
         rel.getRelationship('LB', 'LA').trust = 0.1;
         world.correctRumor(rumor.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
-        const applied = meet();
+        meet();
         expect(b.knownRumors.has(rumor.id)).toBe(true);
-        expect(b.knownCorrections.has(rumor.id)).toBe(false);
-        expect(applied).toBeDefined();
+        expect(b.knownRumors.get(rumor.id).credibility).toBeCloseTo(Math.max(0.05, before * (0.1 / 0.4)), 6);
+        expect(b.knownCorrections.has(rumor.id)).toBe(true);
     });
     test('2. Trusted delivery applies the refutation', () => {
         const { world, rel, a, b, meet } = ledPair();
@@ -973,6 +973,8 @@ describe('NEXT-87: trust-gated correction acceptance', () => {
         meet();
         rel.getRelationship('LB', 'LA').trust = 0.1;
         world.correctRumor(rumor.id, { confirmed: true, byGroupId: a.id, relationshipTensorSystem: rel });
+        expect(world.transmitCorrections(a.id, 'b_dst', { relationshipTensorSystem: rel }))
+            .toEqual([{ rumorId: rumor.id, result: 'distrusted' }]);
         meet();
         const inst = b.knownRumors.get(rumor.id);
         expect(inst).toBeDefined();
@@ -1102,14 +1104,14 @@ describe('NEXT-89: rehabilitation through vindication', () => {
         meet();
         expect(b.knownRumors.get(r.id).credibility).toBe(1.0);
     });
-    test('3. Distrusted delivery reports distrusted, not silent success', () => {
+    test('3. Distrusted refutation reports dented, not silent success', () => {
         const { world, rel, a, meet } = ledPair();
         expose(world, rel, a, meet);
         const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
         meet();
         world.correctRumor(r.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
         const applied = world.transmitCorrections(a.id, 'b_dst', { relationshipTensorSystem: rel });
-        expect(applied).toEqual([{ rumorId: r.id, result: 'distrusted' }]);
+        expect(applied).toEqual([{ rumorId: r.id, result: 'dented' }]);
     });
     test('4. Rehabilitation is deterministic for a fixed seed', () => {
         const run = () => {
@@ -1121,5 +1123,56 @@ describe('NEXT-89: rehabilitation through vindication', () => {
         };
         expect(run()).toBeCloseTo(0, 4);
         expect(run()).toBe(run());
+    });
+});
+
+describe('NEXT-90: graded correction acceptance', () => {
+    function ledPair() {
+        const world = new WorldSimulationSystem({ seed: 42 });
+        const rel = new RelationshipTensorSystem();
+        const a = world.registerGroup('a_src', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 100, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LA'
+        });
+        const b = world.registerGroup('b_dst', {
+            type: ROAMING_PARTY_TYPES.CARAVAN,
+            position: { x: 105, y: 0, z: 100 },
+            militaryStrength: 0.5, wealth: 0.5, leaderId: 'LB'
+        });
+        const meet = () => world._generateSystemicEncounter(a, b,
+            { distance: 5, factionSystem: null, relationshipTensorSystem: rel });
+        return { world, rel, a, b, meet };
+    }
+    function dentedCred(trustValue) {
+        const { world, rel, a, b, meet } = ledPair();
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        const before = b.knownRumors.get(r.id).credibility;
+        rel.getRelationship('LB', 'LA').trust = trustValue;
+        world.correctRumor(r.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        return { held: b.knownRumors.has(r.id), cred: b.knownRumors.get(r.id)?.credibility, before };
+    }
+    test('1. Dent depth is monotonic in messenger trust', () => {
+        const levels = [0.1, 0.2, 0.3].map(dentedCred);
+        expect(levels.every(l => l.held)).toBe(true);
+        expect(levels[0].cred).toBeLessThan(levels[1].cred);
+        expect(levels[1].cred).toBeLessThan(levels[2].cred);
+        expect(levels[2].cred).toBeLessThan(levels[2].before);
+    });
+    test('2. Zero trust guts confidence to the floor', () => {
+        const { held, cred } = dentedCred(0.0);
+        expect(held).toBe(true);
+        expect(cred).toBe(0.05);
+    });
+    test('3. The 0.4 boundary still fully applies', () => {
+        const { world, rel, a, b, meet } = ledPair();
+        const r = world.createRumor('WAR_DECLARED', { sourceEntityId: a.id, severity: 0.9 });
+        meet();
+        rel.getRelationship('LB', 'LA').trust = 0.4;
+        world.correctRumor(r.id, { confirmed: false, byGroupId: a.id, relationshipTensorSystem: rel });
+        meet();
+        expect(b.knownRumors.has(r.id)).toBe(false);
     });
 });

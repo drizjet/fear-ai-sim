@@ -7204,6 +7204,30 @@
  "Distrusted refutations still leave pressure to decay and aging (unchanged)"
  ],
  "next_action": "MAINTAIN"
+ },
+ {
+ "milestone": "GRADED_ACCEPTANCE_NEXT90",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Distrusted refutations dent instead of bouncing: credibility multiplied by trust/0.4 floored at 0.05, one shot per correction (marked aware), no pressure relief, no trust write; confirmations keep the binary gate plus NEXT-89 rehabilitation",
+ "NEXT-87 battery evolved honestly with the semantics (retention-plus-dent replaces retention-plus-ignorance); rehab pins unaffected (confirmation path untouched)",
+ "Mid-build failures: two hunks ate the vindicate-branch opening and test bodies (encounter-graph delivery re-learned), plus five range collisions across test repair; all fixed with zero unintended removals (recorded, not hidden)"
+ ],
+ "test_evidence": [
+ "World-simulation battery 65/65 (3 new NEXT-90 pins: monotonic dent depth across trust 0.1/0.2/0.3, 0.05 floor at zero trust, full application preserved at the 0.4 boundary)",
+ "Dent-factor-off probe fails exactly the 3 graded pins; fix restored",
+ "Full matrix 343/344 suites, 2635 pass (8 dashboard EACCES env failures, known)",
+ "Guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "World-simulation battery ~1s; full matrix ~39s"
+ ],
+ "known_gaps": [
+ "Dent scale inherits the uncalibrated 0.4 threshold and 0.05 floor (same calibration surface as decay and age windows)",
+ "Stamp-after-aware can double-reward on strictly-higher-credibility retransmits (bounded by the 1.0 ceiling; same residual class as cap-eviction duplication)",
+ "Hearsay routing still keys on hearing site, not rumor originLocation"
+ ],
+ "next_action": "MAINTAIN"
  }
  ]
 }
