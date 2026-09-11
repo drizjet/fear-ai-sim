@@ -343,6 +343,13 @@ export class AffectiveAgent {
             + (traumaDread * 0.8 * neuroticismMod)
             + (contagionFear * extraversionMod)
             - (leaderCalm * 0.7 * agreeablenessMod);
+        // NEXT-149 (audit candidate 13): heard information feeds fear.
+        // Host supplies observations.reportedDanger in [0,1] (e.g. from
+        // AnticipatoryFearEngine dread of a rumored threat). Hearsay weighs
+        // below direct observation; absent input is legacy exactly.
+        const rawReported = Number(observations.reportedDanger ?? 0);
+        const reportedDanger = Number.isFinite(rawReported) ? Math.max(0, Math.min(1, rawReported)) : 0;
+        totalPerceivedThreat += reportedDanger * 0.6 * neuroticismMod;
 
         totalPerceivedThreat = Math.max(0, totalPerceivedThreat);
 
@@ -357,7 +364,7 @@ export class AffectiveAgent {
         const fearDecayRate = Math.min(0.98, Math.max(0.75, 0.92 + (this.traits.neuroticism * 0.05) - resilienceMod));
         const fearInput = totalPerceivedThreat * (0.4 + this.traits.fear * 0.8);
 
-        if (threats.length > 0 || contagionFear > 0.4 || traumaDread > 0.4 || (sounds.length > 0 && fearInput > 0.15)) {
+        if (threats.length > 0 || contagionFear > 0.4 || traumaDread > 0.4 || reportedDanger > 0.4 || (sounds.length > 0 && fearInput > 0.15)) {
             // Sustained threat presence or alarming sounds build acute fear
             this.currentFear = Math.min(1.0, Math.max(this.currentFear + 0.05, fearInput));
         } else {

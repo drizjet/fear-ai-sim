@@ -324,6 +324,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Persona Why-Not NEXT-146:** why-not answers name the strongest supporting and dragging traits behind a rejected action (coefficients pinned against decide); margins unchanged without identity; audit candidate 10 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Decision Nodes NEXT-147:** arbitration outcomes file into the causal graph with cited antecedents (rumor to dread to SURVIVE traces end to end); bad causes throw without mutating; audit candidate 11 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Trauma Telemetry NEXT-148:** runtime emits crystallized load distribution gauges (max, mean, loaded count) with ON-vs-OFF output identity; audit candidate 12 closed; 5 new tests; full matrix green except known dashboard env failures.
+- **Information Fear NEXT-149:** agents feel heard danger via observations.reportedDanger (full hearsay builds fear past 0.9 threat-free); absent input is legacy exactly; audit candidate 13 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

@@ -8859,6 +8859,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AGENT_INFORMATION_FEAR"
+ },
+ {
+ "milestone": "INFORMATION_FEAR_149",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "AffectiveAgent accepts opt-in observations.reportedDanger in [0,1] (host-computed, e.g. AnticipatoryFearEngine dread): adds 0.6 times neuroticism modulation to perceived threat and joins the fear-build gate above 0.4; absent, zero, NaN, or negative input reproduces legacy outputs exactly",
+ "Live proof: full hearsay builds fear past 0.9 over 20 threat-free ticks while calm twins stay at zero; rumor-dread 0.685-class input pushes agent fear past 0.5; neurotic agents catch hearsay harder",
+ "Mid-build notes: two edit-tool boundary repairs needed (duplicated fear gate, dropped resilienceMod and section header); final diff is 7 insertions and 1 modified gate line, both runtime paths re-verified after repair",
+ "Known simplification recorded: hearsay-driven fear can open standard trauma episodes; a hearsay-typed episode path is open on demand"
+ ],
+ "test_evidence": [
+ "New tests/agent-information-fear.test.js: 6 pass (hearsay-only build; legacy identity including explicit zero; hearsay below observation; rumor-dread end-to-end; input clamping; neuroticism ordering)",
+ "Full matrix 376/377 suites, 2895 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~51s"
+ ],
+ "known_gaps": [
+ "Audit candidates 1, 4 through 13, and 15 closed; candidates 2 and 3 verified already-implemented; candidates 14 and 16 through 25 carry (next: social context in intent resolution); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Hearsay-driven trauma episodes reuse physical-threat types; a dedicated information-trauma type open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "SOCIAL_INTENT_CONTEXT"
  }
  ]
 }
