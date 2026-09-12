@@ -10771,6 +10771,33 @@
  "Blame one-way (carried from R18); nomad war unreachability (carried from R32)"
  ],
  "next_action": "MATRIX_231_THEN_COMMIT"
+ },
+ {
+ "milestone": "DEGENERACY_RECALIBRATION_R37",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Diversity normalized by expressive range (event log2-6, diplomatic log2-14) instead of flat 2.0; clamped to [0,1]; entropy components exposed in metrics",
+ "EXEMPLARY rating now requires EQI >= 0.85 AND diversity >= 0.5 AND observed macro dynamics (wars, alliances, migrations, or reroutes); short quiet worlds rate ACCEPTABLE",
+ "Fixed latent omission: faction_decisions was computed but never emitted (7th dimension read undefined; masked until diversity failed first)",
+ "Provenance surprise recorded: checked-in results artifact predates current valley dynamics (2 types vs 4 live); artifact regenerates per matrix run and stays reverted at commit",
+ "Host-authority clean: scoring only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "fear-ai-sim/tests/fabe-world-benchmark.test.js: 7 pass (re-derived floors; 40-tick poverty pinned ACCEPTABLE; rich-vs-poor ordering discrimination test)",
+ "CLI fabe-world pins recalibrated (40-tick text ACCEPTABLE; 25-tick JSON diversity-poor pin)",
+ "Measured ladder: 40t div 0.45 ACCEPTABLE; 60t+ div >= 0.53 EXEMPLARY; 2000t div 0.55 EXEMPLARY (range saturates with steady state, documented)",
+ "Full matrix: 450/450 suites, 3322/3322 tests, 0 failures"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; benchmark itself recalibrated"
+ ],
+ "known_gaps": [
+ "EQI stays >= 0.9 on poor worlds by construction (hygiene-weighted); honesty now carried by diversity plus rating, recorded explicitly against the literal backlog falsifier",
+ "faction_decisions still saturates at 3 occupied stages (stages/3); follow-up candidate",
+ "resource_responses still floors at 0.85 with zero reroutes; follow-up candidate",
+ "Blame one-way (carried from R18); nomad war unreachability (carried from R32)"
+ ],
+ "next_action": "MATRIX_233_THEN_COMMIT"
  }
  ]
 }

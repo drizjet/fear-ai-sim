@@ -316,19 +316,27 @@ describe('Fear AI Unified CLI (bin/fear-ai.js)', () => {
         expect(res.stdout).toContain('resource_responses');
         expect(res.stdout).toContain('Emergence Quality Scorecard (Section 114)');
         expect(res.stdout).toContain('Emergence Quality Index (EQI)');
-        expect(res.stdout).toContain('EXEMPLARY_SYSTEMIC_EMERGENCE');
+        // R37: a 2-seed 40-tick world is content-poor (diversity < 0.5
+        // gate), so the honest rating is ACCEPTABLE, not exemplary.
+        expect(res.stdout).toContain('ACCEPTABLE');
         expect(res.stdout).toContain('World Degeneracy Audit (Section 113)');
         expect(res.stdout).toContain('World Degenerate Detected         : NO (HEALTHY)');
     });
 
-    it('executes "fabe-world --json" and returns structured JSON with all dimensions >= 0.80', async () => {
+    it('executes "fabe-world --json" and returns structured JSON with recalibrated floors', async () => {
         const res = await runCli(['fabe-world', '--seeds', '303', '--ticks', '25', '--json']);
         expect(res.code).toBe(0);
         const parsed = JSON.parse(res.stdout.trim());
         expect(parsed.benchmark).toBe('FABE-WORLD-v1');
         expect(parsed.dimensionScores).toBeDefined();
+        // R37: hygiene dimensions keep 0.80; diversity reports range
+        // fraction, and a 25-tick world must read content-poor (< 0.5).
         for (const [dim, score] of Object.entries(parsed.dimensionScores)) {
-            expect(score).toBeGreaterThanOrEqual(0.80);
+            if (dim === 'diversity') {
+                expect(score).toBeLessThan(0.5);
+            } else {
+                expect(score).toBeGreaterThanOrEqual(0.80);
+            }
         }
         expect(parsed.emergenceQualityScorecard.emergenceQualityIndex).toBeGreaterThanOrEqual(0.85);
         expect(parsed.degeneracyCheck.isDegenerate).toBe(false);

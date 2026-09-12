@@ -257,7 +257,16 @@ export class FabeWorldBenchmarkSuite {
         }
         const stabilityScore = Number(Math.max(0.0, 1.0 - (numericalErrors * 0.5) - (panicLocks * 0.25)).toFixed(4));
 
-        // C. Diversity Score (Shannon Entropy of event types and diplomatic stages)
+        // C. Diversity Score (Shannon Entropy of event types and diplomatic stages).
+        // R37: normalize each entropy by the log of its own expressive
+        // range instead of a flat 2.0. The suite recognizes 6 event types
+        // (ambush/skirmish/reroute/war/alliance/migration) and samples a
+        // 14-stage diplomatic ladder, so the maxima are log2(6) and
+        // log2(14) bits. A world repeating 2 event types in 3 stages now
+        // scores its actual range fraction instead of saturating at 1.0.
+        // Unknown event types still add entropy (variety is variety), but
+        // the denominator stays fixed: unrecognized novelty cannot inflate
+        // the score past the benchmark's own vocabulary.
         const totalEventTokens = Array.from(eventTypeCounts.values()).reduce((a, b) => a + b, 0);
         let eventEntropy = 0;
         if (totalEventTokens > 0) {
@@ -274,8 +283,12 @@ export class FabeWorldBenchmarkSuite {
                 diplomaticEntropy -= p * Math.log2(p);
             }
         }
+        const eventRangeBits = Math.log2(6);
+        const diplomaticRangeBits = Math.log2(14);
         const totalDiversityEntropy = Number((eventEntropy + diplomaticEntropy).toFixed(4));
-        const diversityScore = Number(Math.min(1.0, totalDiversityEntropy / 2.0).toFixed(4));
+        // Clamped: unrecognized-novelty entropy can exceed the fixed
+        // denominator (dimension contract stays within [0, 1]).
+        const diversityScore = Number(Math.min(1.0, (eventEntropy / eventRangeBits + diplomaticEntropy / diplomaticRangeBits) / 2.0).toFixed(4));
 
         // D. Population Behavior & Conservation Score
         const maxPopDelta = Math.max(...runSummaries.map(s => s.populationConservationDelta));
@@ -327,6 +340,9 @@ export class FabeWorldBenchmarkSuite {
                 [BENCHMARK_DIMENSIONS.DIVERSITY]: diversityScore,
                 [BENCHMARK_DIMENSIONS.REPLAY]: replayScore,
                 [BENCHMARK_DIMENSIONS.POPULATION_BEHAVIOR]: populationBehaviorScore,
+                // R37: computed all along but never emitted, so the 7th
+                // dimension read as undefined (masked while diversity
+                // failed first). The suite now scores all 7 it advertises.
                 [BENCHMARK_DIMENSIONS.FACTION_DECISIONS]: factionDecisionScore,
                 [BENCHMARK_DIMENSIONS.RESOURCE_RESPONSES]: resourceResponseScore
             },
@@ -334,6 +350,10 @@ export class FabeWorldBenchmarkSuite {
                 totalEventsEvaluated,
                 totalTraceableEvents,
                 diversityShannonEntropyBits: totalDiversityEntropy,
+                // R37: entropy components behind the normalized diversity
+                // score (inspectable range fractions).
+                eventEntropyBits: Number(eventEntropy.toFixed(4)),
+                diplomaticEntropyBits: Number(diplomaticEntropy.toFixed(4)),
                 distinctEventTypes: eventTypeCounts.size,
                 distinctDiplomaticStages: diplomaticStagesOccupied,
                 meanPopulationFear: degeneracyAnalysis.healthyMetrics.meanPopulationFear,
@@ -352,7 +372,19 @@ export class FabeWorldBenchmarkSuite {
                 replayParity,
                 gameplaySensitivity,
                 emergenceQualityIndex,
-                rating: emergenceQualityIndex >= 0.85 ? 'EXEMPLARY_SYSTEMIC_EMERGENCE' : 'ACCEPTABLE'
+                // R37: EXEMPLARY must be earned by content, not granted
+                // for stability. Beyond EQI >= 0.85 the world must use at
+                // least half the benchmark's expressive range (diversity
+                // >= 0.5, the natural midpoint) AND show macro dynamics
+                // (wars, alliances, migrations, or reroutes observed).
+                // Short, quiet worlds rate ACCEPTABLE: coherent and
+                // stable, but content-poor. This is the degeneracy
+                // recalibration: impoverished worlds can no longer read
+                // as exemplary systemic emergence.
+                rating: emergenceQualityIndex >= 0.85 && diversityScore >= 0.5 &&
+                    runSummaries.some((s) => s.warsDeclared + s.alliancesFormed + s.migrations + s.routeFailures > 0)
+                    ? 'EXEMPLARY_SYSTEMIC_EMERGENCE'
+                    : 'ACCEPTABLE'
             },
             worldChronicleSnippet: globalChronicle.slice(0, 15),
             perSeedSummaries: runSummaries

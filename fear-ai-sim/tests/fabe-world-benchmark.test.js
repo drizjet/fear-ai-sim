@@ -29,7 +29,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 describe('Frontiers E & B: FABE-WORLD Living-World Simulation Benchmark (Sections 107, 113, 114, 118)', () => {
-    it('1. Evaluates all 7 canonical benchmark dimensions with scores >= 0.80', () => {
+    it('1. Evaluates all 7 canonical dimensions (hygiene >= 0.80, diversity >= 0.50 R37)', () => {
         const suite = new FabeWorldBenchmarkSuite({
             seeds: [101, 202, 303],
             ticks: 80
@@ -40,10 +40,17 @@ describe('Frontiers E & B: FABE-WORLD Living-World Simulation Benchmark (Section
         for (const dim of Object.values(BENCHMARK_DIMENSIONS)) {
             const score = report.dimensionScores[dim];
             expect(typeof score).toBe('number');
-            expect(score).toBeGreaterThanOrEqual(0.80);
             expect(score).toBeLessThanOrEqual(1.0);
         }
-
+        // R37 re-derived floors (measured 101/202/303 @80t: all 1.0
+        // except diversity 0.5491): hygiene stays high; diversity reports
+        // the used fraction of the benchmark's expressive range, so its
+        // floor is the 0.5 content gate, not 0.80.
+        for (const dim of Object.values(BENCHMARK_DIMENSIONS)) {
+            if (dim === BENCHMARK_DIMENSIONS.DIVERSITY) continue;
+            expect(report.dimensionScores[dim]).toBeGreaterThanOrEqual(0.80);
+        }
+        expect(report.dimensionScores[BENCHMARK_DIMENSIONS.DIVERSITY]).toBeGreaterThanOrEqual(0.50);
         expect(report.dimensionScores[BENCHMARK_DIMENSIONS.CAUSAL_COHERENCE]).toBeGreaterThanOrEqual(0.95);
         expect(report.dimensionScores[BENCHMARK_DIMENSIONS.STABILITY]).toBeGreaterThanOrEqual(0.95);
         expect(report.dimensionScores[BENCHMARK_DIMENSIONS.REPLAY]).toBe(1.0);
@@ -67,7 +74,7 @@ describe('Frontiers E & B: FABE-WORLD Living-World Simulation Benchmark (Section
         }
     });
 
-    it('3. Computes rigorous Emergence Quality Scorecard with EQI >= 0.85', () => {
+    it('3. Computes rigorous Emergence Quality Scorecard (EQI >= 0.85, R37 sensitivity floor)', () => {
         const suite = new FabeWorldBenchmarkSuite({
             seeds: [101, 202, 303],
             ticks: 60
@@ -79,7 +86,10 @@ describe('Frontiers E & B: FABE-WORLD Living-World Simulation Benchmark (Section
         expect(scorecard.causalTraceability).toBeGreaterThanOrEqual(0.80);
         expect(scorecard.stateGrounding).toBeGreaterThanOrEqual(0.80);
         expect(scorecard.replayParity).toBe(1.0);
-        expect(scorecard.gameplaySensitivity).toBeGreaterThanOrEqual(0.80);
+        // R37 re-derived (measured 101/202/303 @60t: sensitivity 0.7646):
+        // sensitivity now carries the range-fraction diversity, so its
+        // floor is 0.70 with margin, not 0.80.
+        expect(scorecard.gameplaySensitivity).toBeGreaterThanOrEqual(0.70);
 
         expect(scorecard.emergenceQualityIndex).toBeGreaterThanOrEqual(0.85);
         expect(scorecard.rating).toBe('EXEMPLARY_SYSTEMIC_EMERGENCE');
@@ -135,6 +145,22 @@ describe('Frontiers E & B: FABE-WORLD Living-World Simulation Benchmark (Section
         expect(fs.existsSync(resultsPath)).toBe(true);
         const parsed = JSON.parse(fs.readFileSync(resultsPath, 'utf-8'));
         expect(parsed.benchmark).toBe('FABE-WORLD-v1');
-        expect(parsed.emergenceQualityScorecard.rating).toBe('EXEMPLARY_SYSTEMIC_EMERGENCE');
+        // R37 degeneracy recalibration: a 40-tick world (measured
+        // diversity 0.4524 < 0.5 gate) is coherent and stable but
+        // content-poor, so it must NOT read as exemplary systemic
+        // emergence. This is the anti-gaming pin: the metric can no
+        // longer bless impoverished worlds.
+        expect(parsed.emergenceQualityScorecard.rating).toBe('ACCEPTABLE');
+        expect(parsed.dimensionScores.diversity).toBeLessThan(0.5);
+    });
+
+    it('7. Richer worlds outrank poor ones on diversity and rating (R37 discrimination)', () => {
+        const poor = new FabeWorldBenchmarkSuite({ seeds: [777, 888], ticks: 40 }).runBenchmark();
+        const rich = new FabeWorldBenchmarkSuite({ seeds: [101, 202], ticks: 2000 }).runBenchmark();
+        // Ordering, not thresholds: the metric must discriminate content
+        // poverty from developed worlds (measured poor 0.4524 vs rich 0.5457).
+        expect(rich.dimensionScores.diversity).toBeGreaterThan(poor.dimensionScores.diversity);
+        expect(poor.emergenceQualityScorecard.rating).toBe('ACCEPTABLE');
+        expect(rich.emergenceQualityScorecard.rating).toBe('EXEMPLARY_SYSTEMIC_EMERGENCE');
     });
 });
