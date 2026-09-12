@@ -8,7 +8,13 @@ import { HEAVY_IGNORE_PATTERNS } from './tools/heavy-suites.mjs';
 export default {
     // Use jsdom environment for browser APIs (Canvas, etc.)
     testEnvironment: 'jsdom',
-    
+
+    // R11: bound parallel memory. Unbounded workers (CPUs-1 heavy jsdom
+    // environments) OOM-crashed workers and the in-matrix dotnet build on
+    // large hosts (R8 flake autopsy). Half the cores still saturate a
+    // 400+ suite matrix; bloated workers recycle past 1 GiB.
+    maxWorkers: '50%',
+    workerIdleMemoryLimit: '1GB',
     // Test file patterns
     testMatch: [
         '**/tests/**/*.test.js'

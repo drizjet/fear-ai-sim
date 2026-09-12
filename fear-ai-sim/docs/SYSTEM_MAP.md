@@ -376,6 +376,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Intent Stability Under Cohesion R9:** probe-only — identical threat/social scripts wire-on vs off flip exactly 15/6 times in both runs (zero extra oscillation); chatter agrees; emergency FLEE parity; 4 new tests; matrix 422/422 fully green.
 - **Bond Champion Rank R5b:** vault keeps the argmax-trust edge plus top-11 by rank (cap, receipt, and order preserved); R5's 85/600 champion losses go to zero on identical populations; pre-existing rank pins untouched; 6 tests; matrix 422/422 fully green.
 - **Smoothing Multirate Probe R10:** probe-only — cadence-3 reuse diverges boundedly (max 0.5), step lag within N-1 ticks, steady input rejoins, uncertainty shifts within one fuse-branch gap (0.15); 4 new tests; matrix 423/423 fully green.
+- **Harness Memory Bounds R11:** maxWorkers 50% plus 1 GiB worker recycling ends the OOM flake class (R8 autopsy closed); 1 pin test; matrix 424/424, EXIT 0.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

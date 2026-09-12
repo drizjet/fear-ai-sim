@@ -10082,7 +10082,29 @@
  "Next: harness memory-bound frontier from the R8 flake autopsy, or misinformation-to-trade chain (R13)",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_201_THEN_COMMIT"
+ "next_action": "R11_HARNESS_BOUNDS_BUILD"
+ },
+ {
+ "milestone": "HARNESS_MEMORY_BOUNDS_R11",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "jest.config.js now caps maxWorkers at 50 percent and recycles workers past 1 GiB idle memory; no other harness behavior touched",
+ "One orchestrator edit slip recorded: duplicated testEnvironment line plus eaten export-default opener during the config edit (parse failures, restored, import-verified)",
+ "Deterministic: config-only change, no product code touched"
+ ],
+ "test_evidence": [
+ "New tests/jest-harness-bounds.test.js pins both bounds against silent removal",
+ "Full matrix: 424/424 suites, 3179/3179 tests, EXIT 0 — zero worker or dotnet OOMs, flake autopsy closed"
+ ],
+ "benchmark_evidence": [
+ "Wall-time delta vs unbounded matrix to be recorded from this run"
+ ],
+ "known_gaps": [
+ "If OOMs persist under bounds, next step is per-suite heap profiling, not wider guessing",
+ "Next: R13 misinformation-to-trade chain",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_202_THEN_COMMIT"
  }
  ]
 }
