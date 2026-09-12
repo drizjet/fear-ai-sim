@@ -11,6 +11,7 @@ import {
 import { FEAR_BANDS } from '../../core/src/FearCore.js';
 import { ACTION_INTENTS } from '../../core/src/IntentResolver.js';
 import { SOCIAL_EVENTS } from '../../core/src/SocialEventEngine.js';
+import { INTENT_OUTCOMES, FAILURE_REASONS } from '../../core/src/HostFeedbackLoop.js';
 
 const finiteOr = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 const clamp01Finite = (v, fallback) => {
@@ -187,6 +188,68 @@ export class ProtocolValidator {
             }
         };
     }
+    /**
+     * R36: sanitize per-tick host capability advertisements. Accepts an
+     * array (or capability->bool map); keeps strings, drops garbage,
+     * bounds length. Returns null when the request carries nothing
+     * (legacy unfiltered output); an explicitly empty set filters
+     * everything gated. Unknown names are kept verbatim (forward-compat;
+     * filtering only consults known requirement keys).
+     */
+    static sanitizeTickCapabilities(raw) {
+        if (raw === null || raw === undefined) return null;
+        let list = [];
+        if (Array.isArray(raw)) {
+            list = raw;
+        } else if (typeof raw === 'object') {
+            list = Object.entries(raw).filter(([, v]) => v).map(([k]) => k);
+        }
+        const caps = [];
+        for (const cap of list) {
+            if (typeof cap !== 'string') continue;
+            const trimmed = cap.trim().slice(0, 128);
+            if (trimmed.length === 0 || caps.includes(trimmed)) continue;
+            caps.push(trimmed);
+            if (caps.length >= 32) break;
+        }
+        return caps;
+    }
+
+    /**
+     * R36: validate a host outcome report for the execution-aware loop.
+     * Strict on identity and outcome taxonomy (unknown outcomes are
+     * host bugs, fail loudly); lenient on reason (defaults UNKNOWN).
+     */
+    static validateOutcomeReport(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Outcome report must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        if (raw.agent_id === undefined || raw.agent_id === null || String(raw.agent_id).trim().length === 0) {
+            errors.push('Missing or empty "agent_id"');
+        }
+        if (typeof raw.intent_type !== 'string' || raw.intent_type.trim().length === 0) {
+            errors.push('Missing or empty "intent_type"');
+        }
+        if (typeof raw.outcome !== 'string' || !Object.values(INTENT_OUTCOMES).includes(raw.outcome)) {
+            errors.push(`Property "outcome" must be one of: ${Object.values(INTENT_OUTCOMES).join(', ')}`);
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                agent_id: String(raw.agent_id).trim().slice(0, 256),
+                intent_type: raw.intent_type.trim().slice(0, 128),
+                outcome: raw.outcome,
+                reason: typeof raw.reason === 'string' && Object.values(FAILURE_REASONS).includes(raw.reason)
+                    ? raw.reason
+                    : 'UNKNOWN',
+                tick: Number.isFinite(Number(raw.tick)) ? Number(raw.tick) : 0
+            }
+        };
+    }
 
     static validateSocialEvent(raw) {
         if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
@@ -278,6 +341,21 @@ export class ProtocolValidator {
         if (visual !== null) value.visual = visual;
         const audio = sanitizePerceptionChannel(raw.audio, 'loudness');
         if (audio !== null) value.audio = audio;
+        // R36: opt-in visible-peer forwarding (JSON path only). Hosts
+        // report peers their NPC can see; IntentResolver uses them for
+        // WARN_GROUP/APPROACH_ALLY. Attach-only-when-present like context
+        // above, so legacy clients keep the exact old shape (and peerless
+        // behavior). Bounded at 32 ids; entries need a usable id.
+        if (Array.isArray(raw.peers)) {
+            const peers = [];
+            for (const p of raw.peers) {
+                const id = p && (p.id ?? p.agent_id ?? p);
+                if ((typeof id !== 'string' && typeof id !== 'number') || String(id).trim().length === 0) continue;
+                peers.push({ id: String(id).trim().slice(0, 256) });
+                if (peers.length >= 32) break;
+            }
+            if (peers.length > 0) value.peers = peers;
+        }
         return { valid: true, value };
     }
 

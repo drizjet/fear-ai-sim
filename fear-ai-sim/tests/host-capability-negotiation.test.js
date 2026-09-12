@@ -15,8 +15,10 @@ import { describe, it, expect } from '@jest/globals';
 import {
     HostCapabilityNegotiator,
     HOST_CAPABILITIES,
-    INTENT_CAPABILITY_REQUIREMENTS
+    INTENT_CAPABILITY_REQUIREMENTS,
+    RUNTIME_SAFE_FALLBACKS
 } from '../packages/core/src/HostCapabilityNegotiator.js';
+import { ACTION_INTENTS } from '../packages/core/src/IntentResolver.js';
 
 describe('Section 73 / Front D: Host Capability Negotiation & Intent Downgrade', () => {
     it('1. Correctly registers and inspects host advertised capabilities', () => {
@@ -110,5 +112,28 @@ describe('Section 73 / Front D: Host Capability Negotiation & Intent Downgrade',
         expect(dummyHostEntity.y).toBe(50);
         expect(dummyHostEntity.hp).toBe(100);
         expect(advice.intent).toBe('HIDE');
+    });
+
+    it('8. R36 runtime intents gate on structural capabilities', () => {
+        expect(INTENT_CAPABILITY_REQUIREMENTS.SEEK_COVER)
+            .toBe(HOST_CAPABILITIES.SUPPORTS_COVER_POINTS);
+        expect(INTENT_CAPABILITY_REQUIREMENTS.WARN_GROUP)
+            .toBe(HOST_CAPABILITIES.SUPPORTS_DIALOGUE);
+        // Unmapped runtime intents need no structural capability.
+        const negotiator = new HostCapabilityNegotiator({});
+        for (const intent of ['APPROACH_ALLY', 'INVESTIGATE_SOUND', 'FLEE_FROM', 'IDLE_VIGILANT']) {
+            const res = negotiator.filterIntent(intent, RUNTIME_SAFE_FALLBACKS);
+            expect(res.downgraded).toBe(false);
+            expect(res.intent).toBe(intent);
+        }
+    });
+
+    it('9. R36 runtime fallbacks stay inside runtime vocabulary', () => {
+        const negotiator = new HostCapabilityNegotiator({});
+        for (const intent of ['SEEK_COVER', 'WARN_GROUP']) {
+            const res = negotiator.filterIntent(intent, RUNTIME_SAFE_FALLBACKS);
+            expect(res.downgraded).toBe(true);
+            expect(ACTION_INTENTS).toContain(res.intent);
+        }
     });
 });

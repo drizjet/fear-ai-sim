@@ -37,7 +37,13 @@ export const INTENT_CAPABILITY_REQUIREMENTS = Object.freeze({
     REQUEST_CEASEFIRE: HOST_CAPABILITIES.SUPPORTS_DIALOGUE,
     REROUTE_TRADE: HOST_CAPABILITIES.SUPPORTS_DYNAMIC_REROUTING,
     TACTICAL_RETREAT: HOST_CAPABILITIES.SUPPORTS_TACTICAL_RETREAT,
-    SURRENDER: HOST_CAPABILITIES.SUPPORTS_SURRENDER
+    SURRENDER: HOST_CAPABILITIES.SUPPORTS_SURRENDER,
+    // R36: runtime ACTION_INTENTS (IntentResolver vocabulary) gated the
+    // same way. Unmapped runtime intents need no structural capability
+    // and always pass (e.g. APPROACH_ALLY needs no formation slots,
+    // INVESTIGATE_SOUND needs no dialogue channel).
+    SEEK_COVER: HOST_CAPABILITIES.SUPPORTS_COVER_POINTS,
+    WARN_GROUP: HOST_CAPABILITIES.SUPPORTS_DIALOGUE
 });
 
 export const DEFAULT_FALLBACK_CHAIN = Object.freeze({
@@ -49,6 +55,18 @@ export const DEFAULT_FALLBACK_CHAIN = Object.freeze({
     REROUTE_TRADE: 'AVOID_DANGER',
     TACTICAL_RETREAT: 'FLEE_FROM',
     SURRENDER: 'FLEE_FROM'
+});
+
+/**
+ * R36: fallback chain in runtime ACTION_INTENTS vocabulary. The legacy
+ * DEFAULT_FALLBACK_CHAIN speaks directive vocabulary (HIDE, HOLD_LINE);
+ * server tick filtering must only ever emit intents the runtime itself
+ * produces, so capped hosts get FLEE_FROM (universal movement primitive)
+ * instead of cover/dialogue intents they cannot honor.
+ */
+export const RUNTIME_SAFE_FALLBACKS = Object.freeze({
+    SEEK_COVER: 'FLEE_FROM',
+    WARN_GROUP: 'FLEE_FROM'
 });
 
 export class HostCapabilityNegotiator {

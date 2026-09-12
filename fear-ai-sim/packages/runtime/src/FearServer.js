@@ -9,6 +9,13 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { RuntimeSimulation } from './RuntimeSimulation.js';
 import { ValleyChainScenario } from '../../core/index.js';
 import {
+    HostCapabilityNegotiator,
+    HOST_CAPABILITIES,
+    INTENT_CAPABILITY_REQUIREMENTS,
+    RUNTIME_SAFE_FALLBACKS,
+    HostFeedbackLoop
+} from '../../core/index.js';
+import {
     PROTOCOL_VERSION,
     MESSAGE_TYPES,
     ERROR_CODES,
@@ -40,12 +47,17 @@ export class FearServer {
             this.host = '127.0.0.1';
         }
         this.simulation = new RuntimeSimulation(options);
+        this.connectedClients = new Set();
+        // R36: execution-aware advisory loop. Records host outcome
+        // reports per agent (bounded inside: 5000 agents, 64 history
+        // each) and filters tick outputs the host already reported
+        // unexecutable. Advisory statistics only; never host mutation.
+        this.feedbackLoop = new HostFeedbackLoop();
         this.chainScenario = new ValleyChainScenario();
         this.maxPayloadBytes = options.maxPayloadBytes || (50 * 1024 * 1024);
 
         this.httpServer = null;
         this.wss = null;
-        this.connectedClients = new Set();
         this.isRunning = false;
     }
 
@@ -194,6 +206,57 @@ export class FearServer {
         this._sendJson(res, 405, { error: 'Method not allowed' });
     }
 
+    /**
+     * R36: enforce host contracts on tick outputs (Front D backlog #1).
+     * Two independent filters, applied in order per output:
+     * 1. Capability filter (only when the request advertises caps):
+     *    intents the host cannot honor downgrade via RUNTIME_SAFE_FALLBACKS.
+     * 2. Affordance filter (only for agents with recorded structural
+     *    failures): intents the host already reported unexecutable are
+     *    replaced by the loop's safe fallback.
+     * Absent capabilities (null/undefined) mean legacy unfiltered output.
+     * An explicitly empty array means the host advertises nothing: every
+     * gated intent downgrades. Untouched outputs return as-is.
+     * Downgrades are annotated so hosts see what changed and why.
+     * @param {Array} outputs batchTick/tick outputs
+     * @param {Array<string>} [capabilities] sanitized host caps, or null
+     * @returns {Array} filtered outputs
+     */
+    _applyHostContracts(outputs, capabilities) {
+        if (!Array.isArray(outputs) || outputs.length === 0) return outputs;
+        const caps = Array.isArray(capabilities) ? capabilities : null;
+        const negotiator = caps ? new HostCapabilityNegotiator(caps) : null;
+        for (const output of outputs) {
+            if (!output || typeof output !== 'object') continue;
+            const intent = output.action_intent;
+            const type = intent && typeof intent.type === 'string' ? intent.type : null;
+            if (!type) continue;
+            if (negotiator) {
+                const filtered = negotiator.filterIntent(type, RUNTIME_SAFE_FALLBACKS);
+                if (filtered.downgraded) {
+                    output.action_intent = { ...intent, type: filtered.intent };
+                    output.capability_downgrade = {
+                        original_intent: filtered.originalIntent,
+                        required_capability: filtered.requiredCapability,
+                        reason: filtered.reason
+                    };
+                }
+            }
+            const current = output.action_intent && typeof output.action_intent.type === 'string'
+                ? output.action_intent.type
+                : type;
+            if (current && this.feedbackLoop.isUnavailable(output.agent_id, current)) {
+                output.action_intent = { ...(output.action_intent || {}), type: this.feedbackLoop.fallbackFor(current) };
+                output.affordance_downgrade = {
+                    original_intent: current,
+                    fallback: this.feedbackLoop.fallbackFor(current),
+                    reason: 'HOST_REPORTED_UNAVAILABLE'
+                };
+            }
+        }
+        return outputs;
+    }
+
     _routeHttpPost(path, body, res) {
         switch (path) {
             case '/api/v1/handshake': {
@@ -209,7 +272,14 @@ export class FearServer {
                     server_time_ms: Date.now(),
                     supported_observation_fields: SUPPORTED_OBSERVATION_FIELDS,
                     supported_social_event_fields: SUPPORTED_SOCIAL_EVENT_FIELDS,
-                    supported_pacing_metrics: SUPPORTED_PACING_METRICS
+                    supported_pacing_metrics: SUPPORTED_PACING_METRICS,
+                    // R36: capability contract advertisement. Hosts learn
+                    // which intents require which advertised capabilities
+                    // (echo back per tick as `capabilities`) and the full
+                    // capability vocabulary. Additive: legacy clients
+                    // ignore unknown fields.
+                    host_capabilities: Object.values(HOST_CAPABILITIES),
+                    capability_requirements: { ...INTENT_CAPABILITY_REQUIREMENTS }
                 });
             }
             case '/api/v1/register': {
@@ -256,7 +326,10 @@ export class FearServer {
                     if (singleVal.valid) observations = [singleVal.value];
                 }
                 const dt = body?.dt ?? 0.0166;
-                const results = this.simulation.batchTick(observations, dt);
+                const results = this._applyHostContracts(
+                    this.simulation.batchTick(observations, dt),
+                    ProtocolValidator.sanitizeTickCapabilities(body?.capabilities)
+                );
                 return this._sendJson(res, 200, {
                     type: MESSAGE_TYPES.BATCH_TICK_RESPONSE,
                     tick: this.simulation.tickCount,
@@ -266,11 +339,40 @@ export class FearServer {
 
             case '/api/v1/batch_tick': {
                 const val = ProtocolValidator.validateBatchTick(body || {});
-                const results = this.simulation.batchTick(val.value.observations, val.value.dt);
+                const results = this._applyHostContracts(
+                    this.simulation.batchTick(val.value.observations, val.value.dt),
+                    ProtocolValidator.sanitizeTickCapabilities(body?.capabilities)
+                );
                 return this._sendJson(res, 200, {
                     type: MESSAGE_TYPES.BATCH_TICK_RESPONSE,
                     tick: this.simulation.tickCount,
                     results
+                });
+            }
+
+            case '/api/v1/outcome': {
+                // R36: host execution-outcome reports close the advisory
+                // loop (XCVI-XCVIII). Recorded per agent; structural
+                // failures mark intents unavailable for future ticks.
+                // Garbage fails 400 loudly; the loop itself never throws
+                // on validated input (bounded inside HostFeedbackLoop).
+                const val = ProtocolValidator.validateOutcomeReport(body || {});
+                if (!val.valid) {
+                    return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                }
+                // Field mapping: the wire speaks snake_case, the loop
+                // speaks camelCase (its tested vocabulary wins).
+                const receipt = this.feedbackLoop.reportOutcome({
+                    agentId: val.value.agent_id,
+                    intentType: val.value.intent_type,
+                    outcome: val.value.outcome,
+                    reason: val.value.reason,
+                    tick: val.value.tick
+                });
+                return this._sendJson(res, 200, {
+                    type: MESSAGE_TYPES.INTENT_OUTCOME_ACK,
+                    status: 'RECORDED',
+                    ...receipt
                 });
             }
 
@@ -562,7 +664,9 @@ export class FearServer {
                     client_id: payload.client_id,
                     supported_observation_fields: SUPPORTED_OBSERVATION_FIELDS,
                     supported_social_event_fields: SUPPORTED_SOCIAL_EVENT_FIELDS,
-                    supported_pacing_metrics: SUPPORTED_PACING_METRICS
+                    supported_pacing_metrics: SUPPORTED_PACING_METRICS,
+                    host_capabilities: Object.values(HOST_CAPABILITIES),
+                    capability_requirements: { ...INTENT_CAPABILITY_REQUIREMENTS }
                 }, correlationId);
                 break;
             }
@@ -629,7 +733,11 @@ export class FearServer {
 
             case MESSAGE_TYPES.STEP_REQUEST: {
                 const dt = typeof payload.dt === 'number' ? payload.dt : 0.0166;
-                const results = this.simulation.tick(dt);
+                // Caps read from the raw message: validateBatchTick rebuilds
+                // its value (pinned shape) and drops unknown keys, so the
+                // validated payload cannot carry them.
+                const caps = ProtocolValidator.sanitizeTickCapabilities(msg && msg.capabilities);
+                const results = this._applyHostContracts(this.simulation.tick(dt), caps);
                 this._sendWs(ws, {
                     type: MESSAGE_TYPES.BATCH_TICK_RESPONSE,
                     tick: this.simulation.tickCount,
@@ -639,11 +747,36 @@ export class FearServer {
             }
 
             case MESSAGE_TYPES.BATCH_TICK_REQUEST: {
-                const results = this.simulation.batchTick(payload.observations, payload.dt);
+                const caps = ProtocolValidator.sanitizeTickCapabilities(msg && msg.capabilities);
+                const results = this._applyHostContracts(
+                    this.simulation.batchTick(payload.observations, payload.dt),
+                    caps
+                );
                 this._sendWs(ws, {
                     type: MESSAGE_TYPES.BATCH_TICK_RESPONSE,
                     tick: this.simulation.tickCount,
                     results
+                }, correlationId);
+                break;
+            }
+
+            case MESSAGE_TYPES.INTENT_OUTCOME_REPORT: {
+                // R36: WebSocket twin of POST /api/v1/outcome.
+                const val = ProtocolValidator.validateOutcomeReport(payload);
+                if (!val.valid) {
+                    return this._sendWsError(ws, val.errors.join(', '), val.code, correlationId);
+                }
+                const receipt = this.feedbackLoop.reportOutcome({
+                    agentId: val.value.agent_id,
+                    intentType: val.value.intent_type,
+                    outcome: val.value.outcome,
+                    reason: val.value.reason,
+                    tick: val.value.tick
+                });
+                this._sendWs(ws, {
+                    type: MESSAGE_TYPES.INTENT_OUTCOME_ACK,
+                    status: 'RECORDED',
+                    ...receipt
                 }, correlationId);
                 break;
             }

@@ -87,7 +87,8 @@ export {
     HostCapabilityNegotiator,
     HOST_CAPABILITIES,
     INTENT_CAPABILITY_REQUIREMENTS,
-    DEFAULT_FALLBACK_CHAIN
+    DEFAULT_FALLBACK_CHAIN,
+    RUNTIME_SAFE_FALLBACKS
 } from './src/HostCapabilityNegotiator.js';
 export {
     CANONICAL_PRESETS,

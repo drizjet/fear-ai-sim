@@ -10745,6 +10745,32 @@
  "Blame one-way and nomad war reachability carried as ranked backlog items 10 and 15"
  ],
  "next_action": "R36_CAPABILITY_ENFORCEMENT"
+ },
+ {
+ "milestone": "CAPABILITY_ENFORCEMENT_R36",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Negotiator reconciled to runtime vocabulary: SEEK_COVER needs cover_points, WARN_GROUP needs dialogue; unmapped runtime intents always pass; RUNTIME_SAFE_FALLBACKS keeps fallbacks inside ACTION_INTENTS (legacy directive chain untouched)",
+ "FearServer owns a bounded HostFeedbackLoop; _applyHostContracts filters tick outputs per request (caps filter, then affordance filter), annotating downgrades; absent caps mean legacy-identical output, explicit empty caps filter everything",
+ "Handshake (HTTP plus WS) advertises host_capabilities plus capability_requirements (additive fields); new POST /api/v1/outcome plus WS INTENT_OUTCOME_REPORT record execution outcomes with strict taxonomy validation",
+ "Validator: sanitizeTickCapabilities (null-when-absent, bounded, forward-compat unknowns) plus validateOutcomeReport; visible-peer forwarding unlocked WARN_GROUP over the wire (attach-only, legacy shape kept)",
+ "Host-authority clean: advisory filtering with annotations; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/runtime-capability-enforcement.test.js: 9 pass live against booted server (contract advertisement; legacy unfiltered; empty-caps downgrade plus annotation; full-caps intact; garbage sanitized; outcome validation plus receipts; 3-reject parking plus completion restore; twin determinism; WS parity)",
+ "Extended fear-ai-sim/tests/host-capability-negotiation.test.js: 2 pins (runtime gating; fallback vocabulary)",
+ "Neighbors green: feedback-loop plus handshake-advertisement plus runtime-server plus node-roundtrip plus protocol-validation plus fuzz plus context-forwarding plus godot wires (85 tests)",
+ "Full matrix: 450/450 suites, 3321/3321 tests, 0 failures, EXIT 0 (matrix231 voided: trauma OOM plus 2 CLI subprocess crashes under parallel load, both green in isolation; clean reseal matrix232)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Binary wire path carries no capabilities and drops peer/context channels (known lossy path; JSON-only enforcement for now)",
+ "Outcome records live only in server memory (no snapshot persistence for the feedback loop; restart clears unavailability)",
+ "Blame one-way (carried from R18); nomad war unreachability (carried from R32)"
+ ],
+ "next_action": "MATRIX_231_THEN_COMMIT"
  }
  ]
 }
