@@ -192,9 +192,14 @@ export class SettlementMigrationSystem {
                         this.totalWorldCasualties += casualties;
                     }
 
-                    // 1. Population influx
+                    // 1. Population influx. New mouths eat on arrival: each
+                    // survivor consumes one per-capita meal from the
+                    // destination stockpile (R12 loop: influx dilutes food
+                    // security, so migration can raise downstream scarcity).
                     const previousPop = dest.population;
                     dest.population += survivors;
+                    const arrivalMeal = survivors * this.config.consumptionPerCapita;
+                    dest.foodStock = Math.max(0, Number((dest.foodStock - arrivalMeal).toFixed(3)));
 
                     // 2. Labor productivity boost (+0.4% per migrant)
                     dest.laborBonus = Number((dest.laborBonus + (survivors * this.config.laborMultiplier)).toFixed(4));

@@ -10175,7 +10175,30 @@
  "Next: migration-to-settlement pressure loop (R12) or governance reactions to succession risk",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_205_THEN_COMMIT"
+ "next_action": "R12_MIGRATION_SCARCITY_BUILD"
+ },
+ {
+ "milestone": "MIGRATION_SCARCITY_LOOP_R12",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "SettlementMigrationSystem.tick arrival now deducts one per-capita arrival meal per survivor from destination foodStock (floored at 0, existing consumptionPerCapita config); single-line-class delta closing the open migration-to-scarcity loop",
+ "Host-authority clean: advisory/internal settlement state only; deterministic; population conservation untouched",
+ "Edit slip recorded: post-matrix amend mis-anchored and duplicated a benchmark line; repaired and re-validated, diff-verified (24 insertions, 1 deletion)"
+ ],
+ "test_evidence": [
+ "New tests/migration-influx-scarcity.test.js: 6 pass (exact meal deduction; famine 0 to positive with netPush rise; headcount-scaled dilution; abundant dest no phantom famine; mouths conserved; replay)",
+ "Neighbors green pre-matrix: settlement-migration-system plus immigration plus lifecycle plus drought-shortage plus pressure-contracts (27 tests)",
+ "Full matrix: 428/428 suites, 3200/3200 tests, EXIT 0 — fully green"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "R14b carried: runtime auto-mirroring of retaliation exhaustion into stance context",
+ "Next: governance reactions to succession risk, or R14b auto-mirroring",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_206_THEN_COMMIT"
  }
  ]
 }
