@@ -394,6 +394,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Setup Tuning R24:** options.settlements overrides population/wealth/resources at setup (clamped, garbage-safe, unknown ids throw); tuned-low trips the chain; 6 new tests; matrix 439/439, 3267 tests.
 - **Node Adapter R25:** reference client driven live over REST+WS against booted FearServer (no source changes; audit turn); 2 new tests; matrix 440/440, 3269 tests, EXIT 0.
 - **CLI Daemons R26:** fear-ai server/dashboard spawn-bind-poll-kill covered (red run caught dashboard port colliding with lifecycle suite; moved to 8793); 2 new tests; matrix 441/441, 3271 tests, EXIT 0.
+- **C# Live R27:** dotnet verifier driven against booted FearServer (argv host/port; execFileSync deadlock found and fixed); matrix 442/442, 3272 tests.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

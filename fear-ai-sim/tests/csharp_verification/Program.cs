@@ -13,7 +13,11 @@ namespace FearAI.Tests
             Console.WriteLine("             REAL C# / .NET SDK VERIFICATION RUNNER                             ");
             Console.WriteLine("================================================================================");
 
-            using var client = new FearAIClient("127.0.0.1", 8765);
+            // R27: host/port from argv so Jest can point the verifier at
+            // a booted ephemeral server; defaults preserve the manual run.
+            var host = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]) ? args[0] : "127.0.0.1";
+            var port = args.Length > 1 && int.TryParse(args[1], out var p) ? p : 8765;
+            using var client = new FearAIClient(host, port);
 
             Console.WriteLine("[+] C# FearAIClient instantiated cleanly.");
 
@@ -21,7 +25,7 @@ namespace FearAI.Tests
             var hsSuccess = await client.HandshakeAsync("dotnet_verifier");
             if (!hsSuccess)
             {
-                Console.WriteLine("[WARN] FearServer not running on port 8765; testing offline serialization path.");
+                Console.WriteLine($"[WARN] FearServer not running on {host}:{port}; testing offline serialization path.");
                 // Test pure C# serialization/deserialization integrity
                 var obs = new AgentObservation
                 {

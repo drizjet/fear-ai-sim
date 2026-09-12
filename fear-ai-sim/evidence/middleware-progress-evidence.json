@@ -10504,6 +10504,28 @@
  "Standing gaps carried: parallel harness flakiness; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_219_THEN_COMMIT"
+ },
+ {
+ "milestone": "CSHARP_LIVE_R27",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "tests/csharp_verification/Program.cs takes argv host/port (defaults preserve the manual 8765 run); Jest boots FearServer on surveyed-free 8794 and drives the real dotnet verifier through handshake, register, and batch tick",
+ "Harness bug found and fixed: execFileSync blocked the in-process server event loop, so dotnet HttpClient calls died at its 100s default timeout (three confusing red runs); async execFile keeps the loop free and the suite runs in ~1s warm. Rule recorded: never synchronously block while asserting on a live in-process server"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/conformance/csharp-live-roundtrip.test.js: live handshake/register/tick asserts plus offline-fallback absence pin, pre-flight health check, dotnet-absent skip",
+ "Neighbors green: runtime-server plus node-adapter-roundtrip (11 tests)",
+ "Full matrix: 442/442 suites, 3272/3272 tests, 0 failures (EXIT line lost when background shell reaped; 442 PASS lines audited)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Unity/Unreal adapters untestable without engines (carried); CLI server/dashboard spawn covered in R26 (closed)",
+ "RAID grievance fuel unscaled (carried from R21); blame one-way (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_221_THEN_COMMIT"
  }
  ]
 }
