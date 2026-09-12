@@ -9507,6 +9507,70 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_17"
+ },
+ {
+ "milestone": "TRAUMA_ZONE_CRYSTALLIZATION_177",
+ "status": "INCONCLUSIVE",
+ "implementation_evidence": [
+ "No production change: measured with live objects that no automatic link exists — getTraumaAt is agent-blind (hot center 1.0 for any agent) and the engine never reads zones, so identical severity-0.8 doses crystallize identically (floor 0.2, N 0.66, R 0.36) regardless of zone heat",
+ "The real joint is compositional and pinned: severity-0.9 resting fear 0.225 with composed dread 1.0 fresh versus 1.225 scarred, spatial cue dread 0.6237 plus flashback and avoidance, PEER_SOLACE defusal versus twin crystallization, zone decay 0.999^100 over 100 ticks with bit-exact snapshot restore",
+ "One self-caught pin error (resilience 0.36 not 0.39) fixed and re-run green; tests by Marceline subagent, orchestrator verified 6/6 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/trauma-zone-crystallization.test.js: 6 pass (agent-blind zones; dose indifference; composed dread; solace gate; malformed safety; decay with snapshot restore)",
+ "Neighbor trauma crystallization suite green (13 pass combined)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Zone-to-engine auto-coupling does not exist; a dose-scaling bridge is a build candidate, not a pin",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_18"
+ },
+ {
+ "milestone": "CRYSTALLIZED_OBSERVABILITY_178",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: crystallized state IS observable through hooks via the RuntimeSimulation tick path (bare engine never emits) — sim_core_traumas_active, sim_core_traumas_crystallized, sim_core_trauma_max_load, sim_core_trauma_mean_load, sim_core_trauma_loaded_agents",
+ "Seed 41 with 160 ticks over 3 agents: crystallized count 2, loaded agents 2, max load 0.4605, mean load 0.2969; fresh sim reports finite zeros; ON-vs-OFF outputs identical",
+ "Tests by Fionna subagent; orchestrator verified 6/6 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/crystallized-observability.test.js: 6 pass (gauge presence; load arithmetic; fresh zeros; optionality metamorphic; per-agent agreement; exact replay)",
+ "Neighbor suites green (17 pass across telemetry, hooks, and crystallization engine)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Bare-engine observability absent by design; hooks see runtime aggregates only, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_19"
+ },
+ {
+ "milestone": "SOCIAL_TRAUMA_ZONE_PROBE_179",
+ "status": "INCONCLUSIVE",
+ "implementation_evidence": [
+ "No production change: SocialEventEngine.applyEvent takes no location parameter, so trauma-zone coordinates cannot reach relationship updates — absence pinned with both systems live",
+ "Zone falloff characterized anyway (0.25 at d=5, strict zero at and beyond d=10) and social vectors pinned (RESCUE trust 0.6, BETRAYAL trust -0.85); malformed coordinates collapse to origin without throwing",
+ "Tests by Cake subagent; orchestrator verified 5/5 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/social-trauma-zone.test.js: 5 pass (absence proof; falloff shape; vector pins; malformed safety; exact replay)",
+ "Neighbor suites green (15 pass across 3 suites)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 20 through 24 carry (next: DeterministicRng audit sweep over social and trauma paths); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Location-aware social events are an unbuilt bridge; candidate for a future build chunk, not a pin",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_20"
  }
  ]
 }
