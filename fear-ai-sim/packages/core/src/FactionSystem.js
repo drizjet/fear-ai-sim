@@ -11,6 +11,7 @@
  * while the host game engine executes unit movement, combat resolution, physics, and world state.
  */
 
+import { RetaliationModel } from './RetaliationModel.js';
 export const ESCALATION_STAGES = Object.freeze({
     UNAWARE: 'UNAWARE',
     OBSERVE: 'OBSERVE',
@@ -62,6 +63,17 @@ export const DEFAULT_FACTION_CONFIG = Object.freeze({
     maxIncidentsPerPair: 20         // Bounded history cap
 });
 
+// R14b: hostile incident -> retaliation provocation kinds. Only physical /
+// diplomatic blows feed the exhaustion ledger; rumors, trade, tribute, and
+// peace gestures do not tire armies.
+const PROVOCATION_BY_INCIDENT = Object.freeze({
+    BORDER_TRESPASS: 'TRESPASS',
+    PROVOCATION: 'PROVOCATION',
+    RAID_CONFIRMED: 'RAID',
+    SKIRMISH_CASUALTY: 'SKIRMISH_DEATHS',
+    TREATY_BROKEN: 'TREATY_BREACH'
+});
+
 function clamp01(v) {
     if (!Number.isFinite(v)) return 0.0;
     return Math.max(0.0, Math.min(1.0, v));
@@ -90,6 +102,10 @@ export class FactionSystem {
         this.factions = new Map();
         // Map<sourceId, Map<targetId, BilateralStance>>
         this.stances = new Map();
+        // R14b: internal retaliation ledger. recordIncident feeds it,
+        // advanceTick ages it, evaluateStance brakes on it — no host
+        // wiring needed. Fresh ledgers read exhaustion 0 (legacy-exact).
+        this.retaliation = new RetaliationModel();
         this.tickCount = 0;
     }
 
@@ -347,6 +363,11 @@ export class FactionSystem {
                 stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance - 0.20);
                 break;
         }
+        // R14b: feed hostile acts into the retaliation ledger (same
+        // direction: actor provokes against victim). Non-hostile types
+        // map to nothing and leave the ledger untouched.
+        const provocationKind = PROVOCATION_BY_INCIDENT[type];
+        if (provocationKind) this.retaliation.provoke(sourceId, targetId, provocationKind);
     }
 
     /**
@@ -358,14 +379,21 @@ export class FactionSystem {
         const griefDecay = 1.0 - Math.pow(2, -deltaTicks / this.config.grievanceHalfLifeTicks);
         const fearDecay = 1.0 - Math.pow(2, -deltaTicks / this.config.fearHalfLifeTicks);
 
+        // R14b: exhaustion accrues only during ATTACK-stage warfare.
+        // SKIRMISH and below cost nothing: verified NEXT-39 behavior
+        // requires chronic raiding to still totalize, so the brake must
+        // culminate offensives, not forbid them. Peacetime recovers.
+        let totalWar = false;
         for (const sourceMap of this.stances.values()) {
             for (const s of sourceMap.values()) {
                 s.grievance = clamp01(s.grievance * (1.0 - griefDecay));
                 s.fear = clamp01(s.fear * (1.0 - fearDecay));
                 s.territorialPressure = clamp01(s.territorialPressure * (1.0 - fearDecay * 0.5));
                 s.economicPressure = clamp01(s.economicPressure * (1.0 - fearDecay * 0.5));
+                if (s.stage === ESCALATION_STAGES.ATTACK) totalWar = true;
             }
         }
+        this.retaliation.advanceTick(deltaTicks, totalWar);
     }
 
     /**
@@ -447,15 +475,18 @@ export class FactionSystem {
             cultureAggression +
             leaderModifier
         );
-        // R14 (audit candidate): war-exhaustion brake. The host supplies
-        // context.warExhaustion in [0,1] (e.g. mirrored from RetaliationModel
-        // accounts, which FactionSystem otherwise never consults). Pressure
-        // scales by (1 - 0.5*exhaustion): zero stays zero (exhaustion invents
-        // no calm), total exhaustion halves pressure (weariness, not
-        // pacifism). Absent/non-finite reproduces legacy pressure exactly,
-        // like the leaderAggression gate above (also not stored on stance).
+        // R14 (audit candidate): war-exhaustion brake. The host may supply
+        // context.warExhaustion in [0,1]; R14b falls back to the internal
+        // retaliation ledger (fed by recordIncident, aged by advanceTick)
+        // when context is absent/non-finite — explicit host values win.
+        // Pressure scales by (1 - 0.5*exhaustion): zero stays zero
+        // (exhaustion invents no calm), total exhaustion halves pressure
+        // (weariness, not pacifism). Fresh ledgers read exhaustion 0,
+        // reproducing legacy pressure exactly (also not stored on stance).
         const rawExh = Number(context.warExhaustion);
-        const warExhaustion = Number.isFinite(rawExh) ? Math.max(0, Math.min(1, rawExh)) : 0;
+        const warExhaustion = Number.isFinite(rawExh)
+            ? Math.max(0, Math.min(1, rawExh))
+            : this.retaliation.recommend(sourceId, targetId).exhaustion;
         const compositePressure = clamp01(rawPressure * (1 - 0.5 * warExhaustion));
         stance.compositePressure = compositePressure;
 
@@ -678,11 +709,21 @@ export class FactionSystem {
                 });
             }
         }
+        // R14b: retaliation ledger accounts are plain data; snapshots
+        // carry them so restore keeps the exhaustion brake continuous.
+        const serializedRetaliation = [];
+        if (this.retaliation) {
+            for (const [key, acc] of this.retaliation.accounts.entries()) {
+                serializedRetaliation.push({ key, grievance: acc.grievance, exhaustion: acc.exhaustion, tick: acc.tick, provocations: acc.provocations });
+            }
+        }
 
         return {
             tickCount: this.tickCount,
             factions: serializedFactions,
-            stances: serializedStances
+            stances: serializedStances,
+            retaliationTick: this.retaliation ? this.retaliation.tick : 0,
+            retaliationAccounts: serializedRetaliation
         };
     }
 
@@ -719,6 +760,24 @@ export class FactionSystem {
                     ...st,
                     incidents: Array.isArray(st.incidents) ? st.incidents.map(i => ({ ...i, details: { ...i.details } })) : []
                 });
+            }
+        }
+
+        // R14b: restore the exhaustion ledger; pre-R14b snapshots carry
+        // no retaliation fields and keep a fresh ledger (garbage-safe).
+        if (this.retaliation) {
+            this.retaliation.accounts.clear();
+            this.retaliation.tick = Number(snapshot.retaliationTick) || 0;
+            if (Array.isArray(snapshot.retaliationAccounts)) {
+                for (const saved of snapshot.retaliationAccounts) {
+                    if (!saved || typeof saved.key !== 'string') continue;
+                    this.retaliation.accounts.set(saved.key, {
+                        grievance: Number.isFinite(Number(saved.grievance)) ? Number(saved.grievance) : 0,
+                        exhaustion: Number.isFinite(Number(saved.exhaustion)) ? Number(saved.exhaustion) : 0,
+                        tick: Number.isFinite(Number(saved.tick)) ? Number(saved.tick) : 0,
+                        provocations: Number.isFinite(Number(saved.provocations)) ? Number(saved.provocations) : 0
+                    });
+                }
             }
         }
     }

@@ -10199,6 +10199,31 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_206_THEN_COMMIT"
+ },
+ {
+ "milestone": "EXHAUSTION_MIRROR_R14B",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FactionSystem owns a RetaliationModel ledger: recordIncident mirrors 5 hostile incident types (BORDER_TRESPASS, PROVOCATION, RAID_CONFIRMED, SKIRMISH_CASUALTY, TREATY_BROKEN) into provoke calls; rumors, trade, tribute, peace gestures leave the ledger untouched",
+ "advanceTick ages the ledger with atWar=true only while a stance sits at ATTACK; MOBILIZE/SKIRMISH accrue nothing (NEXT-39 chronic-raid totalization preserved: brake culminates offensives, never forbids them); peacetime recovers at ledger default rate",
+ "evaluateStance falls back to internal recommend().exhaustion when context.warExhaustion is absent/non-finite; explicit host values still win; fresh ledgers read 0 (legacy-exact)",
+ "getState/setState round-trip retaliationTick plus per-account grievance/exhaustion/tick/provocations with garbage-safe validation; pre-R14b snapshots restore clean onto a fresh ledger",
+ "Host-authority clean: advisory stage/pressure only; deterministic; no host movement, inventory, or entity effects"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/faction-exhaustion-mirror.test.js: 7 pass (legacy-exact fresh ledger; hostile-only ledger feed; ground-war step-down vs explicit-zero control; host override wins; peace recovery to ATTACK; snapshot round-trip plus legacy restore; MOBILIZE/SKIRMISH accrue nothing)",
+ "Neighbors green: escalation-matrix (incl. NEXT-39 raid frontier) plus war-exhaustion plus retaliation plus targeted-retaliation plus stance-machine plus governance plus recovery",
+ "Full matrix: 429/429 suites, 3207/3207 tests, 0 failures (benchmark results artifact churn reverted)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Retaliation accounts of disbanded factions linger until process end (bounded by hostile-pair count; no cap yet)",
+ "Exhaustion brake has no cost channel beyond stage pressure (no economic/morale coupling from long wars yet)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "COMMIT_R14B_THEN_GOVERNANCE_SUCCESSION"
  }
  ]
 }
