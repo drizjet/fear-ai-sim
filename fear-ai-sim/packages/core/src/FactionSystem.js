@@ -120,6 +120,11 @@ export class FactionSystem {
             riskTolerance: clamp01(riskTolerance),
             cohesion: 0.7,
             morale: 0.7,
+            // R11: succession advisory state. splinterRisk is the current
+            // breakaway risk level (0 = none); lastPolicyShift records the
+            // magnitude of the most recent leadership break (0 = continuity).
+            splinterRisk: 0,
+            lastPolicyShift: 0,
             territories: Array.isArray(territories) ? [...new Set(territories.map(String))] : [],
         };
         this.factions.set(faction.id, faction);
@@ -135,9 +140,12 @@ export class FactionSystem {
         return this.factions.get(id) || null;
     }
     /**
-     * Apply a SuccessionEngine.resolve() outcome (NOW-4 wiring).
-     * Cohesion/morale deltas land on the faction record, clamped; the
-     * successor id is recorded as leaderId. Returns the updated record.
+     * Apply a SuccessionEngine.resolve() outcome (NOW-4 wiring, R11 risk
+     * state). Cohesion/morale deltas land on the faction record, clamped;
+     * the successor id is recorded as leaderId; the splinterRisk level and
+     * last policy-shift magnitude land as readable advisory state (finite
+     * numbers only, clamped — garbage leaves prior state). Returns the
+     * updated record, or null for unknown factions.
      */
     applySuccession(result = {}) {
         const faction = result && result.factionId ? this.factions.get(String(result.factionId)) : null;
@@ -150,6 +158,12 @@ export class FactionSystem {
             faction.morale = clamp(faction.morale + Number(result.moraleDelta));
         }
         if (result.successorId) faction.leaderId = String(result.successorId);
+        if (typeof result.splinterRisk === 'number' && Number.isFinite(result.splinterRisk)) {
+            faction.splinterRisk = clamp(result.splinterRisk);
+        }
+        if (typeof result.policyShift === 'number' && Number.isFinite(result.policyShift)) {
+            faction.lastPolicyShift = clamp(result.policyShift);
+        }
         return faction;
     }
 

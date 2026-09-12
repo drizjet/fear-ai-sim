@@ -10128,7 +10128,30 @@
  "Next: succession-to-policy effects probe (R11), or war-exhaustion consumption (R14)",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_203_THEN_COMMIT"
+ "next_action": "R11B_SUCCESSION_STATE_BUILD"
+ },
+ {
+ "milestone": "SUCCESSION_POLICY_STATE_R11B",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Audit answer: cohesion, morale, and leaderId already flowed via applySuccession (NOW-4, pinned in unwired-adjacency); policyShift and splinterRisk were computed but consumed by nothing. They now land as readable faction state: splinterRisk level plus lastPolicyShift magnitude (finite numbers only, clamped; garbage keeps prior state), zeroed at registration",
+ "No direction invented for policyShift (it is a break magnitude, not a heading); hosts and governance read the numbers",
+ "Host-authority clean: advisory record fields only; deterministic"
+ ],
+ "test_evidence": [
+ "New tests/succession-policy-state.test.js: 5 pass (zeroed defaults; all-five landing with 0.8 break pin; interregnum 0.85 risk without leader; unknown plus garbage safety; replay)",
+ "Neighbors green pre-matrix: succession battery (32 combined), faction battery (80)",
+ "Full matrix: 426/426 suites, 3188/3188 tests, EXIT 0 — fully green"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Governance archetypes do not yet consume splinterRisk/policy state in decisions (candidate: council vs autocrat reactions to succession risk)",
+ "Next: war-exhaustion consumption probe (R14)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_204_THEN_COMMIT"
  }
  ]
 }
