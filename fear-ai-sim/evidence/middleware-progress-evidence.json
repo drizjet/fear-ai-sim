@@ -9307,6 +9307,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_8"
+ },
+ {
+ "milestone": "CORRIDOR_MARKET_COUPLING_168",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "EconomicFeedbackSystem.deliverShipments applies a blockade throttle table to scheduled shipments through recordTradeTransaction: absent corridors deliver in full, malformed fractions degrade to full delivery, deterministic in shipment order; the host still owns corridors and hands over the table",
+ "Live blockade through the bridge alone reproduces the NEXT-159 siege endpoints: open city STABLE, held STRANGLEHOLD city CRITICAL with unrest under 0.2",
+ "Mid-build notes: a dead-code unknown-corridor branch was removed in favor of explicit per-delivery allowed records; a summary-rounding assertion needed display-step tolerance; test repairs after range-echo damage, all caught by node --check"
+ ],
+ "test_evidence": [
+ "New tests/corridor-market-coupling.test.js: 5 pass (full delivery on empty table; exact throttle scaling; malformed safety; live blockade starvation; exact replay)",
+ "Economy interaction suites green (14 pass), confirming market behavior preserved",
+ "Full matrix 395/396 suites, 2999 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~90s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 9 through 24 carry (next: per-member fear heterogeneity in courage joints); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "No standing shipment schedules exist; hosts resubmit routes each tick, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_9"
  }
  ]
 }

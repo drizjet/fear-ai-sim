@@ -229,6 +229,44 @@ export class EconomicFeedbackSystem {
 
         return true;
     }
+    /**
+     * NEXT-168 (post-25 candidate 8): automatic corridor-to-market
+     * coupling. Delivers scheduled shipments scaled by a blockade
+     * throttle table (BlockadeEngine.throttleTable()): each shipment
+     * moves ordered x allowed fraction through recordTradeTransaction.
+     * Corridors absent from the table deliver in full and say so in
+     * the record. Deterministic in shipment order. The host still
+     * owns corridors and enforcement policy — this only applies the
+     * table it is handed.
+     * @param {Array} [shipments=[]] { sourceId, destId, commodity, amount, corridorId }
+     * @param {object} [throttleTable={}] corridorId -> allowed fraction [0,1]
+     * @returns {{ deliveries: Array<{ corridorId, ordered, allowed, delivered }> }}
+     */
+    deliverShipments(shipments = [], throttleTable = {}) {
+        const table = (throttleTable && typeof throttleTable === 'object') ? throttleTable : {};
+        const deliveries = [];
+        for (const s of Array.isArray(shipments) ? shipments : []) {
+            const corridorId = s?.corridorId == null ? null : String(s.corridorId);
+            const rawAllowed = corridorId == null ? 1 : table[corridorId];
+            // Absent corridors deliver in full and say so in the record;
+            // malformed fractions degrade to full delivery, never to zero.
+            const allowed = rawAllowed === undefined
+                ? 1
+                : (Number.isFinite(Number(rawAllowed)) ? Math.max(0, Math.min(1, Number(rawAllowed))) : 1);
+            const ordered = Number(s?.amount) || 0;
+            const scaled = ordered * allowed;
+            const moved = scaled > 0
+                ? this.recordTradeTransaction(s?.sourceId, s?.destId, s?.commodity, scaled)
+                : false;
+            deliveries.push({
+                corridorId,
+                ordered: Number(ordered.toFixed(4)),
+                allowed: Number(allowed.toFixed(4)),
+                delivered: moved,
+            });
+        }
+        return { deliveries };
+    }
 
     /**
      * Responds to an ambush incident along a trade corridor by allocating garrison defense to escorts.
