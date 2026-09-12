@@ -9571,6 +9571,69 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_20"
+ },
+ {
+ "milestone": "DETERMINISTIC_RNG_AUDIT_180",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: runtime source scan plus seeded replay proves social and trauma paths clean — propagation uses seeded LCG, social events, trauma zones, crystallization engine, and contagion use zero randomness, runtime wires DeterministicRng as context",
+ "Only three Math.random call sites exist, all off-path advisory record ids (Pareto harness, intervention system, stepper); different seeds diverge mutations and reach as required",
+ "Tests by Breakfast subagent; orchestrator verified 5/5 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/deterministic-rng-audit.test.js: 5 pass (call-site inventory snapshot; seeded replay identity; seed sensitivity; reseed sequences; empty on-path defect list)",
+ "Neighbor determinism suite green (10 pass combined)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Inventory snapshot must be revisited if new randomness is introduced; the test fails on new call sites by design",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_21"
+ },
+ {
+ "milestone": "RUMOR_MEMORY_ARBITRATION_181",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: live RumorMemory through rank extraStores yields memoryLoad 0.5832 and moves the crossover 0.7 to 0.6; correction empties recall, deep decay evicts, disconfirmation weakens below threshold, unrelated topics filter to zero, stale rumors fade the crossover back",
+ "Honest pin: unfiltered unrelated rumor scores 0.4832 on recency plus importance alone, documented as a load-mapping caveat",
+ "Tests by Wildberry subagent; orchestrator verified 6/6 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/rumor-memory-arbitration.test.js: 6 pass (hot shift; correction emptiness; decay eviction; unrelated filtering; staleness fade; malformed safety with replay)",
+ "Memory arbitration neighbor green (13 pass combined)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Load mapping convention (top threat score) stays test-side; no canonical bridge ships, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_22"
+ },
+ {
+ "milestone": "GODOT_RECENT_JOINTS_182",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: Godot adapter exists (JSON protocol plus Binary Wire v2) and all seven recent joints re-verify through it — 15 adapter tests plus 36 conformance and 33 joint-neighbor tests green",
+ "Real protocol gap pinned green: ProtocolValidator allowlist drops all six opt-in fields (trust, trustGain, calmTrustGain, traumaLoad, memoryLoad, identityWeight) while staying valid, and Binary Wire v2 fixed records drop them by design; JSON transport carries them bit-exactly with identical arbitration winners",
+ "One -0 versus 0 strictness fix matching the canonical suite; tests by Marceline subagent, orchestrator verified 15/15"
+ ],
+ "test_evidence": [
+ "New tests/godot-recent-joints.test.js: 15 pass (seven joint re-verifications; validator allowlist gap; binary field gap with exact carried slots; JSON bit-exactness with identical winners; truncation errors; replay)",
+ "Neighbors green (69 pass across 11 suites)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 23 through 24 carry (next: cognitive LOD identity-restoration soak); validator allowlist and binary wire do not forward the six opt-in fields, a protocol-evolution build candidate",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_23"
  }
  ]
 }
