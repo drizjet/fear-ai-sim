@@ -9870,7 +9870,30 @@
  "Next: R3 social-event location wire",
  "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_192_THEN_COMMIT"
+ "next_action": "R3_LOCATION_WIRE_BUILD"
+ },
+ {
+ "milestone": "SOCIAL_LOCATION_DREAD_R3",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "SocialEventEngine.applyEvent reads opt-in options.location {x, y, z?} plus options.traumaZones; danger-flavored events (SHARED_DANGER, RESCUE, WARNING, BETRAYAL, ABANDONMENT, LEADERSHIP_FAILURE) scale by 1 + zoneFear*0.5 on direct and witness weights; calm-positive events unscaled by design; lone or malformed halves keep legacy bit-identical; zoneFear echoed (null unless both halves present)",
+ "Supersedes the 179 absence-pin by construction (recorded, not erased): probe tests 1-5 kept with retitled legacy scope, header rewritten with history note, tests 6-8 pin the built wire",
+ "Two orchestrator edit slips recorded: docblock close eaten (file failed parse, restored) and jest import eaten by header rewrite (restored); both caught before green",
+ "Host-authority clean: reads host location/zones, advises relationship weights only; deterministic (sorted witnesses, no RNG)"
+ ],
+ "test_evidence": [
+ "tests/social-trauma-zone.test.js: 8 pass (5 kept legacy pins; hot equals explicit 1.5x weight; betrayal wounds deeper hot; 4 calm events unscaled; lone/garbage halves legacy with null echo; hot/cold echoes 1/0; witness amplification with exact replay)",
+ "Neighbors green pre-matrix: social-event-engine plus social-trauma-determinism plus agent-social-event-joint (23 combined)",
+ "Full matrix: 414/415 suites, 3133/3141 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Next: R4 Godot stations for the new wires",
+ "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_193_THEN_COMMIT"
  }
  ]
 }

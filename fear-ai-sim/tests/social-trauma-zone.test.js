@@ -3,19 +3,16 @@
  *
  * Post-25 audit candidate 19: SocialEventEngine x TraumaZoneSystem joint.
  *
- * Hypothesis under test: a shared social danger or rescue inside/near a
- * trauma zone interacts with the spatial field (hits harder / relieves
- * more), or the two systems are independent.
- *
- * Measured verdict (live objects, 2026-09-11): INDEPENDENT. The engine
- * signature is applyEvent(tensor, event, actor, target, { weight,
- * witnesses, exposed }) — there is no location parameter, so a hot-zone
- * coordinate cannot reach the relationship update. Every hot-vs-neutral
- * pair below is byte-identical while getTraumaAt() proves the spatial
- * setup is live (1.0 at the epicentre, 0.0 far away). Pinned honestly as
- * INCONCLUSIVE-with-evidence for coupling: absence of effect, measured.
+ * HISTORY: probed INCONCLUSIVE (applyEvent took no location, so hot-zone
+ * coordinates could not reach relationship updates). R3 built the wire:
+ * opt-in options.location {x, y, z?} plus options.traumaZones lets
+ * danger-flavored events (SHARED_DANGER, RESCUE, WARNING, BETRAYAL,
+ * ABANDONMENT, LEADERSHIP_FAILURE) weigh up to 1.5x inside dread-soaked
+ * ground; calm-positive events stay unscaled by design. Tests 1-5 keep
+ * their original absence pins (no location+zones supplied); tests 6-8 pin
+ * the built behavior. Original wording survives in git history and ledger
+ * milestone 179.
  */
-
 import { describe, it, expect } from '@jest/globals';
 import {
     SocialEventEngine,
@@ -41,14 +38,14 @@ function applyFresh(event, options) {
 }
 
 describe('Post-25 candidate 19: SocialEventEngine x TraumaZoneSystem joint', () => {
-    it('1. SHARED_DANGER / RESCUE at hot-zone vs neutral coordinates: identical relationships (no coupling)', () => {
+    it('1. KEPT: without location+zones, hot-vs-neutral context changes nothing (legacy path)', () => {
         const zones = hotField();
         // Spatial setup is live: epicentre reads 1.0, far field reads 0.0.
         expect(zones.getTraumaAt(HOT.x, HOT.y, HOT.z)).toBe(1);
         expect(zones.getTraumaAt(FAR.x, FAR.y, FAR.z)).toBe(0);
 
-        // Same SHARED_DANGER twice; the only difference is where the host
-        // says it happened. The engine takes no location, so both land same.
+        // Same SHARED_DANGER twice with no location supplied: both land the
+        // same (legacy path; R3 needs location AND zones together).
         const hot = applyFresh('SHARED_DANGER', { weight: 1 });
         const neutral = applyFresh('SHARED_DANGER', { weight: 1 });
         expect(hot.direct).toEqual(neutral.direct);
@@ -72,8 +69,8 @@ describe('Post-25 candidate 19: SocialEventEngine x TraumaZoneSystem joint', () 
         expect(rescueHot.direct.affection).toBeCloseTo(0.4, 10);
         expect(rescueHot.direct.obligation).toBeCloseTo(0.5, 10);
 
-        // Passing a location through options is silently ignored — direct
-        // API evidence the joint does not exist at this seam.
+        // A bare location without a zone system is still ignored — the R3
+        // wire needs both halves of the joint.
         const withLoc = applyFresh('SHARED_DANGER', {
             weight: 1,
             location: { x: HOT.x, y: HOT.y },
@@ -153,5 +150,83 @@ describe('Post-25 candidate 19: SocialEventEngine x TraumaZoneSystem joint', () 
         const parsed = JSON.parse(first);
         expect(parsed.interactionCount).toBe(3);
         expect(parsed.grievance).toBeGreaterThan(0);
+    });
+
+    it('6. BUILT (R3): danger events amplify on hot ground, calm events do not', () => {
+        const zones = hotField();
+        const at = (loc) => ({ weight: 1, location: { x: loc.x, y: loc.y, z: loc.z }, traumaZones: zones });
+        // SHARED_DANGER hot vs cold diverges; hot equals an explicit 1.5x
+        // weight run (zoneFear 1.0 -> multiplier 1.5).
+        const hot = applyFresh('SHARED_DANGER', at(HOT));
+        const cold = applyFresh('SHARED_DANGER', at(FAR));
+        expect(hot.direct.trust).toBeGreaterThan(cold.direct.trust);
+        expect(cold.direct.trust).toBeCloseTo(0.15, 10);
+        const heavy = applyFresh('SHARED_DANGER', { weight: 1.5 });
+        expect(hot.direct).toEqual(heavy.direct);
+        // BETRAYAL wounds deeper on hot ground.
+        const betHot = applyFresh('BETRAYAL', at(HOT));
+        const betCold = applyFresh('BETRAYAL', at(FAR));
+        expect(betHot.direct.trust).toBeLessThan(betCold.direct.trust);
+        expect(betHot.direct.grievance).toBeGreaterThan(betCold.direct.grievance);
+        // Calm-positive events stay unscaled by design.
+        for (const event of ['TRADE', 'AID', 'LEADERSHIP_SUCCESS', 'DECEPTION']) {
+            const h = applyFresh(event, at(HOT));
+            const c = applyFresh(event, at(FAR));
+            expect(h.direct).toEqual(c.direct);
+        }
+    });
+
+    it('7. R3 needs both halves: lone location, lone zones, or garbage stay legacy', () => {
+        const zones = hotField();
+        const engine = new SocialEventEngine();
+        const tensor = new RelationshipTensorSystem();
+        const legacy = engine.applyEvent(tensor, 'SHARED_DANGER', 'alice', 'bob', { weight: 1 });
+        expect(legacy.zoneFear).toBe(null);
+        // Location without zones: ignored, echo null.
+        const locOnly = engine.applyEvent(new RelationshipTensorSystem(), 'SHARED_DANGER', 'alice', 'bob',
+            { weight: 1, location: { x: HOT.x, y: HOT.y } });
+        expect(locOnly.zoneFear).toBe(null);
+        // Zones without location: ignored, echo null.
+        const zonesOnly = engine.applyEvent(new RelationshipTensorSystem(), 'SHARED_DANGER', 'alice', 'bob',
+            { weight: 1, traumaZones: zones });
+        expect(zonesOnly.zoneFear).toBe(null);
+        // Garbage halves: no throw, legacy-identical direct vectors.
+        for (const opts of [
+            { weight: 1, location: { x: NaN, y: 0 }, traumaZones: zones },
+            { weight: 1, location: { x: 0, y: 0 }, traumaZones: {} },
+            { weight: 1, location: null, traumaZones: zones },
+        ]) {
+            const t = new RelationshipTensorSystem();
+            const r = engine.applyEvent(t, 'SHARED_DANGER', 'alice', 'bob', opts);
+            expect(r.direct).toEqual(legacy.direct);
+            expect(r.zoneFear).toBe(null);
+        }
+        // Located echo carries the live field reading.
+        const full = engine.applyEvent(new RelationshipTensorSystem(), 'SHARED_DANGER', 'alice', 'bob',
+            { weight: 1, location: { x: HOT.x, y: HOT.y }, traumaZones: zones });
+        expect(full.zoneFear).toBe(1);
+        const far = engine.applyEvent(new RelationshipTensorSystem(), 'SHARED_DANGER', 'alice', 'bob',
+            { weight: 1, location: { x: FAR.x, y: FAR.y }, traumaZones: zones });
+        expect(far.zoneFear).toBe(0);
+    });
+
+    it('8. Witness broadcast amplifies on hot ground; located replay is exact', () => {
+        const zones = hotField();
+        const at = (loc) => ({
+            weight: 1, witnesses: ['carol'],
+            location: { x: loc.x, y: loc.y, z: loc.z }, traumaZones: zones
+        });
+        const run = (loc) => {
+            const tensor = new RelationshipTensorSystem();
+            const engine = new SocialEventEngine();
+            const out = engine.applyEvent(tensor, 'SHARED_DANGER', 'alice', 'bob', at(loc));
+            return { out, rel: tensor.getRelationship('carol', 'alice') };
+        };
+        const hot = run(HOT);
+        const cold = run(FAR);
+        expect(hot.out.witnessUpdates).toHaveLength(1);
+        expect(hot.rel.trust).toBeGreaterThan(cold.rel.trust);
+        const again = run(HOT);
+        expect(JSON.stringify(again)).toBe(JSON.stringify(hot));
     });
 });

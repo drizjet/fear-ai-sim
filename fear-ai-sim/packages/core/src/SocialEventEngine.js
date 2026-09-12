@@ -35,6 +35,13 @@ export const SOCIAL_EVENTS = Object.freeze([
     'TRADE', 'SHARED_DANGER', 'WARNING', 'DECEPTION'
 ]);
 
+// R3: danger-flavored events amplified by location dread. Calm-positive
+// events (TRADE, AID, LEADERSHIP_SUCCESS, DECEPTION) are excluded by design.
+const DANGER_AMPLIFIED_EVENTS = new Set([
+    'SHARED_DANGER', 'RESCUE', 'WARNING',
+    'BETRAYAL', 'ABANDONMENT', 'LEADERSHIP_FAILURE'
+]);
+
 function directPasses(event, exposed = false) {
     if (event === 'DECEPTION' && exposed) return [INTERACTION_TYPES.BETRAYAL];
     switch (event) {
@@ -90,8 +97,9 @@ export class SocialEventEngine {
      * @param {string} event SOCIAL_EVENTS value
      * @param {string} actorId who acted
      * @param {string} targetId who experienced it
-     * @param {object} [options={}] { weight, witnesses: string[], exposed: boolean }
-     * @returns {{ direct: object, witnessUpdates: Array }}
+     * @param {object} [options={}] { weight, witnesses: string[], exposed: boolean,
+     *   location: {x, y, z?}, traumaZones: TraumaZoneSystem-like }
+     * @returns {{ direct: object, witnessUpdates: Array, zoneFear: number|null }}
      */
     applyEvent(tensor, event, actorId, targetId, options = {}) {
         if (!tensor || typeof tensor.recordInteraction !== 'function') throw new Error('INVALID_TENSOR');
@@ -99,9 +107,26 @@ export class SocialEventEngine {
         const actor = String(actorId);
         const target = String(targetId);
         if (!actor || !target || actor === target) throw new Error('INVALID_EVENT_PARTICIPANTS');
-        const weight = clampWeight(options.weight);
+        // R3: opt-in location dread. When the host supplies both a finite
+        // options.location {x, y, z?} and options.traumaZones (a system with
+        // getTraumaAt), danger-flavored events weigh up to 1.5x inside
+        // dread-soaked ground — shared danger, rescue, and warning land
+        // harder where terror lingers. Calm-positive events (TRADE, AID,
+        // LEADERSHIP_SUCCESS, DECEPTION) stay unscaled by design; absent or
+        // malformed location/system keeps the legacy path bit-identical.
+        let zoneFear = 0;
+        const loc = options.location;
+        const zoneSys = options.traumaZones;
+        if (loc && zoneSys && typeof zoneSys.getTraumaAt === 'function'
+            && typeof loc.x === 'number' && Number.isFinite(loc.x)
+            && typeof loc.y === 'number' && Number.isFinite(loc.y)) {
+            const z = zoneSys.getTraumaAt(loc.x, loc.y,
+                typeof loc.z === 'number' && Number.isFinite(loc.z) ? loc.z : 0);
+            zoneFear = (typeof z === 'number' && Number.isFinite(z)) ? clamp01(z) : 0;
+        }
+        const zoneMultiplier = DANGER_AMPLIFIED_EVENTS.has(event) ? 1 + zoneFear * 0.5 : 1;
+        const weight = clampWeight((options.weight ?? 1) * zoneMultiplier);
         const exposed = options.exposed === true;
-
         // 1. Direct pair: tensor passes in fixed order.
         let direct = null;
         for (const type of directPasses(event, exposed)) {
@@ -134,7 +159,12 @@ export class SocialEventEngine {
             if (wRel) witnessUpdates.push({ witness: w, trust: wRel.trust });
         }
         this.eventsApplied += 1;
-        return { direct, witnessUpdates };
+        // R3: location-dread echo; null unless the caller supplied both a
+        // finite location and a zone system (legacy shape kept otherwise).
+        const located = !!(loc && zoneSys && typeof zoneSys.getTraumaAt === 'function'
+            && typeof loc.x === 'number' && Number.isFinite(loc.x)
+            && typeof loc.y === 'number' && Number.isFinite(loc.y));
+        return { direct, witnessUpdates, zoneFear: located ? zoneFear : null };
     }
 
     auditImmutability() {
