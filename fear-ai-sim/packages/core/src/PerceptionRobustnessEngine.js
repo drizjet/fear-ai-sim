@@ -44,6 +44,16 @@ function round4(n) {
     return Number(Number(n).toFixed(4));
 }
 
+// NEXT-186: opt-in per-source reliability. Returns null when the caller
+// supplied no reliability field (legacy path: outputs bit-identical).
+// Present values sanitize to [0, 1]; non-finite garbage collapses to 1
+// (fully trusted) so malformed descriptors can never inflate uncertainty.
+function sanitizeReliability(v) {
+    if (v === undefined) return null;
+    if (typeof v !== 'number' || !Number.isFinite(v)) return 1;
+    return Math.max(0, Math.min(1, v));
+}
+
 export class PerceptionRobustnessEngine {
     constructor(options = {}) {
         this.rng = new DeterministicRng(options.seed ?? 1337);
@@ -180,7 +190,7 @@ export class PerceptionRobustnessEngine {
         const aud = this.degradeChannel(agentId, 'audio', tick, observation.audio?.loudness ?? null);
         const fused = this.fuse(vis.value, aud.value, { vGhost: !!vis.ghost, aGhost: !!aud.ghost });
         if (fused.conflict) m.conflicts += 1;
-        return {
+        const result = {
             agentId,
             tick,
             visual: vis,
@@ -190,6 +200,26 @@ export class PerceptionRobustnessEngine {
             advisoryIntent: fused.intent,
             conflict: fused.conflict
         };
+        // NEXT-186: per-source reliability bridge. Same estimate, lower
+        // confidence: uncertainty rises as contributor reliability falls and
+        // can never fall below the legacy value (LXXXVIII metamorphic).
+        // Threat and intent are untouched; `reliability` is attached only
+        // when the caller supplied at least one field (legacy shape kept).
+        const rv = sanitizeReliability(observation.visual?.reliability);
+        const ra = sanitizeReliability(observation.audio?.reliability);
+        if (rv !== null || ra !== null) {
+            const ev = rv ?? 1;
+            const ea = ra ?? 1;
+            const contributors = [];
+            if (vis.value !== null && vis.value !== undefined) contributors.push(ev);
+            if (aud.value !== null && aud.value !== undefined) contributors.push(ea);
+            const relFused = contributors.length > 0
+                ? contributors.reduce((a, b) => a + b, 0) / contributors.length
+                : 1;
+            result.uncertainty = round4(clamp01(fused.uncertainty + (1 - relFused) * 0.5));
+            result.reliability = { visual: ev, audio: ea, fused: round4(relFused) };
+        }
+        return result;
     }
 
     fuse(visual, audio, flags = {}) {
