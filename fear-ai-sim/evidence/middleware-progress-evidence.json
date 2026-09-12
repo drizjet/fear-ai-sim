@@ -9964,7 +9964,30 @@
  "Next: R7 cohesion-DDA valley end-to-end (or champion-protecting bond rank follow-up from R5)",
  "Standing gaps carried: parallel harness flakiness (dashboard EACCES class now closed); Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_196_THEN_COMMIT"
+ "next_action": "R7_VALLEY_COHESION_BUILD"
+ },
+ {
+ "milestone": "RUNTIME_COHESION_COMPOSITION_R7",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "RuntimeSimulation composes its own subsystems behind options.enablePacingCohesion (default true per file convention, opt-out preserves decoupled runs): mean directed trust across the live social graph mapped to [0,1] feeds the NEXT-189 cohesion wire each tick, but only when at least one finite edge exists; pacingIntensity flows to agents as before",
+ "Default-on adjudicated safe: 105/105 runtime-neighbor tests green with no pin changes, so no existing behavior relied on the decoupled path",
+ "Three orchestrator edit slips recorded: split comment line, eaten avgFear line, and a test-file reconstruction saga (misplaced insert, eaten describe opener and consts) — all caught by parse/test failures and repaired before green",
+ "Host-authority clean: advisory intensity only; deterministic under seed"
+ ],
+ "test_evidence": [
+ "New tests/runtime-pacing-cohesion.test.js: 4 pass (fractured modifier 1.15 / intensity 0.23 vs bonded 1.05 / 0.21 pinned, phase untouched; opt-out equals decoupled baseline; empty graph feeds nothing; exact replay)",
+ "Neighbors green pre-matrix: 11 runtime suites, 105 tests",
+ "Full matrix: 420/420 suites, 3166/3166 tests, EXIT 0 — second fully green matrix"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Next: R8 capability negotiation for the new fields, or champion-protecting bond rank from R5",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_197_THEN_COMMIT"
  }
  ]
 }

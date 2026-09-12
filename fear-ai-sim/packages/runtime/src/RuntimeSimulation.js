@@ -52,6 +52,11 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         this.enableTraumaFeedback = options.enableTraumaFeedback ?? true;
         this.enableContagion = options.enableContagion ?? true;
         this.enablePacing = options.enablePacing ?? true;
+        // R7: pacing-cohesion composition. Mean directed trust across the
+        // live social graph (mapped to [0,1]) feeds the NEXT-189 cohesion
+        // wire each tick, so fractured groups escalate session intensity
+        // while cohesive groups ease it. Opt-out preserves decoupled runs.
+        this.enablePacingCohesion = options.enablePacingCohesion ?? true;
         // Betrayal-path chunk: host-reported semantic social events land on
         // advisory relationship state. Opt-out preserves observe-only runs.
         this.social = new RelationshipTensorSystem(options.socialConfig || {});
@@ -258,13 +263,32 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // 2. Advance Pacing & DDA (if enabled)
         let pacingIntensity = 1.0;
         if (this.enablePacing) {
+            // R7: mean directed trust across the live social graph, mapped
+            // to [0,1], feeds the NEXT-189 cohesion wire. Fed only when at
+            // least one finite edge exists (empty graphs keep legacy); the
+            // wire itself clamps and bounds, and neutral graphs hold steady.
+            let cohesion;
+            if (this.enablePacingCohesion && this.enableSocial && this.social && this.social.relationships) {
+                let sum = 0;
+                let n = 0;
+                for (const targetMap of this.social.relationships.values()) {
+                    if (!targetMap || typeof targetMap.values !== 'function') continue;
+                    for (const rel of targetMap.values()) {
+                        if (rel && typeof rel.trust === 'number' && Number.isFinite(rel.trust)) {
+                            sum += (rel.trust + 1) / 2;
+                            n += 1;
+                        }
+                    }
+                }
+                if (n > 0) cohesion = sum / n;
+            }
             this.pacing.tick(1, {
                 averageFear: avgFear,
-                panickingCount
+                panickingCount,
+                ...(cohesion === undefined ? {} : { cohesion })
             });
             pacingIntensity = this.pacing.getTargetIntensity();
         }
-
         // 3. Advance Trauma Decay (if enabled)
         if (this.enableTrauma) {
             this.trauma.tick(1);
