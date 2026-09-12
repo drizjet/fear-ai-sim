@@ -385,6 +385,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Governance Fracture R15:** deliberateIncident reads succession aftermath (headless autocracy to OBSERVE; fractured ATTACK/SKIRMISH/MOBILIZE step down one rung; councils survive vacancy; legacy-exact absent); 9 new tests; matrix 430/430, 3216 tests.
 - **Valley Displacement R16:** hot settler-bandit war sheds 5% cohorts from Northwatch every 10 ticks to the most food-secure settlement (mouths conserved, R12 arrival meals, floor 5, dead migrations counter wired); 6 new tests; matrix 431/431, 3222 tests, EXIT 0.
 - **Scarcity Unrest R17:** settlements below 0.25 food per mouth stress groups inside radius 40 (+0.05 dread/tick, capped 1; per-capita, deterministic, no new state); 7 new tests; matrix 432/432, 3229 tests, EXIT 0.
+- **Famine Blame R18:** stressed settlements convert to cadence-bound RUMOR_HEARSAY blame toward bandits (+0.10 grievance, no trust/cause/exhaustion effects); 5 new tests; matrix 433/433, 3234 tests, EXIT 0.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

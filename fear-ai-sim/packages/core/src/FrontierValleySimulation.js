@@ -615,6 +615,27 @@ export class FrontierValleySimulation {
         }
         return count;
     }
+    /**
+     * R18: famine blame (CCVIII: faction leaders blame rivals). Stressed
+     * settler settlements convertible to rival blame on cadence: one
+     * RUMOR_HEARSAY incident (small grievance, no trust loss, no casus
+     * belli, no exhaustion feed) from bandits toward settlers. Cadence
+     * bounds the simmer so blame pressures posture without totalizing
+     * on its own. Deterministic, no RNG.
+     * @param {number} stressedSettlements stressed count this tick
+     * @returns {boolean} whether a blame incident was recorded
+     */
+    _blameRivalsForFamine(stressedSettlements) {
+        if (!(stressedSettlements > 0)) return false;
+        if (this.currentTick % 10 !== 0) return false;
+        this.factionSystem.recordIncident(
+            FRONTIER_VALLEY_FACTIONS.BANDITS,
+            FRONTIER_VALLEY_FACTIONS.SETTLERS,
+            INCIDENT_TYPES.RUMOR_HEARSAY,
+            { famineBlame: true, stressedSettlements }
+        );
+        return true;
+    }
 
     /**
      * R16: war displacement. While the settler-bandit bilateral sits at
@@ -959,7 +980,10 @@ export class FrontierValleySimulation {
             this._displaceWarRefugees();
             // R17: scarcity unrest reads post-displacement stocks, so
             // flight-driven dilution bites the same tick it lands.
-            this._applyScarcityUnrest();
+            const stressedSettlements = this._applyScarcityUnrest();
+            // R18: famine blame turns stressed settlements into rival
+            // blame (CCVIII: faction leaders blame rivals).
+            this._blameRivalsForFamine(stressedSettlements);
             // CVII sink: read-only post-tick metrics; fault-isolated.
             if (hooks && typeof hooks.emit === 'function') {
                 try {
