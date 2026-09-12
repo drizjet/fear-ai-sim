@@ -10460,6 +10460,28 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "COMMIT_R24_THEN_FRONTIER_AUDIT"
+ },
+ {
+ "milestone": "NODE_ADAPTER_R25",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No source changes: audit turn. The Node reference client works live over REST and WS against a booted FearServer; the only gap was test-environment fetch (jsdom), shimmed JSON-only in-test with node:http (zero new deps; client unmodified)",
+ "Second audit (FionaAudit2) verdicts: Godot engine paths LIVE-gated, runtime-server/Python/CLI-spawn E2E-tested, C-sharp shallow, Unity/Unreal untested (no engines available: BLOCKED_EXTERNAL_DEPENDENCY retained), node client was the top closable gap"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/conformance/node-adapter-roundtrip.test.js: 2 pass (REST health/register/tick with fear-band assert; WS handshake plus batch tick through the actual client class)",
+ "Neighbors green: runtime-server plus cross-runtime-conformance plus cli (130 tests)",
+ "Full matrix: 440/440 suites, 3269/3269 tests, EXIT 0 (benchmark results artifact churn reverted)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Unity/Unreal adapters untestable without engines (carried); C-sharp live round-trip shallow (carried); CLI server/dashboard spawn untested (open)",
+ "RAID grievance fuel unscaled (carried from R21); blame one-way (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_218_THEN_COMMIT"
  }
  ]
 }
