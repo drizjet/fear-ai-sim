@@ -204,6 +204,12 @@ export class FactionSystem {
         for (const m of this.stances.values()) {
             m.delete(id);
         }
+        // R34: retaliation accounts are bilateral data too. Without this
+        // they linger unboundedly (CXLII) and haunt re-registered ids
+        // with ghost grievance. The closed count is advisory metadata.
+        if (this.retaliation) {
+            this.retaliation.close(id);
+        }
     }
 
     /**

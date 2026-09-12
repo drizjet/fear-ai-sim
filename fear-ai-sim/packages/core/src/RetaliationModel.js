@@ -121,6 +121,25 @@ export class RetaliationModel {
         return acc.grievance;
     }
 
+    /**
+     * R34: close every account involving a disbanded faction. The pair
+     * keys are sorted joins, so membership is an exact part match. A
+     * re-registered id starts clean: incarnations do not inherit ghost
+     * grievance. Returns the number of accounts closed.
+     */
+    close(factionId) {
+        const id = String(factionId ?? '');
+        if (!id) return 0;
+        let closed = 0;
+        for (const key of Array.from(this.accounts.keys())) {
+            if (String(key).split('|').includes(id)) {
+                this.accounts.delete(key);
+                closed++;
+            }
+        }
+        return closed;
+    }
+
     auditImmutability() {
         return {
             isClean: true,

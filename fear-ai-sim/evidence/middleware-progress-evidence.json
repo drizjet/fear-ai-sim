@@ -10675,6 +10675,28 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_229_THEN_COMMIT"
+ },
+ {
+ "milestone": "DISBAND_LEDGER_R34",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "RetaliationModel.close(factionId) drops every account involving the id (exact part match on sorted pair keys); disbandFaction calls it alongside stance cleanup",
+ "No snapshot shape change: closed accounts simply stop serializing; re-registered ids start clean (no ghost grievance or exhaustion brake)",
+ "Host-authority clean: advisory ledger only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/faction-disband-accounts.test.js: 5 pass (full closure; unrelated pairs survive; clean reincarnation; close counts plus garbage-safe; unknown disband safe)",
+ "Neighbors green: faction-count-scaling plus exhaustion-mirror plus escalation-matrix plus save-load plus war-pacing (63 tests)",
+ "Full matrix: 449/449 suites, 3310/3310 tests, 0 failures, EXIT 0"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Blame still one-way (carried from R18); nomad war participation still unreachable (carried from R32)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_230_THEN_COMMIT"
  }
  ]
 }
