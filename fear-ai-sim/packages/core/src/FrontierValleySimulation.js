@@ -135,6 +135,8 @@ export class FrontierValleySimulation {
             perCapitaThreshold: 0.25,
             radius: 40,
             dreadPerTick: 0.05,
+            // R28: hungry towns lose faith per stressed settlement tick.
+            cohesionErosionPerTick: 0.002,
             ...(options.scarcity || {})
         };
         // R21: directive-consumption kill-switch (ablation and legacy
@@ -628,11 +630,30 @@ export class FrontierValleySimulation {
         }
     }
     /**
-     * R17: scarcity unrest. Settlements whose food per mouth falls below
-     * threshold stress groups inside radius (hunger unrest dread on the
-     * existing threatPressure driver, capped at 1). Per-capita, not
-     * absolute: populous stocked towns stay calm while sparse empty ones
-     * fear. Deterministic spatial read, no RNG, no new state.
+     * R28: stressed-settlement read, shared by unrest, blame, and
+     * cohesion erosion so all three see the same hunger in a tick.
+     * @returns {Array} stressed settlement records
+     */
+    _stressedSettlements() {
+        const s = this.scarcity;
+        if (!s) return [];
+        const threshold = Number(s.perCapitaThreshold);
+        if (!Number.isFinite(threshold)) return [];
+        const stressed = [];
+        for (const settlement of this.settlements.values()) {
+            const pop = Math.max(0, Number(settlement.population) || 0);
+            if (pop <= 0) continue;
+            const food = Math.max(0, Number(settlement.resources?.food) || 0);
+            if (food / pop >= threshold) continue;
+            stressed.push(settlement);
+        }
+        return stressed;
+    }
+    /**
+     * R17: scarcity unrest. Stressed settlements stress groups inside
+     * radius (hunger unrest dread on the existing threatPressure
+     * driver, capped at 1). Per-capita, not absolute. Deterministic
+     * spatial read, no RNG, no new state.
      * @returns {number} groups stressed this call
      */
     _applyScarcityUnrest() {
@@ -642,14 +663,7 @@ export class FrontierValleySimulation {
         const radius = Math.max(0, Number(s.radius) || 0);
         const dread = Math.max(0, Number(s.dreadPerTick) || 0);
         if (!Number.isFinite(threshold) || dread <= 0) return 0;
-        const stressed = [];
-        for (const settlement of this.settlements.values()) {
-            const pop = Math.max(0, Number(settlement.population) || 0);
-            if (pop <= 0) continue;
-            const food = Math.max(0, Number(settlement.resources?.food) || 0);
-            if (food / pop >= threshold) continue;
-            stressed.push(settlement);
-        }
+        const stressed = this._stressedSettlements();
         if (stressed.length === 0) return 0;
         let count = 0;
         for (const group of this.worldSystem.groups.values()) {
@@ -738,6 +752,27 @@ export class FrontierValleySimulation {
             INCIDENT_TYPES.RUMOR_HEARSAY,
             { famineBlame: true, stressedSettlements }
         );
+        return true;
+    }
+
+    /**
+     * R28: famine erodes settler cohesion. Each stressed settler town
+     * costs the SettlersAlliance faith per tick (hungry towns blame
+     * their own council too, not just rivals). Floor 0. Succession can
+     * restore cohesion through rally (R19); no passive recovery, so
+     * wars leave scars. Valley towns are settler towns; roaming
+     * factions erode through attrition instead (R19). Deterministic.
+     * @returns {boolean} whether cohesion moved this tick
+     */
+    _erodeSettlerCohesion() {
+        const stressed = this._stressedSettlements();
+        if (stressed.length === 0) return false;
+        const settlers = this.factionSystem.getFaction(FRONTIER_VALLEY_FACTIONS.SETTLERS);
+        if (!settlers) return false;
+        const rate = Math.max(0, Number(this.scarcity?.cohesionErosionPerTick) || 0);
+        if (!(rate > 0)) return false;
+        const current = Number(settlers.cohesion);
+        settlers.cohesion = Math.max(0, (Number.isFinite(current) ? current : 0.7) - rate * stressed.length);
         return true;
     }
 
@@ -1179,6 +1214,8 @@ export class FrontierValleySimulation {
             // R18: famine blame turns stressed settlements into rival
             // blame (CCVIII: faction leaders blame rivals).
             this._blameRivalsForFamine(stressedSettlements);
+            // R28: famine erodes settler faith after blame is laid.
+            this._erodeSettlerCohesion();
             // R19: war attrition reads the same final stages; a long hot
             // episode costs the weaker side its leader (advisory state).
             this._attriteLeadership();

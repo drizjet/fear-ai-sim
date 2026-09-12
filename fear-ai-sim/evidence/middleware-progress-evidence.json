@@ -10526,6 +10526,29 @@
  "Standing gaps carried: parallel harness flakiness; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_221_THEN_COMMIT"
+ },
+ {
+ "milestone": "COHESION_EROSION_R28",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Extracted shared _stressedSettlements read (unrest/blame/erosion see the same hunger); new _erodeSettlerCohesion drains SettlersAlliance faith per stressed town tick (rate 0.002, floor 0, designer-tunable via scarcity params, snapshot-safe); hooked post-blame in advance. Roaming factions erode via attrition instead (documented mapping)",
+ "No passive recovery by design: wars leave scars, succession rally restores (existing R19 path)",
+ "Edit slips recorded: two extraction mis-anchors ate the R17 docblock head and method lines; repaired and diff-verified (deletions are exactly the refactored lines)",
+ "Host-authority clean: advisory faction state only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-cohesion-erosion.test.js: 5 pass (erode-vs-hold control; zero floor without NaN; full-circle fracture with live settler composure 0.5; gradual rate pin; replay)",
+ "Neighbors green: scarcity plus blame plus deliberation plus consumption (25 tests)",
+ "Full matrix: 443/443 suites, 3277/3277 tests, 0 failures"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Nomad cohesion has no erosion path (roamers without towns or attrition); blame still one-way (carried from R18); RAID fuel unscaled (carried from R21); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_222_THEN_COMMIT"
  }
  ]
 }
