@@ -33,6 +33,11 @@ namespace FearAI.Client
         [JsonPropertyName("z")] public float? Z { get; set; }
     }
 
+    public class VisiblePeer
+    {
+        [JsonPropertyName("id")] public string Id { get; set; } = "";
+    }
+
     public class AgentObservation
     {
         [JsonPropertyName("agent_id")] public string AgentId { get; set; } = "";
@@ -42,6 +47,10 @@ namespace FearAI.Client
         [JsonPropertyName("health")] public float Health { get; set; } = 1.0f;
         [JsonPropertyName("energy")] public float Energy { get; set; } = 1.0f;
         [JsonPropertyName("threats")] public List<PerceivedThreat> Threats { get; set; } = new();
+        // R36: opt-in visible peers for peer-aware intents (WARN_GROUP).
+        // Null serializes explicitly; the server ignores non-arrays, so
+        // null behaves exactly like legacy peerless observations.
+        [JsonPropertyName("peers")] public List<VisiblePeer>? Peers { get; set; }
     }
 
     public class ActionIntent
@@ -70,6 +79,20 @@ namespace FearAI.Client
         [JsonPropertyName("vocalization_cue")] public string? VocalizationCue { get; set; }
     }
 
+    public class CapabilityDowngrade
+    {
+        [JsonPropertyName("original_intent")] public string? OriginalIntent { get; set; }
+        [JsonPropertyName("required_capability")] public string? RequiredCapability { get; set; }
+        [JsonPropertyName("reason")] public string? Reason { get; set; }
+    }
+
+    public class AffordanceDowngrade
+    {
+        [JsonPropertyName("original_intent")] public string? OriginalIntent { get; set; }
+        [JsonPropertyName("fallback")] public string? Fallback { get; set; }
+        [JsonPropertyName("reason")] public string? Reason { get; set; }
+    }
+
     public class AgentTickResult
     {
         [JsonPropertyName("agent_id")] public string AgentId { get; set; } = "";
@@ -77,12 +100,28 @@ namespace FearAI.Client
         [JsonPropertyName("affective_state")] public AffectiveState AffectiveState { get; set; } = new();
         [JsonPropertyName("action_intent")] public ActionIntent ActionIntent { get; set; } = new();
         [JsonPropertyName("audio_hints")] public AudioHints AudioHints { get; set; } = new();
+        // R36: present only when the server filtered this output.
+        [JsonPropertyName("capability_downgrade")] public CapabilityDowngrade? CapabilityDowngrade { get; set; }
+        [JsonPropertyName("affordance_downgrade")] public AffordanceDowngrade? AffordanceDowngrade { get; set; }
     }
+
 
     public class BatchTickResponse
     {
         [JsonPropertyName("type")] public string Type { get; set; } = "BATCH_TICK_RESPONSE";
         [JsonPropertyName("tick")] public int Tick { get; set; }
         [JsonPropertyName("results")] public List<AgentTickResult> Results { get; set; } = new();
+    }
+
+    public class OutcomeReceipt
+    {
+        [JsonPropertyName("type")] public string Type { get; set; } = "INTENT_OUTCOME_ACK";
+        [JsonPropertyName("status")] public string Status { get; set; } = "";
+        [JsonPropertyName("agent_id")] public string? AgentId { get; set; }
+        [JsonPropertyName("intent_type")] public string? IntentType { get; set; }
+        [JsonPropertyName("outcome")] public string? Outcome { get; set; }
+        [JsonPropertyName("reason")] public string? Reason { get; set; }
+        [JsonPropertyName("reliability")] public float? Reliability { get; set; }
+        [JsonPropertyName("unavailable")] public bool? Unavailable { get; set; }
     }
 }

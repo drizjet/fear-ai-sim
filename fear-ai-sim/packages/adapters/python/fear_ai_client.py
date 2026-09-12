@@ -74,14 +74,41 @@ class FearAIClient:
         }
         return self._post("/api/v1/unregister", payload)
 
-    def tick(self, observations=None, dt=0.0166):
-        """Advance simulation tick with per-agent sensory observations"""
+    def tick(self, observations=None, dt=0.0166, capabilities=None):
+        """Advance simulation tick with per-agent sensory observations.
+
+        capabilities: optional host capability advertisement (R36). A list
+        (or capability->bool map) such as ["supports_dialogue"]. When
+        omitted, tick output is unfiltered legacy. An explicitly empty
+        list filters every gated intent. Observations may include
+        "peers": [{"id": ...}] for peer-aware intents (WARN_GROUP).
+        """
         payload = {
             "type": "BATCH_TICK_REQUEST",
             "dt": dt,
             "observations": observations or []
         }
+        if capabilities is not None:
+            payload["capabilities"] = capabilities
         return self._post("/api/v1/tick", payload)
+
+    def report_outcome(self, agent_id, intent_type, outcome, reason=None, tick=0):
+        """Report what the host actually did with an advised intent (R36).
+
+        outcome is one of GOAL_COMPLETED, INTENT_REJECTED, EXECUTION_FAILED,
+        ACTION_INTERRUPTED; reason is one of NO_PATH, BLOCKED, UNSUPPORTED,
+        STALE_INTENT, HOST_BUSY, UNKNOWN. Structural failures park the
+        intent for future ticks until a GOAL_COMPLETED clears it.
+        """
+        payload = {
+            "agent_id": agent_id,
+            "intent_type": intent_type,
+            "outcome": outcome,
+            "tick": tick
+        }
+        if reason is not None:
+            payload["reason"] = reason
+        return self._post("/api/v1/outcome", payload)
 
     def add_trauma_zone(self, x, y, z=0, intensity=1.0, radius=150, lifetime_ticks=1800):
         """Mark spatial trauma coordinate where a horrific event occurred"""

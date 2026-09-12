@@ -135,3 +135,32 @@ res = client.tick(observations, dt=0.0166)
 for agent_state in res["results"]:
     print(f"Agent {agent_state['agent_id']} intent: {agent_state['action_intent']['type']}")
 ```
+
+## 6. Capability Advertisement & Outcome Feedback (R36)
+
+Hosts that cannot honor every intent should say so. Read
+`capability_requirements` from the handshake response, then echo your
+subset per tick:
+
+```python
+res = client.tick(observations, capabilities=["supports_dialogue"])
+for agent_state in res["results"]:
+    downgrade = agent_state.get("capability_downgrade")
+    if downgrade:
+        print("downgraded", downgrade["original_intent"], "->",
+              agent_state["action_intent"]["type"], "-", downgrade["reason"])
+```
+
+Report back what actually happened so the server stops sending intents
+your game cannot execute (three structural failures park an intent
+until a completion clears it):
+
+```python
+client.report_outcome("guard_1", "SEEK_COVER", "INTENT_REJECTED", reason="NO_PATH")
+```
+
+Reference clients ship both calls: Python `FearAIClient.tick(..., capabilities=...)` /
+`report_outcome(...)`, Node `tick(observations, dt, capabilities)` /
+`reportOutcome({...})`, C# `BatchTickAsync(..., capabilities)` /
+`ReportOutcomeAsync(...)`. Include visible peers in observations
+(`"peers": [{"id": ...}]`) to unlock peer-aware intents (`WARN_GROUP`).

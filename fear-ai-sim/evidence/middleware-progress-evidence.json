@@ -10798,6 +10798,31 @@
  "Blame one-way (carried from R18); nomad war unreachability (carried from R32)"
  ],
  "next_action": "MATRIX_233_THEN_COMMIT"
+ },
+ {
+ "milestone": "CLIENT_CONTRACTS_R38",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Python client: tick(..., capabilities) plus report_outcome(...), verified live (capped WARN downgrade plus outcome receipt); peers pass through observation dicts untouched",
+ "Node client: tick(..., capabilities) plus reportOutcome({...}) with absent-vs-empty preserved",
+ "C# client: VisiblePeer plus downgrade/receipt DTOs, BatchTickAsync capabilities param, ReportOutcomeAsync; adapter builds 0 errors; extended dotnet verifier exercises outcome plus capped tick plus peers live",
+ "Docs: protocol spec gains handshake contract, tick caps, peers, outcome taxonomy (dated 2026-09-12); integration guide gains section 6 with client call reference",
+ "Host-authority clean: clients send observations and read intents only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "Extended dotnet verifier (R27 suite) passes with outcome plus capped-tick plus peers calls live",
+ "Neighbors green: adapter-conformance plus node-roundtrip plus csharp-live plus handshake-advertisement (11 tests)",
+ "Python client verified via live smoke script (health, handshake, register, capped tick downgrade, outcome receipt); no committed Python runner exists",
+ "Full matrix: 450/450 suites, 3322/3322 tests, 0 failures"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "C# audio field drift (shepard_tone_mix vs protocol) untouched - separate backlog item; Unity and Godot adapters still lack caps/outcome surface",
+ "Blame one-way (carried from R18); nomad war unreachability (carried from R32)"
+ ],
+ "next_action": "MATRIX_234_THEN_COMMIT"
  }
  ]
 }

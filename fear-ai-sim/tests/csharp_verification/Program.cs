@@ -75,6 +75,24 @@ namespace FearAI.Tests
             {
                 var r = results[0];
                 Console.WriteLine($"[PASS] Live Tick Result: Agent={r.AgentId} Band={r.FearBand} Intent={r.ActionIntent.Type} Heartbeat={r.AudioHints.HeartbeatBpm} BPM");
+                // R38: report the advised intent as completed, then tick
+                // with explicitly empty capabilities (every gated intent
+                // filters; the call itself must stay healthy).
+                var receipt = await client.ReportOutcomeAsync(r.AgentId, r.ActionIntent.Type, "GOAL_COMPLETED");
+                Console.WriteLine($"[PASS] Outcome report: {receipt?.Status} unavailable={receipt?.Unavailable}");
+                var capped = await client.BatchTickAsync(new List<AgentObservation>
+                {
+                    new AgentObservation
+                    {
+                        AgentId = "csharp_agent_01",
+                        Threats = new List<PerceivedThreat>
+                        {
+                            new PerceivedThreat { Id = "predator_01", Type = "PREDATOR", Distance = 3.0f, Intensity = 1.0f }
+                        },
+                        Peers = new List<VisiblePeer> { new VisiblePeer { Id = "csharp_agent_02" } }
+                    }
+                }, 0.1f, new List<string>());
+                Console.WriteLine($"[PASS] Capped tick results: {capped.Count}");
             }
 
             Console.WriteLine("================================================================================");

@@ -1,7 +1,7 @@
 ---
 title: Fear AI Canonical Wire Protocol v1.0.0 Specification
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-12
 type: specification
 status: active
 ---
@@ -57,6 +57,12 @@ The Fear AI Wire Protocol is the “any game” layer: Unity, Unreal, Godot, or 
   "engine": "Unity"
 }
 ```
+
+The response advertises the capability contract (R36): `host_capabilities`
+lists every capability string a host may advertise, and
+`capability_requirements` maps intent types to the capability they need.
+Clients echo a subset back per tick as `capabilities` (see
+`BATCH_TICK_REQUEST`). Additive fields: legacy clients ignore them.
 
 #### `REGISTER_AGENT`
 Registers an NPC character with customized Big-Five personality traits:
@@ -114,7 +120,41 @@ Dispatches sensory observations across all active agents and requests updated af
     }
   ]
 }
+
+#### Tick capabilities, peers, and outcome reports (R36)
+
+```json
+{
+  "type": "BATCH_TICK_REQUEST",
+  "dt": 0.0166,
+  "capabilities": ["supports_dialogue"],
+  "observations": [
+    {
+      "agent_id": "civilian_14",
+      "threats": [{ "id": "creature_alpha", "type": "PREDATOR", "distance": 8.5, "intensity": 0.95 }],
+      "peers": [{ "id": "civilian_15" }]
+    }
+  ]
+}
 ```
+
+- `capabilities` (optional): host capability advertisement. Omitted means
+  legacy unfiltered output. An explicitly empty array filters every gated
+  intent (`SEEK_COVER` needs `supports_cover_points`, `WARN_GROUP` needs
+  `supports_dialogue`). Downgraded outputs carry a `capability_downgrade`
+  annotation (`original_intent`, `required_capability`, `reason`) and stay
+  inside runtime intent vocabulary.
+- `peers` (optional): visible peer ids. Enables peer-aware intents
+  (`WARN_GROUP`, `APPROACH_ALLY`). Attach-only: legacy observations
+  without peers behave exactly as before.
+- Outcome reports close the loop: `POST /api/v1/outcome` (or WS
+  `INTENT_OUTCOME_REPORT`) with `agent_id`, `intent_type`, `outcome`
+  (`GOAL_COMPLETED` | `INTENT_REJECTED` | `EXECUTION_FAILED` |
+  `ACTION_INTERRUPTED`) and `reason` (`NO_PATH` | `BLOCKED` |
+  `UNSUPPORTED` | `STALE_INTENT` | `HOST_BUSY` | `UNKNOWN`). Three
+  consecutive structural failures park the intent (replaced by a safe
+  fallback annotated `affordance_downgrade`) until a `GOAL_COMPLETED`
+  clears it.
 
 ---
 

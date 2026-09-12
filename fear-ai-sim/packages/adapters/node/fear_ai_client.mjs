@@ -38,15 +38,35 @@ export class FearAIClient {
         return res.json();
     }
 
-    async tick(observations = [], dt = 0.0166) {
+    async tick(observations = [], dt = 0.0166, capabilities) {
+        const body = {
+            type: 'BATCH_TICK_REQUEST',
+            dt,
+            observations
+        };
+        // R36: optional host capability advertisement. Omitted entirely
+        // when undefined (legacy unfiltered output); an explicitly empty
+        // array filters every gated intent.
+        if (capabilities !== undefined) body.capabilities = capabilities;
         const res = await fetch(`${this.httpBase}/api/v1/tick`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                type: 'BATCH_TICK_REQUEST',
-                dt,
-                observations
-            })
+            body: JSON.stringify(body)
+        });
+        return res.json();
+    }
+
+    /**
+     * R36: report what the host did with an advised intent.
+     * outcome: GOAL_COMPLETED | INTENT_REJECTED | EXECUTION_FAILED |
+     * ACTION_INTERRUPTED. reason: NO_PATH | BLOCKED | UNSUPPORTED |
+     * STALE_INTENT | HOST_BUSY | UNKNOWN.
+     */
+    async reportOutcome({ agentId, intentType, outcome, reason, tick = 0 }) {
+        const res = await fetch(`${this.httpBase}/api/v1/outcome`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ agent_id: agentId, intent_type: intentType, outcome, reason, tick })
         });
         return res.json();
     }

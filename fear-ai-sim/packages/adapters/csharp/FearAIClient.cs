@@ -67,16 +67,21 @@ namespace FearAI.Client
             }
         }
 
-        public async Task<List<AgentTickResult>> BatchTickAsync(List<AgentObservation> observations, float dt = 0.0166f, CancellationToken ct = default)
+        public async Task<List<AgentTickResult>> BatchTickAsync(List<AgentObservation> observations, float dt = 0.0166f, List<string>? capabilities = null, CancellationToken ct = default)
         {
             try
             {
-                var payload = new
+                // R36: capabilities omitted entirely when null (legacy
+                // unfiltered output); an explicitly empty list filters
+                // every gated intent. Anonymous types cannot omit keys,
+                // so build the payload as a dictionary.
+                var payload = new Dictionary<string, object?>
                 {
-                    type = "BATCH_TICK_REQUEST",
-                    dt,
-                    observations
+                    ["type"] = "BATCH_TICK_REQUEST",
+                    ["dt"] = dt,
+                    ["observations"] = observations
                 };
+                if (capabilities is not null) payload["capabilities"] = capabilities;
 
                 var json = JsonSerializer.Serialize(payload);
                 using var content = new StringContent(json, Encoding.UTF8, "application/json");
@@ -99,6 +104,34 @@ namespace FearAI.Client
             catch (Exception)
             {
                 return new List<AgentTickResult>();
+            }
+        }
+
+        /// <summary>R36: report what the host did with an advised intent.
+        /// Returns null on transport failure or rejection.</summary>
+        public async Task<OutcomeReceipt?> ReportOutcomeAsync(string agentId, string intentType, string outcome, string? reason = null, int tick = 0, CancellationToken ct = default)
+        {
+            try
+            {
+                var payload = new Dictionary<string, object?>
+                {
+                    ["agent_id"] = agentId,
+                    ["intent_type"] = intentType,
+                    ["outcome"] = outcome,
+                    ["tick"] = tick
+                };
+                if (reason is not null) payload["reason"] = reason;
+
+                var json = JsonSerializer.Serialize(payload);
+                using var content = new StringContent(json, Encoding.UTF8, "application/json");
+                var response = await _httpClient.PostAsync($"{_baseUrl}/api/v1/outcome", content, ct);
+                if (!response.IsSuccessStatusCode) return null;
+                var respString = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<OutcomeReceipt>(respString);
+            }
+            catch (Exception)
+            {
+                return null;
             }
         }
 
