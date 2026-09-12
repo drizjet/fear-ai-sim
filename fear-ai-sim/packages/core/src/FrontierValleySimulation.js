@@ -106,6 +106,19 @@ export class FrontierValleySimulation {
             fearSum: 0.0,
             fearSamples: 0
         };
+        // R16: war-displacement scenario params (designer-overridable via
+        // options.displacement). While settler-bandit war is hot, the
+        // frontier source sheds a fixed cohort share on cadence to the
+        // most food-secure settlement; arrivals eat the R12 arrival meal.
+        // Cadence keys off currentTick, so snapshots carry no new fields.
+        this.displacement = {
+            source: FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH,
+            everyTicks: 10,
+            rate: 0.05,
+            floor: 5,
+            meal: 0.5,
+            ...(options.displacement || {})
+        };
 
         this._setupFrontierValley(options);
     }
@@ -553,6 +566,49 @@ export class FrontierValleySimulation {
         }
     }
     /**
+     * R16: war displacement. While the settler-bandit bilateral sits at
+     * SKIRMISH/ATTACK, the frontier source sheds a cohort share on
+     * cadence to the most food-secure settlement. Mouths are conserved
+     * (source loss equals destination gain) and arrivals eat the R12
+     * arrival meal from the destination stockpile, so flight dilutes
+     * downstream food security. Deterministic: cadence keys off
+     * currentTick, ties break by fixed settlement order, no RNG.
+     * @returns {boolean} whether a cohort moved
+     */
+    _displaceWarRefugees() {
+        const d = this.displacement;
+        if (!d) return false;
+        const every = Math.max(1, Math.floor(Number(d.everyTicks) || 10));
+        if (this.currentTick % every !== 0) return false;
+        const bilateral = this.factionSystem.getBilateralStance(
+            FRONTIER_VALLEY_FACTIONS.SETTLERS,
+            FRONTIER_VALLEY_FACTIONS.BANDITS
+        );
+        if (!bilateral || (bilateral.stage !== ESCALATION_STAGES.ATTACK && bilateral.stage !== ESCALATION_STAGES.SKIRMISH)) return false;
+        const source = this.settlements.get(d.source);
+        const floor = Math.max(0, Math.floor(Number(d.floor) || 0));
+        if (!source || source.population <= floor) return false;
+        let dest = null;
+        for (const id of [FRONTIER_VALLEY_SETTLEMENTS.NORTHWATCH, FRONTIER_VALLEY_SETTLEMENTS.RIVERBEND, FRONTIER_VALLEY_SETTLEMENTS.OAKHAVEN]) {
+            if (id === source.id) continue;
+            const s = this.settlements.get(id);
+            if (!s) continue;
+            if (!dest || (Number(s.resources?.food) || 0) > (Number(dest.resources?.food) || 0)) dest = s;
+        }
+        if (!dest) return false;
+        const rate = Math.min(1, Math.max(0, Number(d.rate) || 0));
+        const moved = Math.min(Math.max(1, Math.floor(source.population * rate)), source.population - floor);
+        if (moved <= 0) return false;
+        source.population -= moved;
+        dest.population += moved;
+        const meal = moved * (Number(d.meal) || 0);
+        dest.resources.food = Math.max(0, Number(((Number(dest.resources?.food) || 0) - meal).toFixed(3)));
+        // NEXT-62 convention: volume, not event count.
+        this.macroMetrics.migrations += moved;
+        return true;
+    }
+
+    /**
      * Maps live encounters to route danger, group threat pressure, and
      * faction incidents. Extracted (NOW-16) so the mapping is unit-testable
      * with synthetic encounters; advance() calls it once per tick.
@@ -847,6 +903,9 @@ export class FrontierValleySimulation {
             } else {
                 this.macroMetrics.alliancesActive = 0;
             }
+            // R16: war displacement runs after escalation state is final
+            // for the tick, so flight reads the same stages as warsActive.
+            this._displaceWarRefugees();
             // CVII sink: read-only post-tick metrics; fault-isolated.
             if (hooks && typeof hooks.emit === 'function') {
                 try {
