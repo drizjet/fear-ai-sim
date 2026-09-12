@@ -10321,6 +10321,30 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "COMMIT_R18_THEN_GOVERNANCE_VALLEY_WIRING"
+ },
+ {
+ "milestone": "VALLEY_SUCCESSION_R19",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FrontierValleySimulation._attriteLeadership accumulates consecutive SKIRMISH/ATTACK ticks; at 25 the weaker side loses its leader (DEATH_IN_BATTLE): SuccessionEngine resolves deterministic heir-vs-challenger candidates, applySuccession lands cohesion/morale/successor/splinter-risk/policy-shift advisories; one succession per episode, cold ticks reset and re-arm",
+ "Valley owns its SuccessionEngine; attrition episode state plus succession counter round-trip snapshots garbage-safely (pre-R19 snapshots keep fresh state); successions counter lives in macroMetrics",
+ "Host-authority clean: advisory faction state only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-war-succession.test.js: 6 pass (cold gate isolation; sub-threshold silence; exactly-one succession with landed heir state; one-shot plus re-arm; fork fidelity; replay)",
+ "Neighbors green: frontier-valley-simulation plus valley-famine-blame plus succession plus succession-policy-state (104 tests)",
+ "Full matrix: 434/434 suites, 3240/3240 tests, 0 failures (EXIT line lost when background shell reaped; jest summary complete, 434 PASS lines audited)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Succession advisories land but no valley consumer deliberates them yet (R15 fracture awaits its living-world caller)",
+ "Blame flows one way (settlers blame bandits); nomad/wildlife famine attribution not modeled (carried from R18)",
+ "Retaliation accounts of disbanded factions linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "COMMIT_R19_THEN_GOVERNANCE_DELIBERATION_WIRING"
  }
  ]
 }

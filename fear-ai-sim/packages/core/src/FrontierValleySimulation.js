@@ -25,6 +25,7 @@ import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js'
 import { WorldSimulationSystem, ROAMING_PARTY_TYPES, ENCOUNTER_TYPES, RUMOR_TOPICS } from './WorldSimulationSystem.js';
 import { RelationshipTensorSystem } from './RelationshipTensorSystem.js';
 import { TradeDependencyEngine } from './TradeDependencyEngine.js';
+import { SuccessionEngine } from './SuccessionEngine.js';
 
 export const FRONTIER_VALLEY_FACTIONS = Object.freeze({
     SETTLERS: 'SettlersAlliance',
@@ -75,6 +76,12 @@ export class FrontierValleySimulation {
         // trade-dependent victims cool their conflict grievances below.
         this.tradeLedger = [];
         this.dependency = new TradeDependencyEngine();
+        // R19: valley-owned succession engine (stateless resolve) plus
+        // war-attrition episode state. Consecutive hot ticks accumulate;
+        // any cold tick resets and re-arms, bounding one succession per
+        // war episode. Snapshotted explicitly below.
+        this.succession = new SuccessionEngine();
+        this.attrition = { hotTicks: 0, rearmed: true, threshold: 25 };
         // NEXT-95: exoneration ledger. Maps rumorId -> [{ perceiver, subject }]
         // pairs biased by RUMOR_HEARSAY, plus the set of rumorIds already
         // retracted, so a refuted subject rumor unwinds exactly what it
@@ -616,6 +623,58 @@ export class FrontierValleySimulation {
         return count;
     }
     /**
+     * R19: war attrition. Consecutive SKIRMISH/ATTACK ticks on the
+     * settler-bandit bilateral accumulate; any cold tick resets and
+     * re-arms. At threshold, the militarily weaker side loses its
+     * leader (DEATH_IN_BATTLE): SuccessionEngine resolves deterministic
+     * heir-vs-challenger candidates and applySuccession lands cohesion,
+     * morale, successor, splinter-risk, and policy-shift advisories on
+     * the faction record. One succession per hot episode. The host
+     * creates or destroys any entities. Deterministic, no RNG.
+     * @returns {boolean} whether a succession resolved this tick
+     */
+    _attriteLeadership() {
+        const a = this.attrition;
+        if (!a) return false;
+        const bilateral = this.factionSystem.getBilateralStance(
+            FRONTIER_VALLEY_FACTIONS.SETTLERS,
+            FRONTIER_VALLEY_FACTIONS.BANDITS
+        );
+        const hot = !!bilateral && (bilateral.stage === ESCALATION_STAGES.ATTACK || bilateral.stage === ESCALATION_STAGES.SKIRMISH);
+        if (!hot) {
+            a.hotTicks = 0;
+            a.rearmed = true;
+            return false;
+        }
+        a.hotTicks++;
+        const threshold = Math.max(1, Math.floor(Number(a.threshold) || 25));
+        if (!a.rearmed || a.hotTicks < threshold) return false;
+        a.rearmed = false;
+        const settlers = this.factionSystem.getFaction(FRONTIER_VALLEY_FACTIONS.SETTLERS);
+        const bandits = this.factionSystem.getFaction(FRONTIER_VALLEY_FACTIONS.BANDITS);
+        if (!settlers || !bandits) return false;
+        const fallen = (Number(bandits.militaryReadiness) || 0) < (Number(settlers.militaryReadiness) || 0)
+            ? FRONTIER_VALLEY_FACTIONS.BANDITS
+            : FRONTIER_VALLEY_FACTIONS.SETTLERS;
+        const fallenFaction = this.factionSystem.getFaction(fallen);
+        const archetype = fallenFaction && fallenFaction.culture === FACTION_CULTURES.MILITARISTIC
+            ? 'MILITARY_JUNTA'
+            : 'TRIBAL_CONSENSUS';
+        const report = this.succession.resolve({
+            factionId: fallen,
+            cause: 'DEATH_IN_BATTLE',
+            archetype,
+            candidates: [
+                { id: `${fallen}.heir`, legitimacy: 0.8, competence: 0.5, popularity: 0.5, continuity: 0.9 },
+                { id: `${fallen}.challenger`, legitimacy: 0.3, competence: 0.7, popularity: 0.6, continuity: 0.2 }
+            ]
+        });
+        this.factionSystem.applySuccession(report);
+        this.macroMetrics.successions = (Number(this.macroMetrics.successions) || 0) + 1;
+        return true;
+    }
+
+    /**
      * R18: famine blame (CCVIII: faction leaders blame rivals). Stressed
      * settler settlements convertible to rival blame on cadence: one
      * RUMOR_HEARSAY incident (small grievance, no trust loss, no casus
@@ -984,6 +1043,9 @@ export class FrontierValleySimulation {
             // R18: famine blame turns stressed settlements into rival
             // blame (CCVIII: faction leaders blame rivals).
             this._blameRivalsForFamine(stressedSettlements);
+            // R19: war attrition reads the same final stages; a long hot
+            // episode costs the weaker side its leader (advisory state).
+            this._attriteLeadership();
             // CVII sink: read-only post-tick metrics; fault-isolated.
             if (hooks && typeof hooks.emit === 'function') {
                 try {
@@ -1130,7 +1192,11 @@ export class FrontierValleySimulation {
             exoneratedRumors: Array.from(this._exoneratedRumors),
             civSystem: this.civSystem.getState(),
             relationshipSystem: this.relationshipSystem.getState(),
-            worldSystem: this.worldSystem.exportState()
+            worldSystem: this.worldSystem.exportState(),
+            // R19: attrition episode state plus succession count
+            // (resolve is stateless; only the counter persists).
+            attrition: { ...(this.attrition || { hotTicks: 0, rearmed: true, threshold: 25 }) },
+            successionCount: this.succession ? this.succession.successions : 0
         };
     }
 
@@ -1178,6 +1244,18 @@ export class FrontierValleySimulation {
         }
         if (snapshot.worldSystem) {
             this.worldSystem.importState(snapshot.worldSystem);
+        }
+        // R19: restore attrition episode state; pre-R19 snapshots keep
+        // fresh episode state (garbage-safe).
+        if (snapshot.attrition && typeof snapshot.attrition === 'object') {
+            this.attrition = {
+                hotTicks: Math.max(0, Math.floor(Number(snapshot.attrition.hotTicks)) || 0),
+                rearmed: snapshot.attrition.rearmed !== false,
+                threshold: Math.max(1, Math.floor(Number(snapshot.attrition.threshold)) || 25)
+            };
+        }
+        if (this.succession && Number.isFinite(Number(snapshot.successionCount))) {
+            this.succession.successions = Math.max(0, Math.floor(Number(snapshot.successionCount)));
         }
     }
 
