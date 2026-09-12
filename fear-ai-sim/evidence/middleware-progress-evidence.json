@@ -10598,6 +10598,33 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_224_THEN_COMMIT"
+ },
+ {
+ "milestone": "RAID_CONTEST_R31",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FactionSystem RAID_CONFIRMED honors details.severity (default 1 legacy-exact, NaN-safe, clamped): grievance/fear/trust scale, territorial plus economic pressures and casus belli stay factual",
+ "Valley passes bandit strength share through the shared casualtySeverityScale map (NEXT-55 inflicter-share precedent; sweepable via severityParams); strength-share computation hoisted once for raid plus fight-back use",
+ "Pre-existing callers passing severity 0.9 (debt suites) now effective at 0.585, still above their 0.5 pins - verified, not assumed",
+ "Edit slips recorded: two eaten lines (victim deliberation call, exoneration case body) plus one duplicated comment; all repaired and diff-verified",
+ "Host-authority clean: advisory faction state only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-raid-contest.test.js: 5 pass (parity full fuel; overmatch full fuel; escort floor-map exact 0.3575; facts unscaled; fear plus trust scale)",
+ "Neighbors green: raid-contest plus war-pacing plus chain-reaction plus war-succession plus outcomes (48 tests); earlier: pacing plus chain-reaction plus escalation-matrix plus debt suites (72 tests)",
+ "Full matrix: 446/446 suites, 3292/3292 tests, 0 failures"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Live impact small by construction: bandit 0.6 overmatches caravan 0.5 escorts (share above knee), so canonical pacing pins hold unchanged; scaling bites only for strong escorts or weak raiders",
+ "PROVOCATION (extortion) fuel still flat +0.35 - bullying-by-tribute path unscaled, follow-up candidate",
+ "Nomad war participation structurally unreachable (min 84 units vs 40 encounter radius over 5000 ticks, zero incidents both seeds) - recorded, not fixed; needs scenario-design decision",
+ "Blame still one-way (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_226_THEN_COMMIT"
  }
  ]
 }

@@ -317,9 +317,16 @@ export class FactionSystem {
                 // economicPressure (verified by rate sweep: daily raids
                 // peaked at SKIRMISH). Chronic raiding must be able to
                 // totalize; sparse raids still simmer via decay.
-                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.65 * grievanceScale);
-                stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear + 0.40);
-                stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.50);
+                // R31: contest severity scales the affective fuel
+                // (grievance/fear/trust), mirroring SKIRMISH_CASUALTY.
+                // Default 1 reproduces legacy exactly. Territorial and
+                // economic pressures are facts (the raid happened) and
+                // stay unscaled.
+                const rawRaidSev = Number(details.severity);
+                const rsev = Number.isFinite(rawRaidSev) ? clamp01(rawRaidSev) : 1;
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance + 0.65 * rsev * grievanceScale);
+                stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear + 0.40 * rsev);
+                stanceTargetToSource.trust = clamp01(stanceTargetToSource.trust - 0.50 * rsev);
                 stanceTargetToSource.territorialPressure = clamp01(stanceTargetToSource.territorialPressure + 0.35);
                 stanceTargetToSource.economicPressure = clamp01(stanceTargetToSource.economicPressure + 0.25);
                 stanceTargetToSource.casusBelli = 'Lethal border raid on assets';

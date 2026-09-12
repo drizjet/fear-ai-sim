@@ -948,7 +948,24 @@ export class FrontierValleySimulation {
                     // NEXT-16: a victim that depends on the provocateur's
                     // faction cools its grudge (grievance scaled, facts kept).
                     const restraint = this._dependencyRestraint(victim, bandit);
-                    this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null, restraint });
+                    // R31: contest-scaled raid fuel. Strength shares are
+                    // needed for both the raid and the fight-back below,
+                    // so compute once here.
+                    const victimGroup = victim === fA ? gA : gB;
+                    const banditGroup = bandit === fA ? gA : gB;
+                    const vStr = Number(victimGroup?.militaryStrength) || 0;
+                    const bStr = Number(banditGroup?.militaryStrength) || 0;
+                    const totalStr = vStr + bStr;
+                    const victimShare = totalStr > 0 ? vStr / totalStr : 0.5;
+                    // NEXT-56: shared map; sweepable via sim.severityParams.
+                    const sevP = this.severityParams ?? {};
+                    // NEXT-55 precedent: fuel scales with the INFLICTER's
+                    // share. An overmatching raid is a salient atrocity
+                    // (full fuel); a raid broken on strong escorts is a
+                    // footnote (floor). Missing readings split evenly.
+                    const raidSeverity = casualtySeverityScale(
+                        totalStr > 0 ? bStr / totalStr : 0.5, sevP.floor, sevP.knee);
+                    this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null, restraint, severity: raidSeverity });
                     // R20: the victim government deliberates the raid
                     // through live faction state (advisory trail).
                     this._deliberateGovernance(victim, { type: 'RAID_CONFIRMED', severity: 0.7, targetFactionId: bandit });
@@ -960,16 +977,9 @@ export class FrontierValleySimulation {
                     // parity or better mauls (1.0), an unarmed caravan
                     // scuffles (0.25 floor). Per-incident fuel, not the
                     // ladder: the reverse ceiling still holds (less fuel).
-                    const victimGroup = victim === fA ? gA : gB;
-                    const banditGroup = bandit === fA ? gA : gB;
-                    const vStr = Number(victimGroup?.militaryStrength) || 0;
-                    const bStr = Number(banditGroup?.militaryStrength) || 0;
-                    const share = (vStr + bStr) > 0 ? vStr / (vStr + bStr) : 0.5;
-                    // NEXT-56: shared map; sweepable via sim.severityParams.
-                    const sevP = this.severityParams ?? {};
                     // R21: divided victims fight back weakly: casualty fuel
                     // scales by the inflicter's governance composure.
-                    const fightSeverity = casualtySeverityScale(share, sevP.floor, sevP.knee)
+                    const fightSeverity = casualtySeverityScale(victimShare, sevP.floor, sevP.knee)
                         * this._composureScale(victim);
                     const backRestraint = this._dependencyRestraint(bandit, victim);
                     this.factionSystem.recordIncident(victim, bandit, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, restraint: backRestraint, severity: fightSeverity });
