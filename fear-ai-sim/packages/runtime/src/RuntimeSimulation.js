@@ -61,6 +61,8 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // cadences through HostTimeDiscipline. 1 = every runtime tick
         // (legacy). Higher values step those subsystems less often for
         // background populations; dynamics run slower but deterministically.
+        // NEXT-176 (post-25 candidate 16): contagion joins the schedule on
+        // the same terms; off-ticks reuse each agent's last evaluation.
         const cad = (v) => {
             const n = Math.floor(Number(v) || 1);
             return n >= 1 ? n : 1;
@@ -70,9 +72,12 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 affect: 1,
                 social: cad(options.socialCadence),
                 coreTrauma: cad(options.traumaCadence),
+                contagion: cad(options.contagionCadence),
                 faction: 20
             }
         });
+        // NEXT-176: last contagion evaluation per agent for off-tick reuse.
+        this.lastContagion = new Map();
         this.tickCount = 0;
     }
 
@@ -271,10 +276,21 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             const obs = this.pendingObservations.get(agent.id) || {};
             this.pendingObservations.delete(agent.id);
 
-            // Contagion evaluation from surrounding peers
-            const contagionResult = this.enableContagion
-                ? this.contagion.evaluateContagion(agent, peers)
-                : { contagionFear: 0.0, leaderCalm: 0.0 };
+            // Contagion evaluation from surrounding peers. NEXT-176: on
+            // off-cadence ticks each agent reuses its last evaluation
+            // (fresh agents evaluate immediately on cache miss).
+            let contagionResult;
+            if (!this.enableContagion) {
+                contagionResult = { contagionFear: 0.0, leaderCalm: 0.0 };
+            } else if (this.timeDiscipline.dueSubsystems(this.tickCount).includes('contagion')) {
+                contagionResult = this.contagion.evaluateContagion(agent, peers);
+                this.lastContagion.set(agent.id, contagionResult);
+            } else if (this.lastContagion.has(agent.id)) {
+                contagionResult = this.lastContagion.get(agent.id);
+            } else {
+                contagionResult = this.contagion.evaluateContagion(agent, peers);
+                this.lastContagion.set(agent.id, contagionResult);
+            }
 
             // Spatial trauma evaluation at agent coordinates
             const traumaDread = this.enableTrauma

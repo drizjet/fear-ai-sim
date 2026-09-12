@@ -350,6 +350,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Agent Social Event Joint NEXT-173:** live social events move tensor trust into trust-scaled calming and agent affect (betrayal 0.1996 vs allied 0.3447 calming; fear splits around neutral); no production change; post-25 candidate 13 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Why-Not Arbitration NEXT-174:** test-local explainer cites live score arithmetic with recomputed counterfactual flips; no production change; post-25 candidate 14 closed; 5 new tests; full matrix green except known dashboard env failures.
 - **Pacing Relationship Probe NEXT-175:** honest INCONCLUSIVE — pacing reads only average fear so beats score identically across trust worlds; the missing wire becomes a build candidate; post-25 candidate 15 probed; 6 new tests; full matrix green except known dashboard env failures.
+- **Contagion Cadence NEXT-176:** contagion joins the HostTimeDiscipline schedule with per-agent last-result reuse on off ticks (default 1 legacy-exact); slower converging dynamics; post-25 candidate 16 closed; 6 new tests; full matrix green except known dashboard env failures.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

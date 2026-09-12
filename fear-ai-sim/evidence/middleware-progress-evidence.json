@@ -9484,6 +9484,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_16"
+ },
+ {
+ "milestone": "CONTAGION_CADENCE_176",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "RuntimeSimulation gains contagionCadence plumbed into HostTimeDiscipline next to social and trauma cadences, plus a per-agent lastContagion cache: due ticks re-evaluate, off ticks reuse, fresh agents evaluate on cache miss, disabled contagion stays silent",
+ "Default and cadence 1 reproduce legacy focal-fear series exactly; cadence 5 evaluates only on ticks 5 and 10 with slower but converging dynamics",
+ "Mid-build note: a redundant cache-miss branch was simplified before any test ran"
+ ],
+ "test_evidence": [
+ "New tests/contagion-cadence.test.js: 6 pass (legacy exactness; due-tick-only telemetry; close convergence with replay; malformed safety; fresh-agent evaluation; disabled silence)",
+ "Multirate social suite green (11 pass combined), confirming schedule behavior preserved",
+ "Full matrix 403/404 suites, 3044 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~90s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 17 through 24 carry (next: TraumaZone x TraumaCrystallization joint); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Off-tick telemetry goes quiet with the evaluations; consumers reading activeEdges between due ticks see emptiness, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_17"
  }
  ]
 }
