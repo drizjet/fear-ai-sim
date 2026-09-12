@@ -10697,6 +10697,54 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_230_THEN_COMMIT"
+ },
+ {
+ "milestone": "FRONTIER_AUDIT_R35",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "CCI-mandated audit after 5-commit run (R30-R34): four read-only scout audits (playable, behavioral, middleware, evidence) plus direct living-world audit; all findings file-backed",
+ "Front A: Godot 10-station showcase plus 13-check conformance VERIFIED; shipped adapter lacks demo offline appraisal (parity gap); no felt human-input loop; perf headless-only",
+ "Front B: construct gates plus N/R entanglement plus Utility cross-scenario win all on record (honest); inductive cross-scenario invariance unproven; FABE-WORLD scores impoverished worlds exemplary (weakest validity link)",
+ "Front C: war/famine/exhaustion/trade/fault/disband loop closed; remaining: one-way blame, nomad war unreachability, world-model fault boundary by design",
+ "Front D: JSON protocol plus 6 adapters VERIFIED on loopback; capability/feedback/plugin/streaming stacks unwired beside the live path; binary lossy; persistence forked; C# audio drift; dead query surface",
+ "Front E: ledger/linter plus 42-case matrix plus headless budgets real but bounded (depth-5 closure, single-fault-only chaos, zero coverage thresholds); largest gap is host-loaded reliability proof",
+ "Executability gate: no godot binary on PATH in this environment - Godot-executable candidates ranked high but gated"
+ ],
+ "ranked_backlog": [
+ "01 [D] Wire capability negotiation plus feedback into live handshake-register-tick (kills phantom TAKE_COVER class; falsifier: cap-less host still receives unadvertised-cap intent) - SELECTED R36",
+ "02 [B] FABE-WORLD degeneracy recalibration (penalize low type-entropy and zero-war worlds; falsifier: recalibrated EQI still scores 2-type snippet >=0.9)",
+ "03 [E] Variance-gated long-horizon oracles (seeds must vary; frozen worlds rejected; falsifier: multi-seed distribution collapses to 1 macro class)",
+ "04 [A/D] Godot shipped-adapter offline appraisal parity (promote test-mirror evaluate_local; GATED on godot binary; falsifier: severed server still silences shipped agent)",
+ "05 [B] Mode-A inductive cross-scenario invariance at K=60 (source-only residualization; falsifier: Mode-A Top-1 <40pct overlapping Utility null)",
+ "06 [E] Simultaneous multi-fault chaos under load (compose socket abort plus slow consumer plus corrupt snapshot; falsifier: composed run leaks or emits non-defensive intent)",
+ "07 [D] Binary wire identity plus parity (negotiated agent table; context carriage or explicit NACK; falsifier: string-ID round-trip fails)",
+ "08 [D] Persistence reconciliation (server save through migrator-compactor-decompact-load bit-exact; falsifier: live save does not survive)",
+ "09 [A] Human-input Godot station through live server (GATED on godot binary; falsifier: threat strafe moves no band within 2 ticks)",
+ "10 [C] Blame symmetry investigation (design symmetric famine-blame or record INCONCLUSIVE with reason; falsifier: no principled symmetric trigger exists)",
+ "11 [B] Agreeableness re-elicitation (threshold redesign plus low-threat peer scenarios; falsifier: delta-0.10 still fails Bonferroni multi-scenario)",
+ "12 [A] In-engine frame-time proof (GATED; falsifier: 50-agent rendered scene exceeds 16.6ms)",
+ "13 [E] Determinism closure (seed the Math.random fallback; widen import closure; falsifier: seed-omitted runs diverge)",
+ "14 [D] Adapter drift close (C# audio names, Unreal units doc plus handshake, Python/Node caps; falsifier: same-fixture divergence persists)",
+ "15 [C] Nomad war reachability scenario decision (foraging-round contact design or documented scope; falsifier: no world-reasoned contact)",
+ "16 [E] Ledger-honesty hardening (coverage above zero on fear paths; quarantine dashboard-env failures; falsifier: green-from-absence recurs)",
+ "17 [B] N/R entanglement hard-negatives (matched-pair attribution under noise; falsifier: accuracy <=60pct at delta-0.10)",
+ "18 [A] Dashboard-Godot linked replay (station event seeks dashboard tick; falsifier: no corresponding tick row)",
+ "19 [D] Dead query surface implement-or-remove (falsifier: MODULE_HANDSHAKE still errors)",
+ "20 [C] World-model fault-boundary contract tests (prove corruption surfaces loudly; falsifier: world-tick throw is swallowed)",
+ "21 [A] Failure-as-feel showcase drill (GATED; falsifier: kill mid-tour freezes window)",
+ "22 [D] Second unrelated host replication with friction log (falsifier: core edits required)"
+ ],
+ "test_evidence": [
+ "Audit-only milestone: no source or test changes; matrix seal stands at 449/449, 3310/3310 from R34"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Godot-executable verification unavailable in this environment (no binary on PATH); prior conformance records stand but cannot be re-run here",
+ "Blame one-way and nomad war reachability carried as ranked backlog items 10 and 15"
+ ],
+ "next_action": "R36_CAPABILITY_ENFORCEMENT"
  }
  ]
 }
