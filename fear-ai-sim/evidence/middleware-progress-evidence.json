@@ -10625,6 +10625,32 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_226_THEN_COMMIT"
+ },
+ {
+ "milestone": "NOMAD_TRADE_R32",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "WorldSimulationSystem Context 5 now resolves NOMAD_TRIBE x CARAVAN meetings as PEACEFUL_TRADE (caravan-caravan unchanged; all other crossings still share sightings only)",
+ "FrontierValleySimulation records cross-faction TRADE_ESTABLISHED once per pair per 100-tick trading season (bounded tradeSeasons map, intra-faction and wildlife excluded); trust therefore compounds gradually",
+ "Commerce ceiling (red-run fix): trade-grown trust stops at 0.70, below the 0.75 ALLY gate - first matrix showed trade saturating every cell to ALLY (setup-sweep collapse 3->1, alliance-intervention dethroned); ceiling restores setup discrimination (sweep 2 classes, ALLY only via setup above ceiling)",
+ "tradeSeasons snapshotted and restored (forks inherit the season clock; garbage-safe)",
+ "Host-authority clean: advisory faction state only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-nomad-trade.test.js: 7 pass (exact symmetric trust build; same-tick cadence; intra-faction guard; live 1000-tick gradual compounding with 9 establishments vs 319 meetings; replay; fork plus garbage restore)",
+ "Live audit: nomad-caravan peaceful meetings already occurred (319/1000 ticks) but changed nothing; now they build trust (0 to 1 over seasons, not a dozen ticks)",
+ "Neighbors green: encounter-consequences plus roaming-band plus unwired-adjacency plus escalation-matrix plus save-load plus fork-api plus fork-independence plus scenario-params (63 tests)",
+ "Full matrix: 447/447 suites, 3299/3299 tests, 0 failures (matrix227 voided: 4 red runs from trade-trust saturating to ALLY; fixed via commerce ceiling plus two principled pin updates, resealed matrix228)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Nomad war participation still unreachable (min 84 units vs 40 encounter radius; zero combat incidents): trade gives nomads a faction-level role, but cohesion/composure still cannot move for nomads",
+ "Blame still one-way (carried from R18); PROVOCATION extortion fuel still flat (considered and rejected: overmatch implies share ~1, a no-op scaling)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_227_THEN_COMMIT"
  }
  ]
 }

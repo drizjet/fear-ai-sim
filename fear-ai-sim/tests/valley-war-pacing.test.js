@@ -566,6 +566,10 @@ describe('NEXT-65: faction retained-state bounds', () => {
         }
         expect(fs.getBilateralStance('BX', 'AX').incidents.length).toBeLessThanOrEqual(20);
         // Valley composite: incidents, ledger flat across 50k ticks.
+        // R32 raised the flat steady-state level 40 -> 60: seasonal
+        // TRADE_ESTABLISHED incidents accumulate in the bounded per-pair
+        // lists. The invariants under test are unchanged: per-pair cap
+        // holds and every leg is identical (flat).
         const sim = new FrontierValleySimulation({ seed: 11 });
         const legs = [];
         for (let t = 0; t < 50000; t += 10000) {
@@ -576,6 +580,6 @@ describe('NEXT-65: faction retained-state bounds', () => {
             }
             legs.push([n, sim.worldSystem.historyLedger.length]);
         }
-        expect(legs).toEqual([[40, 1000], [40, 1000], [40, 1000], [40, 1000], [40, 1000]]);
+        expect(legs).toEqual([[60, 1000], [60, 1000], [60, 1000], [60, 1000], [60, 1000]]);
     });
 });

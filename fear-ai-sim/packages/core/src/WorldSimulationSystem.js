@@ -756,10 +756,17 @@ export class WorldSimulationSystem {
             urgency = 0.8;
             diagnosticRationale = `Predator pack stalks vulnerable travelers.`;
         }
-        // Context 5: Peaceful commercial convergence
+        // Context 5: Peaceful commercial convergence. Caravan-caravan
+        // meetings trade goods; nomad tribes trade with passing caravans
+        // (forage and craft for grain and iron — the valley's only
+        // cross-faction peaceful contact). All other crossings merely
+        // share sightings.
         else {
             encounterType = ENCOUNTER_TYPES.PEACEFUL_CONVERGENCE;
-            advisoryResolution = (gA.type === ROAMING_PARTY_TYPES.CARAVAN && gB.type === ROAMING_PARTY_TYPES.CARAVAN)
+            const traders = [gA.type, gB.type];
+            const caravanTrade = traders.every((t) => t === ROAMING_PARTY_TYPES.CARAVAN)
+                || (traders.includes(ROAMING_PARTY_TYPES.CARAVAN) && traders.includes(ROAMING_PARTY_TYPES.NOMAD_TRIBE));
+            advisoryResolution = caravanTrade
                 ? ENCOUNTER_RESOLUTIONS.PEACEFUL_TRADE
                 : ENCOUNTER_RESOLUTIONS.MUTUAL_AVOIDANCE;
             urgency = 0.2;

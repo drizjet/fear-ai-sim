@@ -257,13 +257,17 @@ describe('NEXT-43: setup-sweep outcome knobs', () => {
         expect(() => def.applySetupStance({ source: 'GHOST', target: FRONTIER_VALLEY_FACTIONS.NOMADS, patch: {} }))
             .toThrow('UNKNOWN_SETUP_FACTION');
         // Sweep: deterministic, and setup splits what seeds could not.
+        // R32 reshaped the split 3 -> 2: seasonal trade lifts low-setup
+        // cells to TRADE (commerce working as designed), while the 0.9
+        // setup knob still seals ALLY above the commerce ceiling. Setup
+        // overrides still discriminate; trade no longer leaves any cell
+        // at NEGOTIATE over the sweep horizon.
         const full = runSetupSweep();
         expect(setupSweepDigest(runSetupSweep())).toBe(setupSweepDigest(full));
         expect(full.cellCount).toBe(12);
-        expect(full.classCount).toBe(3);
+        expect(full.classCount).toBe(2);
         expect(Object.keys(full.classes).sort()).toEqual([
             'SHADOW/ALLY/UNAWARE|wars=1|ally=1',
-            'SHADOW/NEGOTIATE/UNAWARE|wars=1|ally=0',
             'SHADOW/TRADE/UNAWARE|wars=1|ally=0'
         ]);
     });

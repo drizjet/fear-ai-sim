@@ -325,6 +325,11 @@ export class FrontierValleySimulation {
         if (warlord && !warlord.leaderId) warlord.leaderId = `${FRONTIER_VALLEY_FACTIONS.BANDITS}.warlord`;
         // Bounded advisory trail of deliberated directives (newest last).
         this.governanceTrail = [];
+        // R32: last peaceful-trade tick per faction pair. Trust builds per
+        // trading season, not per sighting: without cadence, constant
+        // caravan contact would max trust in a dozen ticks. Bounded map,
+        // snapshotted below so forks inherit the season clock.
+        this.tradeSeasons = new Map();
 
         // Bilateral relations: Bandits hostile to Settlers; Nomads neutral; Wildlife predatory
         const banditStance = this.factionSystem.getBilateralStance(
@@ -1023,6 +1028,35 @@ export class FrontierValleySimulation {
                     this._deliberateGovernance(victim, { type: 'PROVOCATION', severity: 0.4, targetFactionId: bandit });
                 }
             }
+            // R32: peaceful trade builds trust per trading season (XLV
+            // alliance causes: trade dependency and shared history).
+            // Intra-faction caravans share a ledger already; wildlife
+            // never trades. One TRADE_ESTABLISHED per pair per season
+            // (100 ticks) so constant contact compounds gradually.
+            // Commerce ceiling: trade-grown trust stops at 0.70, below the
+            // 0.75 ALLY gate. Commerce alone makes partners, never allies;
+            // alliance needs non-commercial causes (setup trust, shared
+            // war). Designer setup above the ceiling is never clamped down.
+            else if (enc.advisoryResolution === 'PEACEFUL_TRADE' && fA && fB && fA !== fB) {
+                const pair = [fA, fB].sort().join('~');
+                const last = Number(this.tradeSeasons.get(pair));
+                if (!Number.isFinite(last) || this.currentTick - last >= 100) {
+                    this.tradeSeasons.set(pair, this.currentTick);
+                    if (this.tradeSeasons.size > 50) {
+                        const oldest = this.tradeSeasons.keys().next().value;
+                        this.tradeSeasons.delete(oldest);
+                    }
+                    const viewAB = this.factionSystem.getBilateralStance(fA, fB);
+                    const viewBA = this.factionSystem.getBilateralStance(fB, fA);
+                    const grownAB = viewAB && viewAB.trust <= 0.70;
+                    const grownBA = viewBA && viewBA.trust <= 0.70;
+                    this.factionSystem.recordIncident(fA, fB, INCIDENT_TYPES.TRADE_ESTABLISHED, { encounter: enc.encounterId ?? null });
+                    // Boundary-exact 0.70 stays clamped: only values strictly
+                    // above the ceiling (designer setup) escape it.
+                    if (grownAB && viewAB.trust > 0.70) viewAB.trust = 0.70;
+                    if (grownBA && viewBA.trust > 0.70) viewBA.trust = 0.70;
+                }
+            }
             // NEXT-85: heard (not fought) threats raise ADVISORY route danger
             // at hearsay weight. Combat already logged 0.25 on the pass
             // above, so combat encounters skip this branch. Hearsay danger
@@ -1427,7 +1461,9 @@ export class FrontierValleySimulation {
             })),
             governanceTrail: Array.isArray(this.governanceTrail)
                 ? this.governanceTrail.slice(-100).map((e) => ({ ...e }))
-                : []
+                : [],
+            // R32: trading-season clock so forks inherit cadence.
+            tradeSeasons: Array.from(this.tradeSeasons?.entries?.() ?? [])
         };
     }
 
@@ -1525,6 +1561,19 @@ export class FrontierValleySimulation {
         }
         if (Array.isArray(snapshot.governanceTrail)) {
             this.governanceTrail = snapshot.governanceTrail.slice(-100).map((e) => ({ ...e }));
+        }
+        // R32: restore the trading-season clock; pre-R32 snapshots keep
+        // an empty clock (garbage-safe). Bound the revived map.
+        if (Array.isArray(snapshot.tradeSeasons)) {
+            const seasons = new Map();
+            for (const entry of snapshot.tradeSeasons) {
+                if (!Array.isArray(entry)) continue;
+                const [pair, tick] = entry;
+                if (typeof pair !== 'string' || !Number.isFinite(Number(tick))) continue;
+                seasons.set(pair, Number(tick));
+                if (seasons.size >= 50) break;
+            }
+            this.tradeSeasons = seasons;
         }
     }
 
