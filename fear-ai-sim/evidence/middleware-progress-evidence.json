@@ -9893,7 +9893,31 @@
  "Next: R4 Godot stations for the new wires",
  "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_193_THEN_COMMIT"
+ "next_action": "R4_GODOT_WIRES_BUILD"
+ },
+ {
+ "milestone": "GODOT_PROTOCOL_WIRES_R4",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Integration finding: the Godot adapter forwarded only position/threat/health/energy, the validator dropped visual/audio entirely, and RuntimeSimulation never feeds the perception engine — the 186/187/188 wires had no host path. Opened it: fear_agent.gd emits opt-in visual/audio channels (absent-by-default exports keep legacy observations byte-identical); validator sanitizes and forwards visual/audio with engine-mirroring coercion and opt-in social-event location (zones stay server-side)",
+ "One orchestrator edit slip recorded: docblock close eaten (parse failure, restored); return-block reconstruction verified addition-only via diff",
+ "Host-authority clean: adapter only observes and recommends via get_movement_hint; deterministic"
+ ],
+ "test_evidence": [
+ "New tests/godot-perception-wires.test.js: 6 pass (.gd surface pins; Godot-shaped obs drives 0.4 vs 0.15 end to end; validator-direct parity battery; legacy shape; binary-v2 drop kept; garbage safety)",
+ "New tests/protocol-social-location.test.js: 5 pass (validated location lands on R3 wire; legacy without finite x/y; location-without-zones legacy; z default; rejection intact)",
+ "Neighbors green pre-matrix: protocol-context-forwarding plus godot-recent-joints (32 combined)",
+ "Full matrix: 416/417 suites, 3144/3152 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "RuntimeSimulation does not yet auto-feed validated visual/audio into a perception engine nor attach a server-side zone system to social reports (R4b follow-up); pacing cohesion and zone dread have no Godot station observatory yet",
+ "Next: R5 LOD bond-cap scale probe",
+ "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_194_THEN_COMMIT"
  }
  ]
 }

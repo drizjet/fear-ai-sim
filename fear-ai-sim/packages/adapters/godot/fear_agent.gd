@@ -17,6 +17,16 @@ signal audio_hints_received(hints: Dictionary)
 @export_range(0.0, 1.0) var fear_baseline: float = 0.5
 @export_range(0.0, 1.0) var resilience: float = 0.5
 
+@export_group("Sensor Quality (opt-in, R4)")
+## Visual channel intensity. Negative = channel absent (legacy shape).
+@export var visual_intensity: float = -1.0
+## Audio channel loudness. Negative = channel absent (legacy shape).
+@export var audio_loudness: float = -1.0
+## Per-source reliability in [0,1]. Negative = absent (fully trusted).
+@export_range(-1.0, 1.0) var sensor_reliability: float = -1.0
+## Observation age in ticks. Negative = absent (fresh).
+@export var observation_age_ticks: int = -1
+
 var current_fear_band: String = "CALM"
 var current_intent: String = "IDLE_VIGILANT"
 var current_urgency: float = 0.0
@@ -53,6 +63,23 @@ func _physics_process(_delta: float) -> void:
 		"z": pos.z,
 		"threats": _scan_threats()
 	}
+	# R4: opt-in perception channels. Absent by default so legacy hosts
+	# emit byte-identical observations; configured sensors ride through
+	# the JSON protocol to the validator's visual/audio sanitizers.
+	if visual_intensity >= 0.0:
+		var visual = { "intensity": visual_intensity }
+		if sensor_reliability >= 0.0:
+			visual["reliability"] = sensor_reliability
+		if observation_age_ticks >= 0:
+			visual["ageTicks"] = observation_age_ticks
+		obs["visual"] = visual
+	if audio_loudness >= 0.0:
+		var audio = { "loudness": audio_loudness }
+		if sensor_reliability >= 0.0:
+			audio["reliability"] = sensor_reliability
+		if observation_age_ticks >= 0:
+			audio["ageTicks"] = observation_age_ticks
+		obs["audio"] = audio
 	_client.queue_observation(obs)
 
 func _scan_threats() -> Array[Dictionary]:

@@ -18,6 +18,30 @@ const clamp01Finite = (v, fallback) => {
     return Math.max(0, Math.min(1.0, v));
 };
 
+// R4: opt-in perception channel sanitizer. Mirrors
+// PerceptionRobustnessEngine coercion exactly so validated observations
+// behave identically to direct engine calls: intensity/loudness Number()
+// -coerces with garbage collapsing to 0; reliability collapses to 1
+// (trusted); ageTicks collapses to 0 (fresh). Returns null unless the
+// channel object carries at least one of its keys (legacy shape kept).
+function sanitizePerceptionChannel(rawChannel, levelKey) {
+    if (!rawChannel || typeof rawChannel !== 'object' || Array.isArray(rawChannel)) return null;
+    const out = {};
+    if (levelKey in rawChannel) {
+        const n = Number(rawChannel[levelKey]);
+        out[levelKey] = Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0;
+    }
+    if ('reliability' in rawChannel) {
+        const r = rawChannel.reliability;
+        out.reliability = (typeof r === 'number' && Number.isFinite(r)) ? Math.max(0, Math.min(1, r)) : 1;
+    }
+    if ('ageTicks' in rawChannel) {
+        const a = rawChannel.ageTicks;
+        out.ageTicks = (typeof a === 'number' && Number.isFinite(a)) ? Math.max(0, a) : 0;
+    }
+    return Object.keys(out).length > 0 ? out : null;
+}
+
 export class ProtocolValidator {
     /**
      * Validate incoming raw message structure
@@ -183,19 +207,31 @@ export class ProtocolValidator {
         const witnesses = Array.isArray(raw.witnesses)
             ? [...new Set(raw.witnesses.map(String))].filter((w) => w.trim().length > 0).slice(0, 32)
             : [];
-        return {
-            valid: true,
-            value: {
-                type: MESSAGE_TYPES.SOCIAL_EVENT,
-                event: raw.event,
-                actor_id: String(raw.actor_id).trim().slice(0, 256),
-                target_id: String(raw.target_id).trim().slice(0, 256),
-                weight: typeof raw.weight === 'number' && Number.isFinite(raw.weight) ? raw.weight : 1.0,
-                witnesses,
-                exposed: raw.exposed === true,
-                severity: typeof raw.severity === 'number' && Number.isFinite(raw.severity) ? raw.severity : null
-            }
+        // R4: opt-in location for the R3 location-dread wire. Finite x/y
+        // required; finite z rides along, otherwise 0. Attached only when
+        // present (legacy shape kept). Zone systems stay server-side.
+        let location = null;
+        if (raw.location && typeof raw.location === 'object' && !Array.isArray(raw.location)
+            && typeof raw.location.x === 'number' && Number.isFinite(raw.location.x)
+            && typeof raw.location.y === 'number' && Number.isFinite(raw.location.y)) {
+            location = {
+                x: raw.location.x,
+                y: raw.location.y,
+                z: typeof raw.location.z === 'number' && Number.isFinite(raw.location.z) ? raw.location.z : 0
+            };
+        }
+        const value = {
+            type: MESSAGE_TYPES.SOCIAL_EVENT,
+            event: raw.event,
+            actor_id: String(raw.actor_id).trim().slice(0, 256),
+            target_id: String(raw.target_id).trim().slice(0, 256),
+            weight: typeof raw.weight === 'number' && Number.isFinite(raw.weight) ? raw.weight : 1.0,
+            witnesses,
+            exposed: raw.exposed === true,
+            severity: typeof raw.severity === 'number' && Number.isFinite(raw.severity) ? raw.severity : null
         };
+        if (location !== null) value.location = location;
+        return { valid: true, value };
     }
 
     static validateObservation(raw) {
@@ -235,6 +271,13 @@ export class ProtocolValidator {
         if (context !== null) {
             value.context = context;
         }
+        // R4: opt-in perception channels for the NEXT-186/187 engine wires.
+        // Same attach-only-when-present rule as context above (JSON path;
+        // binary v2 fixed slots cannot carry these).
+        const visual = sanitizePerceptionChannel(raw.visual, 'intensity');
+        if (visual !== null) value.visual = visual;
+        const audio = sanitizePerceptionChannel(raw.audio, 'loudness');
+        if (audio !== null) value.audio = audio;
         return { valid: true, value };
     }
 
