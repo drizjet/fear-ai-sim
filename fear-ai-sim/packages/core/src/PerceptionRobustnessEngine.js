@@ -173,6 +173,26 @@ export class PerceptionRobustnessEngine {
             return { value: null, stale: true, dropped: true };
         }
 
+        // NEXT-188: opt-in temporal smoothing. When smoothingWindow >= 2,
+        // raw is replaced by the mean of the last W buffered raw values
+        // (nulls excluded; warm-up averages whatever exists). Applied after
+        // latency/dropout resolution and before occlusion/noise, so it
+        // smooths observations, not noise. Window 0/absent/garbage keeps
+        // the legacy single-sample path bit-identical. Pure arithmetic over
+        // buffer order: deterministic, RNG untouched.
+        let window = profile.smoothingWindow;
+        window = (typeof window === 'number' && Number.isFinite(window))
+            ? Math.min(16, Math.max(0, Math.floor(window)))
+            : 0;
+        if (window >= 2 && raw !== null && raw !== undefined) {
+            const arr = (this.buffers.get(agentId) || {})[channel] || [];
+            const recent = arr.slice(-window)
+                .map((e) => e.value)
+                .filter((v) => v !== null && v !== undefined)
+                .map((v) => Number(v))
+                .filter((v) => Number.isFinite(v));
+            raw = recent.length > 0 ? recent.reduce((a, b) => a + b, 0) / recent.length : null;
+        }
         let val = raw === null || raw === undefined ? null : Number(raw);
         if (val !== null && channel === 'visual' && profile.occlusion > 0) {
             val = val * (1 - clamp01(profile.occlusion));

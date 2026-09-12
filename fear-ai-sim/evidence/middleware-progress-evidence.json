@@ -9741,7 +9741,29 @@
  "Pacing-by-relationship wire (175) and the four auto-coupling gaps are now the top build candidates; perception V2 (LXXXVI) complete except cross-modal temporal smoothing",
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
- "next_action": "MATRIX_188_THEN_COMMIT"
+ "next_action": "NEXT_188_BUILD"
+ },
+ {
+ "milestone": "PERCEPTION_TEMPORAL_SMOOTHING_188",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "PerceptionRobustnessEngine profile gains opt-in smoothingWindow (default 0/absent/garbage keeps the legacy single-sample path bit-identical; floored, clamped to 16): raw is replaced by the mean of the last W buffered raw values (nulls excluded, warm-up averages available) after latency/dropout resolution and before occlusion/noise; deterministic pure arithmetic, RNG untouched",
+ "One orchestrator edit error caught by inspection (dropped let-val line) and restored before any test ran; one wrong warm-up expectation (0.4 vs 0.4667) fixed before first run",
+ "Host-authority clean: advisory numbers only; composes with NEXT-186/187 uncertainty terms"
+ ],
+ "test_evidence": [
+ "New tests/perception-temporal-smoothing.test.js: 6 pass (legacy-exact across 0/1/garbage/negative; window-3 oscillation 0.8/0.4/0.5333/0.2667/0.5333; spike attenuation with peak below unsmoothed; null exclusion; smoothing-plus-reliability-plus-age saturation clamp at 1 with exact replay; 16-cap with warm-up)",
+ "Neighbors green pre-matrix: source-reliability plus robustness (23 combined), interaction-mutations plus interaction-coverage (17)",
+ "Full matrix: 412/413 suites, 3115/3123 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Perception V2 (LXXXVI) now complete: multiple observations, source reliability, stale age, contradictions, temporal smoothing all live; pacing-by-relationship wire (175) and the four auto-coupling gaps are the top build candidates",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "MATRIX_189_THEN_COMMIT"
  }
  ]
 }
