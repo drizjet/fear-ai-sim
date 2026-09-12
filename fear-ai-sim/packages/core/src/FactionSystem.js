@@ -447,7 +447,16 @@ export class FactionSystem {
             cultureAggression +
             leaderModifier
         );
-        const compositePressure = clamp01(rawPressure);
+        // R14 (audit candidate): war-exhaustion brake. The host supplies
+        // context.warExhaustion in [0,1] (e.g. mirrored from RetaliationModel
+        // accounts, which FactionSystem otherwise never consults). Pressure
+        // scales by (1 - 0.5*exhaustion): zero stays zero (exhaustion invents
+        // no calm), total exhaustion halves pressure (weariness, not
+        // pacifism). Absent/non-finite reproduces legacy pressure exactly,
+        // like the leaderAggression gate above (also not stored on stance).
+        const rawExh = Number(context.warExhaustion);
+        const warExhaustion = Number.isFinite(rawExh) ? Math.max(0, Math.min(1, rawExh)) : 0;
+        const compositePressure = clamp01(rawPressure * (1 - 0.5 * warExhaustion));
         stance.compositePressure = compositePressure;
 
         // Capability Gates
@@ -455,7 +464,6 @@ export class FactionSystem {
         const hasMilitaryForAttack = sourceFaction.militaryReadiness >= this.config.minMilitaryForAttack;
         const hasEconomicStockpile = sourceFaction.economicStockpile >= this.config.minResourceStockpile;
         const isMilitarilyCapable = hasMilitaryForAttack && hasEconomicStockpile;
-
         // Uncertainty Gate
         const isSufficientlyInformed = stance.informationConfidence >= this.config.minInfoConfidence;
 

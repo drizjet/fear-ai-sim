@@ -10151,7 +10151,31 @@
  "Next: war-exhaustion consumption probe (R14)",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_204_THEN_COMMIT"
+ "next_action": "R14_EXHAUSTION_BRAKE_BUILD"
+ },
+ {
+ "milestone": "WAR_EXHAUSTION_BRAKE_R14",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FactionSystem.evaluateStance reads opt-in context.warExhaustion in [0,1] (default 0 legacy-exact) and scales composite pressure by (1 - 0.5*exhaustion): zero stays zero, total exhaustion halves pressure; not stored on stance, mirroring the leaderAggression gate",
+ "Connects the two exhaustion systems the audit found isolated: hosts mirror RetaliationModel account values into escalation context; retaliation keeps its own CEASEFIRE brake",
+ "Edit slips recorded: comment block mis-anchored twice (eaten opener lines restored, diff-verified to a single-line delta); test field named stage instead of toStage; float-boundary MOBILIZE expectation corrected to THREATEN",
+ "Host-authority clean: advisory stage only; deterministic"
+ ],
+ "test_evidence": [
+ "New tests/faction-war-exhaustion.test.js: 6 pass (ATTACK to THREATEN step-down; monotonic ranks; legacy-exact garbage; calm stays calm; joint CEASEFIRE plus stand-down; replay)",
+ "Neighbors green pre-matrix: escalation-matrix plus retaliation plus targeted-retaliation",
+ "Full matrix: 427/427 suites, 3194/3194 tests, EXIT 0 — fully green"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "RuntimeSimulation does not yet auto-mirror retaliation exhaustion into stance context (hosts wire it manually); candidate R14b",
+ "Next: migration-to-settlement pressure loop (R12) or governance reactions to succession risk",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_205_THEN_COMMIT"
  }
  ]
 }

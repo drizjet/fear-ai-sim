@@ -379,6 +379,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Harness Memory Bounds R11:** maxWorkers 50% plus 1 GiB worker recycling ends the OOM flake class (R8 autopsy closed); 1 pin test; matrix 424/424, EXIT 0.
 - **False Rumor Cascade R13:** probe-only — fabricated ambush rumor with no encounter flips route avoidance at identical magnitude to truth; correction marks CORRECTED plus 0.7x liar credibility but retracts no dread; 4 new tests; matrix 425/425, EXIT 0.
 - **Succession Policy State R11b:** applySuccession now lands splinterRisk plus lastPolicyShift as readable faction state (zeroed at registration; garbage keeps prior); cohesion/morale/leader path unchanged; 5 new tests; matrix 426/426, EXIT 0.
+- **War Exhaustion Brake R14:** evaluateStance context.warExhaustion scales pressure by (1-0.5x) (ATTACK to THREATEN at full exhaustion; monotonic; legacy-exact absent); joint CEASEFIRE plus stand-down pinned with RetaliationModel; 6 new tests; matrix 427/427, EXIT 0.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
