@@ -9786,7 +9786,68 @@
  "Known auto-coupling gaps still open include trauma-zone engine blindness (177) and social-trauma-zone location blindness (179); a fresh frontier-regeneration audit is now due after five post-25 builds",
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
- "next_action": "MATRIX_190_THEN_COMMIT"
+ "next_action": "FRONTIER_AUDIT_190"
+ },
+ {
+ "milestone": "FRONTIER_REGENERATION_AUDIT_190",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "CCI-due audit after five post-25 builds: surveyed 94 core modules and 413 suites; live-grepped six suspected gaps, three already closed (GoalArbitration ally-bond NEXT-138, TraumaCrystallization read by AffectiveAgent, AnticipatoryFearEngine rumor/belief inputs, RetaliationModel proportionality plus exhaustion), four confirmed open, rest ranked as probe-first candidates",
+ "No production change; audit only"
+ ],
+ "test_evidence": [
+ "No new tests; verification by live code reads recorded per candidate below"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "R1 (Front E, build): explainer fidelity for the four new wires — WhyNotExplainer plus DiagnosticExplainabilityInspector never mention reliability, ageTicks, smoothingWindow, or cohesion; CLXXXI requires explanations to derive from computations; falsifier: explanation omits the dominant uncertainty term",
+ "R2 (Fronts B/C, build): trauma-zone engine coupling (177) — TraumaZoneSystem read only by ComparativeBaselines, never by appraisal; falsifier: agent inside a severe zone appraises identically to outside",
+ "R3 (Fronts B/C, build): social-event location wire (179) — SocialEventEngine has no location field so zones cannot reach relationship updates; falsifier: co-located vs distant dyads update identically",
+ "R4 (Front A, build): Godot stations for the four new wires — reliability, age, smoothing, cohesion have no showcase observatory; falsifier: designer cannot see the wire move in-engine",
+ "R5 (Front E, probe): LOD bond-cap scale — vault keeps top 12 of 20 edges, hundred-agent pressure untested; falsifier: restoration diverges or drops critical bonds at scale",
+ "R6 (Front E, fix): dashboard EACCES port-0 fallback defect — sole matrix failure five runs running; falsifier: clean matrix after fix",
+ "R7 (Fronts C/E, probe): cohesion-DDA valley end-to-end — wire proven in joint isolation only, never through FrontierValleySimulation; falsifier: valley intensity identical across cohesion extremes",
+ "R8 (Front D, build): capability negotiation for new fields (CXXVIII) — no advertisement of reliability/age/smoothing/cohesion support; falsifier: host cannot discover what the runtime honors",
+ "R9 (Front B, probe): intent stability under cohesion-DDA movement (XCIX/C) — modifier now drifts with cohesion; falsifier: oscillation count rises vs frozen-modifier baseline",
+ "R10 (Fronts B/E, probe): smoothing times multi-rate interaction — buffer means vs HostTimeDiscipline off-tick reuse untested together; falsifier: cadenced smoothing diverges from same-tick smoothing",
+ "R11 (Front C, probe): succession to policy effects (XXXVII) — SuccessionEngine read by FactionSystem, unverified whether policy/cohesion actually change; falsifier: post-succession decisions identical",
+ "R12 (Front C, probe): migration to settlement pressure loop (LIX/LX) — SettlementMigrationSystem exists, closed-loop scarcity unverified; falsifier: influx never moves scarcity indices",
+ "R13 (Front C, probe): misinformation to trade-reroute chain (XXII/LXIII) end-to-end — rumor seeds exist in EncounterConsequenceEngine, valley chain unmeasured; falsifier: false army rumor never reroutes a caravan",
+ "R14 (Front C, probe): war-exhaustion consumption — RetaliationModel tracks exhaustion, unverified FactionSystem consumes it toward peace; falsifier: exhausted factions escalate identically",
+ "R15 (Front B, probe): trauma-memory appraisal depth — AffectiveAgent reads crystallization, unverified appraisal actually shifts; falsifier: crystallized vs naive agents appraise identically",
+ "R16 (Front B, probe): 100k-tick identity horizon (XIV) — LongHorizonCharacterLife exists, longest pinned horizon below 100k; falsifier: persona collapse past current max",
+ "R17 (Fronts A/D, blocked-user): true external host (CXVI) — needs project designation per workspace policy; ask which project, then measure friction metrics",
+ "R18 (Front D, blocked-dep): Unity editor gate — no editor on host; Unreal stays deferred per policy",
+ "R19 (Front B, standing): psychometric ground truth for ratios — methodology open, no fabrication",
+ "R20 (Front E, standing): human participants — BLOCKED_EXTERNAL_PARTICIPANTS; protocol maintained, nothing fabricated",
+ "Standing gaps carried: dashboard port-0 fallback defect (now R6); parallel harness flakiness"
+ ],
+ "next_action": "R1_EXPLAINER_FIDELITY_BUILD"
+ },
+ {
+ "milestone": "PERCEPTION_EXPLANATION_FIDELITY_R1",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "WhyNotExplainer.explainUncertainty(result, context) decomposes perceive() uncertainty into fused-estimate base plus NEXT-186 reliability and NEXT-187 age terms from recorded echoes only; smoothing reported as informational context when raw observation plus window supplied; receipt independently re-derives the fuse-branch base from recorded channel values (table lookup, no RNG/buffers) and requires agreement within 0.0002, degrading honestly to a saturation bound-check at the clamped ceiling",
+ "Two self-caught design errors recorded: first receipt was vacuous (decomposition always re-sums; caught by the tamper test failing open) and saturation destroys the base (caught by the conflict-branch case); both fixed before commit",
+ "Host-authority clean: advisory strings and numbers only; deterministic"
+ ],
+ "test_evidence": [
+ "New tests/perception-explanation-fidelity.test.js: 8 pass (bare base attribution; exact 186/187 terms with dominance; combined tolerance battery; smoothing context; uncertainty-plus-echo tampering caught including saturated bound-weakening; malformed throws; exact replay)",
+ "Neighbors green pre-matrix: why-not-explainer plus explanation-fidelity plus persona-why-not (24 combined)",
+ "Full matrix: 413/414 suites, 3124/3132 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "ExplanationFidelityHarness integration for the new method left as follow-up (harness covers identity/retaliation; new method carries a self-contained receipt)",
+ "Next: R2 trauma-zone engine coupling",
+ "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_191_THEN_COMMIT"
  }
  ]
 }

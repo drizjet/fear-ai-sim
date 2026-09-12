@@ -116,6 +116,96 @@ export class WhyNotExplainer {
         };
     }
 
+    /**
+     * Why is this perception result this uncertain? Decomposes
+     * PerceptionRobustnessEngine uncertainty into its exact additive terms:
+     * fused-estimate base, source-reliability penalty (NEXT-186), and
+     * observation-age penalty (NEXT-187). Terms derive strictly from the
+     * recorded result echoes — never re-simulation. Temporal smoothing
+     * (NEXT-188) shapes channel values, not uncertainty, so it is reported
+     * as informational context when the caller supplies the raw
+     * observation and window, and null otherwise.
+     *
+     * Fidelity is non-vacuous: the receipt independently re-derives the
+     * expected fuse-branch base from the RECORDED degraded channel values
+     * (pure table lookup over values already in the result — no RNG, no
+     * buffers, no re-simulation, mirroring how ExplanationFidelityHarness
+     * re-derives identity answers from frames) and requires the
+     * penalty-stripped uncertainty to agree within two roundings — or,
+     * at the saturated ceiling where clamping destroys the base, requires
+     * the re-derived base plus cited penalties to suffice for saturation.
+     * @param {object} result recorded perceive() output
+     * @param {object} [context] opt-in { observation, smoothingWindow }
+     */
+    explainUncertainty(result, context = {}) {
+        if (!result || typeof result.uncertainty !== 'number' || !Number.isFinite(result.uncertainty)) {
+            throw new Error('RESULT_NEEDS_UNCERTAINTY');
+        }
+        const rel = result.reliability && typeof result.reliability === 'object' ? result.reliability : null;
+        const age = result.ageTicks && typeof result.ageTicks === 'object' ? result.ageTicks : null;
+        const relTerm = rel && Number.isFinite(rel.fused) ? round4((1 - Math.max(0, Math.min(1, rel.fused))) * 0.5) : 0;
+        const ageTerm = age && Number.isFinite(age.fused) ? round4(Math.min(Math.max(0, age.fused), 10) / 10 * 0.25) : 0;
+        const base = round4(Math.max(0, result.uncertainty - relTerm - ageTerm));
+        const terms = [
+            { name: 'fused-estimate', value: base },
+            { name: 'source-reliability', value: relTerm },
+            { name: 'observation-age', value: ageTerm }
+        ];
+        const dominant = terms.reduce((a, b) => (b.value > a.value ? b : a)).name;
+        const baseExpected = WhyNotExplainer._fuseBaseUncertainty(result.visual, result.audio);
+        // Engine rounds twice (one round4 per penalty layer), so agreement
+        // within 0.0002 holds by construction for honest results. Clamping
+        // is lossy: at the saturated ceiling (1) the stripped base cannot
+        // recover the fuse base, so the receipt degrades honestly to a
+        // bound check — re-derived base plus cited penalties must suffice
+        // to saturate. (The floor never binds: fuse bases are >= 0.15 and
+        // penalties are non-negative.)
+        const sum = round4(base + relTerm + ageTerm);
+        const saturated = result.uncertainty >= 1;
+        const matches = saturated
+            ? Math.abs(sum - result.uncertainty) <= 0.0002
+                && baseExpected + relTerm + ageTerm >= 1 - 0.0002
+            : Math.abs(sum - result.uncertainty) <= 0.0002
+                && Math.abs(base - baseExpected) <= 0.0002;
+        let smoothing = null;
+        const window = context.smoothingWindow;
+        const rawIntensity = context.observation?.visual?.intensity;
+        if (typeof window === 'number' && Number.isFinite(window) && Math.floor(window) >= 2
+            && typeof rawIntensity === 'number' && Number.isFinite(rawIntensity)
+            && result.visual && typeof result.visual.value === 'number') {
+            smoothing = {
+                window: Math.min(16, Math.max(2, Math.floor(window))),
+                rawIntensity: round4(rawIntensity),
+                smoothedValue: result.visual.value,
+                delta: round4(result.visual.value - rawIntensity)
+            };
+        }
+        return {
+            question: 'Why is this perception result this uncertain?',
+            answer: `Uncertainty ${result.uncertainty} = base ${base} + reliability ${relTerm} + age ${ageTerm}; ${dominant} dominates.`,
+            uncertainty: result.uncertainty,
+            terms,
+            dominant,
+            smoothing,
+            receipt: { sum, matches, tolerance: 0.0002, baseExpected }
+        };
+    }
+
+    // Independent re-derivation of the PerceptionRobustnessEngine fuse-branch
+    // base uncertainty from recorded degraded channel values (table lookup
+    // only). Degraded-value shapes (null, ghost flags) follow the engine branches.
+    static _fuseBaseUncertainty(visual, audio) {
+        const v = visual && typeof visual.value === 'number' && Number.isFinite(visual.value) ? visual.value : null;
+        const a = audio && typeof audio.value === 'number' && Number.isFinite(audio.value) ? audio.value : null;
+        const ghosted = !!((visual && visual.ghost) || (audio && audio.ghost));
+        const lift = (base) => (ghosted ? Math.max(base, 0.55) : base);
+        if (v !== null && v >= 0.55 && (a === null || a < 0.3)) return lift(0.3);
+        if ((v === null || v < 0.25) && a !== null && a >= 0.5) return lift(0.65);
+        if (v !== null && a !== null) return lift(0.15);
+        if (v === null && a === null) return lift(0.4);
+        return lift(0.45);
+    }
+
     auditImmutability() {
         return {
             isClean: true,
