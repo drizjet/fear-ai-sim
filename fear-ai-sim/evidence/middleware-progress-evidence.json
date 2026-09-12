@@ -9763,7 +9763,30 @@
  "Perception V2 (LXXXVI) now complete: multiple observations, source reliability, stale age, contradictions, temporal smoothing all live; pacing-by-relationship wire (175) and the four auto-coupling gaps are the top build candidates",
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
- "next_action": "MATRIX_189_THEN_COMMIT"
+ "next_action": "NEXT_189_BUILD"
+ },
+ {
+ "milestone": "PACING_COHESION_WIRE_189",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "PacingDirector.tick reads opt-in observedMetrics.cohesion in [0,1] (clamped; absent/non-finite leaves the legacy path bit-identical): cohesion above 0.5 eases the DDA modifier toward the 0.7 floor, below 0.5 boosts toward the 1.3 ceiling, at the fear-DDA order of rate; neutral 0.5 holds steady; phase logic untouched; pacing never imports the relationship layer, the joint maps live trust [-1,1] to cohesion as (trust+1)/2 at the boundary",
+ "Supersedes milestone 175's absence-pin by construction (recorded, not erased): joint test 2 rewritten from INCONCLUSIVE-pin to BUILT-pin with history note; bare trust/grievance keys remain ignored and still pinned",
+ "Two orchestrator edit-placement errors (orphaned old body, dropped breather asserts) caught by re-reading and repaired before any test ran",
+ "Host-authority clean: advisory intensity only; deterministic, exact replay kept"
+ ],
+ "test_evidence": [
+ "tests/pacing-relationship-joint.test.js: 7 pass (BUILT divergence 0.7 vs 1.3 at CLIMAX and 0.21 vs 0.39 at BREATHER from live trust extremes; garbage cohesion ignored; neutral holds over 5000 ticks; out-of-range clamps; 0.7/1.3 bounds; snapshot round-trip)",
+ "Neighbors green pre-matrix: valley-war-pacing (36 combined), conformance plus interaction-coverage (18)",
+ "Full matrix: 412/413 suites, 3116/3124 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Known auto-coupling gaps still open include trauma-zone engine blindness (177) and social-trauma-zone location blindness (179); a fresh frontier-regeneration audit is now due after five post-25 builds",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "MATRIX_190_THEN_COMMIT"
  }
  ]
 }

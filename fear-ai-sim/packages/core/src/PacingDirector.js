@@ -50,6 +50,21 @@ export class PacingDirector {
                 this.ddaIntensityModifier = Math.min(1.3, this.ddaIntensityModifier + 0.002 * deltaTicks);
             }
         }
+        // NEXT-189: opt-in group-cohesion wire. cohesion in [0, 1], supplied
+        // by the host/designer (e.g. mapped from live relationship trust):
+        // cohesive groups weather beats together (ease toward 0.7), fragile
+        // groups amplify tension (boost toward 1.3). Same order of rate as
+        // the fear DDA above; neutral 0.5 holds steady. Absent/non-finite
+        // leaves the legacy path bit-identical. Pacing never imports the
+        // relationship layer; the joint test performs the mapping.
+        if (typeof observedMetrics.cohesion === 'number' && Number.isFinite(observedMetrics.cohesion)) {
+            const cohesion = Math.max(0, Math.min(1, observedMetrics.cohesion));
+            if (cohesion > 0.5) {
+                this.ddaIntensityModifier = Math.max(0.7, this.ddaIntensityModifier - 0.001 * (cohesion - 0.5) * 2 * deltaTicks);
+            } else if (cohesion < 0.5) {
+                this.ddaIntensityModifier = Math.min(1.3, this.ddaIntensityModifier + 0.001 * (0.5 - cohesion) * 2 * deltaTicks);
+            }
+        }
     }
 
     /**

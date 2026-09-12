@@ -7,19 +7,13 @@ import {
 
 // Post-25 audit candidate 15: PacingDirector x RelationshipTensorSystem joint.
 //
-// Hypothesis under test: pacing/valley directives that schedule social beats
-// (reunions, betrayals, reconciliations) land differently depending on live
-// relationship state — e.g. a scheduled rally/betrayal beat amplifies or
-// dampens based on trust.
-//
-// MEASURED OUTCOME: INCONCLUSIVE-with-evidence (no coupling inside either
-// class). PacingDirector.tick only reads `observedMetrics.averageFear` and
-// phase baseIntensity; it accepts no relationship input, so identical pacing
-// beats yield identical intensity/phase across trust extremes. The
-// relationship layer DOES modulate social gains (contagion / prosocial /
-// leader-reassurance differ sharply), but that modulation lives entirely in
-// RelationshipTensorSystem — no wire connects the two classes. Both halves
-// are pinned below with live objects so a future coupling would fail loudly.
+// HISTORY: probed INCONCLUSIVE (pacing read only averageFear; trust extremes
+// yielded identical beats). NEXT-189 built the wire: opt-in
+// observedMetrics.cohesion in [0, 1] steers the DDA modifier (cohesive
+// eases toward 0.7, fragile boosts toward 1.3). Pacing never imports the
+// tensor layer; the joint maps live trust [-1, 1] to cohesion as
+// (trust + 1) / 2. Original absence wording survives in git history and
+// ledger milestone 175. Bare trust/grievance keys remain ignored (test 3).
 
 const SESSION_TICKS = 36000;
 const CLIMAX_TICK = 26000; // progress 0.7222 -> CLIMAX, baseIntensity 1.0
@@ -63,40 +57,47 @@ describe('pacing x relationship joint (candidate 15)', () => {
         expect(loRel.familiarity).toBeCloseTo(0.0, 10);
     });
 
-    it('INCONCLUSIVE: identical pacing beat yields identical output across trust extremes', () => {
+    it('BUILT (NEXT-189): same beat diverges when cohesion is mapped from live trust', () => {
         const hi = buildHighTrust();
         const lo = buildLowTrust();
         // Both tensors are live and opposite (guard against fixture rot).
-        expect(hi.getRelationship('A', 'B').trust).toBeCloseTo(1.0, 10);
-        expect(lo.getRelationship('A', 'B').trust).toBeCloseTo(-1.0, 10);
+        const hiTrust = hi.getRelationship('A', 'B').trust;
+        const loTrust = lo.getRelationship('A', 'B').trust;
+        expect(hiTrust).toBeCloseTo(1.0, 10);
+        expect(loTrust).toBeCloseTo(-1.0, 10);
+        const cohesionOf = (trust) => (trust + 1) / 2;
 
-        // The pacing beat itself takes no relationship input: same tick,
-        // same metrics -> same advisory output regardless of tensor state.
-        const hiPacing = pacingAt(CLIMAX_TICK);
-        const loPacing = pacingAt(CLIMAX_TICK);
+        // Without the wire the beat stays identical (legacy absence kept).
+        const bare1 = pacingAt(CLIMAX_TICK);
+        const bare2 = pacingAt(CLIMAX_TICK);
+        expect(bare1.getTargetIntensity()).toBeCloseTo(bare2.getTargetIntensity(), 12);
+        expect(bare1.getTargetIntensity()).toBeCloseTo(1.0, 10);
+
+        // With cohesion mapped from live trust: cohesive eases to the 0.7
+        // floor, fragile boosts to the 1.3 ceiling; phase never moves.
+        const hiPacing = pacingAt(CLIMAX_TICK, { cohesion: cohesionOf(hiTrust) });
+        const loPacing = pacingAt(CLIMAX_TICK, { cohesion: cohesionOf(loTrust) });
         expect(hiPacing.getCurrentPhase().name).toBe('CLIMAX');
         expect(loPacing.getCurrentPhase().name).toBe('CLIMAX');
-        expect(hiPacing.getTargetIntensity()).toBeCloseTo(1.0, 10);
-        expect(loPacing.getTargetIntensity()).toBeCloseTo(1.0, 10);
-
-        const hiBreather = pacingAt(BREATHER_TICK);
-        const loBreather = pacingAt(BREATHER_TICK);
+        expect(hiPacing.getTargetIntensity()).toBeCloseTo(0.7, 10);
+        expect(loPacing.getTargetIntensity()).toBeCloseTo(1.3, 10);
+        const hiBreather = pacingAt(BREATHER_TICK, { cohesion: cohesionOf(hiTrust) });
+        const loBreather = pacingAt(BREATHER_TICK, { cohesion: cohesionOf(loTrust) });
         expect(hiBreather.getCurrentPhase().name).toBe('BREATHER');
         expect(loBreather.getCurrentPhase().name).toBe('BREATHER');
-        expect(hiBreather.getTargetIntensity()).toBeCloseTo(0.3, 10);
-        expect(loBreather.getTargetIntensity()).toBeCloseTo(0.3, 10);
+        expect(hiBreather.getTargetIntensity()).toBeCloseTo(0.21, 10);
+        expect(loBreather.getTargetIntensity()).toBeCloseTo(0.39, 10);
     });
 
-    it('INCONCLUSIVE: relationship-flavoured metrics keys do not steer pacing', () => {
-        // PacingDirector.tick only reads observedMetrics.averageFear;
-        // extra relationship keys must be ignored, not crash or steer.
+    it('INCONCLUSIVE-KEPT: bare trust/grievance keys still do not steer pacing', () => {
+        // Only observedMetrics.averageFear and the opt-in cohesion key steer;
+        // bare relationship keys must be ignored, not crash or steer.
         const a = pacingAt(CLIMAX_TICK, { averageFear: 0.5, trust: 1.0, grievance: 0.0 });
         const b = pacingAt(CLIMAX_TICK, { averageFear: 0.5, trust: -1.0, grievance: 1.0 });
         expect(a.getTargetIntensity()).toBeCloseTo(b.getTargetIntensity(), 12);
         expect(a.getTargetIntensity()).toBeCloseTo(1.0, 10);
-        // Sanity: the fear-driven DDA path itself still works (fear is the
-        // only steering input), so the equality above is "ignores trust",
-        // not "ignores everything".
+        // Sanity: the fear-driven DDA path itself still works, so the
+        // equality above is "ignores bare trust keys", not "ignores all".
         const overwhelmed = pacingAt(CLIMAX_TICK, { averageFear: 0.9 });
         const bored = pacingAt(CLIMAX_TICK, { averageFear: 0.1 });
         expect(overwhelmed.getTargetIntensity()).toBeCloseTo(0.7, 10);
@@ -107,8 +108,7 @@ describe('pacing x relationship joint (candidate 15)', () => {
         const hi = buildHighTrust();
         const lo = buildLowTrust();
         // Same base gain, opposite tensors -> sharply different advisories.
-        // This is the coupling a future pacing beat COULD consume; today it
-        // does not (see INCONCLUSIVE tests above).
+        // NEXT-189 consumes this coupling at the pacing boundary via the cohesion mapping (BUILT test above).
         expect(hi.getContagionSusceptibility('A', 'B', 0.5)).toBeCloseTo(0.5, 10);
         expect(lo.getContagionSusceptibility('A', 'B', 0.5)).toBeCloseTo(0.0375, 10);
         expect(hi.getProSocialWillingness('A', 'B', 0.5)).toBeCloseTo(1.0, 10);
@@ -166,5 +166,35 @@ describe('pacing x relationship joint (candidate 15)', () => {
         expect(first.phase).toBe('CLIMAX');
         expect(first.intensity).toBeCloseTo(0.7, 10);
         expect(first.rel.relationships).toHaveLength(2);
+    });
+
+    it('cohesion wire: garbage ignored, neutral holds, extremes clamp', () => {
+        // Garbage cohesion leaves the legacy output untouched.
+        for (const cohesion of [undefined, NaN, 'high', null, Infinity]) {
+            const p = pacingAt(CLIMAX_TICK, { cohesion });
+            expect(p.getTargetIntensity()).toBeCloseTo(1.0, 10);
+        }
+        // Neutral 0.5 holds the modifier steady over many ticks.
+        const steady = new PacingDirector({ totalSessionTicks: SESSION_TICKS });
+        for (let t = 0; t < 5000; t++) steady.tick(1, { cohesion: 0.5 });
+        expect(steady.getState().ddaIntensityModifier).toBeCloseTo(1.0, 12);
+        // Out-of-range clamps: 5 behaves as 1, -3 behaves as 0.
+        const over = pacingAt(1000, { cohesion: 5 });
+        const one = pacingAt(1000, { cohesion: 1 });
+        expect(over.getTargetIntensity()).toBeCloseTo(one.getTargetIntensity(), 12);
+        const under = pacingAt(1000, { cohesion: -3 });
+        const zero = pacingAt(1000, { cohesion: 0 });
+        expect(under.getTargetIntensity()).toBeCloseTo(zero.getTargetIntensity(), 12);
+        // Bounds hold under sustained extremes: 20000 ticks each way.
+        const floor = new PacingDirector({ totalSessionTicks: SESSION_TICKS });
+        floor.tick(20000, { cohesion: 1 });
+        expect(floor.getState().ddaIntensityModifier).toBeCloseTo(0.7, 12);
+        const ceil = new PacingDirector({ totalSessionTicks: SESSION_TICKS });
+        ceil.tick(20000, { cohesion: 0 });
+        expect(ceil.getState().ddaIntensityModifier).toBeCloseTo(1.3, 12);
+        // Modifier round-trips through snapshot state.
+        const restored = new PacingDirector({ totalSessionTicks: SESSION_TICKS });
+        restored.setState(floor.getState());
+        expect(restored.getTargetIntensity()).toBeCloseTo(floor.getTargetIntensity(), 12);
     });
 });
