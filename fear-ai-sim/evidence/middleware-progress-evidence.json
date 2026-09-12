@@ -10104,7 +10104,31 @@
  "Next: R13 misinformation-to-trade chain",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_202_THEN_COMMIT"
+ "next_action": "R13_FALSE_RUMOR_CHAIN_PROBE"
+ },
+ {
+ "milestone": "FALSE_RUMOR_CASCADE_R13",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Probe-only, no production change: fabricated ROAD_AMBUSH rumor with no encounter anywhere, run through the live valley downstream links against the true chain as oracle",
+ "Two corrected assumptions recorded: equal-confidence hearsay forms IDENTICAL dread (the merchant never observes in either chain — truth wins only via higher confidence or observed channels), and credibility taxes received confidence, not delivery reach (topology-bound)",
+ "Key findings: fabrication flips route avoidance; correction marks CORRECTED plus 0.7x liar credibility but retracts nothing — absorbed dread lingers and avoidance persists after debunk",
+ "Repeated orchestrator edit-placement slips in one test file repaired by reads plus targeted cuts before green"
+ ],
+ "test_evidence": [
+ "New tests/valley-false-rumor-chain.test.js: 4 pass (identical-magnitude cascade; correction marks plus taxes without retracting dread; taxed liar weaker copies; exact replay)",
+ "Neighbors green pre-matrix: valley-chain plus misinformation-cascade plus anticipatory-fear (15 combined), four rumor suites (20)",
+ "Full matrix: 425/425 suites, 3183/3183 tests, EXIT 0 — fully green"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Dread has no debunk listener: correction stops spread but never retracts absorbed fear — candidate build (retraction hook) or accepted limitation with designer warning",
+ "Next: succession-to-policy effects probe (R11), or war-exhaustion consumption (R14)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_203_THEN_COMMIT"
  }
  ]
 }
