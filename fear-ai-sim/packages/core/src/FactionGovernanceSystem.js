@@ -110,6 +110,31 @@ export class FactionGovernanceSystem {
                 directive = FACTION_DIRECTIVES.WARN;
                 rationale = 'Default fallback governance.';
         }
+        // R15: succession aftermath fractures commitment. Opt-in context
+        // carries the SuccessionEngine aftermath: splinterRisk [0,1],
+        // leaderVacant bool (interregnum, no successor), cohesion [0,1].
+        // A headless autocracy can will nothing (councils survive their
+        // leaders); a fractured faction steps high-commitment directives
+        // down one rung. Absent/garbage reproduces legacy exactly.
+        const rawRisk = Number(context.splinterRisk);
+        const splinterRisk = Number.isFinite(rawRisk) ? Math.max(0, Math.min(1, rawRisk)) : 0;
+        const rawCohesion = Number(context.cohesion);
+        const cohesion = Number.isFinite(rawCohesion) ? Math.max(0, Math.min(1, rawCohesion)) : 1;
+        const fractured = splinterRisk >= 0.5 || cohesion <= 0.35;
+        if (context.leaderVacant === true && this.archetype === GOVERNANCE_ARCHETYPES.AUTOCRATIC_DESPOT) {
+            rationale = `Headless autocracy cannot will ${directive}: no successor enthroned; the apparatus watches and waits.`;
+            directive = FACTION_DIRECTIVES.OBSERVE;
+        } else if (fractured) {
+            const stepDown = {
+                [FACTION_DIRECTIVES.ATTACK]: FACTION_DIRECTIVES.MOBILIZE,
+                [FACTION_DIRECTIVES.SKIRMISH]: FACTION_DIRECTIVES.MOBILIZE,
+                [FACTION_DIRECTIVES.MOBILIZE]: FACTION_DIRECTIVES.WARN
+            };
+            if (stepDown[directive]) {
+                rationale = `${rationale} Fractured council (splinter risk ${splinterRisk.toFixed(2)}) could not commit to ${directive}; stepped down to ${stepDown[directive]}.`;
+                directive = stepDown[directive];
+            }
+        }
 
         this.currentDirective = directive;
 

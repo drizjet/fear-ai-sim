@@ -10224,6 +10224,30 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "COMMIT_R14B_THEN_GOVERNANCE_SUCCESSION"
+ },
+ {
+ "milestone": "GOVERNANCE_FRACTURE_R15",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FactionGovernanceSystem.deliberateIncident reads opt-in succession aftermath (splinterRisk, cohesion, leaderVacant): headless autocracies fall to OBSERVE, fractured factions step ATTACK/SKIRMISH/MOBILIZE down one rung, councils deliberate through leader vacancy; absent/garbage reproduces legacy exactly",
+ "Pure-addition delta (25 insertions, 0 deletions); no stored state, context-only like the R14 brake; advisory directives only",
+ "Edit slip recorded: first insertion ate the switch close and directive assignment; restored and diff-verified to pure addition",
+ "Host-authority clean: advisory semantic directives only; deterministic"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/faction-governance-fracture.test.js: 9 pass (legacy-exact garbage; ATTACK to MOBILIZE; cohesion-only fracture; 0.49/0.5 boundary; non-commitment directives survive; headless autocrat OBSERVE; headless junta attacks; interregnum end-to-end; replay)",
+ "Neighbors green: governance (6) plus succession, succession-policy-state, identity-succession, nomadic-succession, succession-identity-traits (28)",
+ "Full matrix: 430/430 suites, 3216/3216 tests, 0 failures (benchmark results artifact churn reverted)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "No production caller composes SuccessionEngine with FactionGovernanceSystem yet (FrontierValley does not deliberate); hosts must pass aftermath via context manually",
+ "Retaliation accounts of disbanded factions linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "COMMIT_R15_THEN_NEXT_FRONTIER_AUDIT"
  }
  ]
 }
