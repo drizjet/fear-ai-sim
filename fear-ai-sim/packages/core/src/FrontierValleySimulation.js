@@ -112,7 +112,11 @@ export class FrontierValleySimulation {
             // sinks throttle to crumbs).
             deliveredVolume: 0,
             fearSum: 0.0,
-            fearSamples: 0
+            fearSamples: 0,
+            // R33: advisory-loop fault counts by subsystem. The valley
+            // overlay must never break the host tick: isolated faults
+            // land here and the tick continues degraded.
+            advisoryFaults: {}
         };
         // R16: war-displacement scenario params (designer-overridable via
         // options.displacement). While settler-bandit war is hot, the
@@ -928,6 +932,31 @@ export class FrontierValleySimulation {
     }
 
     /**
+     * R33: run one advisory-overlay step with fault isolation (CCXIX).
+     * A throwing advisory subsystem is counted under its name and the
+     * tick continues degraded — the overlay must never break the host
+     * tick. Only the advisory overlay is wrapped: the world model
+     * (movement, civ production, world tick, stance evaluation) stays
+     * unguarded so world-model corruption still surfaces loudly.
+     * Lazy counter init keeps pre-R33 snapshots (no key) working.
+     * @param {string} name subsystem key for advisoryFaults
+     * @param {Function} fn advisory step
+     * @returns {*} fn's return, or undefined on isolated fault
+     */
+    _advisory(name, fn) {
+        try {
+            return fn();
+        } catch {
+            if (!this.macroMetrics.advisoryFaults || typeof this.macroMetrics.advisoryFaults !== 'object') {
+                this.macroMetrics.advisoryFaults = {};
+            }
+            const faults = this.macroMetrics.advisoryFaults;
+            faults[name] = (Number(faults[name]) || 0) + 1;
+            return undefined;
+        }
+    }
+
+    /**
      * Maps live encounters to route danger, group threat pressure, and
      * faction incidents. Extracted (NOW-16) so the mapping is unit-testable
      * with synthetic encounters; advance() calls it once per tick.
@@ -1223,7 +1252,7 @@ export class FrontierValleySimulation {
             this.worldSystem.tick(1.0, { factionSystem: this.factionSystem, relationshipTensorSystem: this.relationshipSystem });
             const encounters = this.worldSystem.activeEncounters || [];
             this.macroMetrics.totalEncounters += encounters.length;
-            this._recordEncounterConsequences(encounters);
+            this._advisory('encounterConsequences', () => this._recordEncounterConsequences(encounters));
 
             // 3. Advance Faction Escalation
             this.factionSystem.advanceTick(1);
@@ -1275,18 +1304,22 @@ export class FrontierValleySimulation {
             }
             // R16: war displacement runs after escalation state is final
             // for the tick, so flight reads the same stages as warsActive.
-            this._displaceWarRefugees();
+            this._advisory('warDisplacement', () => this._displaceWarRefugees());
             // R17: scarcity unrest reads post-displacement stocks, so
-            // flight-driven dilution bites the same tick it lands.
-            const stressedSettlements = this._applyScarcityUnrest();
+            // flight-driven dilution bites the same tick it lands. On
+            // unrest fault the tick continues with zero stressed towns.
+            let stressedSettlements = 0;
+            this._advisory('scarcityUnrest', () => {
+                stressedSettlements = this._applyScarcityUnrest();
+            });
             // R18: famine blame turns stressed settlements into rival
             // blame (CCVIII: faction leaders blame rivals).
-            this._blameRivalsForFamine(stressedSettlements);
+            this._advisory('famineBlame', () => this._blameRivalsForFamine(stressedSettlements));
             // R28: famine erodes settler faith after blame is laid.
-            this._erodeSettlerCohesion();
+            this._advisory('cohesionErosion', () => this._erodeSettlerCohesion());
             // R19: war attrition reads the same final stages; a long hot
             // episode costs the weaker side its leader (advisory state).
-            this._attriteLeadership();
+            this._advisory('warAttrition', () => this._attriteLeadership());
             // CVII sink: read-only post-tick metrics; fault-isolated.
             if (hooks && typeof hooks.emit === 'function') {
                 try {

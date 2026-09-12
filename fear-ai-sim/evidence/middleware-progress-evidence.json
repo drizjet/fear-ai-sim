@@ -10651,6 +10651,30 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_227_THEN_COMMIT"
+ },
+ {
+ "milestone": "ADVISORY_FAULTS_R33",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "New _advisory(name, fn) helper: throwing advisory steps are counted in macroMetrics.advisoryFaults and the tick continues; world model (movement, civ, world tick, stance evaluation) deliberately unguarded so world-model corruption still surfaces",
+ "Isolated: encounter consequences plus war displacement plus scarcity unrest plus famine blame plus cohesion erosion plus war attrition (6 sites); unrest fault degrades blame input to zero stressed towns",
+ "Lazy counter init keeps pre-R33 snapshots working; macroMetrics snapshot/restore carries the counts automatically",
+ "getMacroSummary shape untouched (explicit field list); host-authority clean: advisory overlay only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-advisory-faults.test.js: 6 pass (counted erosion fault with intact tick; tick-boundary encounter fault; corrupt season clock survives; summary shape stable; restore stops counting; identical fault replay)",
+ "Neighbors green: failure-matrix-v3 plus subsystem-resilience plus observability-sinks plus all five R28-R32 loop suites (49 tests)",
+ "Full matrix: 448/448 suites, 3305/3305 tests, 0 failures"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "World-model throws (movement, civ production, world tick, stance evaluation) still abort the tick by design - documented boundary, not yet fault-injected",
+ "Nomad war participation still unreachable (carried from R32); blame one-way (carried from R18); disbanded retaliation accounts (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_229_THEN_COMMIT"
  }
  ]
 }
