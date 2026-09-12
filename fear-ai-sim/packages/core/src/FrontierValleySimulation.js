@@ -26,7 +26,7 @@ import { WorldSimulationSystem, ROAMING_PARTY_TYPES, ENCOUNTER_TYPES, RUMOR_TOPI
 import { RelationshipTensorSystem } from './RelationshipTensorSystem.js';
 import { TradeDependencyEngine } from './TradeDependencyEngine.js';
 import { SuccessionEngine } from './SuccessionEngine.js';
-import { FactionGovernanceSystem, GOVERNANCE_ARCHETYPES } from './FactionGovernanceSystem.js';
+import { FactionGovernanceSystem, GOVERNANCE_ARCHETYPES, governanceComposure } from './FactionGovernanceSystem.js';
 
 export const FRONTIER_VALLEY_FACTIONS = Object.freeze({
     SETTLERS: 'SettlersAlliance',
@@ -137,6 +137,9 @@ export class FrontierValleySimulation {
             dreadPerTick: 0.05,
             ...(options.scarcity || {})
         };
+        // R21: directive-consumption kill-switch (ablation and legacy
+        // comparison). Default on; snapshotted below so forks inherit it.
+        this.directiveConsumption = options.directiveConsumption !== false;
 
         this._setupFrontierValley(options);
     }
@@ -759,6 +762,30 @@ export class FrontierValleySimulation {
     }
 
     /**
+     * R21: governance composure of a valley faction (pure, trailless).
+     * Reads the same live faction record the deliberation path uses and
+     * scales casualty-fuel severity by conviction: whole governments
+     * fight at full strength, split councils at half, headless
+     * autocracies at a quarter. Returns 1.0 when directive consumption
+     * is disabled, for unknown factions, or on garbage (legacy-safe).
+     * @param {string} factionId inflicting faction
+     * @returns {number} severity multiplier in { 0.25, 0.5, 1.0 }
+     */
+    _composureScale(factionId) {
+        if (this.directiveConsumption === false) return 1.0;
+        const gov = this.governance ? this.governance.get(factionId) : null;
+        if (!gov) return 1.0;
+        const faction = this.factionSystem.getFaction(factionId);
+        if (!faction) return 1.0;
+        return governanceComposure({
+            splinterRisk: faction.splinterRisk,
+            cohesion: faction.cohesion,
+            leaderVacant: !faction.leaderId,
+            archetype: gov.archetype
+        }).scale;
+    }
+
+    /**
      * R20: deliberate one incident through a valley government's live
      * faction state (NOW-16 style: unit-testable in isolation). Reads
      * splinterRisk, cohesion, and leader vacancy off the faction record
@@ -858,7 +885,10 @@ export class FrontierValleySimulation {
                     const share = (vStr + bStr) > 0 ? vStr / (vStr + bStr) : 0.5;
                     // NEXT-56: shared map; sweepable via sim.severityParams.
                     const sevP = this.severityParams ?? {};
-                    const fightSeverity = casualtySeverityScale(share, sevP.floor, sevP.knee);
+                    // R21: divided victims fight back weakly: casualty fuel
+                    // scales by the inflicter's governance composure.
+                    const fightSeverity = casualtySeverityScale(share, sevP.floor, sevP.knee)
+                        * this._composureScale(victim);
                     const backRestraint = this._dependencyRestraint(bandit, victim);
                     this.factionSystem.recordIncident(victim, bandit, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, restraint: backRestraint, severity: fightSeverity });
                     // R20: the bandit warlord deliberates the bloody nose.
@@ -881,11 +911,13 @@ export class FrontierValleySimulation {
                     const aStr = Number(gA?.militaryStrength) || 0;
                     const bStr = Number(gB?.militaryStrength) || 0;
                     const sevP = this.severityParams ?? {};
-                    const sevFor = (inf, vic) => (inf + vic) > 0
+                    // R21: each side's fuel scales by its own governance
+                    // composure: fractured factions maul with less conviction.
+                    const sevFor = (inf, vic, inflicter) => ((inf + vic) > 0
                         ? casualtySeverityScale(inf / (inf + vic), sevP.floor, sevP.knee)
-                        : 0.5;
-                    this.factionSystem.recordIncident(fA, fB, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, severity: sevFor(aStr, bStr) });
-                    this.factionSystem.recordIncident(fB, fA, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, severity: sevFor(bStr, aStr) });
+                        : 0.5) * this._composureScale(inflicter);
+                    this.factionSystem.recordIncident(fA, fB, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, severity: sevFor(aStr, bStr, fA) });
+                    this.factionSystem.recordIncident(fB, fA, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, severity: sevFor(bStr, aStr, fB) });
                 }
             } else if (enc.advisoryResolution === 'EXTORTION_PAID') {
                 if (gA && gA.drivers) gA.drivers.threatPressure = Math.min(1.0, gA.drivers.threatPressure + 0.15);
@@ -1278,6 +1310,8 @@ export class FrontierValleySimulation {
             // (resolve is stateless; only the counter persists).
             attrition: { ...(this.attrition || { hotTicks: 0, rearmed: true, threshold: 25 }) },
             successionCount: this.succession ? this.succession.successions : 0,
+            // R21: consumption switch so forks inherit the ablation setting.
+            directiveConsumption: this.directiveConsumption !== false,
             // R20: governments carry deliberation memory (grievance,
             // current directive, leader traits); the trail is bounded.
             governance: Array.from((this.governance || new Map()).entries()).map(([id, gov]) => ({
@@ -1350,6 +1384,10 @@ export class FrontierValleySimulation {
         }
         if (this.succession && Number.isFinite(Number(snapshot.successionCount))) {
             this.succession.successions = Math.max(0, Math.floor(Number(snapshot.successionCount)));
+        }
+        // R21: restore the ablation switch; pre-R21 snapshots default on.
+        if (typeof snapshot.directiveConsumption === 'boolean') {
+            this.directiveConsumption = snapshot.directiveConsumption;
         }
         // R20: restore governments and the bounded trail; pre-R20
         // snapshots keep fresh setup-built governments (garbage-safe).

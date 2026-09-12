@@ -346,3 +346,23 @@ export class FactionGovernanceSystem {
         };
     }
 }
+
+/**
+ * R21: governance composure. Pure function sharing the R15 fracture
+ * gates: a headless autocracy fights at quarter conviction, a split
+ * council (splinterRisk >= 0.5 or cohesion <= 0.35) at half, whole
+ * governments at full. Absent/garbage reads whole (legacy-safe).
+ * @param {object} [state={}] { splinterRisk, cohesion, leaderVacant, archetype }
+ * @returns {{ scale: number, fractured: boolean }}
+ */
+export function governanceComposure(state = {}) {
+    const rawRisk = Number(state.splinterRisk);
+    const splinterRisk = Number.isFinite(rawRisk) ? Math.max(0, Math.min(1, rawRisk)) : 0;
+    const rawCohesion = Number(state.cohesion);
+    const cohesion = Number.isFinite(rawCohesion) ? Math.max(0, Math.min(1, rawCohesion)) : 1;
+    const vacantAutocrat = state.leaderVacant === true
+        && state.archetype === GOVERNANCE_ARCHETYPES.AUTOCRATIC_DESPOT;
+    if (vacantAutocrat) return { scale: 0.25, fractured: true };
+    if (splinterRisk >= 0.5 || cohesion <= 0.35) return { scale: 0.5, fractured: true };
+    return { scale: 1.0, fractured: false };
+}

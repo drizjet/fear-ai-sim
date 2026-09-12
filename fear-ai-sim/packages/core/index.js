@@ -128,7 +128,8 @@ export {
 export {
     FactionGovernanceSystem,
     GOVERNANCE_ARCHETYPES,
-    FACTION_DIRECTIVES
+    FACTION_DIRECTIVES,
+    governanceComposure
 } from './src/FactionGovernanceSystem.js';
 export {
     Spatial3DAdapter,

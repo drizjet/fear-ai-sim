@@ -10369,6 +10369,30 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "COMMIT_R20_THEN_DIRECTIVE_CONSUMPTION"
+ },
+ {
+ "milestone": "DIRECTIVE_CONSUMPTION_R21",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Exported pure governanceComposure helper sharing the R15 fracture gates (headless autocracy 0.25, split council 0.5, whole 1.0; garbage reads whole); barrel-exported",
+ "Valley scales SKIRMISH_CASUALTY severity by the inflicter composure at fight-back and symmetric border fuel; kill-switch options.directiveConsumption (default on) snapshotted so forks inherit the ablation setting",
+ "Edit slip recorded: fuel-range mis-anchor ate share/sevP lines; restored and diff-verified",
+ "Host-authority clean: advisory incident severity only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-directive-consumption.test.js: 6 pass (composure unit pins incl. garbage/wildlife; kill-switch; synthetic raid exact half fuel; early-war ON-equals-OFF identity; long-war monotonic damping; fork plus replay)",
+ "Neighbors green: deliberation plus fracture plus escalation-matrix (NEXT-39 intact) plus war-succession (39 tests)",
+ "Full matrix: 436/436 suites, 3252/3252 tests, 0 failures (EXIT line lost when background shell reaped; 436 PASS lines audited)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "RAID grievance fuel is unscaled host reality; only casualty fuel feels composure (raids still saturate grievance alone)",
+ "Blame flows one way (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b); R16/R17 options flags not snapshotted (same fork gap R21 just closed for its own flag)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "COMMIT_R21_THEN_OPTIONS_SNAPSHOT_GAP"
  }
  ]
 }

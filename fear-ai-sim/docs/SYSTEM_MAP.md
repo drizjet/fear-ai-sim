@@ -388,6 +388,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Famine Blame R18:** stressed settlements convert to cadence-bound RUMOR_HEARSAY blame toward bandits (+0.10 grievance, no trust/cause/exhaustion effects); 5 new tests; matrix 433/433, 3234 tests, EXIT 0.
 - **Valley Succession R19:** 25 consecutive SKIRMISH/ATTACK ticks cost the weaker side its leader (deterministic heir-vs-challenger resolve, advisories land, one per episode, snapshot-safe); 6 new tests; matrix 434/434, 3240 tests.
 - **Governance Valley R20:** valley governments deliberate live incidents through live faction state (warlord autocracy fractures to WARN as cohesion collapses; fallen throne OBSERVE; bounded trail, snapshot-safe); 6 new tests; matrix 435/435, 3246 tests, EXIT 0.
+- **Directive Consumption R21:** casualty fuel scales by inflicter governance composure (whole 1, split 0.5, headless 0.25; kill-switch snapshotted); 6 new tests; matrix 436/436, 3252 tests.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
