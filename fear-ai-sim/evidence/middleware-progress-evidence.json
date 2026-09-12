@@ -9264,6 +9264,28 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_6"
+ },
+ {
+ "milestone": "CALM_TRUST_SCALING_166",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "ContagionGraph gains opt-in calmTrustGain (default 0, legacy-exact) scaling leaderCalm by focal trust in the calming leader with the same x1.3/x0.7 ratios at 0.6 as the fear path, composing independently with trustGain",
+ "Mid-build notes: two edits ate lines (config close, then activeEdges and maxEdges inits across three repairs); each caught by node --check plus git diff, final diff is exactly the 3-line config addition and the 5-line calming change"
+ ],
+ "test_evidence": [
+ "New tests/calm-trust-scaling.test.js: 5 pass (legacy default; trusted-up plus distrusted-down with exact ratios; fear/calm independence; malformed safety; exact replay)",
+ "Fear-path trust suites still green (10 pass combined), confirming no coupling",
+ "Full matrix 393/394 suites, 2988 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~90s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 7 through 24 carry (next: unilateral-rumor spiral dynamics); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Scream transmission still ignores trust; shouting strangers carry the same bonus as trusted criers, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_7"
  }
  ]
 }

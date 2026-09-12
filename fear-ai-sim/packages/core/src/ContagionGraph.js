@@ -20,6 +20,9 @@ export class ContagionGraph {
             // NEXT-155 (audit candidate 20): focal-agent trust in the peer
             // scales transmission. 0 (default) is legacy transmission.
             trustGain: config.trustGain || 0,
+            // NEXT-166 (post-25 candidate 6): focal-agent trust in a calm
+            // leader scales reassurance. 0 (default) is legacy damping.
+            calmTrustGain: config.calmTrustGain || 0,
         };
 
         // Active panic/calm contagion transmission events
@@ -118,7 +121,11 @@ export class ContagionGraph {
             if (leadership > 0.05 && isCalmOrAlert && distSq < this.config.leaderRadius * this.config.leaderRadius) {
                 const dist = Math.sqrt(distSq) || 0.001;
                 const distanceFalloff = 1.0 - (dist / this.config.leaderRadius);
-                const calmImpact = leadership * distanceFalloff * this.config.leaderDampingStrength;
+                // NEXT-166: focal trust in the calming leader scales
+                // reassurance (absent/non-finite reads as neutral 0).
+                const rawCalmTrust = Number(peer.trust ?? 0);
+                const calmTrust = Number.isFinite(rawCalmTrust) ? Math.max(-1, Math.min(1, rawCalmTrust)) : 0;
+                const calmImpact = leadership * distanceFalloff * this.config.leaderDampingStrength * (1 + this.config.calmTrustGain * calmTrust * 0.5);
                 totalLeaderDamping += calmImpact;
             }
         }
