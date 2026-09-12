@@ -10438,6 +10438,28 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_216_THEN_COMMIT"
+ },
+ {
+ "milestone": "SETUP_TUNING_R24",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "options.settlements overrides per-settlement population/wealth/resources at setup: finite numbers clamp at zero, non-numeric garbage ignored, unknown ids throw UNKNOWN_SETUP_SETTLEMENT, positions stay canonical; tuned stocks flow through existing snapshot machinery untouched",
+ "No behavior change at defaults: canonical setup byte-identical without options",
+ "Host-authority clean: scenario construction only; deterministic"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-setup-tuning.test.js: 6 pass (canonical defaults; tuned-low trips the chain with no manual starving; partial preservation; garbage discipline; unknown-id throw; fork plus replay)",
+ "Neighbors green: valley-chain-reaction plus frontier-valley-simulation plus world-counterfactual-engine (98 tests)",
+ "Full matrix: 439/439 suites, 3267/3267 tests, 0 failures (EXIT line lost when background shell reaped; 439 PASS lines audited)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "RAID grievance fuel unscaled host reality (carried from R21); blame one-way (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b); governance grievanceLevel never decays (noted in R23, pre-existing)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "COMMIT_R24_THEN_FRONTIER_AUDIT"
  }
  ]
 }

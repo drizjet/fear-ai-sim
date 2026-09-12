@@ -195,6 +195,29 @@ export class FrontierValleySimulation {
                 resources: { food: 50.0, timber: 40.0, ore: 30.0 }
             }
         ];
+        // R24: designer setup-stock tuning (closes the R23 red-team gap:
+        // hardcoded stocks kept the migration-to-scarcity chain
+        // sub-threshold with no designer recourse). Per-settlement
+        // population/wealth/resource overrides; finite numbers clamp at
+        // zero, non-numeric garbage is ignored, unknown settlement ids
+        // throw (NEXT-43 convention). Positions stay canonical.
+        const setupTunings = options.settlements || {};
+        for (const [id, patch] of Object.entries(setupTunings)) {
+            const target = settlementsData.find((s) => s.id === id);
+            if (!target) throw new Error('UNKNOWN_SETUP_SETTLEMENT');
+            if (!patch || typeof patch !== 'object') continue;
+            const nonNeg = (v) => typeof v !== 'number' || !Number.isFinite(v) ? null : Math.max(0, v);
+            const pop = nonNeg(patch.population);
+            if (pop !== null) target.population = Math.floor(pop);
+            const wealth = nonNeg(patch.wealth);
+            if (wealth !== null) target.wealth = wealth;
+            if (patch.resources && typeof patch.resources === 'object') {
+                for (const commodity of ['food', 'timber', 'ore']) {
+                    const qty = nonNeg(patch.resources[commodity]);
+                    if (qty !== null) target.resources[commodity] = qty;
+                }
+            }
+        }
 
         for (const s of settlementsData) {
             this.settlements.set(s.id, s);

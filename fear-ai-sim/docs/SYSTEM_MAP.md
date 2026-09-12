@@ -391,6 +391,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Directive Consumption R21:** casualty fuel scales by inflicter governance composure (whole 1, split 0.5, headless 0.25; kill-switch snapshotted); 6 new tests; matrix 436/436, 3252 tests.
 - **Scenario Params R22:** snapshots carry displacement/scarcity/severity tuning (forks inherit, legacy restores to defaults, garbage-safe); 5 new tests; matrix 437/437, 3257 tests.
 - **Chain Red Team R23:** full R16-R17-R18 chain proven in low-stock war (fed-war control silent); negative finding that canonical stocks never trip it; blame-ceiling adversarial pin; no source changes; matrix 438/438, 3261 tests.
+- **Setup Tuning R24:** options.settlements overrides population/wealth/resources at setup (clamped, garbage-safe, unknown ids throw); tuned-low trips the chain; 6 new tests; matrix 439/439, 3267 tests.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
