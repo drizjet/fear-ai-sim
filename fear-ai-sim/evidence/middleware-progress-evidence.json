@@ -9941,7 +9941,30 @@
  "Next: R6 dashboard port-0 fallback defect",
  "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_195_THEN_COMMIT"
+ "next_action": "R6_PORT_FALLBACK_FIX"
+ },
+ {
+ "milestone": "SERVER_PORT_FALLBACK_R6",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Root cause, not a sandbox quirk: `options.port || DEFAULT` in both DesignerDashboardServer (8766) and FearServer (8765) coerced port 0 to the fixed default, forcing parallel workers and sandboxes onto EACCES ports; the dashboard test already passed port 0 and the listen path already reported bound ports, so one coercion line was the entire defect",
+ "Both constructors now pass finite numbers >= 0 through floored (0 survives to the OS bind) with garbage falling back to defaults; FearServer additionally reports the OS-bound port like the dashboard server already did",
+ "Host-authority clean: transport binding only; deterministic",
+ "No production behavior change for explicit nonzero ports"
+ ],
+ "test_evidence": [
+ "New tests/server-port-fallback.test.js: 5 pass (port-0 survival plus bound reporting on both servers; garbage fallback matrix; concurrent ephemeral starts never collide)",
+ "tests/designer-dashboard.test.js: 8/8 pass in isolation (previously the sole matrix failure five runs running)",
+ "Full matrix: 419/419 suites, 3162/3162 tests, EXIT 0 — first fully green matrix on record (dashboard EACCES class closed)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Next: R7 cohesion-DDA valley end-to-end (or champion-protecting bond rank follow-up from R5)",
+ "Standing gaps carried: parallel harness flakiness (dashboard EACCES class now closed); Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_196_THEN_COMMIT"
  }
  ]
 }

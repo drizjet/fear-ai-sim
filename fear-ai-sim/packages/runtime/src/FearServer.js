@@ -25,7 +25,12 @@ export class FearServer {
      */
     constructor(options = {}) {
         this.host = options.host || '127.0.0.1';
-        this.port = options.port || 8765;
+        // R6: same port-0 coercion defect as the dashboard server — finite
+        // numbers >= 0 pass through floored (0 = OS ephemeral); garbage
+        // falls back to the default.
+        this.port = Number.isFinite(Number(options.port)) && Number(options.port) >= 0
+            ? Math.floor(Number(options.port))
+            : 8765;
         this.allowRemoteAccess = Boolean(options.allowRemoteAccess);
         if ((this.host === '0.0.0.0' || this.host === '::') && !this.allowRemoteAccess) {
             console.warn('[FearServer] Public bind requested without allowRemoteAccess=true; defaulting safely to 127.0.0.1.');
@@ -76,6 +81,10 @@ export class FearServer {
 
             this.httpServer.listen(this.port, this.host, () => {
                 this.isRunning = true;
+                // Report the OS-bound port so port 0 resolves to the actual
+                // listening port (mirrors DesignerDashboardServer).
+                const bound = this.httpServer.address();
+                if (bound && typeof bound.port === 'number') this.port = bound.port;
                 resolve({ host: this.host, port: this.port });
             });
         });

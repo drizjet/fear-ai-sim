@@ -41,7 +41,13 @@ export class DesignerDashboardServer {
      */
     constructor(options = {}) {
         this.host = options.host || '127.0.0.1';
-        this.port = options.port || 8766;
+        // R6: port 0 (OS ephemeral) must survive — `||` coerced it to the
+        // fixed default, forcing parallel workers and sandboxes onto 8766
+        // (EACCES). Finite numbers >= 0 pass through floored; garbage falls
+        // back to the default.
+        this.port = Number.isFinite(Number(options.port)) && Number(options.port) >= 0
+            ? Math.floor(Number(options.port))
+            : 8766;
         this.httpServer = null;
         this.isRunning = false;
     }
