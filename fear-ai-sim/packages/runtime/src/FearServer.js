@@ -16,7 +16,10 @@ import {
     BinaryWireProtocol,
     BINARY_MAGIC,
     FRAME_TYPES,
-    INTENT_CODES
+    INTENT_CODES,
+    SUPPORTED_OBSERVATION_FIELDS,
+    SUPPORTED_SOCIAL_EVENT_FIELDS,
+    SUPPORTED_PACING_METRICS
 } from '../../protocol/index.js';
 
 export class FearServer {
@@ -203,10 +206,12 @@ export class FearServer {
                     protocol_version: PROTOCOL_VERSION,
                     status: 'ACCEPTED',
                     client_id: val.value.client_id,
-                    server_time_ms: Date.now()
+                    server_time_ms: Date.now(),
+                    supported_observation_fields: SUPPORTED_OBSERVATION_FIELDS,
+                    supported_social_event_fields: SUPPORTED_SOCIAL_EVENT_FIELDS,
+                    supported_pacing_metrics: SUPPORTED_PACING_METRICS
                 });
             }
-
             case '/api/v1/register': {
                 const val = ProtocolValidator.validateRegisterAgent(body || {});
                 if (!val.valid) {
@@ -554,7 +559,10 @@ export class FearServer {
                     type: MESSAGE_TYPES.HANDSHAKE_RESPONSE,
                     protocol_version: PROTOCOL_VERSION,
                     status: 'ACCEPTED',
-                    client_id: payload.client_id
+                    client_id: payload.client_id,
+                    supported_observation_fields: SUPPORTED_OBSERVATION_FIELDS,
+                    supported_social_event_fields: SUPPORTED_SOCIAL_EVENT_FIELDS,
+                    supported_pacing_metrics: SUPPORTED_PACING_METRICS
                 }, correlationId);
                 break;
             }

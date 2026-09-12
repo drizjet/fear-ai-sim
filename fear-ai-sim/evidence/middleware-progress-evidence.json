@@ -9987,7 +9987,31 @@
  "Next: R8 capability negotiation for the new fields, or champion-protecting bond rank from R5",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_197_THEN_COMMIT"
+ "next_action": "R8_CAPABILITY_ADVERTISEMENT_BUILD"
+ },
+ {
+ "milestone": "HANDSHAKE_CAPABILITY_ADVERTISEMENT_R8",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Protocol exports a frozen wire-support manifest (observation visual/audio/context keys, social-event location keys, pacing metrics); both FearServer handshake responses (HTTP and WS) advertise it; manifest is contractual with a completeness test binding it to the validator in both directions",
+ "One orchestrator edit slip recorded: dropped case-block brace in the HTTP handler (parse failure, restored); stale-tag edit rejection handled by re-grounding",
+ "Host-authority clean: advertisement only, legacy handshakes accepted unchanged; deterministic"
+ ],
+ "test_evidence": [
+ "New tests/handshake-capability-advertisement.test.js: 3 pass (manifest completeness over kitchen-sink validation; live HTTP handshake plus legacy acceptance; live WS handshake over ephemeral port)",
+ "Neighbors green pre-matrix: protocol-fuzz plus conformance plus cross-runtime plus port-fallback (29 combined)",
+ "First run 414/421: 7 failures all load-flake, none R8-related (4 Jest worker OOMs, 1 dotnet-build OOM, 1 heavy-listing delta, 2 CLI assertions) — all pass isolated",
+ "Rerun 418/421: different victims (2 worker OOMs, 2 CLI spawn exit-code flakes, all pass isolated) — transient pressure, third attempt launched",
+ "Third run 421/421 suites, 3169/3169 tests, zero FAIL — fully green; flake autopsy supports a future harness-memory-bound frontier"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Next: champion-protecting bond rank follow-up from R5, or R9 intent stability under cohesion-DDA",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_198_THEN_COMMIT"
  }
  ]
 }

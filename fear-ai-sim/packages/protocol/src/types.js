@@ -4,6 +4,26 @@
 
 export const PROTOCOL_VERSION = '1.0.0';
 
+/**
+ * R8: runtime-honored optional wire fields, advertised in handshake
+ * responses so hosts discover what the server sanitizes and forwards
+ * (CXXVIII). This manifest is contractual: the completeness test pins
+ * that every key listed here survives validation, and every key the
+ * validator forwards appears here. Binary Wire Protocol v2 fixed slots
+ * carry none of these (JSON path only).
+ */
+export const SUPPORTED_OBSERVATION_FIELDS = Object.freeze({
+    visual: Object.freeze(['intensity', 'reliability', 'ageTicks']),
+    audio: Object.freeze(['loudness', 'reliability', 'ageTicks']),
+    context: Object.freeze(['trust', 'trustGain', 'calmTrustGain', 'traumaLoad', 'memoryLoad', 'identityWeight'])
+});
+
+export const SUPPORTED_SOCIAL_EVENT_FIELDS = Object.freeze({
+    location: Object.freeze(['x', 'y', 'z'])
+});
+
+export const SUPPORTED_PACING_METRICS = Object.freeze(['averageFear', 'panickingCount', 'cohesion']);
+
 export const MESSAGE_TYPES = Object.freeze({
     // Client to Server
     HANDSHAKE_REQUEST: 'HANDSHAKE_REQUEST',
