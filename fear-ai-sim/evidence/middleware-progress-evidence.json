@@ -10058,7 +10058,31 @@
  "Next: R10 smoothing-times-multirate interaction, or harness memory-bound frontier from the R8 flake autopsy",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_200_THEN_COMMIT"
+ "next_action": "R10_SMOOTHING_CADENCE_PROBE"
+ },
+ {
+ "milestone": "SMOOTHING_MULTIRATE_PROBE_R10",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Probe-only, no production change: every-tick vs cadence-3-reuse smoothing runs over a square wave plus step, steady, and replay scenarios",
+ "Measured interaction shape: reuse diverges boundedly (max 0.5 threat), step detection lags at most cadence-1 ticks, steady input rejoins identically, uncertainty shifts stay within one fuse-branch gap (0.15, stale values cross branch boundaries), sparse runs replay exactly",
+ "Two honest corrections recorded: the wave tail does not rejoin by t=59 (sparse sampling aliases transitions — slower convergence, not divergence), and the first uncertainty-envelope claim was false (branch crossing found, bound pinned instead)",
+ "Repeated orchestrator edit-placement slips in one test file (mis-anchored inserts, truncated tail) repaired by reads plus a partial rewrite before green"
+ ],
+ "test_evidence": [
+ "New tests/perception-multirate-interaction.test.js: 4 pass (bounded divergence with aliasing note; step lag bound; branch-gap uncertainty bound; replay)",
+ "Neighbors green pre-matrix: temporal-smoothing plus source-reliability (19 combined)",
+ "Full matrix: 423/423 suites, 3178/3178 tests, zero FAIL lines — fully green"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Guidance for hosts: cadence-N perception reuse lags steps by at most N-1 ticks and can shift fuse branches by one gap; no engine change needed",
+ "Next: harness memory-bound frontier from the R8 flake autopsy, or misinformation-to-trade chain (R13)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_201_THEN_COMMIT"
  }
  ]
 }
