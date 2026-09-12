@@ -90,4 +90,25 @@ describe('R18: famine blame moves faction grievance', () => {
         expect(first).toBeGreaterThan(0);
         expect(run()).toBe(first);
     });
+
+    it('6. Red team: blame alone never totalizes (2000-tick ceiling)', () => {
+        // Adversarial pin on the R18 design claim: cadence-bound hearsay
+        // must simmer posture without reaching MOBILIZE on its own.
+        const sys = new FactionSystem();
+        sys.registerFaction({ id: 'a', militaryReadiness: 0.9, economicStockpile: 0.9 });
+        sys.registerFaction({ id: 'b', militaryReadiness: 0.9, economicStockpile: 0.9 });
+        sys.getBilateralStance('a', 'b').informationConfidence = 1;
+        const stages = new Set();
+        for (let t = 1; t <= 2000; t++) {
+            if (t % 10 === 0) {
+                sys.recordIncident('b', 'a', INCIDENT_TYPES.RUMOR_HEARSAY, { famineBlame: true });
+            }
+            sys.advanceTick(1);
+            stages.add(sys.evaluateStance('a', 'b').toStage);
+        }
+        expect(sys.getBilateralStance('a', 'b').grievance).toBeGreaterThan(0.5);
+        for (const hot of ['MOBILIZE', 'SKIRMISH', 'ATTACK']) {
+            expect(stages.has(hot)).toBe(false);
+        }
+    });
 });

@@ -10415,6 +10415,29 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "COMMIT_R22_THEN_RED_TEAM_AUDIT"
+ },
+ {
+ "milestone": "CHAIN_RED_TEAM_R23",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No source changes: red-team turn. Three falsification attempts failed (claims held): blame-only equilibrium peaks at THREATEN over 2000 ticks; famine-only valley reaches meanFear 0.77 with no hysteria lock and no war; 3000-tick stoked war breathes across the full ladder (SHADOW-majority occupancy, oscillating exhaustion, 9 successions) with no permanent lock",
+ "Genuine negative finding: canonical stocks dwarf displacement flows, so the R16-to-R17 link never trips at canonical calibration (per-capita floor 0.44 vs 0.25 threshold over 1500 war ticks); chain is wired but sub-threshold without a stock shock",
+ "Minor wart recorded, not fixed: governance grievanceLevel saturates after ~3 incidents with no decay (bounded +0.2 tribal tilt; pre-existing, low leverage)"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-chain-reaction.test.js: 3 pass (low-stock war runs the full R16-R17-R18 chain with fed-war control silent; canonical-calibration negative pin guards threshold drift; replay)",
+ "Extended fear-ai-sim/tests/valley-famine-blame.test.js with 2000-tick blame-ceiling adversarial pin (grievance simmers high, MOBILIZE/SKIRMISH/ATTACK never reached)",
+ "Full matrix: 438/438 suites, 3261/3261 tests, 0 failures (EXIT line lost when background shell reaped; 438 PASS lines audited)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Setup food stocks are hardcoded, so designers cannot tune the chain threshold without code (gap opened by the negative finding)",
+ "RAID grievance fuel unscaled host reality (carried from R21); blame one-way (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_216_THEN_COMMIT"
  }
  ]
 }
