@@ -10823,6 +10823,28 @@
  "Blame one-way (carried from R18); nomad war unreachability (carried from R32)"
  ],
  "next_action": "MATRIX_234_THEN_COMMIT"
+ },
+ {
+ "milestone": "VARIANCE_ORACLES_R39",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No source changes: closed-world A5-F1/F2/F3 verified already addressed (activity floors, frozen contrasts, seed threading); R39 closes the remaining valley-side gap",
+ "Valley long runs carry genuine variance (measured 942-1122 encounters, 122-212 deliberations across 4 seeds); agency-free valley completes clean with structural zeros on every axis",
+ "Host-authority clean: read-only census plus group clearing in test setup; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-variance-oracles.test.js: 5 pass (multi-seed variance gates; frozen contrast with zeros; live twin agency; frozen determinism; finite exposure-denominated rates)",
+ "Neighbors green: war-pacing plus chain-reaction plus 5000tick plus invariant-health plus sensitivity-500 (43 tests)",
+ "Full matrix: 451/451 suites, 3327/3327 tests, 0 failures (matrix235 voided: 21 failures all parallel-load flakes - server-boot timeouts plus CLI subprocess crashes; all 4 suites green in isolation; clean reseal matrix236)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "NEXT-22b single-attractor convergence stands as documented scenario fact (setup variation, not seeds, splits classes per sweep evidence)",
+ "Blame one-way (carried from R18); nomad war unreachability (carried from R32)"
+ ],
+ "next_action": "MATRIX_235_THEN_COMMIT"
  }
  ]
 }

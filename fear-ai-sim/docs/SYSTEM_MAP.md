@@ -406,6 +406,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Capability Enforcement R36:** per-tick caps filter tick intents with annotations; outcome endpoint closes the feedback loop (park/restore); 11 new tests; matrix 450/450, 3321 tests, EXIT 0.
 - **Degeneracy Recalibration R37:** diversity normalized by expressive range; EXEMPLARY gated on content; missing faction dimension restored; matrix 450/450, 3322 tests.
 - **Client Contracts R38:** Python/Node/C# clients speak caps, outcome, peers; protocol spec plus integration guide updated; matrix 450/450, 3322 tests.
+- **Variance Oracles R39:** valley seed-variance gates plus frozen-world contrast (soaks measure agency); 5 new tests; matrix 451/451, 3327 tests.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
