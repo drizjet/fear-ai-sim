@@ -9330,6 +9330,29 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_9"
+ },
+ {
+ "milestone": "HETEROGENEOUS_SQUAD_FEAR_169",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "CollectiveCourageHarness.runSequence honors the documented-but-unread fearByMember input: members seed and ratchet individually by the same affine rule, squad series track the survivor mean (affine, so uniform input reproduces legacy series exactly), and the report adds id-sorted per-survivor finalFears",
+ "Null and undefined entries read as absent rather than fear zero, avoiding the Number(null) equals 0 footgun; out-of-range values clamp",
+ "Composition beats the mean: a heterogeneous squad and a uniform squad at the same mean share holdsDuty while arbitrating 5/7 versus 7/7 on duty"
+ ],
+ "test_evidence": [
+ "New tests/heterogeneous-squad-fear.test.js: 6 pass (legacy exactness; composition split; survivor-only sorted finals; malformed safety; leaderless break; exact replay)",
+ "Courage suites green (17 pass), confirming legacy verdicts preserved",
+ "Full matrix 396/397 suites, 3005 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~90s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 10 through 24 carry (next: bravery and agreeableness succession traits); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Morale stays squad-level; per-member morale and desertion thresholds do not exist, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_10"
  }
  ]
 }

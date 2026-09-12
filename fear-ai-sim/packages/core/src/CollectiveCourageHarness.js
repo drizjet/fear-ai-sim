@@ -38,7 +38,7 @@ export class CollectiveCourageHarness {
     /**
      * Evaluate one casualty sequence.
      * @param {object} [config={}] { members, casualtyOrder: string[], leaderPresent,
-     *   leaderTrust, leaderRespect, doctrineBonus, baseFear }
+     *   leaderTrust, leaderRespect, doctrineBonus, baseFear, fearByMember: {id: fear} }
      * @returns report with morale series, retreat series, and duty verdict
      */
     runSequence(config = {}) {
@@ -59,16 +59,36 @@ export class CollectiveCourageHarness {
         const retreatSeries = [];
         // Morale starts at cohesion; each loss hits morale proportional to
         // casualty fraction, buffered by leadership; fear ratchets upward.
+        // NEXT-169 (post-25 candidate 9): per-member fear. Host-reported
+        // fearByMember seeds individual fear; members without entries use
+        // baseFear. Each survivor ratchets by the same rule; squad series
+        // track the survivor mean, so uniform input reproduces legacy
+        // series exactly.
+        const rawMap = (config.fearByMember && typeof config.fearByMember === 'object')
+            ? config.fearByMember : {};
+        const fearOf = new Map(ids.map((id) => {
+            const raw = rawMap[id] == null ? NaN : Number(rawMap[id]);
+            return [id, Number.isFinite(raw) ? clamp01(raw) : baseFear];
+        }));
+        const meanFear = () => {
+            let s = 0;
+            for (const id of alive) s += fearOf.get(id);
+            return alive.size > 0 ? s / alive.size : 0;
+        };
         let morale = round4(cohesion);
-        let fear = baseFear;
+        let fear = meanFear();
         moraleSeries.push(morale);
         fearSeries.push(round4(fear));
-        retreatSeries.push(round4s(fear * 0.3 - morale * 0.5));
         for (const fallen of order) {
             if (!alive.has(fallen)) continue;
             alive.delete(fallen);
+            fearOf.delete(fallen);
             const casualtyFraction = 1 - alive.size / n;
-            fear = clamp01(fear + 0.12 * (1 - fear));
+            for (const id of alive) {
+                const f = fearOf.get(id);
+                fearOf.set(id, clamp01(f + 0.12 * (1 - f)));
+            }
+            fear = meanFear();
             const buffer = leaderPresent ? 0.45 : 0.1;
             morale = round4(clamp01(morale - casualtyFraction * 0.35 * (1 - buffer)));
             moraleSeries.push(morale);
@@ -88,7 +108,12 @@ export class CollectiveCourageHarness {
             finalMorale,
             finalFear,
             finalRetreatPressure: finalRetreat,
-            holdsDuty: finalRetreat <= 0 && finalMorale >= 0.35
+            holdsDuty: finalRetreat <= 0 && finalMorale >= 0.35,
+            // NEXT-169: per-survivor fear (4-decimal, id-sorted) so joints
+            // can arbitrate heterogeneous squads member by member.
+            finalFears: Object.fromEntries([...fearOf.entries()]
+                .sort(([a], [b]) => (a < b ? -1 : 1))
+                .map(([id, f]) => [id, Math.round(f * 10000) / 10000]))
         };
     }
 
