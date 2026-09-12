@@ -10393,6 +10393,28 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "COMMIT_R21_THEN_OPTIONS_SNAPSHOT_GAP"
+ },
+ {
+ "milestone": "SCENARIO_PARAMS_R22",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Snapshots carry scenarioParams (displacement, scarcity, severityParams); setState shallow-merges with constructor defaults so pre-R22 snapshots and garbage restore clean; directiveConsumption flag already covered",
+ "No behavior change: params flow through existing code paths; forks inherit tuning instead of reverting to defaults",
+ "Host-authority clean: snapshot shape only; deterministic"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-scenario-params.test.js: 5 pass (round-trip incl. severityParams; tuned-fork diverges from default twin while matching its parent; legacy restore defaults; garbage-safe; replay)",
+ "Neighbors green: world-counterfactual-engine plus world-snapshot-compactor plus deliberation plus consumption (24 tests)",
+ "Full matrix: 437/437 suites, 3257/3257 tests, 0 failures (EXIT line lost when background shell reaped; 437 PASS lines audited)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "RAID grievance fuel unscaled host reality (carried from R21); blame one-way (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "COMMIT_R22_THEN_RED_TEAM_AUDIT"
  }
  ]
 }

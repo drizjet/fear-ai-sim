@@ -1312,6 +1312,14 @@ export class FrontierValleySimulation {
             successionCount: this.succession ? this.succession.successions : 0,
             // R21: consumption switch so forks inherit the ablation setting.
             directiveConsumption: this.directiveConsumption !== false,
+            // R22: designer scenario params (R16 displacement, R17
+            // scarcity, NEXT-56 severity sweep) so forks and
+            // counterfactuals inherit tuning instead of defaults.
+            scenarioParams: {
+                displacement: { ...(this.displacement || {}) },
+                scarcity: { ...(this.scarcity || {}) },
+                severityParams: { ...(this.severityParams || {}) }
+            },
             // R20: governments carry deliberation memory (grievance,
             // current directive, leader traits); the trail is bounded.
             governance: Array.from((this.governance || new Map()).entries()).map(([id, gov]) => ({
@@ -1388,6 +1396,21 @@ export class FrontierValleySimulation {
         // R21: restore the ablation switch; pre-R21 snapshots default on.
         if (typeof snapshot.directiveConsumption === 'boolean') {
             this.directiveConsumption = snapshot.directiveConsumption;
+        }
+        // R22: restore designer tuning; pre-R22 snapshots keep
+        // constructor defaults (garbage-safe). Shallow merge so new
+        // future keys default instead of vanishing.
+        if (snapshot.scenarioParams && typeof snapshot.scenarioParams === 'object') {
+            const sp = snapshot.scenarioParams;
+            if (sp.displacement && typeof sp.displacement === 'object') {
+                this.displacement = { ...this.displacement, ...sp.displacement };
+            }
+            if (sp.scarcity && typeof sp.scarcity === 'object') {
+                this.scarcity = { ...this.scarcity, ...sp.scarcity };
+            }
+            if (sp.severityParams && typeof sp.severityParams === 'object') {
+                this.severityParams = { ...(this.severityParams || {}), ...sp.severityParams };
+            }
         }
         // R20: restore governments and the bounded trail; pre-R20
         // snapshots keep fresh setup-built governments (garbage-safe).
