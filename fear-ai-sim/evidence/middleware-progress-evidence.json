@@ -10482,6 +10482,28 @@
  "Standing gaps carried: parallel harness flakiness; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_218_THEN_COMMIT"
+ },
+ {
+ "milestone": "CLI_DAEMONS_R26",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No source changes: audit turn. Spawn-bind-poll-kill coverage for the two long-lived CLI paths the audit found untested",
+ "Windows signal semantics recorded: SIGTERM kill surfaces as code 1/null, so the test asserts exit (no hang) rather than exit code; graceful server.stop() stays covered by conformance afterAll hooks"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/cli-daemons.test.js: 2 pass (server binds on --port flag, answers /health ok, exits past SIGTERM; dashboard binds, answers /api/status, terminates)",
+ "Neighbors green: cli plus runtime-server plus dashboard-workbench (131 tests)",
+ "Full matrix: 441/441 suites, 3271/3271 tests, EXIT 0 (benchmark results artifact churn reverted). Red run first: 5 suites failed (4 worker OOM/read flakes plus cli.test.js scarcity/spawn failures); root-caused to dashboard port 8792 colliding with lifecycle-and-optional-modules under parallel workers, fixed to surveyed-free 8793 and re-ran green"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Unity/Unreal adapters untestable without engines (carried); C-sharp live round-trip shallow (carried)",
+ "RAID grievance fuel unscaled (carried from R21); blame one-way (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_219_THEN_COMMIT"
  }
  ]
 }
