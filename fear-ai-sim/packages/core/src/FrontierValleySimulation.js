@@ -119,6 +119,16 @@ export class FrontierValleySimulation {
             meal: 0.5,
             ...(options.displacement || {})
         };
+        // R17: scarcity-unrest params (designer-overridable via
+        // options.scarcity). Settlements below perCapitaThreshold food
+        // per mouth stress nearby groups (hunger unrest). Pure function
+        // of existing stocks/positions: no new snapshot fields.
+        this.scarcity = {
+            perCapitaThreshold: 0.25,
+            radius: 40,
+            dreadPerTick: 0.05,
+            ...(options.scarcity || {})
+        };
 
         this._setupFrontierValley(options);
     }
@@ -566,6 +576,47 @@ export class FrontierValleySimulation {
         }
     }
     /**
+     * R17: scarcity unrest. Settlements whose food per mouth falls below
+     * threshold stress groups inside radius (hunger unrest dread on the
+     * existing threatPressure driver, capped at 1). Per-capita, not
+     * absolute: populous stocked towns stay calm while sparse empty ones
+     * fear. Deterministic spatial read, no RNG, no new state.
+     * @returns {number} groups stressed this call
+     */
+    _applyScarcityUnrest() {
+        const s = this.scarcity;
+        if (!s) return 0;
+        const threshold = Number(s.perCapitaThreshold);
+        const radius = Math.max(0, Number(s.radius) || 0);
+        const dread = Math.max(0, Number(s.dreadPerTick) || 0);
+        if (!Number.isFinite(threshold) || dread <= 0) return 0;
+        const stressed = [];
+        for (const settlement of this.settlements.values()) {
+            const pop = Math.max(0, Number(settlement.population) || 0);
+            if (pop <= 0) continue;
+            const food = Math.max(0, Number(settlement.resources?.food) || 0);
+            if (food / pop >= threshold) continue;
+            stressed.push(settlement);
+        }
+        if (stressed.length === 0) return 0;
+        let count = 0;
+        for (const group of this.worldSystem.groups.values()) {
+            if (!group || !group.drivers || !group.position) continue;
+            let near = false;
+            for (const settlement of stressed) {
+                const dx = Number(group.position.x) - Number(settlement.position?.x);
+                const dz = Number(group.position.z) - Number(settlement.position?.z);
+                if (!Number.isFinite(dx) || !Number.isFinite(dz)) continue;
+                if (dx * dx + dz * dz <= radius * radius) { near = true; break; }
+            }
+            if (!near) continue;
+            group.drivers.threatPressure = Math.min(1.0, (Number(group.drivers.threatPressure) || 0) + dread);
+            count++;
+        }
+        return count;
+    }
+
+    /**
      * R16: war displacement. While the settler-bandit bilateral sits at
      * SKIRMISH/ATTACK, the frontier source sheds a cohort share on
      * cadence to the most food-secure settlement. Mouths are conserved
@@ -906,6 +957,9 @@ export class FrontierValleySimulation {
             // R16: war displacement runs after escalation state is final
             // for the tick, so flight reads the same stages as warsActive.
             this._displaceWarRefugees();
+            // R17: scarcity unrest reads post-displacement stocks, so
+            // flight-driven dilution bites the same tick it lands.
+            this._applyScarcityUnrest();
             // CVII sink: read-only post-tick metrics; fault-isolated.
             if (hooks && typeof hooks.emit === 'function') {
                 try {

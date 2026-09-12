@@ -10273,6 +10273,30 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "COMMIT_R16_THEN_SCARCITY_CONSUMER"
+ },
+ {
+ "milestone": "SCARCITY_UNREST_R17",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "FrontierValleySimulation._applyScarcityUnrest runs post-displacement each tick: settlements below 0.25 food per mouth stress groups inside radius 40 with +0.05 hunger-unrest dread on threatPressure (capped 1); per-capita not absolute; deterministic spatial read, no RNG, no new snapshot fields",
+ "Famine threshold calibrated to canonical stocks (Northwatch 0.44 per mouth starts calm); designer-overridable via options.scarcity; pure-addition delta",
+ "Host-authority clean: advisory driver only; deterministic"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-settlement-scarcity.test.js: 7 pass (starved stresses vs stocked calm; per-capita isolation; radius bound; strict 0.25 boundary; 1.0 cap; live starved-vs-fed fear lift; replay)",
+ "Neighbors green: valley-war-displacement plus frontier-valley-simulation plus valley-outcomes (100 tests)",
+ "Full matrix: 432/432 suites, 3229/3229 tests, EXIT 0 (benchmark results artifact churn reverted)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Scarcity dread feeds group fear only; no faction-level reaction to starving settlements (governance/mobilization link open)",
+ "No production caller composes SuccessionEngine with governance yet (carried from R15); valley leader-death events not modeled",
+ "Retaliation accounts of disbanded factions linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "COMMIT_R17_THEN_FACTION_SCARCITY_REACTION"
  }
  ]
 }
