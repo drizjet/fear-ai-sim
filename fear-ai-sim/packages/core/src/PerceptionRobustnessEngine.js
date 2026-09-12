@@ -54,6 +54,15 @@ function sanitizeReliability(v) {
     return Math.max(0, Math.min(1, v));
 }
 
+// NEXT-187: opt-in observation age in ticks. Null when absent (legacy
+// path); present values sanitize to a non-negative finite count, garbage
+// collapsing to 0 (fresh) so malformed ages can never inflate uncertainty.
+function sanitizeAgeTicks(v) {
+    if (v === undefined) return null;
+    if (typeof v !== 'number' || !Number.isFinite(v)) return 0;
+    return Math.max(0, v);
+}
+
 export class PerceptionRobustnessEngine {
     constructor(options = {}) {
         this.rng = new DeterministicRng(options.seed ?? 1337);
@@ -218,6 +227,23 @@ export class PerceptionRobustnessEngine {
                 : 1;
             result.uncertainty = round4(clamp01(fused.uncertainty + (1 - relFused) * 0.5));
             result.reliability = { visual: ev, audio: ea, fused: round4(relFused) };
+        }
+        // NEXT-187: opt-in observation-age discounting. Mean contributor age
+        // adds at most +0.25 at 10+ ticks (linear ramp); threat and intent
+        // untouched; `ageTicks` echo attached only when supplied.
+        const gv = sanitizeAgeTicks(observation.visual?.ageTicks);
+        const ga = sanitizeAgeTicks(observation.audio?.ageTicks);
+        if (gv !== null || ga !== null) {
+            const av = gv ?? 0;
+            const aa = ga ?? 0;
+            const ages = [];
+            if (vis.value !== null && vis.value !== undefined) ages.push(av);
+            if (aud.value !== null && aud.value !== undefined) ages.push(aa);
+            const ageFused = ages.length > 0
+                ? ages.reduce((a, b) => a + b, 0) / ages.length
+                : 0;
+            result.uncertainty = round4(clamp01(result.uncertainty + Math.min(ageFused, 10) / 10 * 0.25));
+            result.ageTicks = { visual: av, audio: aa, fused: round4(ageFused) };
         }
         return result;
     }

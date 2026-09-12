@@ -9719,7 +9719,29 @@
  "Stale-age discounting (observation age/staleness) still unbuilt; pacing-by-relationship wire (175) and four auto-coupling gaps remain the next build candidates",
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
- "next_action": "MATRIX_187_THEN_COMMIT"
+ "next_action": "NEXT_187_BUILD"
+ },
+ {
+ "milestone": "PERCEPTION_STALE_AGE_187",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "PerceptionRobustnessEngine.perceive reads opt-in inline visual.ageTicks and audio.ageTicks (non-negative finite; garbage collapses to 0 fresh; absent leaves outputs bit-identical); mean contributor age adds min(age,10)/10*0.25 to uncertainty, stacking additively with the NEXT-186 reliability term under clamp01; threat and intent untouched; ageTicks echo attached only when supplied",
+ "Legacy age/staleness spellings remain ignored (absence kept for those names); candidate 24's remaining gap is now closed",
+ "Host-authority clean: advisory numbers only; deterministic, exact replay pinned"
+ ],
+ "test_evidence": [
+ "tests/perception-source-reliability.test.js: 10 pass (rewritten test 2: legacy names ignored plus ageTicks 12-tick 0.4 and 4-tick 0.25; new test 10: reliability-plus-age stacking 0.9 and conflict-branch saturation clamp at 1)",
+ "Neighbors green pre-matrix: perception-robustness plus interaction-mutations plus interaction-coverage (34 combined)",
+ "Full matrix: 411/412 suites, 3109/3117 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Pacing-by-relationship wire (175) and the four auto-coupling gaps are now the top build candidates; perception V2 (LXXXVI) complete except cross-modal temporal smoothing",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "MATRIX_188_THEN_COMMIT"
  }
  ]
 }

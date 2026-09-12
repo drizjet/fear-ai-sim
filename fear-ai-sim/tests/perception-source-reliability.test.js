@@ -43,7 +43,7 @@ describe('Post-25 audit 24: perception source-reliability inputs', () => {
         expect(rTrusted.reliability).toEqual({ visual: 0.99, audio: 0.99, fused: 0.99 });
     });
 
-    it('2. INCONCLUSIVE: observation age/staleness fields do not discount outputs', () => {
+    it('2. BUILT (NEXT-187): ageTicks discounts confidence; legacy age/staleness names stay ignored', () => {
         const fresh = new PerceptionRobustnessEngine({ seed: 5 });
         fresh.setProfile('a', { noiseStd: 0 });
         const rFresh = fresh.perceive('a', 1, OBS());
@@ -53,9 +53,31 @@ describe('Post-25 audit 24: perception source-reliability inputs', () => {
             visual: { intensity: 0.8, age: 50, staleness: 50 },
             audio: { loudness: 0.6, age: 50, staleness: 50 }
         });
-        // Pinned absence: no stale-age discounting on the observation path.
+        // Legacy names remain ignored (absence kept for those spellings).
         expect(rAged).toEqual(rFresh);
         expect(rAged.visual.stale).toBe(false);
+        // Documented ageTicks path: 10+ ticks adds the full +0.25.
+        const e = new PerceptionRobustnessEngine({ seed: 5 });
+        e.setProfile('b', { noiseStd: 0 });
+        const rOld = e.perceive('b', 1, {
+            visual: { intensity: 0.8, ageTicks: 12 },
+            audio: { loudness: 0.6, ageTicks: 12 }
+        });
+        expect(rOld.fusedThreat).toBe(0.72);
+        expect(rOld.uncertainty).toBe(0.4);
+        expect(rOld.ageTicks).toEqual({ visual: 12, audio: 12, fused: 12 });
+        const rMid = e.perceive('b', 2, {
+            visual: { intensity: 0.8, ageTicks: 4 },
+            audio: { loudness: 0.6, ageTicks: 4 }
+        });
+        expect(rMid.uncertainty).toBe(0.25);
+        // Garbage ages collapse to fresh; absent keeps legacy shape.
+        const rGarbageAge = e.perceive('b', 3, {
+            visual: { intensity: 0.8, ageTicks: NaN },
+            audio: { loudness: 0.6, ageTicks: -7 }
+        });
+        expect(rGarbageAge.uncertainty).toBe(0.15);
+        expect('ageTicks' in rFresh).toBe(false);
     });
 
     it('3. Latency-stale ticks yield lower-or-equal threat and higher-or-equal uncertainty (metamorphic)', () => {
@@ -168,5 +190,24 @@ describe('Post-25 audit 24: perception source-reliability inputs', () => {
         const b = run();
         expect(JSON.stringify(b)).toBe(JSON.stringify(a));
         expect(a[0].reliability).toEqual({ visual: 0.3, audio: 0.7, fused: 0.5 });
+    });
+
+    it('10. Reliability and age stack additively under the clamp; threat still untouched', () => {
+        const e = new PerceptionRobustnessEngine({ seed: 5 });
+        e.setProfile('a', { noiseStd: 0 });
+        // 0.15 + (1-0)*0.5 + 0.25 = 0.9.
+        const r = e.perceive('a', 1, {
+            visual: { intensity: 0.8, reliability: 0, ageTicks: 20 },
+            audio: { loudness: 0.6, reliability: 0, ageTicks: 20 }
+        });
+        expect(r.fusedThreat).toBe(0.72);
+        expect(r.uncertainty).toBe(0.9);
+        // Saturation: conflict-branch base 0.65 + full penalties clamps at 1.
+        const c = e.perceive('a', 2, {
+            visual: { intensity: 0.1, reliability: 0, ageTicks: 50 },
+            audio: { loudness: 0.9, reliability: 0, ageTicks: 50 }
+        });
+        expect(c.conflict).toBe(true);
+        expect(c.uncertainty).toBe(1);
     });
 });
