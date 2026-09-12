@@ -10345,6 +10345,30 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "COMMIT_R19_THEN_GOVERNANCE_DELIBERATION_WIRING"
+ },
+ {
+ "milestone": "GOVERNANCE_VALLEY_R20",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Valley owns governments (settlers/nomads consensus, bandit warlord autocracy with seeded leaderId); raid/fight-back/extortion incidents deliberate victim and warlord governments through live splinterRisk/cohesion/vacancy; bounded 100-entry advisory trail plus deliberation/fracture counters",
+ "Governments and trail round-trip snapshots garbage-safely; pre-R20 snapshots keep setup-built governments; wildlife deliberates nothing (null, trailless)",
+ "Edit slip recorded: setup insert ate the wildlife registration block; restored and diff-verified",
+ "Host-authority clean: advisory directives and trail only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-governance-deliberation.test.js: 6 pass (shaped trail entries; early-war whole; long-war warlord fracture with stepped-down directives; fallen-throne OBSERVE plus heir recovery; wildlife null; fork plus replay)",
+ "Neighbors green: faction-governance plus fracture plus valley-war-succession plus frontier-valley-simulation (110 tests)",
+ "Full matrix: 435/435 suites, 3246/3246 tests, EXIT 0 (benchmark results artifact churn reverted)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Deliberated directives are recorded but consumed by nothing yet (fight-back modulation is the next link)",
+ "Blame flows one way (settlers blame bandits) (carried from R18); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "COMMIT_R20_THEN_DIRECTIVE_CONSUMPTION"
  }
  ]
 }

@@ -26,6 +26,7 @@ import { WorldSimulationSystem, ROAMING_PARTY_TYPES, ENCOUNTER_TYPES, RUMOR_TOPI
 import { RelationshipTensorSystem } from './RelationshipTensorSystem.js';
 import { TradeDependencyEngine } from './TradeDependencyEngine.js';
 import { SuccessionEngine } from './SuccessionEngine.js';
+import { FactionGovernanceSystem, GOVERNANCE_ARCHETYPES } from './FactionGovernanceSystem.js';
 
 export const FRONTIER_VALLEY_FACTIONS = Object.freeze({
     SETTLERS: 'SettlersAlliance',
@@ -269,6 +270,24 @@ export class FrontierValleySimulation {
             militaryReadiness: 0.35,
             economicStockpile: 0.20
         });
+        // R20: valley governments. Settlers and nomads deliberate by
+        // council; bandits follow a single warlord (autocracy), so a
+        // fallen warlord headless-falls their deliberation (R15) until
+        // succession enthrones an heir (R19). Wildlife is hunger, not
+        // government (NOW-16 spirit: no deliberation).
+        this.governance = new Map([
+            [FRONTIER_VALLEY_FACTIONS.SETTLERS, new FactionGovernanceSystem(
+                FRONTIER_VALLEY_FACTIONS.SETTLERS, GOVERNANCE_ARCHETYPES.TRIBAL_CONSENSUS)],
+            [FRONTIER_VALLEY_FACTIONS.BANDITS, new FactionGovernanceSystem(
+                FRONTIER_VALLEY_FACTIONS.BANDITS, GOVERNANCE_ARCHETYPES.AUTOCRATIC_DESPOT,
+                { leader: { fear: 0.2, anger: 0.8, bravery: 0.7, neuroticism: 0.5 } })],
+            [FRONTIER_VALLEY_FACTIONS.NOMADS, new FactionGovernanceSystem(
+                FRONTIER_VALLEY_FACTIONS.NOMADS, GOVERNANCE_ARCHETYPES.TRIBAL_CONSENSUS)]
+        ]);
+        const warlord = this.factionSystem.getFaction(FRONTIER_VALLEY_FACTIONS.BANDITS);
+        if (warlord && !warlord.leaderId) warlord.leaderId = `${FRONTIER_VALLEY_FACTIONS.BANDITS}.warlord`;
+        // Bounded advisory trail of deliberated directives (newest last).
+        this.governanceTrail = [];
 
         // Bilateral relations: Bandits hostile to Settlers; Nomads neutral; Wildlife predatory
         const banditStance = this.factionSystem.getBilateralStance(
@@ -740,6 +759,61 @@ export class FrontierValleySimulation {
     }
 
     /**
+     * R20: deliberate one incident through a valley government's live
+     * faction state (NOW-16 style: unit-testable in isolation). Reads
+     * splinterRisk, cohesion, and leader vacancy off the faction record
+     * (R19 succession aftermath), so fractured governments step down
+     * (R15) and headless autocracies fall to OBSERVE. Appends a bounded
+     * advisory trail entry and counts deliberations/fractures. Factions
+     * without governments (wildlife) return null. Deterministic.
+     * @param {string} factionId deliberating faction
+     * @param {object} incident { type, severity, targetFactionId }
+     * @returns {object|null} deliberation result
+     */
+    _deliberateGovernance(factionId, incident = {}) {
+        const gov = this.governance ? this.governance.get(factionId) : null;
+        if (!gov) return null;
+        const faction = this.factionSystem.getFaction(factionId);
+        const other = incident.targetFactionId ? this.factionSystem.getFaction(incident.targetFactionId) : null;
+        const myMil = Number(faction?.militaryReadiness) || 0;
+        const theirMil = Number(other?.militaryReadiness) || 0;
+        const rawRisk = Number(faction?.splinterRisk);
+        const splinterRisk = Number.isFinite(rawRisk) ? Math.max(0, Math.min(1, rawRisk)) : 0;
+        const rawCohesion = Number(faction?.cohesion);
+        const cohesion = Number.isFinite(rawCohesion) ? Math.max(0, Math.min(1, rawCohesion)) : 1;
+        const leaderVacant = !faction?.leaderId;
+        const result = gov.deliberateIncident(
+            { type: incident.type, severity: incident.severity, targetFactionId: incident.targetFactionId },
+            {
+                powerRatio: theirMil > 0 ? myMil / theirMil : 1.0,
+                splinterRisk,
+                cohesion,
+                leaderVacant
+            }
+        );
+        // Input-based fracture flag (mirrors the R15 gates, not string
+        // matching): vacant autocracy, or split council.
+        const fractured = (leaderVacant && gov.archetype === GOVERNANCE_ARCHETYPES.AUTOCRATIC_DESPOT)
+            || splinterRisk >= 0.5 || cohesion <= 0.35;
+        this.governanceTrail.push({
+            tick: this.currentTick,
+            factionId,
+            incidentType: incident.type ?? 'UNKNOWN',
+            directive: result.directive,
+            rationale: result.rationale,
+            fractured
+        });
+        if (this.governanceTrail.length > 100) {
+            this.governanceTrail.splice(0, this.governanceTrail.length - 100);
+        }
+        this.macroMetrics.governanceDeliberations = (Number(this.macroMetrics.governanceDeliberations) || 0) + 1;
+        if (fractured) {
+            this.macroMetrics.governanceFractures = (Number(this.macroMetrics.governanceFractures) || 0) + 1;
+        }
+        return result;
+    }
+
+    /**
      * Maps live encounters to route danger, group threat pressure, and
      * faction incidents. Extracted (NOW-16) so the mapping is unit-testable
      * with synthetic encounters; advance() calls it once per tick.
@@ -766,6 +840,9 @@ export class FrontierValleySimulation {
                     // faction cools its grudge (grievance scaled, facts kept).
                     const restraint = this._dependencyRestraint(victim, bandit);
                     this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.RAID_CONFIRMED, { encounter: enc.encounterId ?? null, restraint });
+                    // R20: the victim government deliberates the raid
+                    // through live faction state (advisory trail).
+                    this._deliberateGovernance(victim, { type: 'RAID_CONFIRMED', severity: 0.7, targetFactionId: bandit });
                     // NEXT-44: the victim fought back, so the raiders bled
                     // too. Symmetric restraint: dependence cools both ways.
                     // NEXT-48: mauling-vs-scuffle differentiation. The
@@ -784,6 +861,8 @@ export class FrontierValleySimulation {
                     const fightSeverity = casualtySeverityScale(share, sevP.floor, sevP.knee);
                     const backRestraint = this._dependencyRestraint(bandit, victim);
                     this.factionSystem.recordIncident(victim, bandit, INCIDENT_TYPES.SKIRMISH_CASUALTY, { encounter: enc.encounterId ?? null, restraint: backRestraint, severity: fightSeverity });
+                    // R20: the bandit warlord deliberates the bloody nose.
+                    this._deliberateGovernance(bandit, { type: 'SKIRMISH_CASUALTY', severity: 0.55, targetFactionId: victim });
                 }
                 // NEXT-44: retaliatory fuel. Border-skirmish combat (never
                 // bandit-initiated: that path attributes blame above) bleeds
@@ -816,6 +895,8 @@ export class FrontierValleySimulation {
                 if (bandit && civilized) {
                     const restraint = this._dependencyRestraint(victim, bandit);
                     this.factionSystem.recordIncident(bandit, victim, INCIDENT_TYPES.PROVOCATION, { encounter: enc.encounterId ?? null, restraint });
+                    // R20: the victim government deliberates the shakedown.
+                    this._deliberateGovernance(victim, { type: 'PROVOCATION', severity: 0.4, targetFactionId: bandit });
                 }
             }
             // NEXT-85: heard (not fought) threats raise ADVISORY route danger
@@ -1196,7 +1277,20 @@ export class FrontierValleySimulation {
             // R19: attrition episode state plus succession count
             // (resolve is stateless; only the counter persists).
             attrition: { ...(this.attrition || { hotTicks: 0, rearmed: true, threshold: 25 }) },
-            successionCount: this.succession ? this.succession.successions : 0
+            successionCount: this.succession ? this.succession.successions : 0,
+            // R20: governments carry deliberation memory (grievance,
+            // current directive, leader traits); the trail is bounded.
+            governance: Array.from((this.governance || new Map()).entries()).map(([id, gov]) => ({
+                factionId: id,
+                archetype: gov.archetype,
+                leader: gov.leader ? { ...gov.leader } : null,
+                councilMembers: Array.isArray(gov.councilMembers) ? gov.councilMembers.map((m) => ({ ...m })) : [],
+                grievanceLevel: gov.grievanceLevel,
+                currentDirective: gov.currentDirective
+            })),
+            governanceTrail: Array.isArray(this.governanceTrail)
+                ? this.governanceTrail.slice(-100).map((e) => ({ ...e }))
+                : []
         };
     }
 
@@ -1256,6 +1350,22 @@ export class FrontierValleySimulation {
         }
         if (this.succession && Number.isFinite(Number(snapshot.successionCount))) {
             this.succession.successions = Math.max(0, Math.floor(Number(snapshot.successionCount)));
+        }
+        // R20: restore governments and the bounded trail; pre-R20
+        // snapshots keep fresh setup-built governments (garbage-safe).
+        if (Array.isArray(snapshot.governance)) {
+            for (const saved of snapshot.governance) {
+                if (!saved || typeof saved.factionId !== 'string') continue;
+                const gov = this.governance ? this.governance.get(saved.factionId) : null;
+                if (!gov) continue;
+                if (saved.leader && typeof saved.leader === 'object') gov.leader = { ...saved.leader };
+                if (Array.isArray(saved.councilMembers)) gov.councilMembers = saved.councilMembers.map((m) => ({ ...m }));
+                if (Number.isFinite(Number(saved.grievanceLevel))) gov.grievanceLevel = Number(saved.grievanceLevel);
+                if (typeof saved.currentDirective === 'string') gov.currentDirective = saved.currentDirective;
+            }
+        }
+        if (Array.isArray(snapshot.governanceTrail)) {
+            this.governanceTrail = snapshot.governanceTrail.slice(-100).map((e) => ({ ...e }));
         }
     }
 
