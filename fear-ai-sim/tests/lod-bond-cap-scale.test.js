@@ -52,14 +52,21 @@ describe('R5: bond-cap pressure at hundred-agent scale', () => {
         }
     });
 
-    it('2. Kept edges are the exact top-12 by |trust|+familiarity; restore is exact', () => {
+    it('2. Kept edges are champion plus top-11 of the rest; restore is exact', () => {
         const pop = buildPopulation(7);
         const vault = new IdentityVault();
         sealAll(vault, pop);
         for (const snap of pop) {
-            const expected = [...snap.relationships]
-                .sort((a, b) => (Math.abs(b.trust) + b.familiarity) - (Math.abs(a.trust) + a.familiarity))
-                .slice(0, 12);
+            const ranked = [...snap.relationships]
+                .sort((a, b) => (Math.abs(b.trust) + b.familiarity) - (Math.abs(a.trust) + a.familiarity));
+            let champ = ranked[0];
+            for (const e of ranked) {
+                if (Math.abs(e.trust) > Math.abs(champ.trust)) champ = e;
+            }
+            const expected = ranked.includes(champ) && ranked.indexOf(champ) < 12
+                ? ranked.slice(0, 12)
+                : [champ, ...ranked.filter((e) => e !== champ).slice(0, 11)]
+                    .sort((a, b) => (Math.abs(b.trust) + b.familiarity) - (Math.abs(a.trust) + a.familiarity));
             const restored = vault.restore(snap.agentId);
             expect(restored.bonds).toEqual(expected);
             expect(restored.identity).toEqual(snap.identity);
@@ -68,20 +75,13 @@ describe('R5: bond-cap pressure at hundred-agent scale', () => {
         }
     });
 
-    it('3. FALSIFIER FIRED: the cap drops strongest-trust bonds (pinned finding)', () => {
-        // The rank key couples trust with familiarity, so a pure-trust
-        // champion with low familiarity loses to twelve lukewarm familiar
-        // edges. Measured over five deterministic populations (120 agents,
-        // 30 uniform-random edges each): 85 of 600 agents lose their single
-        // strongest-trust bond, 83 of those with |trust| > 0.9. This is a
-        // pinned FINDING, not a code failure: the vault behaves exactly as
-        // designed (test 2 proves rank-exactness), but the design drops
-        // near-maximum-trust bonds under dense edge lists. Follow-up: a
-        // champion-protecting rank (e.g. always keep argmax-|trust|) or a
-        // raised/configurable cap with perf data from test 4. The seal
-        // receipt already reports droppedEdges so hosts can detect pressure.
+    it('3. BUILT (R5b): the trust champion always survives the cap', () => {
+        // R5 pinned 85/600 champion losses (83 above 0.9) under the pure
+        // |trust|+familiarity rank. Champion protection keeps the argmax-
+        // |trust| edge and fills the other 11 slots by rank, so losses go
+        // to zero on the identical populations. History in git plus ledger
+        // milestone R5.
         let losses = 0;
-        let strongLosses = 0;
         let checked = 0;
         for (const seed of [7, 8, 9, 10, 11]) {
             const pop = buildPopulation(seed);
@@ -92,15 +92,41 @@ describe('R5: bond-cap pressure at hundred-agent scale', () => {
                     (Math.abs(b.trust) > Math.abs(a.trust) ? b : a));
                 const restored = vault.restore(snap.agentId);
                 checked += 1;
-                if (!restored.bonds.some((b) => b.targetId === champ.targetId)) {
-                    losses += 1;
-                    if (Math.abs(champ.trust) > 0.9) strongLosses += 1;
-                }
+                expect(restored.bonds).toHaveLength(12);
+                if (!restored.bonds.some((b) => b.targetId === champ.targetId)) losses += 1;
             }
         }
         expect(checked).toBe(AGENTS * 5);
-        expect(losses).toBe(85);
-        expect(strongLosses).toBe(83);
+        expect(losses).toBe(0);
+    });
+
+    it('3b. Champion displaces the lowest-ranked kept edge; ties keep input order', () => {
+        const vault = new IdentityVault();
+        // Twelve lukewarm familiar edges outrank a pure-trust champion.
+        const relationships = Array.from({ length: 12 }, (_, i) => ({
+            targetId: `lukewarm_${i}`, trust: 0.55, familiarity: 0.55,
+        }));
+        relationships.push({ targetId: 'champion', trust: 0.99, familiarity: 0 });
+        vault.seal('hero', { identity: { n: 0.5 }, relationships });
+        const back = vault.restore('hero');
+        expect(back.bonds.map((b) => b.targetId)).toContain('champion');
+        expect(back.bonds).toHaveLength(12);
+        // Ranked order preserved: champion sorts by its own key (0.99),
+        // displacing exactly one lukewarm edge.
+        const keys = back.bonds.map((b) => Math.abs(b.trust) + b.familiarity);
+        const sorted = [...keys].sort((a, b) => b - a);
+        expect(keys).toEqual(sorted);
+        // Tie on |trust|: first in ranked order wins the protection.
+        const tied = new IdentityVault();
+        const edges = Array.from({ length: 12 }, (_, i) => ({
+            targetId: `warm_${i}`, trust: 0.5, familiarity: 0.6,
+        }));
+        edges.push({ targetId: 'twin_a', trust: 0.95, familiarity: 0 });
+        edges.push({ targetId: 'twin_b', trust: 0.95, familiarity: 0 });
+        tied.seal('twins', { identity: { n: 0.5 }, relationships: edges });
+        const twins = tied.restore('twins').bonds.map((b) => b.targetId);
+        expect(twins).toContain('twin_a');
+        expect(twins).toHaveLength(12);
     });
 
     it('4. Seal/restore throughput stays interactive at this scale', () => {

@@ -10034,7 +10034,31 @@
  "Next: champion-protecting bond rank follow-up from R5",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_199_THEN_COMMIT"
+ "next_action": "R5B_CHAMPION_RANK_BUILD"
+ },
+ {
+ "milestone": "BOND_CHAMPION_RANK_R5B",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "IdentityVault.seal keeps the argmax-|trust| edge (first in ranked order on ties) and fills the other 11 slots by the existing rank, preserving ranked order; cap size, receipt shape, and droppedEdges semantics unchanged; one-line behavioral delta plus comment",
+ "Closes the R5 falsifier by construction: 85/600 champion losses go to zero on the identical populations; pre-existing rank pins (identity-vault bonds, 183 twenty-edge case) provably unaffected because their champions already ranked top",
+ "One orchestrator edit slip recorded: replacement dropped the memory field from the seal record (caught by re-read, restored, diff-verified single-line delta)",
+ "Host-authority clean: advisory-internal vault records only; deterministic (stable sort plus strict-greater scan)"
+ ],
+ "test_evidence": [
+ "tests/lod-bond-cap-scale.test.js: 6 pass (test 2 rewritten to champion-plus-top-11 rule with independent re-derivation; test 3 rewritten from 85-loss finding to zero-loss proof; new 3b displacement plus tie-order pins)",
+ "Vault battery green pre-matrix: identity-vault plus lod-identity-restoration plus lod-vault-cycle plus trauma-vault-preservation plus wire-persistence (39 combined, zero pin changes)",
+ "Full matrix: 422/422 suites, 3174/3174 tests, zero FAIL lines — fully green"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Second-strongest-trust bonds can still drop under dense lists (cap is 12 by design); seal receipt reports droppedEdges for host detection",
+ "Next: R10 smoothing-times-multirate interaction, or harness memory-bound frontier from the R8 flake autopsy",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_200_THEN_COMMIT"
  }
  ]
 }

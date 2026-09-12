@@ -75,11 +75,29 @@ export class IdentityVault {
         const trauma = snapshot.trauma && typeof snapshot.trauma === 'object'
             ? deepCloneJson(snapshot.trauma)
             : null;
+        // R5b: champion protection. The rank key couples trust with
+        // familiarity, so a pure-trust champion can lose to twelve lukewarm
+        // familiar edges (R5 pins 85/600 losses, 83 above 0.9). The argmax-
+        // |trust| edge (first in ranked order on ties) always survives,
+        // filling the remaining slots by rank. Ranked order is preserved so
+        // existing kept-sets without a displaced champion are untouched.
+        let kept = ranked.slice(0, IMPORTANT_EDGE_K);
+        if (ranked.length > 0) {
+            let champ = ranked[0];
+            for (const e of ranked) {
+                if (Math.abs(e.trust || 0) > Math.abs(champ.trust || 0)) champ = e;
+            }
+            if (!kept.includes(champ)) {
+                kept = [champ, ...ranked.filter((e) => e !== champ).slice(0, IMPORTANT_EDGE_K - 1)];
+                kept.sort((a, b) =>
+                    (Math.abs(b.trust || 0) + (b.familiarity || 0)) - (Math.abs(a.trust || 0) + (a.familiarity || 0)));
+            }
+        }
         const rec = {
             agentId: id,
             identity: freezeTraits(snapshot.identity),
             adaptive: Object.freeze({ ...(snapshot.adaptive || {}) }),
-            bonds: Object.freeze(ranked.slice(0, IMPORTANT_EDGE_K)),
+            bonds: Object.freeze(kept),
             droppedEdges: ranked.length - Math.min(ranked.length, IMPORTANT_EDGE_K),
             memory,
             trauma,
