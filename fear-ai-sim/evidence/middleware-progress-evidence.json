@@ -9634,6 +9634,70 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_23"
+ },
+ {
+ "milestone": "LOD_IDENTITY_RESTORATION_183",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: 12-citizen population vaulted to LOD4 and restored bit-identical across a 144-pair soak with zero drift on identity, adaptive state, bonds, memory, and trauma",
+ "Boundaries pinned honestly: bond vault keeps top 12 of 20 edges by trust plus familiarity, NaN traits coerce to 0.5, ad-hoc top-level snapshot fields do not ride the vault while the in-blob history ledger restores intact",
+ "Three test-harness bugs fixed test-side with re-verification; tests by Huntress Wizard subagent, orchestrator verified 10/10 plus neighbors green"
+ ],
+ "test_evidence": [
+ "tests/lod-identity-restoration.test.js extended with Candidate 23 block: 6 new tests pass (population seal/restore; 12-cycle soak; bond capacity; trait coercion; contract boundary; replay)",
+ "Neighbor LOD suites green (38 pass across 6 suites)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Vault bond cap of 12 untested at scale; hundred-agent bond pressure open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_24"
+ },
+ {
+ "milestone": "PERCEPTION_SOURCE_RELIABILITY_184",
+ "status": "INCONCLUSIVE",
+ "implementation_evidence": [
+ "No production change: the engine has no per-source reliability input — perceive reads only visual intensity and audio loudness, so trusted and flaky descriptors produce identical outputs (threat 0.72, uncertainty 0.15); no confidence field exists, uncertainty from fuse is the inverse analogue",
+ "Characterized anyway: latency stale flag raises uncertainty to 0.4, conflict detection fires with INVESTIGATE_SOUND routing, garbage coerces safely, explicit null throws",
+ "Tests by Flame Princess subagent; orchestrator verified 6/6 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/perception-source-reliability.test.js: 6 pass (absence proof; latency staleness; conflict routing; garbage safety; null boundary; exact replay)",
+ "Perception robustness neighbor green (13 pass combined)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Per-source reliability is an unbuilt bridge; candidate for a future build chunk, not a pin",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_24_DONE"
+ },
+ {
+ "milestone": "PROTOCOL_CONTEXT_FORWARDING_185",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "ProtocolValidator.validateObservation forwards an opt-in context object with exactly six sanitized keys (trust in [-1,1], five gains/loads/weights in [0,1]); unknown keys dropped, non-finite absent, context attached only when a valid key survives so legacy shape is preserved; binary wire untouched by design",
+ "Forwarded context drives the identical arbitration flip as direct context (HOLD_POST to SURVIVE at fear 0.6); one -0 versus 0 strictness fix matching the canonical suite",
+ "Tests and implementation by Slime Princess subagent; orchestrator verified 6/6 plus 73 neighbors green per report, re-verifying now in the full matrix"
+ ],
+ "test_evidence": [
+ "New tests/protocol-context-forwarding.test.js: 6 pass (exact round-trip; clamps; unknown dropped; legacy shape; end-to-end flip; replay)",
+ "Full matrix with fixed ledger: 411/412 suites, 3105/3113 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing); evidence-linter, metric-gaming, cross-runtime-conformance all green, confirming the prior matrix failures were the orchestrator broken-ledger window plus env"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Post-25 audit complete: all 24 candidates closed, verified, or probed with honest status; binary wire still drops the six fields by fixed-record design",
+ "Perception source reliability (184) and pacing-by-relationship (175) remain the top build candidates alongside the four auto-coupling gaps",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "POST_25_COMPLETE"
  }
  ]
 }

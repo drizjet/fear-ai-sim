@@ -205,27 +205,54 @@ export class ProtocolValidator {
         if (!raw.agent_id) {
             return { valid: false, errors: ['Missing required property "agent_id"'], code: ERROR_CODES.VALIDATION_FAILED };
         }
-        return {
-            valid: true,
-            value: {
-                agent_id: String(raw.agent_id).slice(0, 256),
-                x: finiteOr(Number(raw.x), 0) || 0,
-                y: finiteOr(Number(raw.y), 0) || 0,
-                z: finiteOr(Number(raw.z), 0) || 0,
-                velocity: raw.velocity ? {
-                    x: finiteOr(Number(raw.velocity.x), 0) || 0,
-                    y: finiteOr(Number(raw.velocity.y), 0) || 0,
-                    z: finiteOr(Number(raw.velocity.z), 0) || 0
-                } : null,
-                health: clamp01Finite(raw.health, 1.0),
-                energy: clamp01Finite(raw.energy, 1.0),
-                inSafeHaven: Boolean(raw.inSafeHaven),
-                obstacleAhead: Boolean(raw.obstacleAhead),
-                obstaclePresent: Boolean(raw.obstaclePresent),
-                threats: Array.isArray(raw.threats) ? raw.threats.map(ProtocolValidator._sanitizeStimulus) : [],
-                sounds: Array.isArray(raw.sounds) ? raw.sounds.map(ProtocolValidator._sanitizeStimulus) : []
-            }
+        const value = {
+            agent_id: String(raw.agent_id).slice(0, 256),
+            x: finiteOr(Number(raw.x), 0) || 0,
+            y: finiteOr(Number(raw.y), 0) || 0,
+            z: finiteOr(Number(raw.z), 0) || 0,
+            velocity: raw.velocity ? {
+                x: finiteOr(Number(raw.velocity.x), 0) || 0,
+                y: finiteOr(Number(raw.velocity.y), 0) || 0,
+                z: finiteOr(Number(raw.velocity.z), 0) || 0
+            } : null,
+            health: clamp01Finite(raw.health, 1.0),
+            energy: clamp01Finite(raw.energy, 1.0),
+            inSafeHaven: Boolean(raw.inSafeHaven),
+            obstacleAhead: Boolean(raw.obstacleAhead),
+            obstaclePresent: Boolean(raw.obstaclePresent),
+            threats: Array.isArray(raw.threats) ? raw.threats.map(ProtocolValidator._sanitizeStimulus) : [],
+            sounds: Array.isArray(raw.sounds) ? raw.sounds.map(ProtocolValidator._sanitizeStimulus) : []
         };
+        // NEXT-182: opt-in protocol context forwarding (JSON path only).
+        // Binary Wire v2 fixed 32-byte records cannot carry these — out of scope.
+        // `context` must be a plain object; anything else means no context.
+        // Exactly six finite-number keys survive: trust is clamped to [-1, 1],
+        // the five gains/loads/weights to [0, 1]. Unknown keys are dropped;
+        // non-finite values become absent. `value.context` is attached ONLY
+        // when at least one valid key survives, preserving the legacy output
+        // shape (no `context` key) for old clients.
+        const context = ProtocolValidator._sanitizeContext(raw.context);
+        if (context !== null) {
+            value.context = context;
+        }
+        return { valid: true, value };
+    }
+
+    static _sanitizeContext(rawContext) {
+        if (!rawContext || typeof rawContext !== 'object' || Array.isArray(rawContext)) {
+            return null;
+        }
+        const out = {};
+        if (typeof rawContext.trust === 'number' && Number.isFinite(rawContext.trust)) {
+            out.trust = Math.max(-1, Math.min(1, rawContext.trust));
+        }
+        for (const key of ['trustGain', 'calmTrustGain', 'traumaLoad', 'memoryLoad', 'identityWeight']) {
+            const v = rawContext[key];
+            if (typeof v === 'number' && Number.isFinite(v)) {
+                out[key] = Math.max(0, Math.min(1.0, v));
+            }
+        }
+        return Object.keys(out).length > 0 ? out : null;
     }
 
     static validateBatchTick(raw) {
