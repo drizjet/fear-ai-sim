@@ -10549,6 +10549,30 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_222_THEN_COMMIT"
+ },
+ {
+ "milestone": "WAR_EXHAUSTION_R29",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "deliberateIncident return gains steppedDown boolean (local flag, never instance state; headless-fall and natural directives report false)",
+ "New INCIDENT_TYPES.GOVERNANCE_STAND_DOWN cools the deliberator grievance one rung (-0.10, mirrors RUMOR_HEARSAY; trust/fear/pressures/casus-belli and retaliation ledger untouched)",
+ "_deliberateGovernance records the cooling incident on step-down (targeted only; targetless deliberations trail) and trails steppedDown per entry",
+ "Host-authority clean: advisory faction state only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-war-exhaustion.test.js: 5 pass (starved war emits stand-downs vs fed zero; exact -0.10 mechanism pin; whole-gov control; targetless guard; replay)",
+ "Neighbors green: governance fracture plus governance plus deliberation plus war pacing plus chain-reaction plus cohesion-erosion plus famine-blame (64 tests)",
+ "Full matrix: 444/444 suites, 3282/3282 tests, 0 failures"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "HONEST LIMIT: at canonical calibration raid (+0.65) plus famine-blame (+0.10) inflow dominates -0.10 cooling, so fracture cools without pacifying (starved grievance 0.842 vs fed 0.370 at 200 ticks); exhaustion magnitude calibration is a future frontier",
+ "Nomad cohesion has no erosion path (carried from R28); blame still one-way (carried from R18); RAID fuel unscaled (carried from R21); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_223_THEN_COMMIT"
  }
  ]
 }

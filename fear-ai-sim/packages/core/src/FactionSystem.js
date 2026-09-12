@@ -49,7 +49,10 @@ export const INCIDENT_TYPES = Object.freeze({
     SKIRMISH_CASUALTY: 'SKIRMISH_CASUALTY',
     TRIBUTE_PAID: 'TRIBUTE_PAID',
     TREATY_BROKEN: 'TREATY_BROKEN',
-    PEACE_OFFER: 'PEACE_OFFER'
+    PEACE_OFFER: 'PEACE_OFFER',
+    // R29: a fractured council steps its own war posture down. Cools the
+    // deliberator's grievance without touching trust or casus belli.
+    GOVERNANCE_STAND_DOWN: 'GOVERNANCE_STAND_DOWN'
 });
 
 export const DEFAULT_FACTION_CONFIG = Object.freeze({
@@ -362,6 +365,17 @@ export class FactionSystem {
                 stanceTargetToSource.fear = clamp01(stanceTargetToSource.fear - 0.20);
                 stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance - 0.20);
                 break;
+            case INCIDENT_TYPES.GOVERNANCE_STAND_DOWN: {
+                // R29: war-weariness made visible. A council that cannot
+                // commit to its own mobilization cools its grudge a rung
+                // (mirrors the RUMOR_HEARSAY +0.10 rung). Facts kept:
+                // trust, fear, pressures, and casus belli untouched, and
+                // the retaliation ledger ignores non-hostile types.
+                const rawRelief = Number(details.relief);
+                const relief = Number.isFinite(rawRelief) ? clamp01(rawRelief) : 0.10;
+                stanceTargetToSource.grievance = clamp01(stanceTargetToSource.grievance - relief * grievanceScale);
+                break;
+            }
         }
         // R14b: feed hostile acts into the retaliation ledger (same
         // direction: actor provokes against victim). Non-hostile types

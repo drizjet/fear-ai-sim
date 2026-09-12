@@ -886,7 +886,8 @@ export class FrontierValleySimulation {
             incidentType: incident.type ?? 'UNKNOWN',
             directive: result.directive,
             rationale: result.rationale,
-            fractured
+            fractured,
+            steppedDown: result.steppedDown === true
         });
         if (this.governanceTrail.length > 100) {
             this.governanceTrail.splice(0, this.governanceTrail.length - 100);
@@ -894,6 +895,19 @@ export class FrontierValleySimulation {
         this.macroMetrics.governanceDeliberations = (Number(this.macroMetrics.governanceDeliberations) || 0) + 1;
         if (fractured) {
             this.macroMetrics.governanceFractures = (Number(this.macroMetrics.governanceFractures) || 0) + 1;
+        }
+        // R29: close the exhaustion loop. A council that steps its own
+        // war posture down cools its grudge a rung (war-weariness made
+        // mechanical): famine-fractured governments de-escalate faster
+        // than whole ones. Advisory faction state only; deterministic.
+        // No target (or unknown target) deliberations only trail.
+        if (result.steppedDown === true && typeof incident.targetFactionId === 'string' && incident.targetFactionId) {
+            this.factionSystem.recordIncident(
+                incident.targetFactionId,
+                factionId,
+                INCIDENT_TYPES.GOVERNANCE_STAND_DOWN,
+                { directive: result.directive, steppedDown: true }
+            );
         }
         return result;
     }

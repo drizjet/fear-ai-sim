@@ -121,10 +121,15 @@ export class FactionGovernanceSystem {
         const rawCohesion = Number(context.cohesion);
         const cohesion = Number.isFinite(rawCohesion) ? Math.max(0, Math.min(1, rawCohesion)) : 1;
         const fractured = splinterRisk >= 0.5 || cohesion <= 0.35;
+        // R29: local step-down flag (never instance state: consecutive
+        // deliberations must not leak commitment failure into each other).
+        let steppedDown = false;
         if (context.leaderVacant === true && this.archetype === GOVERNANCE_ARCHETYPES.AUTOCRATIC_DESPOT) {
             rationale = `Headless autocracy cannot will ${directive}: no successor enthroned; the apparatus watches and waits.`;
             directive = FACTION_DIRECTIVES.OBSERVE;
         } else if (fractured) {
+            // Report the step-down so hosts (and the valley loop)
+            // can observe that commitment failed, not just the outcome.
             const stepDown = {
                 [FACTION_DIRECTIVES.ATTACK]: FACTION_DIRECTIVES.MOBILIZE,
                 [FACTION_DIRECTIVES.SKIRMISH]: FACTION_DIRECTIVES.MOBILIZE,
@@ -133,6 +138,7 @@ export class FactionGovernanceSystem {
             if (stepDown[directive]) {
                 rationale = `${rationale} Fractured council (splinter risk ${splinterRisk.toFixed(2)}) could not commit to ${directive}; stepped down to ${stepDown[directive]}.`;
                 directive = stepDown[directive];
+                steppedDown = true;
             }
         }
 
@@ -146,6 +152,7 @@ export class FactionGovernanceSystem {
             rationale,
             voteBreakdown,
             grievanceLevel: Number(this.grievanceLevel.toFixed(4)),
+            steppedDown,
             isHostAuthoritative: true
         };
     }
