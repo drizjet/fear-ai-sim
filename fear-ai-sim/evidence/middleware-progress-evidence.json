@@ -9286,6 +9286,27 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_7"
+ },
+ {
+ "milestone": "UNILATERAL_RUMOR_DYNAMICS_167",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: live one-sided hearsay composes into the dilemma loop, mapping where unilateral rumor can and cannot spiral",
+ "B's peak climbs a dose ladder 0.58 to 1.00 while A stays pinned at its fear-driven 0.70 cap; spiral boundary sits exactly at that cap (0.70 spirals, 0.71 does not); trust 0.9 absorbs back to stable; repeated waves settle on a fixed point with no ratchet since the harness carries no inter-run memory"
+ ],
+ "test_evidence": [
+ "New tests/unilateral-rumor-dynamics.test.js: 6 pass (live ASYMMETRIC escalation; dose ladder with A capped; exact threshold boundary; trust absorption; fixed-point waves; exact replay)",
+ "Full matrix 394/395 suites, 2994 pass (8 dashboard EACCES env failures, known pre-existing); guardian CLEAN"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks; full matrix ~91s"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 8 through 24 carry (next: automatic corridor-to-market coupling); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Unilateral spiral needs either a tense threshold at or below the unrumored cap or pre-escalated baselines; endogenous grievance ratchets across runs do not exist, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_8"
  }
  ]
 }
