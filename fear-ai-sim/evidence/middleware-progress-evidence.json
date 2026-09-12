@@ -9419,6 +9419,71 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_13"
+ },
+ {
+ "milestone": "AGENT_SOCIAL_EVENT_JOINT_173",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: live chain SocialEventEngine to tensor trust to trust-scaled contagion calming into AffectiveAgent.tick",
+ "BETRAYAL drives trust to -0.85 versus AID at 0.35; betrayed-leader calming 0.1996 versus allied 0.3447; agent fear splits 0.526 success below 0.546 neutral below 0.587 failure at close threat",
+ "Mid-build honesty: distant-threat pin washed out under the fear floor, re-pinned at close threat where fear input dominates; tests by Huntress subagent, orchestrator verified 5/5 plus agent suite green"
+ ],
+ "test_evidence": [
+ "New tests/agent-social-event-joint.test.js: 5 pass (trust directions; betrayal vs allied affect; leadership success vs failure split; empty-peer neutrality; exact replay with live divergence)",
+ "Agent suite green (23 pass)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "One-tick chain only; multi-tick social-to-affect accumulation unmapped, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_14"
+ },
+ {
+ "milestone": "WHY_NOT_ARBITRATION_174",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: test-local explainer reconstructs why-not answers from live rankedGoals arithmetic",
+ "At fear 0.8 SURVIVE 0.6x0.85 equals 0.51 beats HOLD_POST 0.45; at fear 0.1 survival relevance collapses to 0.325 and duty wins at 0.45; raising the loser to priority 1.0 flips the winner, proving the counterfactual by recomputation",
+ "Tests by Bonnie subagent; orchestrator verified 5/5 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/why-not-arbitration.test.js: 5 pass (loser citation; duty-win citation; counterfactual flip; malformed safety; exact replay)",
+ "Arbitration and persona why-not suites green (18 pass across 3 suites)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Explainer lives in the test; no canonical why-not-arbitration bridge ships, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_15"
+ },
+ {
+ "milestone": "PACING_RELATIONSHIP_PROBE_175",
+ "status": "INCONCLUSIVE",
+ "implementation_evidence": [
+ "No production change: probe with live objects shows PacingDirector.tick reads only observedMetrics.averageFear, so identical beats score identically across trust extremes (CLIMAX 1.0, BREATHER 0.30); the relationship layer itself diverges sharply on the same beats but no wire connects the classes",
+ "Honest negative finding worth keeping: pacing-by-relationship does not exist; the debt edge stays open and becomes a build candidate rather than a pin",
+ "Mid-build honesty: fresh-pair leader efficiency first pinned 0.25 from the default vector guess, measured 0.175 after accounting for auto-created defaults; corrected",
+ "Tests by Fionna subagent; orchestrator verified 6/6 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/pacing-relationship-joint.test.js: 6 pass (identical beats across trust worlds; relationship-layer divergence; DDA fear response; fresh-pair correction; replay)",
+ "Combined 46 pass across 4 suites"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 16 through 24 carry (next: contagion at its own cadence through HostTimeDiscipline); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "Pacing-by-relationship is an unbuilt bridge; candidate for a future build chunk, not a pin",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_16"
  }
  ]
 }
