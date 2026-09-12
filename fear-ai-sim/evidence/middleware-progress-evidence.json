@@ -9917,7 +9917,31 @@
  "Next: R5 LOD bond-cap scale probe",
  "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_194_THEN_COMMIT"
+ "next_action": "R5_BOND_CAP_PROBE"
+ },
+ {
+ "milestone": "LOD_BOND_CAP_SCALE_R5",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Probe-only, no production change: 120-agent population with 30 uniform-random edges each seals 12 kept plus 18 dropped per agent with rank-exact restore of identity, adaptive, and kept edges",
+ "Falsifier fired and pinned: 85 of 600 agents (five seeds) lose their single strongest-trust bond, 83 of those with |trust| above 0.9 — the |trust|+familiarity rank systematically drops near-maximum-trust bonds under dense edge lists; vault behaves exactly as designed, so this bounds the design rather than indicting the code",
+ "Throughput interactive at this scale; determinism byte-identical across runs",
+ "One orchestrator edit slip recorded: duplicated counter declarations, repaired before green"
+ ],
+ "test_evidence": [
+ "New tests/lod-bond-cap-scale.test.js: 5 pass (exact 12/18 split; rank-exact restore; pinned 85/600 champion loss with 83 strong; throughput bound; determinism)",
+ "Neighbors green pre-matrix: lod-identity-restoration (15 combined), identity-vault plus lod-vault-cycle plus trauma-vault-preservation plus wire-persistence (23)",
+ "Full matrix: 417/418 suites, 3149/3157 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Follow-up build candidate: champion-protecting bond rank (always keep argmax-|trust|) or raised/configurable IMPORTANT_EDGE_K with perf data; seal receipt already reports droppedEdges so hosts detect pressure",
+ "Next: R6 dashboard port-0 fallback defect",
+ "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_195_THEN_COMMIT"
  }
  ]
 }
