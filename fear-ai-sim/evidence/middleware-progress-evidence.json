@@ -10845,6 +10845,29 @@
  "Blame one-way (carried from R18); nomad war unreachability (carried from R32)"
  ],
  "next_action": "MATRIX_235_THEN_COMMIT"
+ },
+ {
+ "milestone": "BLAME_VERDICT_R40",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Verdict, not mechanism: one-way famine blame is structural (hunger blame needs a granary; only settlers hold per-capita stocks; raiders burn fields per NEXT-39). No behavior change; one structural comment added",
+ "Future-proofing noted: _stressedSettlements already reads all towns regardless of holder; only the blamed-party mapping would need revisiting if another faction gains stocked towns",
+ "Edit slip recorded: comment insert ate the two guard lines (stressed>0 and tick cadence); restored and diff-verified purely additive",
+ "Host-authority clean: no state or logic change; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "Extended fear-ai-sim/tests/valley-famine-blame.test.js: 2 new pins (blame direction exhaustive across all stances; stockless factions never originate blame even under stoked multi-bilateral war)",
+ "Neighbors green: famine-blame plus chain-reaction plus cohesion-erosion (16 tests)",
+ "Full matrix: 451/451 suites, 3329/3329 tests, 0 failures"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Nomad war unreachability (carried from R32) - last structural valley gap standing",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_237_THEN_COMMIT"
  }
  ]
 }

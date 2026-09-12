@@ -762,6 +762,11 @@ export class FrontierValleySimulation {
      * @returns {boolean} whether a blame incident was recorded
      */
     _blameRivalsForFamine(stressedSettlements) {
+        // R40 verdict: one-way blame is structural. Hunger blame needs a
+        // granary: only settlement-holding factions keep per-capita food
+        // stocks, and raiders burn fields (NEXT-39), so settler hunger
+        // blaming bandits is exhaustive. Stockless factions cannot starve
+        // and never originate famine blame (pinned in R40 tests).
         if (!(stressedSettlements > 0)) return false;
         if (this.currentTick % 10 !== 0) return false;
         this.factionSystem.recordIncident(

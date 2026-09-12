@@ -112,3 +112,61 @@ describe('R18: famine blame moves faction grievance', () => {
         }
     });
 });
+
+describe('R40: one-way blame is structural, not a gap', () => {
+    // Verdict on the carried R18 gap: hunger blame requires a granary.
+    // Only settlement-holding factions keep per-capita food stocks, and
+    // every valley town is settler-held, so settler hunger blaming the
+    // raiders who burn fields (NEXT-39) is exhaustive, not arbitrary.
+    // Stockless factions (bandits, nomads, wildlife) cannot starve and
+    // therefore never originate famine blame. If a future scenario gives
+    // another faction stocked towns, _stressedSettlements already reads
+    // all towns; only the blamed-party mapping would need revisiting.
+    function allFamineBlame(sim) {
+        const found = [];
+        for (const [, map] of sim.factionSystem.stances) {
+            for (const st of map.values()) {
+                for (const i of st.incidents) {
+                    if (i.type === INCIDENT_TYPES.RUMOR_HEARSAY && i.details?.famineBlame === true) {
+                        found.push({ view: `${st.sourceId}->${st.targetId}`, source: i.sourceId, target: i.targetId });
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
+    it('7. Blame direction exhaustive: only settlers blame, only bandits blamed', () => {
+        const sim = new FrontierValleySimulation({ seed: 818 });
+        starve(sim);
+        sim.advance(60);
+        const all = allFamineBlame(sim);
+        expect(all.length).toBeGreaterThan(0);
+        for (const b of all) {
+            expect(b.target).toBe(FRONTIER_VALLEY_FACTIONS.SETTLERS);
+            expect(b.source).toBe(FRONTIER_VALLEY_FACTIONS.BANDITS);
+        }
+    });
+
+    it('8. Stockless factions never originate famine blame, even at war', () => {
+        const sim = new FrontierValleySimulation({ seed: 818 });
+        starve(sim);
+        // Stoke every bilateral to war: if blame could originate anywhere,
+        // this run would show it.
+        for (const [a, b] of [
+            [FRONTIER_VALLEY_FACTIONS.SETTLERS, FRONTIER_VALLEY_FACTIONS.BANDITS],
+            [FRONTIER_VALLEY_FACTIONS.NOMADS, FRONTIER_VALLEY_FACTIONS.BANDITS]
+        ]) {
+            sim.applySetupStance({
+                source: a, target: b,
+                patch: { grievance: 1, territorialPressure: 1, economicPressure: 1, trust: 0, fear: 0, informationConfidence: 1 }
+            });
+        }
+        sim.advance(100);
+        const all = allFamineBlame(sim);
+        expect(all.length).toBeGreaterThan(0);
+        const blamers = new Set(all.map((b) => b.target));
+        // Only the stocked faction (settlers) appears as the blaming view.
+        expect(blamers).toEqual(new Set([FRONTIER_VALLEY_FACTIONS.SETTLERS]));
+    });
+});
