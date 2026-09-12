@@ -373,6 +373,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Server Port Fallback R6:** port-0 coercion defect fixed in both servers (finite >= 0 survives; garbage falls back; FearServer reports bound port); dashboard 8/8 green; first fully green matrix 419/419 suites, 3162/3162 tests; 5 new tests.
 - **Runtime Cohesion Composition R7:** runtime feeds mean social trust into the pacing cohesion wire by default (opt-out preserves decoupled runs; empty graphs feed nothing); fractured 1.15/0.23 vs bonded 1.05/0.21 pinned end to end; 4 new tests; matrix 420/420 fully green.
 - **Handshake Capability Advertisement R8:** frozen wire-support manifest (observation channels, social location, pacing metrics) advertised in HTTP+WS handshakes, completeness-bound to the validator both ways; 3 new tests; matrix 421/421 fully green on third attempt after two load-flake runs (worker/dotnet OOMs, all pass isolated).
+- **Intent Stability Under Cohesion R9:** probe-only — identical threat/social scripts wire-on vs off flip exactly 15/6 times in both runs (zero extra oscillation); chatter agrees; emergency FLEE parity; 4 new tests; matrix 422/422 fully green.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

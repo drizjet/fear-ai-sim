@@ -10011,7 +10011,30 @@
  "Next: champion-protecting bond rank follow-up from R5, or R9 intent stability under cohesion-DDA",
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_198_THEN_COMMIT"
+ "next_action": "R9_INTENT_STABILITY_PROBE"
+ },
+ {
+ "milestone": "INTENT_STABILITY_COHESION_R9",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Probe-only, no production change: identical threat schedules plus swinging cohesion scripts through the live runtime loop, wire on vs off",
+ "Pinned null result: alice flips 15x and bob 6x in BOTH runs across 300 ticks — cohesion drift moves session intensity (R7) but crosses no intent boundary here; stabilizer chatter agrees; emergency FLEE latency identical; sequences replay exactly",
+ "One orchestrator edit saga recorded: mis-anchored test edit tangled helpers and ate the describe opener and consts; repaired by clean rewrite before green"
+ ],
+ "test_evidence": [
+ "New tests/intent-stability-cohesion.test.js: 4 pass (exact 15/6 null result; chatter agreement; emergency-override parity; replay)",
+ "Neighbors green pre-matrix: intent-stabilizer (11 combined)",
+ "Full matrix: 422/422 suites, 3173/3173 tests, zero FAIL lines — fully green"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Stronger stress remains open: threat intensities hovering exactly at an intent boundary while cohesion drifts (current blocks sit mid-band); recorded as follow-up, not assumed safe everywhere",
+ "Next: champion-protecting bond rank follow-up from R5",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_199_THEN_COMMIT"
  }
  ]
 }
