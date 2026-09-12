@@ -10573,6 +10573,31 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_223_THEN_COMMIT"
+ },
+ {
+ "milestone": "EXHAUSTION_SENSITIVITY_R30",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "New designer knob options.standDown.relief (default 0.10, legacy-exact; 0 ablates cooling); threaded through _deliberateGovernance into GOVERNANCE_STAND_DOWN details; FactionSystem case already clamped/NaN-guarded",
+ "Knob snapshotted under scenarioParams.standDown with fork restore (counterfactuals inherit, overridable per-fork)",
+ "Edit slips recorded: two mis-anchored edits ate attrition/succession snapshot lines and duplicated the deliberation tail; repaired and diff-verified purely additive",
+ "Host-authority clean: advisory faction state only; deterministic, no RNG"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-exhaustion-sensitivity.test.js: 5 pass (exact custom relief; relief-0 ablation logs-without-cooling; NaN fallback; fork inherit plus override; 3-seed insensitivity pin)",
+ "Finding: relief 0 vs 0.30 over 400 starved-stoked ticks moves war ticks 149->148 (4242), 151->150 (7), 180->171 (77), 87->87 (1234) - cooling cannot pacify raid-driven wars at any sane magnitude",
+ "Neighbors green: scenario-params plus fork-api plus fork-independence plus save-load plus war-exhaustion plus deliberation (31 tests)",
+ "Full matrix: 445/445 suites, 3287/3287 tests, 0 failures (matrix224 voided: collected the sensitivity suite mid-edit; clean reseal matrix225)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "War exhaustion is mechanically closed but quantitatively negligible vs raid (+0.65) and blame (+0.10) inflow; real exhaustion dynamics (bigger levers or low-raid regimes) remain a future frontier",
+ "Nomad cohesion has no erosion path (carried from R28); blame still one-way (carried from R18); RAID fuel unscaled (carried from R21); disbanded-faction retaliation accounts linger (carried from R14b)",
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_224_THEN_COMMIT"
  }
  ]
 }

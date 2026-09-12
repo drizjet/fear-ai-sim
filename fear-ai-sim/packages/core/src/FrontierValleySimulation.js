@@ -142,6 +142,15 @@ export class FrontierValleySimulation {
         // R21: directive-consumption kill-switch (ablation and legacy
         // comparison). Default on; snapshotted below so forks inherit it.
         this.directiveConsumption = options.directiveConsumption !== false;
+        // R30: stand-down relief knob (designer-overridable via
+        // options.standDown). Fractured councils cool their grievance by
+        // this much per GOVERNANCE_STAND_DOWN. Default 0.10 mirrors the
+        // RUMOR_HEARSAY rung; 0 disables cooling (ablation). Snapshotted
+        // below so forks inherit it.
+        this.standDown = {
+            relief: 0.10,
+            ...(options.standDown || {})
+        };
 
         this._setupFrontierValley(options);
     }
@@ -898,15 +907,16 @@ export class FrontierValleySimulation {
         }
         // R29: close the exhaustion loop. A council that steps its own
         // war posture down cools its grudge a rung (war-weariness made
-        // mechanical): famine-fractured governments de-escalate faster
-        // than whole ones. Advisory faction state only; deterministic.
+        // mechanical). Advisory faction state only; deterministic.
         // No target (or unknown target) deliberations only trail.
+        // R30: relief amount is the designer-tunable standDown.relief
+        // (default 0.10); the incident case clamps and NaN-guards it.
         if (result.steppedDown === true && typeof incident.targetFactionId === 'string' && incident.targetFactionId) {
             this.factionSystem.recordIncident(
                 incident.targetFactionId,
                 factionId,
                 INCIDENT_TYPES.GOVERNANCE_STAND_DOWN,
-                { directive: result.directive, steppedDown: true }
+                { directive: result.directive, steppedDown: true, relief: Number(this.standDown?.relief) }
             );
         }
         return result;
@@ -1387,12 +1397,13 @@ export class FrontierValleySimulation {
             // R21: consumption switch so forks inherit the ablation setting.
             directiveConsumption: this.directiveConsumption !== false,
             // R22: designer scenario params (R16 displacement, R17
-            // scarcity, NEXT-56 severity sweep) so forks and
-            // counterfactuals inherit tuning instead of defaults.
+            // scarcity, NEXT-56 severity sweep, R30 stand-down relief) so
+            // forks and counterfactuals inherit tuning instead of defaults.
             scenarioParams: {
                 displacement: { ...(this.displacement || {}) },
                 scarcity: { ...(this.scarcity || {}) },
-                severityParams: { ...(this.severityParams || {}) }
+                severityParams: { ...(this.severityParams || {}) },
+                standDown: { ...(this.standDown || {}) }
             },
             // R20: governments carry deliberation memory (grievance,
             // current directive, leader traits); the trail is bounded.
@@ -1484,6 +1495,9 @@ export class FrontierValleySimulation {
             }
             if (sp.severityParams && typeof sp.severityParams === 'object') {
                 this.severityParams = { ...(this.severityParams || {}), ...sp.severityParams };
+            }
+            if (sp.standDown && typeof sp.standDown === 'object') {
+                this.standDown = { ...(this.standDown || {}), ...sp.standDown };
             }
         }
         // R20: restore governments and the bounded trail; pre-R20

@@ -397,6 +397,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **C# Live R27:** dotnet verifier driven against booted FearServer (argv host/port; execFileSync deadlock found and fixed); matrix 442/442, 3272 tests.
 - **Cohesion Erosion R28:** famine drains settler faith per stressed town tick (floor 0, succession rallies back); victim-side composure reachable live; 5 new tests; matrix 443/443, 3277 tests.
 - **War Exhaustion R29:** fractured councils cool their own grievance a rung (GOVERNANCE_STAND_DOWN, steppedDown flag); exhaustion loop closed live; 5 new tests; matrix 444/444, 3282 tests.
+- **Exhaustion Sensitivity R30:** standDown.relief knob (default 0.10, snapshotted); 4-seed sweep proves cooling cannot pacify raid-driven wars; 5 new tests; matrix 445/445, 3287 tests.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`
