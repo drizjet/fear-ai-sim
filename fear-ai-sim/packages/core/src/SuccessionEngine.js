@@ -94,17 +94,24 @@ export class SuccessionEngine {
         // the aftermath. A high-leadership successor rallies cohesion and
         // morale and calms splinter risk; a low-leadership one deepens the
         // wound. Opt-in identityWeight in [0,1]; 0 (default) is legacy.
+        // NEXT-170 (post-25 candidate 10): bravery steadies morale (more
+        // after violent causes) and agreeableness calms splinter risk,
+        // under the same identityWeight gate.
         const rawIw = Number(params.identityWeight ?? 0);
         const iw = Number.isFinite(rawIw) ? clamp01(rawIw) : 0;
         const winnerRaw = candidates.find((c) => String(c.id) === winner.id);
-        const rawLead = Number(winnerRaw?.traits?.leadership ?? 0.5);
-        const lead = Number.isFinite(rawLead) ? clamp01(rawLead) : 0.5;
-        const rally = iw * (lead - 0.5) * 0.3;
+        const trait01 = (key) => {
+            const v = Number(winnerRaw?.traits?.[key] ?? 0.5);
+            return Number.isFinite(v) ? clamp01(v) : 0.5;
+        };
+        const rally = iw * (trait01('leadership') - 0.5) * 0.3;
+        const steel = iw * (trait01('bravery') - 0.5) * (0.1 + violent);
+        const concord = iw * (trait01('agreeableness') - 0.5) * 0.3;
         const cohesionDelta = round4s(-(violent + contestPenalty) + winner.score * 0.1 + rally);
-        const moraleDelta = round4s(-violent * 0.8 + (winner.score - 0.5) * 0.2 + rally * 0.5);
+        const moraleDelta = round4s(-violent * 0.8 + (winner.score - 0.5) * 0.2 + rally * 0.5 + steel);
         // Policy shift: low-continuity winners break with the past.
         const policyShift = round4(1 - clamp01(winnerRaw.continuity ?? 0.5));
-        const splinterRisk = round4(clamp01(0.15 + contestPenalty * 1.5 + policyShift * 0.25 - winner.score * 0.2 - rally * 0.5));
+        const splinterRisk = round4(clamp01(0.15 + contestPenalty * 1.5 + policyShift * 0.25 - winner.score * 0.2 - rally * 0.5 - concord * 0.5));
         return {
             factionId,
             successorId: winner.id,

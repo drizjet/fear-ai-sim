@@ -9353,6 +9353,72 @@
  "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
  ],
  "next_action": "AUDIT_CANDIDATE_10"
+ },
+ {
+ "milestone": "SUCCESSION_BRAVERY_CONCORD_170",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "SuccessionEngine rally block gains bravery steel on morale scaled by (0.1 plus violent) and agreeableness concord calming splinterRisk, under the existing identityWeight gate; leadership path untouched",
+ "Brave (0.95) successor lifts moraleDelta from legacy -0.08 to 0.0325 under ASSASSINATION versus 0.0675 under NATURAL_DEATH; agreeable (0.95) calms splinter 0.085 to 0.0175 while disagreeable (0.05) raises it to 0.1525",
+ "Behavioral note pinned honestly: negative bravery clamps to 0 rather than degrading to neutral; only NaN reads as neutral",
+ "Built by orchestrator, tests by Marceline subagent; orchestrator verified 6/6 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/succession-identity-traits.test.js: 6 pass (legacy exactness; bravery steel with violent scaling; concord calming; selection untouched; malformed honesty; exact replay)",
+ "Succession suites green (17 pass with succession and identity-succession)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Conscientiousness and openness succession effects unmapped, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_11"
+ },
+ {
+ "milestone": "BETRAYAL_CYCLE_DYNAMICS_171",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: betrayal-path cycle characterization through existing TraumaCrystallizationEngine mechanics",
+ "One betrayal dose moves agreeableness 0.6 to 0.384 with N 0.5 to 0.66 and R 0.5 to 0.36; passive SANCTUARY* solace accrues zero while SOCIAL_REPAIR_* defuses fully; repeated cycles erode as 0.6 times 0.64^n with diminishing deltas; 3000 calm ticks restore to baseline",
+ "Gate truth pinned: source prefix SANCTUARY ignored, TEMPLE_SANCTUARY accrues despite the temple name",
+ "Tests by Fionna subagent; orchestrator verified 5/5 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/betrayal-cycle-dynamics.test.js: 5 pass (crystallization with erosion; solace gate; compounding cycles; sanctuary restoration; exact replay)",
+ "Trauma suites green (17 pass with crystallization engine and safety cycles)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Betrayal cycles with concurrent combat trauma unmapped, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_12"
+ },
+ {
+ "milestone": "ALLY_DUTY_CROSSOVER_172",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "No production change: 108-cell sweep (3 ally-family duties x 4 priorities x 3 doses x 3 bonds) shows max one flip per cell with dose monotonicity preserved under bond weights",
+ "PROTECT_ALLY at duty 0.45 and bond 0.5 ladders 0.7 to 0.65 to 0.55 across loads, matching the HOLD_POST ladder exactly; full-bond low-duty ally still yields at 0.05; ESCORT proves bond-blind with identical crossovers across bonds",
+ "Tests by Cake subagent; orchestrator verified 6/6 plus neighbors green"
+ ],
+ "test_evidence": [
+ "New tests/ally-duty-crossover.test.js: 6 pass (no-flap grid; bond monotonicity; pinned ladder; low-duty yield; ESCORT bond-blindness; exact replay)",
+ "Arbitration suites green (16 pass with priority-dose crossover and no-flap generalization)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Post-25 audit candidates 13 through 24 carry (next: AffectiveAgent x SocialEventEngine joint); frontier 10 still BLOCKED_EXTERNAL_HOST awaiting designation",
+ "REACH_SAFETY crossover under bond weights unmapped, open on demand",
+ "Standing gaps carried: psychometric ground truth for ratios; Unity and Unreal editor gates; human participants blocked; parallel harness flakiness; dashboard port-0 fallback defect"
+ ],
+ "next_action": "AUDIT_CANDIDATE_13"
  }
  ]
 }
