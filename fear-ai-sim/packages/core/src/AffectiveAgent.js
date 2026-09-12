@@ -191,6 +191,12 @@ export class AffectiveAgent {
             && this.traumaEngine.agentRecords && !this.traumaEngine.agentRecords.has(this.id)) {
             this.traumaEngine.registerAgent(this.id, { ...this.traits });
         }
+        // R2: opt-in trauma-zone attachment. A TraumaZoneSystem supplied via
+        // options.traumaZones contributes ambient spatial dread read at the
+        // agent's host-reported position, folded through the pre-existing
+        // traumaDread input via max() so host/context values never reduce.
+        // Detached by default (legacy path bit-identical).
+        this.traumaZones = options.traumaZones ?? null;
 
         // History trace
         this.tickCount = 0;
@@ -214,13 +220,13 @@ export class AffectiveAgent {
     tick(dt = 0.016, observations = {}, context = {}) {
         this.tickCount++;
         const safeDt = (typeof dt === 'number' && Number.isFinite(dt) && dt >= 0) ? Math.min(dt, 1.0) : 0.016;
-
+        let traumaDread = context.traumaDread ?? 0.0;
+        let traumaEngineState = null;
+        let zoneDread = 0;
         const rng = typeof context.rng === 'function' ? context.rng : this._defaultRngFn;
         const pacingIntensity = context.pacingIntensity ?? 1.0;
         const contagionFear = context.contagionFear ?? 0.0;
         const leaderCalm = context.leaderCalm ?? 0.0;
-        let traumaDread = context.traumaDread ?? 0.0;
-        let traumaEngineState = null;
 
         // 1. Update Spatial Coordinates if supplied by host
         if (typeof observations.x === 'number' && Number.isFinite(observations.x)) this.x = observations.x;
@@ -326,6 +332,15 @@ export class AffectiveAgent {
                 + (traumaEngineState.effectiveRestingFear || 0);
             if (engineDread > traumaDread) traumaDread = engineDread;
             traumaPanicBias = traumaEngineState.effectivePanicThresholdOffset || 0;
+        }
+        // 2c. R2 trauma-zone ambient dread. Reads the attached zone system
+        // at the agent's host-reported position (updated in section 1
+        // above); folded via max() so host/context/engine values never
+        // reduce. Non-finite reads and detached systems keep legacy exactly.
+        if (this.traumaZones && typeof this.traumaZones.getTraumaAt === 'function') {
+            const z = this.traumaZones.getTraumaAt(this.x, this.y, this.z);
+            zoneDread = (typeof z === 'number' && Number.isFinite(z)) ? Math.max(0, Math.min(1, z)) : 0;
+            if (zoneDread > traumaDread) traumaDread = zoneDread;
         }
 
         // 3. OCEAN Trait Modulation & Threat Weighting
@@ -557,6 +572,10 @@ export class AffectiveAgent {
                 panicOffset: traumaEngineState.effectivePanicThresholdOffset || 0,
                 hasFlashback: traumaEngineState.hasFlashback
             };
+        }
+        // R2: zone dread echo, attached-system only (legacy shape kept).
+        if (this.traumaZones && typeof this.traumaZones.getTraumaAt === 'function') {
+            result.debug_trace.perception_breakdown.zone_dread = zoneDread;
         }
 
         this.lastResult = result;

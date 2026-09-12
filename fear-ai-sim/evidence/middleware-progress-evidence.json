@@ -9847,7 +9847,30 @@
  "Next: R2 trauma-zone engine coupling",
  "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
- "next_action": "MATRIX_191_THEN_COMMIT"
+ "next_action": "R2_ZONE_COUPLING_BUILD"
+ },
+ {
+ "milestone": "TRAUMA_ZONE_APPRAISAL_R2",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "AffectiveAgent accepts opt-in options.traumaZones; each tick reads getTraumaAt at the host-reported position and folds ambient dread through the pre-existing traumaDread input via max(), so host, context, and crystallization-engine values never reduce; detached agents bit-identical; non-finite reads treated as 0; zone_dread echoed in perception_breakdown only when a system is attached",
+ "Supersedes the 177 absence-pin by construction for the appraisal path (zone-to-crystallization-engine auto-dose remains unbuilt and still pinned in the 177 file)",
+ "Two orchestrator edit slips recorded: a duplicated declaration block and an eaten safeDt line, both caught by test failures and repaired before green",
+ "Host-authority clean: reads host position, advises fear only; deterministic"
+ ],
+ "test_evidence": [
+ "New tests/trauma-zone-appraisal.test.js: 6 pass (detached legacy shape; hot-vs-cold divergence with cold pinned at 0; max-fold both directions; garbage systems; decay-to-zero convergence; exact replay)",
+ "Neighbors green pre-matrix: trauma-zone-crystallization plus social-trauma-zone (17 combined)",
+ "Full matrix: 414/415 suites, 3130/3138 tests — sole failure designer-dashboard (8 tests, EACCES port-bind env, pre-existing)"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Next: R3 social-event location wire",
+ "Standing gaps carried: dashboard port-0 fallback defect; parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_192_THEN_COMMIT"
  }
  ]
 }
