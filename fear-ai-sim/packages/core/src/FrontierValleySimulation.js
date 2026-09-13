@@ -428,6 +428,10 @@ export class FrontierValleySimulation {
             leaderId: 'lead_bandit_warband'
         });
 
+        // R41 verdict: southeast forage loop is fiction, not a gap.
+        // Foragers stay beyond bandit reach (~84 min vs 35 radius) while
+        // meeting settler caravans on the Riverway; canon peace is
+        // emergent (pinned in valley-nomad-reachability tests).
         this.worldSystem.registerGroup('nomad_clan_1', {
             name: 'Wilderness Foragers',
             type: ROAMING_PARTY_TYPES.NOMAD_TRIBE,
@@ -1268,6 +1272,9 @@ export class FrontierValleySimulation {
             this.factionSystem.evaluateStance(FRONTIER_VALLEY_FACTIONS.BANDITS, FRONTIER_VALLEY_FACTIONS.SETTLERS);
             this.factionSystem.evaluateStance(FRONTIER_VALLEY_FACTIONS.SETTLERS, FRONTIER_VALLEY_FACTIONS.NOMADS);
             this.factionSystem.evaluateStance(FRONTIER_VALLEY_FACTIONS.NOMADS, FRONTIER_VALLEY_FACTIONS.SETTLERS);
+            // R41 verdict: bandit-nomad stays off this list by design.
+            // recordIncident never moves stages, so a future scenario
+            // reuniting those factions must evaluate the pair here.
             for (const route of this.civSystem.routes.values()) {
                 if (route.perceivedDanger >= 0.60) {
                     this.macroMetrics.routeFailures++;

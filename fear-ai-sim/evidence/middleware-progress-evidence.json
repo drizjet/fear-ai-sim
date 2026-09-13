@@ -10868,6 +10868,29 @@
  "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
  ],
  "next_action": "MATRIX_237_THEN_COMMIT"
+ },
+ {
+ "milestone": "NOMAD_VERDICT_R41",
+ "status": "VERIFIED",
+ "implementation_evidence": [
+ "Verdict, not mechanism: canon nomad peace is emergent (settler-nomad stages never heat under canon inputs; trade is the only contact per R32). Bandit-nomad separation (~84 min vs 35 radius) is Highland-vs-forager fiction. No behavior change; two structural comments added",
+ "Mechanism proven ready: BORDER_SKIRMISH classifier fires for any hot pair; raid-consequence path already treats nomads as civilized victims; stoked war makes nomads fight on all probed seeds",
+ "Future-proofing noted: recordIncident never moves stages, so a future scenario reuniting bandits and nomads must add the pair to the advance() evaluate list (pinned in source comment)",
+ "Host-authority clean: no state or logic change; deterministic, no RNG",
+ "Edit discipline: insert-only comments; diff-verified purely additive (no deletions)"
+ ],
+ "test_evidence": [
+ "New fear-ai-sim/tests/valley-nomad-reachability.test.js: 3 pins (canon meetings exhaustive peaceful settler-caravan trade; bandit-nomad separation beyond radius across seeds; stoked war makes nomads fight BORDER_SKIRMISH)",
+ "Neighbors green: nomad-reachability plus nomad-trade plus war-pacing plus famine-blame (47 tests)",
+ "Full matrix: 452/452 suites, 3332/3332 tests, 0 failures"
+ ],
+ "benchmark_evidence": [
+ "No new benchmarks"
+ ],
+ "known_gaps": [
+ "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
+ ],
+ "next_action": "MATRIX_238_THEN_COMMIT"
  }
  ]
 }
