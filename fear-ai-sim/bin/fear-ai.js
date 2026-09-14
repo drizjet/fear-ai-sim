@@ -169,7 +169,11 @@ import {
     ScaleHarness,
     WhyNotExplainer,
     ExplanationFidelityHarness,
-    PsychoacousticEngine
+    PsychoacousticEngine,
+    PackCoordinationEngine,
+    PACK_ROLES,
+    TACTICAL_PHASES,
+    ENCIRCLEMENT_PATTERNS
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -282,6 +286,8 @@ function printHelp() {
     console.log(`                     Options: --outcome <id> --depth <n> --threshold <0..1> --narrative --json`);
     console.log(`  audio              Evaluate procedural psychoacoustic synthesis, Shepard curves & cardiac pacing (Frontier D / Audio)`);
     console.log(`                     Options: --fear <0..1> --threat-distance <meters> --occlusion <0..1> --enclosure <0..1> --df-dt <rate> --json`);
+    console.log(`  pack               Evaluate multi-agent pack coordination, encirclement geometry & alpha damping (Frontier C & D / Tactical)`);
+    console.log(`                     Options: --size <n> --target-distance <m> --alpha-dominance <0..1> --phase <PHASE> --pattern <PATTERN> --json`);
     console.log(`  feedback           Report host execution outcomes and re-rank advisory intents (Sections 208–211, 288–293)`);
     console.log(`                     Options: --agent <id> --intent <TYPE> --outcome <GOAL_COMPLETED|INTENT_REJECTED|EXECUTION_FAILED|ACTION_INTERRUPTED> --reason <NO_PATH|BLOCKED|UNSUPPORTED|HOST_BUSY|STALE_INTENT> --json`);
     console.log(`  resilience         Inject partial subsystem failures and verify graceful degradation (Sections 138–139, 197, 199)`);
@@ -3563,6 +3569,72 @@ function handleAudio(options) {
     console.log(`\nHost Game Authority Check: ✓ Strictly advisory parameters (Host audio device retains exclusive playback authority)\n`);
 }
 
+function handlePack(options = {}) {
+    const size = Math.max(2, Math.min(20, parseInt(options.size, 10) || 5));
+    const targetDistance = typeof options['target-distance'] !== 'undefined' ? parseFloat(options['target-distance']) : 15.0;
+    const alphaDominance = typeof options['alpha-dominance'] !== 'undefined' ? Math.max(0, Math.min(1, parseFloat(options['alpha-dominance']))) : 0.85;
+    const phase = (options.phase && TACTICAL_PHASES[options.phase.toUpperCase()]) ? options.phase.toUpperCase() : TACTICAL_PHASES.ENCIRCLING;
+    const pattern = (options.pattern && ENCIRCLEMENT_PATTERNS[options.pattern.toUpperCase()]) ? options.pattern.toUpperCase() : ENCIRCLEMENT_PATTERNS.CIRCULAR_PINCER;
+
+    const engine = new PackCoordinationEngine({ defaultEngagementRadius: targetDistance });
+    const pack = engine.createPack('wolf_pack_01', {
+        phase,
+        pattern,
+        engagementRadius: targetDistance,
+        targetThreat: { x: 0, y: 0, z: 0, id: 'intruder_target' }
+    });
+
+    // Register Alpha
+    engine.registerMember('wolf_pack_01', 'alpha_prime', {
+        dominance: alphaDominance,
+        courage: 0.90,
+        fear: 0.15,
+        aggression: 0.85,
+        speed: 1.2,
+        resilience: 0.80
+    });
+
+    // Register subordinates with varied traits
+    const subordinateTemplates = [
+        { id: 'flanker_stalker_1', dominance: 0.60, courage: 0.75, fear: 0.30, aggression: 0.80, speed: 1.4, resilience: 0.60 },
+        { id: 'flanker_stalker_2', dominance: 0.55, courage: 0.70, fear: 0.35, aggression: 0.75, speed: 1.35, resilience: 0.65 },
+        { id: 'chaser_hound_1', dominance: 0.40, courage: 0.65, fear: 0.40, aggression: 0.70, speed: 1.1, resilience: 0.70 },
+        { id: 'bait_scout_1', dominance: 0.35, courage: 0.60, fear: 0.45, aggression: 0.50, speed: 1.5, resilience: 0.50 },
+        { id: 'rear_guard_1', dominance: 0.50, courage: 0.80, fear: 0.25, aggression: 0.60, speed: 0.9, resilience: 0.85 }
+    ];
+
+    for (let i = 1; i < size; i++) {
+        const tmpl = subordinateTemplates[(i - 1) % subordinateTemplates.length];
+        const id = `${tmpl.id}_${i}`;
+        engine.registerMember('wolf_pack_01', id, { ...tmpl });
+    }
+
+    const evaluation = engine.tickPack('wolf_pack_01');
+
+    if (options.json) {
+        console.log(JSON.stringify(evaluation, null, 2));
+        return;
+    }
+
+    console.log(BANNER);
+    console.log(`=== MULTI-AGENT PACK COORDINATION & COLLECTIVE TACTICAL SWARM (Frontier C & D) ===\n`);
+    console.log(`Pack ID:        [${evaluation.packId}] | Members: ${evaluation.members.length}`);
+    console.log(`Tactical Phase: [${evaluation.phase}] | Pattern: [${evaluation.pattern}]`);
+    console.log(`Pack Cohesion:  ${(evaluation.packCohesion * 100).toFixed(1)}% | Pack Morale: ${(evaluation.packMorale * 100).toFixed(1)}%`);
+    console.log(`Alpha Leader:   [${evaluation.alphaId}] (Dominance: ${evaluation.alphaDominance.toFixed(2)})\n`);
+
+    console.log(`Tactical Formation Radar (Advisory Geometry around Target [T]):`);
+    console.log(engine.renderAsciiRadar('wolf_pack_01', 15));
+    console.log(`\nMember Tactical Role & Advisory Vectors:`);
+
+    for (const m of evaluation.members) {
+        const feintTag = m.isFeinting ? ' [FEINTING / DISTRACTING]' : '';
+        console.log(`  • [${m.memberId.padEnd(18)}] Role: ${m.role.padEnd(14)} | Pos: (${m.advisoryPosition.x.toFixed(1)}, ${m.advisoryPosition.z.toFixed(1)}) | Heading: (${m.headingVector.x.toFixed(2)}, ${m.headingVector.z.toFixed(2)}) | Effective Fear: ${m.effectiveFear.toFixed(3)}${feintTag}`);
+    }
+
+    console.log(`\nHost Game Authority Check: ✓ Advisory coordinates only (Host retains exclusive authority over physics, navmesh & combat damage)\n`);
+}
+
 // NEXT-123 (CCI-28 frontier 7): hierarchical command groups. Each group
 // maps subcommands onto the pre-existing flat commands, so every flat
 // invocation keeps working byte-for-byte. `fear-ai <group> --help`
@@ -3572,11 +3644,12 @@ const COMMAND_GROUPS = {
         'signatures', 'reaction-norm', 'behavior-effects', 'memory', 'memory-relevance', 'relevance',
         'trauma', 'crystallization', 'dread', 'courage', 'goals', 'arbitrate', 'stabilize', 'chatter',
         'tuning', 'validate-tuning', 'presets', 'why', 'why-not', 'explain-why-not', 'motives', 'motive', 'why-move',
-        'audio', 'sound', 'psychoacoustic'],
+        'audio', 'sound', 'psychoacoustic', 'pack', 'swarm', 'formation'],
     world: ['frontier-valley', 'valley', 'scenario', 'encounter', 'consequences', 'chain', 'cascade',
         'migration', 'refuge', 'refugee', 'arrivals', 'famine', 'scarcity', 'economy', 'trade', 'trade-chains',
         'blockade', 'embargo', 'denial', 'caravans', 'roaming', 'ambush', 'anticipate', 'anticipatory',
-        'sim', 'step', 'stepper', 'snapshot', 'restore', 'seeds', 'dashboard', 'ui', 'server', 'godot', 'showcase'],
+        'sim', 'step', 'stepper', 'snapshot', 'restore', 'seeds', 'dashboard', 'ui', 'server', 'godot', 'showcase',
+        'pack', 'swarm', 'formation'],
     debug: ['explain-faction', 'causal', 'causal-graph', 'root-cause', 'counterfactual', 'counterfactual-world',
         'diff-replay', 'intervene', 'intervention', 'coverage', 'interaction-coverage', 'metamorphic',
         'adversarial', 'resilience', 'degrade', 'failover', 'feedback', 'execution-aware', 'host-feedback',
@@ -3717,6 +3790,11 @@ async function main() {
         case 'sound':
         case 'psychoacoustic':
             handleAudio(options);
+            break;
+        case 'pack':
+        case 'swarm':
+        case 'formation':
+            handlePack(options);
             break;
         case 'tuning':
         case 'validate-tuning':

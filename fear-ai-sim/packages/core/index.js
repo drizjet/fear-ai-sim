@@ -470,7 +470,10 @@ export {
  PlaceMemory,
  DEFAULT_PLACE_MEMORY_CONFIG
 } from './src/PlaceMemory.js';
-
-
-
-
+export {
+    PackCoordinationEngine,
+    PACK_ROLES,
+    TACTICAL_PHASES,
+    ENCIRCLEMENT_PATTERNS,
+    DEFAULT_PACK_CONFIG
+} from './src/PackCoordinationEngine.js';

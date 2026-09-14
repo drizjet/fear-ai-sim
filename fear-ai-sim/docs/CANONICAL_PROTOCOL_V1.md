@@ -235,3 +235,16 @@ Fear AI core module `PsychoacousticEngine` maps affective kinetics into determin
 - **Harmonic Roughness / Dissonance Index**: Plomp-Levelt critical-bandwidth consonance-dissonance calculation across active threat frequency stems.
 - **Vocalization Hints**: Contextual actor cue recommendations (`SILENT`, `SUPPRESSED_BREATH`, `PANTING`, `WHIMPER`, `GASP`, `DESPERATE_SHOUT`, `SCREAM`, `SHOCKED_SILENCE`).
 - **Host Authority**: Fear AI emits advisory parameters and filters; the host engine retains exclusive authority over audio device playback, DSP buffers, and spatial mixers.
+
+---
+
+## 6. Multi-Agent Pack Coordination & Collective Swarm Engine (Frontiers C & D / Tactical)
+
+Fear AI core module `PackCoordinationEngine` computes multi-agent swarm coordination and encirclement geometry:
+- **Role Assignment**: Evaluates composite trait scores ($S_{\alpha} = 0.40 \cdot \text{dominance} + 0.35 \cdot \text{assertiveness} + 0.25 \cdot (1 - \text{fear})$) and relative positions to assign specialized tactical roles: `ALPHA_LEADER`, `FLANKER_LEFT`, `FLANKER_RIGHT`, `CHASER`, `REAR_GUARD`, `BAIT`, and `HARASSER`.
+- **Encirclement Geometry**: Computes optimal spatial formations (`CIRCULAR_PINCER`, `V_FORMATION`, `CRESCENT_SURROUND`, `STAGGERED_LINE`) around the target entity, emitting advisory target positions, headings, and encirclement radii.
+- **Phase State Machine**: Manages collective tactical transitions: `STALKING` $\to$ `ENCIRCLING` $\to$ `FEINT_PROBE` $\to$ `SYNCHRONIZED_STRIKE` $\to$ `SCATTER_DISPERSE` $\to$ `REGROUPING`.
+- **Alpha Morale Damping**: When the Alpha remains calm ($F_{\alpha} < 0.40$), subordinate member fear is attenuated by an alpha buffer ($F_{\text{eff}} = F \cdot (1 - 0.35 \cdot (1 - F_{\alpha}))$).
+- **Alpha Fall Catastrophe**: If the Alpha leader reaches panic threshold ($F_{\alpha} \ge 0.85$) or is removed (death), the pack suffers an immediate catastrophic breakdown: phase collapses to `SCATTER_DISPERSE`, pack cohesion drops to minimal floor ($\le 0.35$), and subordinates scatter into individualized evasion.
+- **Host Game Authority Invariant**: All pack coordination payloads are strictly advisory (`authority: "ADVISORY_ONLY"`). The host game retains 100% exclusive authority over physics, pathfinding, movement execution, health, and combat resolutions.
+
