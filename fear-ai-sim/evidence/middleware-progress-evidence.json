@@ -10940,7 +10940,7 @@
       ],
       "known_gaps": [
         "Standing gaps carried: parallel harness flakiness; Unity and Unreal editor gates; human participants blocked; psychometric ground truth"
-      ],
+      ]
     },
     {
       "milestone": "PACK_COORDINATION_ENGINE_R44",
