@@ -55,6 +55,7 @@ export class EconomicFeedbackSystem {
             subsistenceThresholdMultiplier: 0.40, // Stockpile below 40% target triggers scarcity
             maxPriceMultiplier: 10.0,
             escortInvestmentPerIncident: 0.15,
+            maxTradeHistory: config.maxTradeHistory ?? 1000,
             ...config
         };
     }
@@ -226,6 +227,10 @@ export class EconomicFeedbackSystem {
             commodity,
             amount: actualTransfer
         });
+
+        if (this.config.maxTradeHistory > 0 && this.tradeHistory.length > this.config.maxTradeHistory) {
+            this.tradeHistory.shift();
+        }
 
         return true;
     }
