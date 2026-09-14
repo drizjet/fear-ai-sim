@@ -168,7 +168,8 @@ import {
     IdentityVault,
     ScaleHarness,
     WhyNotExplainer,
-    ExplanationFidelityHarness
+    ExplanationFidelityHarness,
+    PsychoacousticEngine
 } from '../packages/core/index.js';
 import {
     BinaryWireProtocol,
@@ -279,6 +280,8 @@ function printHelp() {
     console.log(`                     Options: --fileA <path> --fileB <path>`);
     console.log(`  causal-graph       Build causal event DAG and explain systemic outcome root causes (Frontier E/Sections 156–160)`);
     console.log(`                     Options: --outcome <id> --depth <n> --threshold <0..1> --narrative --json`);
+    console.log(`  audio              Evaluate procedural psychoacoustic synthesis, Shepard curves & cardiac pacing (Frontier D / Audio)`);
+    console.log(`                     Options: --fear <0..1> --threat-distance <meters> --occlusion <0..1> --enclosure <0..1> --df-dt <rate> --json`);
     console.log(`  feedback           Report host execution outcomes and re-rank advisory intents (Sections 208–211, 288–293)`);
     console.log(`                     Options: --agent <id> --intent <TYPE> --outcome <GOAL_COMPLETED|INTENT_REJECTED|EXECUTION_FAILED|ACTION_INTERRUPTED> --reason <NO_PATH|BLOCKED|UNSUPPORTED|HOST_BUSY|STALE_INTENT> --json`);
     console.log(`  resilience         Inject partial subsystem failures and verify graceful degradation (Sections 138–139, 197, 199)`);
@@ -3488,6 +3491,78 @@ function handleEpistemicFog(options) {
     console.log(`Host Authority Check:         ✓ Strictly advisory (0 host game state mutations)\n`);
 }
 
+function handleAudio(options) {
+    const rawFear = options.fear !== undefined ? parseFloat(options.fear) : 0.65;
+    const fear = Number.isFinite(rawFear) ? Math.max(0, Math.min(1.0, rawFear)) : 0.65;
+    const arousal = options.arousal !== undefined ? parseFloat(options.arousal) : fear * 0.9;
+    const adrenaline = options.adrenaline !== undefined ? parseFloat(options.adrenaline) : fear * 0.7;
+    const energy = options.energy !== undefined ? parseFloat(options.energy) : 0.8;
+    const band = options.band || (fear >= 0.8 ? 'PANIC' : fear >= 0.5 ? 'ANXIOUS' : fear >= 0.2 ? 'ALERT' : 'CALM');
+    const dF_dt = options['df-dt'] !== undefined ? parseFloat(options['df-dt']) : (options.dfdt !== undefined ? parseFloat(options.dfdt) : 0.0);
+    const threatDistance = options['threat-distance'] !== undefined ? parseFloat(options['threat-distance']) : (options.distance !== undefined ? parseFloat(options.distance) : 12.0);
+    const occlusion = options.occlusion !== undefined ? parseFloat(options.occlusion) : 0.0;
+    const enclosure = options.enclosure !== undefined ? parseFloat(options.enclosure) : 0.5;
+
+    let activeFrequencies = [];
+    if (options.frequencies || options.chords) {
+        const rawList = String(options.frequencies || options.chords).split(',');
+        activeFrequencies = rawList.map(s => parseFloat(s.trim())).filter(n => Number.isFinite(n) && n > 0);
+    }
+
+    const evaluation = PsychoacousticEngine.evaluate({
+        affectiveState: {
+            rawFear: fear,
+            arousal,
+            adrenaline,
+            energy,
+            state: band
+        },
+        dF_dt,
+        threatDistance,
+        occlusion,
+        enclosure,
+        activeThreatFrequencies: activeFrequencies
+    });
+
+    if (options.json) {
+        console.log(JSON.stringify(evaluation, null, 2));
+        return;
+    }
+
+    console.log(BANNER);
+    console.log(`=== PROCEDURAL PSYCHOACOUSTIC AUDIO SYNTHESIS & DYNAMIC AMBIENCE (Frontier D / Audio) ===\n`);
+    console.log(`Agent Affective Input:  Fear = ${fear.toFixed(3)} | Band = [${band}] | Arousal = ${arousal.toFixed(3)} | Adrenaline = ${adrenaline.toFixed(3)} | dF/dt = ${dF_dt.toFixed(2)}`);
+    console.log(`Spatial Acoustics:      Threat Dist = ${threatDistance.toFixed(1)}m | Occlusion = ${(occlusion * 100).toFixed(0)}% | Enclosure = ${(enclosure * 100).toFixed(0)}%\n`);
+
+    console.log(`1. Physiological Cardiac & Respiratory Pacing:`);
+    console.log(`   • Heartbeat Tempo:     ${evaluation.cardiac.heartbeat_bpm} BPM (Interval: ${evaluation.cardiac.beat_interval_ms} ms)`);
+    console.log(`   • Rhythm Status:       [${evaluation.cardiac.rhythm_status}]${evaluation.cardiac.arrhythmia_triggered ? ' ⚠️ (ARRHYTHMIA / SKIPPED BEAT DETECTED)' : ''}`);
+    console.log(`   • Respiration Rate:    ${evaluation.cardiac.respiration_rate_cpm} breaths/min (Breath Envelope Depth: ${evaluation.cardiac.breath_envelope_depth})`);
+
+    console.log(`\n2. Shepard-Risset Infinite Pitch Glissando:`);
+    console.log(`   • Suspense Mix:        ${evaluation.shepard.mix} [0..1]`);
+    console.log(`   • Glissando Rate:      ${evaluation.shepard.glissando_rate_octaves_per_min} octaves/min (${evaluation.shepard.direction})`);
+    console.log(`   • Base Frequency:      ${evaluation.shepard.base_frequency_hz} Hz (${evaluation.shepard.spectral_octave_spread} octave Gaussian envelope)`);
+
+    console.log(`\n3. Sub-Bass Infrasound & Resonant Rumble:`);
+    console.log(`   • Infrasound Level:    ${evaluation.infrasound.intensity} [0..1]`);
+    console.log(`   • Resonant Peak:       ${evaluation.infrasound.peak_frequency_hz} Hz (Bandwidth: ${evaluation.infrasound.bandwidth_hz} Hz, Rumble Gain: ${evaluation.infrasound.rumble_gain_db} dB)`);
+
+    console.log(`\n4. Spatial Occlusion & Sensory Deprivation Low-Pass Filter:`);
+    console.log(`   • Low-Pass Cutoff:     ${evaluation.acoustic_filter.lowpass_cutoff_hz} Hz`);
+    console.log(`   • High-Pass Cutoff:    ${evaluation.acoustic_filter.highpass_cutoff_hz} Hz`);
+    console.log(`   • Environmental Reverb: Wet/Dry = ${(evaluation.acoustic_filter.reverb_wet_ratio * 100).toFixed(1)}%`);
+    console.log(`   • Auditory Attenuation:${evaluation.acoustic_filter.sensory_deprivation_attenuation_db} dB (Distance Gain: ${evaluation.acoustic_filter.distance_attenuation_gain})`);
+
+    console.log(`\n5. Musical Tension & Dissonance Index:`);
+    console.log(`   • Acoustic Roughness:  ${evaluation.dissonance.roughness_index} [0..1] -> [${evaluation.dissonance.musical_tension_tier}]`);
+    console.log(`   • Harmonic Weight:     ${evaluation.dissonance.dissonant_harmonic_weight}`);
+
+    console.log(`\n6. Character Vocalization Suggestion:`);
+    console.log(`   • Suggested Cue:       [${evaluation.vocalization_hint}]`);
+    console.log(`\nHost Game Authority Check: ✓ Strictly advisory parameters (Host audio device retains exclusive playback authority)\n`);
+}
+
 // NEXT-123 (CCI-28 frontier 7): hierarchical command groups. Each group
 // maps subcommands onto the pre-existing flat commands, so every flat
 // invocation keeps working byte-for-byte. `fear-ai <group> --help`
@@ -3496,7 +3571,8 @@ const COMMAND_GROUPS = {
     npc: ['explain', 'character', 'character-life', 'life', 'persona', 'persona-layers', 'identity',
         'signatures', 'reaction-norm', 'behavior-effects', 'memory', 'memory-relevance', 'relevance',
         'trauma', 'crystallization', 'dread', 'courage', 'goals', 'arbitrate', 'stabilize', 'chatter',
-        'tuning', 'validate-tuning', 'presets', 'why', 'why-not', 'explain-why-not', 'motives', 'motive', 'why-move'],
+        'tuning', 'validate-tuning', 'presets', 'why', 'why-not', 'explain-why-not', 'motives', 'motive', 'why-move',
+        'audio', 'sound', 'psychoacoustic'],
     world: ['frontier-valley', 'valley', 'scenario', 'encounter', 'consequences', 'chain', 'cascade',
         'migration', 'refuge', 'refugee', 'arrivals', 'famine', 'scarcity', 'economy', 'trade', 'trade-chains',
         'blockade', 'embargo', 'denial', 'caravans', 'roaming', 'ambush', 'anticipate', 'anticipatory',
@@ -3636,6 +3712,11 @@ async function main() {
         case 'observe':
         case 'telemetry':
             handleMetrics(options);
+            break;
+        case 'audio':
+        case 'sound':
+        case 'psychoacoustic':
+            handleAudio(options);
             break;
         case 'tuning':
         case 'validate-tuning':

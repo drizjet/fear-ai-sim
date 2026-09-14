@@ -27,6 +27,12 @@ export {
 export { IntentResolver, ACTION_INTENTS, pickTrustedPeer, warnGroupUrgency, approachAllyUrgency, WARN_AGREEABLENESS_GATE } from './src/IntentResolver.js';
 export { PsychoacousticSynthesizer } from './src/PsychoacousticSynthesizer.js';
 export {
+    PsychoacousticEngine,
+    VOCALIZATION_HINTS,
+    CARDIAC_RHYTHM_STATUS,
+    MUSICAL_INTERVALS
+} from './src/PsychoacousticEngine.js';
+export {
     LayeredMemorySystem,
     MEMORY_LAYERS,
     EPISODIC_EVENT_TYPES,

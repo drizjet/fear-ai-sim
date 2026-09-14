@@ -222,3 +222,16 @@ Returns updated affective states, semantic action intents, and audio synthesis h
 | `FREEZE` | Panic + low morale ($< 0.40$) | Tonic immobility, gasping, rigid posture |
 | `VAULTING` | High panic + low obstacle ahead | Jumping over low obstacles |
 | `CRAWLING` | Hiding behind low cover | Prone crawling, low silhouette |
+
+---
+
+## 5. Procedural Psychoacoustic Synthesis Engine (Frontier D / Audio)
+
+Fear AI core module `PsychoacousticEngine` maps affective kinetics into deterministic procedural psychoacoustic parameters:
+- **Physiological Cardiac Pacing**: Resting 60 BPM to 180 BPM panic lock; extreme shock ($Fear \ge 0.85, dF/dt \ge 0.50$) triggers `ARRHYTHMIA_SKIPPED_BEAT`.
+- **Shepard-Risset Continuous Glissando**: Infinite auditory pitch illusion curves ($mix \in [0, 1]$, glissando rate in octaves/min) creating subconscious escalating tension.
+- **Sub-Bass Infrasound & Resonant Rumble**: $16–30$ Hz target envelope (peak 18.9 Hz resonant frequency) calibrated to dread and environmental enclosure.
+- **Acoustic Occlusion & Sensory Deprivation Filter**: Low-pass cutoff frequency $f_c \in [250, 20000]$ Hz combining wall obstacle muffling with terror auditory exclusion.
+- **Harmonic Roughness / Dissonance Index**: Plomp-Levelt critical-bandwidth consonance-dissonance calculation across active threat frequency stems.
+- **Vocalization Hints**: Contextual actor cue recommendations (`SILENT`, `SUPPRESSED_BREATH`, `PANTING`, `WHIMPER`, `GASP`, `DESPERATE_SHOUT`, `SCREAM`, `SHOCKED_SILENCE`).
+- **Host Authority**: Fear AI emits advisory parameters and filters; the host engine retains exclusive authority over audio device playback, DSP buffers, and spatial mixers.
