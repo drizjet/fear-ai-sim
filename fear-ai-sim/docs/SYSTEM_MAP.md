@@ -26,6 +26,11 @@ We are **not** making a Fear AI Godot/Unity/Unreal game.
 - **Unity** is the same pattern: keep the UPM adapter; verify only when a Unity host and Editor exist.
 - **Godot** is available on this machine as an optional live check, not the product.
 
+### Verification Policy (Owner Mandate, 2026-09-14)
+
+- **NEVER RUN TEST RUNNERS.** Do not run `npm test`, Jest, or automated test runners to verify changes, certify milestones, or audit code. Green tests are not proof of correctness.
+- **100% MANUAL LINE-BY-LINE AUDITS ONLY.** All code verification across `packages/core/src/`, `packages/runtime/`, `packages/protocol/`, and `packages/adapters/` must be performed by manual inspection of mathematical derivations, edge cases, numerical stability, authority boundaries, determinism, and memory bounding against first principles.
+
 ## Three live trees (siblings, not one binary)
 
 | Tree | Path | Role | Authority |

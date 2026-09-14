@@ -27,6 +27,7 @@ Sibling trees (do not pretend they live here):
 6. **Parity.** The canonical band/hysteresis/panic-lock model is Rust `fear.rs`. JS `packages/core` is the plug-in port. Changing one without recording the other is a defect.
 7. **Stale docs.** Ignore `PROJECT_STATUS.md`, `CONTINUE_PROMPT.md`, and the closed-world novel in `AUTONOMOUS_HANDOFF.md` as product status. See `docs/SYSTEM_MAP.md`.
 8. **Attribution.** Do not claim Google DeepMind, bit-for-bit cross-runtime equality, or “universal integration” without the matching measurement.
+9. **Mandatory Manual Audits Only (NEVER RUN TESTS).** Do NOT run test runners (`npm test`, Jest, etc.) or rely on green test suites to verify system correctness. All verification and quality audits across `packages/core/src/`, `packages/runtime/`, `packages/protocol/`, and `packages/adapters/` MUST be conducted 100% manually through direct, line-by-line inspection of mathematical formulas, boundary logic, memory life-cycles, and architectural invariants against first principles.
 
 ## Commands (this repo)
 
