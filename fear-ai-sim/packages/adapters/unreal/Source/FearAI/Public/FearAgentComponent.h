@@ -64,6 +64,36 @@ struct FFearAudioHints
     FString VocalizationHint;
 };
 
+USTRUCT(BlueprintType)
+struct FFearCapabilityDowngrade
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "Fear AI")
+    FString OriginalIntent;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Fear AI")
+    FString RequiredCapability;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Fear AI")
+    FString Reason;
+};
+
+USTRUCT(BlueprintType)
+struct FFearAffordanceDowngrade
+{
+    GENERATED_BODY()
+
+    UPROPERTY(BlueprintReadOnly, Category = "Fear AI")
+    FString OriginalIntent;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Fear AI")
+    FString Fallback;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Fear AI")
+    FString Reason;
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnFearBandChanged, EFearBand, NewBand, float, RawFear);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionIntentReceived, const FFearActionIntent&, Intent);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAudioHintsUpdated, const FFearAudioHints&, AudioHints);
@@ -89,6 +119,15 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fear AI|Personality")
     float Leadership = 0.5f;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fear AI|Capabilities")
+    TArray<FString> HostCapabilities;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fear AI|Social")
+    TArray<FString> VisiblePeerIds;
+
+    UFUNCTION(BlueprintCallable, Category = "Fear AI|Execution")
+    void ReportOutcome(const FString& IntentType, const FString& Outcome, const FString& Reason = TEXT(""), int32 Tick = 0);
+
     UPROPERTY(BlueprintAssignable, Category = "Fear AI|Events")
     FOnFearBandChanged OnFearBandChanged;
 
@@ -103,6 +142,12 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Fear AI|State")
     float CurrentRawFear = 0.0f;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Fear AI|State")
+    FFearCapabilityDowngrade CurrentCapabilityDowngrade;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Fear AI|State")
+    FFearAffordanceDowngrade CurrentAffordanceDowngrade;
 
 private:
     TSharedPtr<IWebSocket> WebSocket;

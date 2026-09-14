@@ -74,9 +74,12 @@ namespace FearAI.Client
     public class AudioHints
     {
         [JsonPropertyName("heartbeat_bpm")] public int HeartbeatBpm { get; set; } = 60;
-        [JsonPropertyName("shepard_tone_mix")] public float ShepardToneMix { get; set; }
+        [JsonPropertyName("shepard_mix")] public float ShepardMix { get; set; }
+        [JsonPropertyName("shepard_tone_mix")] public float ShepardToneMix { get => ShepardMix; set => ShepardMix = value; }
         [JsonPropertyName("lowpass_cutoff_hz")] public float LowpassCutoffHz { get; set; } = 20000f;
-        [JsonPropertyName("vocalization_cue")] public string? VocalizationCue { get; set; }
+        [JsonPropertyName("infrasound_intensity")] public float InfrasoundIntensity { get; set; }
+        [JsonPropertyName("vocalization_hint")] public string? VocalizationHint { get; set; }
+        [JsonPropertyName("vocalization_cue")] public string? VocalizationCue { get => VocalizationHint; set => VocalizationHint = value; }
     }
 
     public class CapabilityDowngrade

@@ -20,6 +20,10 @@ namespace FearAI
         [SerializeField] private bool useWebSocket = true;
         [SerializeField] private float reconnectInterval = 3.0f;
 
+        [Header("Host Capabilities (R36/R38)")]
+        [SerializeField] private List<string> hostCapabilities = new List<string>();
+        public List<string> HostCapabilities => hostCapabilities;
+
         private ClientWebSocket webSocket;
         private CancellationTokenSource cts;
         private readonly List<AgentObservation> pendingObservations = new List<AgentObservation>();
@@ -121,11 +125,17 @@ namespace FearAI
             }
         }
 
-        private async Task SendBatchWsAsync(List<AgentObservation> batch, float dt)
+        private async Task SendBatchWsAsync(List<AgentObservation> batch, float dt, List<string> capabilities = null)
         {
             try
             {
-                string json = "{\"type\":\"BATCH_TICK_REQUEST\",\"dt\":" + dt.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + ",\"observations\":" + JsonHelper.ToJson(batch) + "}";
+                var caps = capabilities ?? hostCapabilities;
+                string capJson = "";
+                if (caps != null && caps.Count > 0)
+                {
+                    capJson = ",\"capabilities\":" + JsonHelper.ToJsonStringList(caps);
+                }
+                string json = "{\"type\":\"BATCH_TICK_REQUEST\",\"dt\":" + dt.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + ",\"observations\":" + JsonHelper.ToJson(batch) + capJson + "}";
                 await SendRawWsAsync(json);
             }
             catch (Exception ex)
@@ -189,10 +199,16 @@ namespace FearAI
             catch { /* non-critical message parsing */ }
         }
 
-        private IEnumerator SendBatchHttp(List<AgentObservation> batch, float dt)
+        private IEnumerator SendBatchHttp(List<AgentObservation> batch, float dt, List<string> capabilities = null)
         {
             string url = $"http://{serverHost}:{serverPort}/api/v1/tick";
-            string json = "{\"dt\":" + dt.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + ",\"observations\":" + JsonHelper.ToJson(batch) + "}";
+            var caps = capabilities ?? hostCapabilities;
+            string capJson = "";
+            if (caps != null && caps.Count > 0)
+            {
+                capJson = ",\"capabilities\":" + JsonHelper.ToJsonStringList(caps);
+            }
+            string json = "{\"type\":\"BATCH_TICK_REQUEST\",\"dt\":" + dt.ToString("F4", System.Globalization.CultureInfo.InvariantCulture) + ",\"observations\":" + JsonHelper.ToJson(batch) + capJson + "}";
 
             using (var request = new UnityWebRequest(url, "POST"))
             {
@@ -209,6 +225,38 @@ namespace FearAI
                 }
             }
         }
+
+        public void ReportOutcome(string agentId, string intentType, string outcome, string reason = null, int tick = 0, Action<OutcomeReceipt> onReceipt = null)
+        {
+            StartCoroutine(SendOutcomeHttp(agentId, intentType, outcome, reason, tick, onReceipt));
+        }
+
+        private IEnumerator SendOutcomeHttp(string agentId, string intentType, string outcome, string reason, int tick, Action<OutcomeReceipt> onReceipt)
+        {
+            string url = $"http://{serverHost}:{serverPort}/api/v1/outcome";
+            string reasonField = string.IsNullOrEmpty(reason) ? "" : $",\"reason\":\"{reason.Replace("\"", "\\\"")}\"";
+            string json = $"{{\"agent_id\":\"{agentId}\",\"intent_type\":\"{intentType}\",\"outcome\":\"{outcome}\",\"tick\":{tick}{reasonField}}}";
+
+            using (var request = new UnityWebRequest(url, "POST"))
+            {
+                byte[] bodyRaw = Encoding.UTF8.GetBytes(json);
+                request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+                request.downloadHandler = new DownloadHandlerBuffer();
+                request.SetRequestHeader("Content-Type", "application/json");
+
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success)
+                {
+                    try
+                    {
+                        var receipt = JsonUtility.FromJson<OutcomeReceipt>(request.downloadHandler.text);
+                        onReceipt?.Invoke(receipt);
+                    }
+                    catch { /* non-critical outcome parsing */ }
+                }
+            }
+        }
     }
 
     public static class JsonHelper
@@ -219,6 +267,19 @@ namespace FearAI
             for (int i = 0; i < list.Count; i++)
             {
                 sb.Append(JsonUtility.ToJson(list[i]));
+                if (i < list.Count - 1) sb.Append(",");
+            }
+            sb.Append("]");
+            return sb.ToString();
+        }
+
+        public static string ToJsonStringList(List<string> list)
+        {
+            if (list == null) return "[]";
+            StringBuilder sb = new StringBuilder("[");
+            for (int i = 0; i < list.Count; i++)
+            {
+                sb.Append("\"").Append(list[i].Replace("\"", "\\\"")).Append("\"");
                 if (i < list.Count - 1) sb.Append(",");
             }
             sb.Append("]");

@@ -15,6 +15,10 @@ namespace FearAI
         [SerializeField] private LayerMask threatLayer;
         [SerializeField] private LayerMask obstacleLayer;
 
+        [Header("Peer Detection & Social Awareness (R38)")]
+        [SerializeField] private List<string> peerIds = new List<string>();
+        public List<string> PeerIds => peerIds;
+
         [Header("Runtime Affective State (Read-Only)")]
         [SerializeField] private string currentFearBand = "CALM";
         [SerializeField] private float rawFear = 0.0f;
@@ -33,6 +37,8 @@ namespace FearAI
         public string CurrentIntent => currentIntent;
         public string CurrentFearBand => currentFearBand;
         public float IntentUrgency => intentUrgency;
+        public CapabilityDowngrade CurrentCapabilityDowngrade { get; private set; }
+        public AffordanceDowngrade CurrentAffordanceDowngrade { get; private set; }
 
         private void Awake()
         {
@@ -59,13 +65,24 @@ namespace FearAI
         private void Update()
         {
             // Gather per-frame sensory observation
+            var peersList = new List<VisiblePeer>();
+            if (peerIds != null)
+            {
+                foreach (var pid in peerIds)
+                {
+                    if (!string.IsNullOrEmpty(pid))
+                        peersList.Add(new VisiblePeer { id = pid });
+                }
+            }
+
             var observation = new AgentObservation
             {
                 agent_id = agentId,
                 x = transform.position.x,
                 y = transform.position.y,
                 z = transform.position.z,
-                threats = ScanForThreats()
+                threats = ScanForThreats(),
+                peers = peersList
             };
 
             FearAIClient.Instance.QueueObservation(observation);
@@ -114,12 +131,19 @@ namespace FearAI
             currentIntent = intent.type;
             intentUrgency = intent.urgency;
             RecommendedVector = intent.vector_hint.ToUnityVector();
+            CurrentCapabilityDowngrade = state.capability_downgrade;
+            CurrentAffordanceDowngrade = state.affordance_downgrade;
 
             // Host game applies NavMesh / character movement from CurrentIntent + RecommendedVector.
             if (heartbeatAudio != null && state.audio_hints != null)
             {
                 heartbeatAudio.pitch = Mathf.Clamp(state.audio_hints.heartbeat_bpm / 60.0f, 0.8f, 2.2f);
             }
+        }
+
+        public void ReportExecutionOutcome(string outcome, string reason = null, int tick = 0, System.Action<OutcomeReceipt> onReceipt = null)
+        {
+            FearAIClient.Instance?.ReportOutcome(agentId, currentIntent, outcome, reason, tick, onReceipt);
         }
 
         public float SuggestedSpeed()

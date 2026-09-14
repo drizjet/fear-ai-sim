@@ -1,7 +1,7 @@
 ---
 title: Fear AI Canonical Wire Protocol v1.0.0 Specification
 created: 2026-09-06
-updated: 2026-09-12
+updated: 2026-09-14
 type: specification
 status: active
 ---
@@ -120,8 +120,9 @@ Dispatches sensory observations across all active agents and requests updated af
     }
   ]
 }
+```
 
-#### Tick capabilities, peers, and outcome reports (R36)
+#### Tick capabilities, peers, and outcome reports (R36/R38/R42)
 
 ```json
 {

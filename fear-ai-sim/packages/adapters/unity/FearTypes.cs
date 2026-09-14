@@ -79,6 +79,35 @@ namespace FearAI
     }
 
     [Serializable]
+    public class CapabilityDowngrade
+    {
+        public string original_intent;
+        public string required_capability;
+        public string reason;
+    }
+
+    [Serializable]
+    public class AffordanceDowngrade
+    {
+        public string original_intent;
+        public string fallback;
+        public string reason;
+    }
+
+    [Serializable]
+    public class OutcomeReceipt
+    {
+        public string type;
+        public string status;
+        public string agent_id;
+        public string intent_type;
+        public string outcome;
+        public string reason;
+        public float reliability;
+        public bool unavailable;
+    }
+
+    [Serializable]
     public class AgentStateOutput
     {
         public string agent_id;
@@ -87,6 +116,8 @@ namespace FearAI
         public AffectiveState affective_state;
         public ActionIntent action_intent;
         public AudioHints audio_hints;
+        public CapabilityDowngrade capability_downgrade;
+        public AffordanceDowngrade affordance_downgrade;
     }
 
     [Serializable]
@@ -112,6 +143,12 @@ namespace FearAI
     }
 
     [Serializable]
+    public class VisiblePeer
+    {
+        public string id;
+    }
+
+    [Serializable]
     public class AgentObservation
     {
         public string agent_id;
@@ -125,6 +162,7 @@ namespace FearAI
         public bool obstaclePresent = false;
         public List<StimulusObservation> threats = new List<StimulusObservation>();
         public List<StimulusObservation> sounds = new List<StimulusObservation>();
+        public List<VisiblePeer> peers = new List<VisiblePeer>();
     }
 
     [Serializable]

@@ -16,5 +16,10 @@ This addon talks to the **Fear AI middleware server**.
 5. Start the server from the JS repo: `npm run server` (loopback `:8765`). There is no `npx fear-ai-server` package and no `Launch-FearAI-Server.bat` in tree.
 
 ## Architecture
-- `FearAIClient`: WebSocket / HTTP client. Autoload.
-- `FearAgent`: Queues observations, receives affective state and **advisory** intents. Host applies movement.
+- `FearAIClient`: WebSocket / HTTP client. Autoload. Supports `host_capabilities` array for dynamic intent filtering and `report_outcome()` for execution feedback.
+- `FearAgent`: Queues observations (with optional `peer_ids`), receives affective state, recommended **advisory** intents, and capability/affordance downgrades. Host applies movement.
+
+## Capabilities & Outcome Feedback (R36/R38/R42)
+- Configure `FearAIClient.host_capabilities = ["supports_dialogue", "supports_cover_points"]` in the inspector or in `_ready()`.
+- Populate `FearAgent.peer_ids` to enable peer-aware intents (`WARN_GROUP`).
+- Call `fear_agent.report_outcome("GOAL_COMPLETED")` or `FearAIClient.report_outcome(id, intent, outcome, reason)` to close the feedback loop.

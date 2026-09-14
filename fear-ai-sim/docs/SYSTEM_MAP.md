@@ -1,7 +1,7 @@
 ---
 title: "Fear AI — System Map (read this first)"
 created: 2026-09-07
-updated: 2026-09-08
+updated: 2026-09-14
 type: navigation
 status: active
 ---
@@ -409,6 +409,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Variance Oracles R39:** valley seed-variance gates plus frozen-world contrast (soaks measure agency); 5 new tests; matrix 451/451, 3327 tests.
 - **Blame Verdict R40:** one-way famine blame ruled structural (hunger needs a granary), pinned; carried gap retired; matrix 451/451, 3329 tests.
 - **Nomad Verdict R41:** canon nomad peace ruled emergent (stoked war proves the fight path works), pinned; carried gap retired, valley gaps closed; matrix 452/452, 3332 tests.
+- **Adapter Surface Harmonization R42:** C# AudioHints protocol alignment (shepard_mix, infrasound_intensity, vocalization_hint) with legacy aliases; Unity, Godot 4, and Unreal 5 adapters gain host capabilities, execution outcome feedback, visible peers, and downgrade DTOs; 5 new tests; matrix 453/453, 3337 tests.
 - **Ledger Bound NEXT-38:** valley trade ledger evicts window-stale rows on write (invisible) plus a 1000-row hard backstop. Sibling histories closed by the sweep above.
 - **Server:** `npm run server` → `packages/runtime/bin/fear-ai-server.js` (loopback `127.0.0.1:8765`)
 - **Desktop sim launcher (not the middleware server):** `Launch-FearAI.ps1` / `Launch-FearAI.bat`

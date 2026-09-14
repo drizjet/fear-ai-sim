@@ -27,11 +27,17 @@ signal audio_hints_received(hints: Dictionary)
 ## Observation age in ticks. Negative = absent (fresh).
 @export var observation_age_ticks: int = -1
 
+@export_group("Social Awareness (opt-in, R38)")
+## List of visible peer agent IDs.
+@export var peer_ids: Array[String] = []
+
 var current_fear_band: String = "CALM"
 var current_intent: String = "IDLE_VIGILANT"
 var current_urgency: float = 0.0
 var current_heartbeat_bpm: int = 60
 var recommended_vector: Vector3 = Vector3.ZERO
+var capability_downgrade: Dictionary = {}
+var affordance_downgrade: Dictionary = {}
 
 var _parent_body: Node
 var _client: Node
@@ -80,6 +86,11 @@ func _physics_process(_delta: float) -> void:
 		if observation_age_ticks >= 0:
 			audio["ageTicks"] = observation_age_ticks
 		obs["audio"] = audio
+	if peer_ids.size() > 0:
+		var peers_arr: Array[Dictionary] = []
+		for pid in peer_ids:
+			peers_arr.append({ "id": pid })
+		obs["peers"] = peers_arr
 	_client.queue_observation(obs)
 
 func _scan_threats() -> Array[Dictionary]:
@@ -116,11 +127,17 @@ func _on_state_received(id: String, state: Dictionary) -> void:
 	
 	var vec = intent.get("vector_hint", {})
 	recommended_vector = Vector3(vec.get("x", 0.0), vec.get("y", 0.0), vec.get("z", 0.0))
-	
+	capability_downgrade = state.get("capability_downgrade", {})
+	affordance_downgrade = state.get("affordance_downgrade", {})
+
 	if prev_band != current_fear_band:
 		fear_band_changed.emit(current_fear_band)
 	intent_changed.emit(intent)
 	audio_hints_received.emit(audio)
+
+func report_outcome(outcome: String, reason: String = "", tick: int = 0) -> void:
+	if _client and _client.has_method("report_outcome"):
+		_client.report_outcome(agent_id, current_intent, outcome, reason, tick)
 
 func apply_state(state: Dictionary) -> void:
 	_on_state_received(agent_id, state)

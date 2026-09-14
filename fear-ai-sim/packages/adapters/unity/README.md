@@ -39,7 +39,13 @@ Assets/
    - `fear` (base susceptibility)
 
 ## How It Works: The Host Authority Invariant
-1. In `Update()`, `FearAgent` samples nearby colliders in vision cone and sends sensory observations (`threats`, distances, occlusions) to `FearAIClient`.
+1. In `Update()`, `FearAgent` samples nearby colliders in vision cone and sends sensory observations (`threats`, distances, occlusions, and optional `peers`) to `FearAIClient`.
 2. The local Fear AI server updates the 11-band emotional model, habituation curves, and social panic contagion.
-3. `FearAgent.OnFearStateUpdated()` receives affective state and recommended `ActionIntent` (`FLEE_FROM`, `SEEK_COVER`, `FREEZE`, etc.).
+3. `FearAgent.OnFearStateUpdated()` receives affective state and recommended `ActionIntent` (`FLEE_FROM`, `SEEK_COVER`, `FREEZE`, etc.), plus any `CapabilityDowngrade` or `AffordanceDowngrade` annotations.
 4. Unity's `NavMeshAgent` executes movement seamlessly with zero physics stutter.
+5. Host reports execution feedback via `FearAgent.ReportExecutionOutcome("GOAL_COMPLETED")` or `ReportOutcome("INTENT_REJECTED", "NO_PATH")` to close the adaptive advisory loop.
+
+## Advanced Features (R36/R38/R42)
+- **Host Capabilities**: Set `FearAIClient.HostCapabilities` (e.g. `["supports_dialogue", "supports_cover_points"]`) to dynamically filter unsupported intents.
+- **Social Awareness**: Populate `FearAgent.PeerIds` with visible companion IDs to enable peer-directed intents (`WARN_GROUP`, `APPROACH_ALLY`).
+- **Outcome Feedback**: Call `FearAgent.ReportExecutionOutcome(outcome, reason)` to let the server learn structural execution limits.

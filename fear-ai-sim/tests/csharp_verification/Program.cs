@@ -75,6 +75,7 @@ namespace FearAI.Tests
             {
                 var r = results[0];
                 Console.WriteLine($"[PASS] Live Tick Result: Agent={r.AgentId} Band={r.FearBand} Intent={r.ActionIntent.Type} Heartbeat={r.AudioHints.HeartbeatBpm} BPM");
+                Console.WriteLine($"[PASS] AudioHints: shepard={r.AudioHints.ShepardMix:F2} infrasound={r.AudioHints.InfrasoundIntensity:F2} vocal={r.AudioHints.VocalizationHint ?? "none"} legacy_shepard={r.AudioHints.ShepardToneMix:F2}");
                 // R38: report the advised intent as completed, then tick
                 // with explicitly empty capabilities (every gated intent
                 // filters; the call itself must stay healthy).

@@ -1,7 +1,7 @@
 ---
 title: Fear AI Engine Integration Guide - Unity, Unreal, Godot, and Custom Engines
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-09-14
 type: guide
 status: active
 ---
@@ -159,8 +159,12 @@ until a completion clears it):
 client.report_outcome("guard_1", "SEEK_COVER", "INTENT_REJECTED", reason="NO_PATH")
 ```
 
-Reference clients ship both calls: Python `FearAIClient.tick(..., capabilities=...)` /
-`report_outcome(...)`, Node `tick(observations, dt, capabilities)` /
-`reportOutcome({...})`, C# `BatchTickAsync(..., capabilities)` /
-`ReportOutcomeAsync(...)`. Include visible peers in observations
-(`"peers": [{"id": ...}]`) to unlock peer-aware intents (`WARN_GROUP`).
+All adapters ship this surface across languages and engines:
+- **Python**: `FearAIClient.tick(..., capabilities=...)`, `report_outcome(...)`, `"peers": [{"id": ...}]`
+- **Node**: `FearAIClient.tick(..., dt, capabilities)`, `reportOutcome({...})`, `"peers": [{"id": ...}]`
+- **C# / .NET 8**: `FearAIClient.BatchTickAsync(..., capabilities)`, `ReportOutcomeAsync(...)`, `AgentObservation.Peers`
+- **Unity**: `FearAIClient.HostCapabilities`, `FearAgent.ReportExecutionOutcome(...)`, `FearAgent.PeerIds` / `AgentObservation.peers`
+- **Godot 4**: `FearAIClient.host_capabilities`, `FearAgent.report_outcome(...)`, `FearAgent.peer_ids` / `obs["peers"]`
+- **Unreal 5**: `UFearAgentComponent.HostCapabilities`, `UFearAgentComponent.ReportOutcome(...)`, `UFearAgentComponent.VisiblePeerIds` / `obs["peers"]`.
+
+Include visible peers in observations to unlock peer-aware intents (`WARN_GROUP`, `APPROACH_ALLY`). When capabilities are advertised, unsupported intents are gracefully downgraded to legal fallbacks (`SEEK_COVER` $\to$ `FLEE_FROM`, `WARN_GROUP` $\to$ `FLEE_FROM`) with metadata attached.

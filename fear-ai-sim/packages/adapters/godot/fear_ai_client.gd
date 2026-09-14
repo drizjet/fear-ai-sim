@@ -5,11 +5,13 @@ extends Node
 signal connected_to_server
 signal disconnected_from_server
 signal agent_state_received(agent_id: String, state: Dictionary)
+signal outcome_reported(receipt: Dictionary)
 
 @export var server_host: String = "127.0.0.1"
 @export var server_port: int = 8765
 @export var use_websocket: bool = true
 @export var use_binary_wire: bool = false
+@export var host_capabilities: Array[String] = []
 
 # Binary Protocol Constants (Front D / Section 83 & Sections 74-75)
 const BINARY_MAGIC = 0x52414546 # "FEAR" in little-endian uint32
@@ -102,6 +104,8 @@ func _physics_process(delta: float) -> void:
 			"dt": delta,
 			"observations": batch
 		}
+		if host_capabilities.size() > 0:
+			payload["capabilities"] = host_capabilities
 		_socket.send_text(JSON.stringify(payload))
 	else:
 		var payload = {
@@ -109,6 +113,8 @@ func _physics_process(delta: float) -> void:
 			"dt": delta,
 			"observations": batch
 		}
+		if host_capabilities.size() > 0:
+			payload["capabilities"] = host_capabilities
 		_send_http_batch(payload)
 
 func queue_observation(obs: Dictionary) -> void:
@@ -272,7 +278,48 @@ func _process_message(json_str: String) -> void:
 	var json = JSON.new()
 	if json.parse(json_str) == OK:
 		var data = json.get_data()
-		if data is Dictionary and data.has("results"):
-			for agent_output in data["results"]:
-				if agent_output.has("agent_id"):
-					agent_state_received.emit(agent_output["agent_id"], agent_output)
+		if data is Dictionary:
+			if data.has("results"):
+				for agent_output in data["results"]:
+					if agent_output.has("agent_id"):
+						agent_state_received.emit(agent_output["agent_id"], agent_output)
+			elif data.get("type") == "INTENT_OUTCOME_ACK":
+				outcome_reported.emit(data)
+
+## Report what the host did with an advised intent (R36/R38).
+func report_outcome(agent_id: String, intent_type: String, outcome: String, reason: String = "", tick: int = 0) -> void:
+	var payload = {
+		"type": "INTENT_OUTCOME_REPORT",
+		"agent_id": agent_id,
+		"intent_type": intent_type,
+		"outcome": outcome,
+		"tick": tick
+	}
+	if not reason.is_empty():
+		payload["reason"] = reason
+
+	if use_websocket and _is_connected:
+		_socket.send_text(JSON.stringify(payload))
+	else:
+		_send_http_outcome(payload)
+
+var _outcome_http_request: HTTPRequest
+
+func _send_http_outcome(payload: Dictionary) -> void:
+	if not is_instance_valid(_outcome_http_request):
+		_outcome_http_request = HTTPRequest.new()
+		add_child(_outcome_http_request)
+		_outcome_http_request.request_completed.connect(_on_outcome_http_response)
+
+	var url = "http://%s:%d/api/v1/outcome" % [server_host, server_port]
+	var headers = ["Content-Type: application/json"]
+	_outcome_http_request.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+
+func _on_outcome_http_response(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if response_code == 200:
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) == OK:
+			var data = json.get_data()
+			if data is Dictionary:
+				outcome_reported.emit(data)
+

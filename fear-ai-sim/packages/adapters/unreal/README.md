@@ -39,8 +39,12 @@ This adapter is intended to connect **Unreal Engine 5** to the **Fear AI middlew
 3. In the Details panel, set:
    - `Neuroticism` (0.0 to 1.0)
    - `Leadership` (0.0 to 1.0)
+   - `HostCapabilities` (e.g. `supports_dialogue`, `supports_cover_points`)
+   - `VisiblePeerIds` (array of visible peer agent IDs)
 4. In the Event Graph, bind to:
    - `OnFearBandChanged`: Fires when agent transitions between emotional states (e.g. `Calm` -> `Alert` -> `Anxious` -> `Panic`).
    - `OnActionIntentReceived`: Delivers `FFearActionIntent` with `Type` (`FLEE_FROM`, `SEEK_COVER`, `FREEZE`), `Urgency`, and `VectorHint`. Wire this directly to your Unreal **AI Controller** / **Move To** / **Gameplay Tasks**.
    - `OnAudioHintsUpdated`: Delivers `FFearAudioHints` (`HeartbeatBpm`, `LowpassCutoffHz`, `ShepardMix`, `VocalizationHint`) to drive MetaSounds or Audio Components.
+5. In your gameplay execution tasks, call:
+   - `ReportOutcome`: Call on the component (`IntentType`, `Outcome`, `Reason`, `Tick`) to feed execution success or failure back into Fear AI's adaptive filter.
 

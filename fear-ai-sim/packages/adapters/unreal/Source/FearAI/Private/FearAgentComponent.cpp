@@ -88,12 +88,34 @@ void UFearAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
     ObsObj->SetStringField("type", "BATCH_TICK_REQUEST");
     ObsObj->SetNumberField("dt", DeltaTime);
 
+    if (HostCapabilities.Num() > 0)
+    {
+        TArray<TSharedPtr<FJsonValue>> CapArray;
+        for (const FString& Cap : HostCapabilities)
+        {
+            CapArray.Add(MakeShareable(new FJsonValueString(Cap)));
+        }
+        ObsObj->SetArrayField("capabilities", CapArray);
+    }
+
     TArray<TSharedPtr<FJsonValue>> ObsArray;
     TSharedPtr<FJsonObject> SingleObs = MakeShareable(new FJsonObject());
     SingleObs->SetStringField("agent_id", AgentId);
     SingleObs->SetNumberField("x", Pos.X / 100.0f); // Convert cm to m
     SingleObs->SetNumberField("y", Pos.Y / 100.0f);
     SingleObs->SetNumberField("z", Pos.Z / 100.0f);
+
+    if (VisiblePeerIds.Num() > 0)
+    {
+        TArray<TSharedPtr<FJsonValue>> PeerArray;
+        for (const FString& PeerId : VisiblePeerIds)
+        {
+            TSharedPtr<FJsonObject> PeerObj = MakeShareable(new FJsonObject());
+            PeerObj->SetStringField("id", PeerId);
+            PeerArray.Add(MakeShareable(new FJsonValueObject(PeerObj)));
+        }
+        SingleObs->SetArrayField("peers", PeerArray);
+    }
 
     ObsArray.Add(MakeShareable(new FJsonValueObject(SingleObs)));
     ObsObj->SetArrayField("observations", ObsArray);
@@ -102,6 +124,30 @@ void UFearAgentComponent::TickComponent(float DeltaTime, ELevelTick TickType, FA
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutJson);
     FJsonSerializer::Serialize(ObsObj.ToSharedRef(), Writer);
     WebSocket->Send(OutJson);
+}
+
+void UFearAgentComponent::ReportOutcome(const FString& IntentType, const FString& Outcome, const FString& Reason, int32 Tick)
+{
+    if (!WebSocket.IsValid() || !WebSocket->IsConnected())
+    {
+        return;
+    }
+
+    TSharedPtr<FJsonObject> ReportObj = MakeShareable(new FJsonObject());
+    ReportObj->SetStringField("type", "INTENT_OUTCOME_REPORT");
+    ReportObj->SetStringField("agent_id", AgentId);
+    ReportObj->SetStringField("intent_type", IntentType);
+    ReportObj->SetStringField("outcome", Outcome);
+    ReportObj->SetNumberField("tick", Tick);
+    if (!Reason.IsEmpty())
+    {
+        ReportObj->SetStringField("reason", Reason);
+    }
+
+    FString OutStr;
+    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&OutStr);
+    FJsonSerializer::Serialize(ReportObj.ToSharedRef(), Writer);
+    WebSocket->Send(OutStr);
 }
 
 void UFearAgentComponent::ProcessStateJson(const FString& Message)
@@ -163,6 +209,22 @@ void UFearAgentComponent::ProcessStateJson(const FString& Message)
                         Hints.InfrasoundIntensity = AudioObj->GetNumberField("infrasound_intensity");
                         Hints.VocalizationHint = AudioObj->GetStringField("vocalization_hint");
                         OnAudioHintsUpdated.Broadcast(Hints);
+                    }
+
+                    // Parse Downgrades (R36/R38)
+                    TSharedPtr<FJsonObject> CapDownObj = AgentState->GetObjectField("capability_downgrade");
+                    if (CapDownObj.IsValid())
+                    {
+                        CurrentCapabilityDowngrade.OriginalIntent = CapDownObj->GetStringField("original_intent");
+                        CurrentCapabilityDowngrade.RequiredCapability = CapDownObj->GetStringField("required_capability");
+                        CurrentCapabilityDowngrade.Reason = CapDownObj->GetStringField("reason");
+                    }
+                    TSharedPtr<FJsonObject> AffDownObj = AgentState->GetObjectField("affordance_downgrade");
+                    if (AffDownObj.IsValid())
+                    {
+                        CurrentAffordanceDowngrade.OriginalIntent = AffDownObj->GetStringField("original_intent");
+                        CurrentAffordanceDowngrade.Fallback = AffDownObj->GetStringField("fallback");
+                        CurrentAffordanceDowngrade.Reason = AffDownObj->GetStringField("reason");
                     }
                 }
             }
