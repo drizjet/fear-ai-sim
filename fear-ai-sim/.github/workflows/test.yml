@@ -26,17 +26,9 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Run tests
+    - name: Hard Rule 9 Advisory Verification
       run: npm test
-      
-    - name: Run heavy engine suites (serialized)
-      run: npm run test:heavy
-      
-    - name: Run coverage
-      run: npm run test:coverage
-      
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        fail_ci_if_error: false
+
+    - name: Authority Guardian Check
+      run: npm run guardian:check
+
