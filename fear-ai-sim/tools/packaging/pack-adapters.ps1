@@ -17,6 +17,9 @@ Compress-Archive -Path "packages/adapters/csharp/*" -DestinationPath "$DistDir/f
 Write-Host "[Pack] Compressing Python reference client..."
 Compress-Archive -Path "packages/adapters/python/*" -DestinationPath "$DistDir/fear-ai-python.zip" -Force
 
+Write-Host "[Pack] Compressing Rust SDK adapter..."
+Compress-Archive -Path "packages/adapters/rust/*" -DestinationPath "$DistDir/fear-ai-rust.zip" -Force
+
 Write-Host "[Pack] Generating SHA256 checksums..."
 $ChecksumFile = "$DistDir/CHECKSUMS.sha256"
 if (Test-Path $ChecksumFile) { Remove-Item $ChecksumFile }
