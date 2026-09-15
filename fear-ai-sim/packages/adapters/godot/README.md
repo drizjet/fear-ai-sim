@@ -15,9 +15,16 @@ This addon talks to the **Fear AI middleware server**.
 4. Put hazards in the `"fear_threats"` group.
 5. Start the server from the JS repo: `npm run server` (loopback `:8765`). There is no `npx fear-ai-server` package and no `Launch-FearAI-Server.bat` in tree.
 
+## Drop-In Components & Quickstart
+- **`FearAgentHUD2D`**: Add as child of NPC to immediately render stylized floating fear meters (green -> red), current intent badge, and pulsating heartbeat indicator.
+- **`FearSteering2D`**: Add as child of `CharacterBody2D` to autonomously smooth advisory vectors into host physics `move_and_slide()` with automatic obstacle deflection.
+- **`examples/quickstart_2d.tscn`**: Out-of-the-box 5-minute interactive demo scene. Move Player with arrow keys/WASD, press `[Space]` to emit acoustic startle shouts, and watch NPC flee and slide around walls.
+
 ## Architecture
 - `FearAIClient`: WebSocket / HTTP client. Autoload. Supports `host_capabilities` array for dynamic intent filtering and `report_outcome()` for execution feedback.
-- `FearAgent`: Queues observations (with optional `peer_ids`), receives affective state, recommended **advisory** intents, and capability/affordance downgrades. Host applies movement.
+- `FearAgent`: Queues observations (with optional `peer_ids`), receives affective state, recommended **advisory** intents, and capability/affordance downgrades. Supports offline `evaluate_local()` fallback.
+- `FearAgentHUD2D`: Reusable floating HUD with zero texture dependencies.
+- `FearSteering2D`: Host-authoritative 2D steering controller for `CharacterBody2D`.
 
 ## Capabilities & Outcome Feedback (R36/R38/R42)
 - Configure `FearAIClient.host_capabilities = ["supports_dialogue", "supports_cover_points"]` in the inspector or in `_ready()`.

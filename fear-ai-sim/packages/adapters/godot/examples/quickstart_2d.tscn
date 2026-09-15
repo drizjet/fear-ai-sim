@@ -1,0 +1,58 @@
+[gd_scene load_steps=7 format=3 uid="uid://fear_ai_quickstart_2d"]
+
+[ext_resource type="Script" path="res://addons/fear_ai/examples/quickstart_2d.gd" id="1_qs"]
+[ext_resource type="Script" path="res://addons/fear_ai/fear_agent.gd" id="2_fa"]
+[ext_resource type="Script" path="res://addons/fear_ai/fear_agent_hud_2d.gd" id="3_hud"]
+[ext_resource type="Script" path="res://addons/fear_ai/fear_steering_2d.gd" id="4_steer"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_p"]
+radius = 16.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_w"]
+size = Vector2(32, 160)
+
+[node name="Quickstart2D" type="Node2D"]
+script = ExtResource("1_qs")
+
+[node name="Player" type="CharacterBody2D" parent="."]
+position = Vector2(200, 300)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
+shape = SubResource("CircleShape2D_p")
+
+[node name="NPC" type="CharacterBody2D" parent="."]
+position = Vector2(500, 300)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="NPC"]
+shape = SubResource("CircleShape2D_p")
+
+[node name="FearAgent" type="Node" parent="NPC"]
+script = ExtResource("2_fa")
+agent_id = "quickstart_npc"
+base_speed = 180.0
+panic_speed_mult = 1.6
+neuroticism = 0.75
+resilience = 0.35
+
+[node name="FearAgentHUD2D" type="Node2D" parent="NPC"]
+script = ExtResource("3_hud")
+vertical_offset = -35.0
+
+[node name="FearSteering2D" type="Node" parent="NPC"]
+script = ExtResource("4_steer")
+acceleration = 900.0
+
+[node name="ObstacleWall" type="StaticBody2D" parent="."]
+position = Vector2(350, 300)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ObstacleWall"]
+shape = SubResource("RectangleShape2D_w")
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="StatusLabel" type="Label" parent="CanvasLayer"]
+offset_left = 20.0
+offset_top = 20.0
+offset_right = 600.0
+offset_bottom = 50.0
+text = "Fear AI Quickstart Initializing..."

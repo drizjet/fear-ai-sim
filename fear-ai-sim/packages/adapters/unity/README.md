@@ -20,8 +20,12 @@ Assets/
       ├── FearTypes.cs
       ├── FearAIClient.cs
       ├── FearAgent.cs
+      ├── FearAgentHUD.cs
       └── README.md
 ```
+
+### 1.1 (Optional) Instant Floating HUD
+Attach `FearAgentHUD` to any GameObject that has `FearAgent` to render floating fear meters, action intent labels, and heartbeat BPM in OnGUI / Screen-space with zero texture dependencies.
 
 ### 2. Add `FearAIClient` to Your Scene
 1. Create an empty GameObject in your initial scene named `FearAI_Manager`.
