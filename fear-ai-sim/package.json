@@ -23,6 +23,8 @@
     "benchmark": "node benchmarks/headless-benchmark.mjs",
     "pack:adapters": "pwsh -File tools/packaging/pack-adapters.ps1",
     "godot:showcase": "pwsh -File tools/launch-godot-showcase.ps1",
+    "audit:newmaster": "pwsh -Command \"cd 'C:\\tools\\03-Projects\\lains Tools\\New Master Game\\pixel-pets'; cargo run --bin audit_fear_ai_connection\"",
+    "verify:rust-sdk": "pwsh -Command \"cd packages/adapters/rust; cargo check\"",
     "cli": "node bin/fear-ai.js"
   },
   "bin": {
