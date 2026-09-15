@@ -35,7 +35,8 @@
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "pixi.js": "^8.16.0",
     "seedrandom": "^3.0.5",
-    "three": "^0.183.2"
+    "three": "^0.183.2",
+    "ws": "^8.16.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.10.0",
