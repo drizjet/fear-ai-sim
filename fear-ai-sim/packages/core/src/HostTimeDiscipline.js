@@ -115,6 +115,14 @@ export class HostTimeDiscipline {
         return { tick: this.tick, simTime: this.simTime, timeScale: this.timeScale, paused: this.paused };
     }
 
+    setState(state) {
+        if (!state || typeof state !== 'object') return;
+        if (typeof state.tick === 'number' && Number.isFinite(state.tick)) this.tick = Math.floor(state.tick);
+        if (typeof state.simTime === 'number' && Number.isFinite(state.simTime)) this.simTime = state.simTime;
+        if (typeof state.timeScale === 'number' && Number.isFinite(state.timeScale)) this.timeScale = state.timeScale;
+        if (typeof state.paused === 'boolean') this.paused = state.paused;
+    }
+
     auditImmutability() {
         return {
             isClean: true,

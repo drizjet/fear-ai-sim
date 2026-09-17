@@ -487,12 +487,26 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         }
 
         return {
-            version: 1,
+            version: 2,
             seed: this.seed,
             tickCount: this.tickCount,
             rng: this.rng.getState(),
             pacing: this.pacing.getState(),
             trauma: this.trauma.getState(),
+            coreTrauma: this.coreTrauma.getState(),
+            social: this.social.getState(),
+            contagion: this.contagion.getState(),
+            timeDiscipline: this.timeDiscipline.getState(),
+            lastContagion: Array.from(this.lastContagion.entries()),
+            flags: {
+                enableTrauma: this.enableTrauma,
+                enableCoreTrauma: this.enableCoreTrauma,
+                enableTraumaFeedback: this.enableTraumaFeedback,
+                enableContagion: this.enableContagion,
+                enablePacing: this.enablePacing,
+                enablePacingCohesion: this.enablePacingCohesion,
+                enableSocial: this.enableSocial
+            },
             agents: agentsSnapshot,
             customMetadata: this.customMetadata ? { ...this.customMetadata } : {}
         };
@@ -510,10 +524,10 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
 
         // Schema versioning & migration
         const version = typeof snapshot.version === 'number' ? snapshot.version : 1;
-        if (version > 1) {
+        if (version > 2) {
             return {
                 success: false,
-                error: `UNSUPPORTED_SNAPSHOT_VERSION: Snapshot version ${version} is newer than current supported version 1`
+                error: `UNSUPPORTED_SNAPSHOT_VERSION: Snapshot version ${version} is newer than current supported version 2`
             };
         }
         let migrated = snapshot;
@@ -526,6 +540,30 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         if (migrated.rng) this.rng.setState(migrated.rng);
         if (migrated.pacing) this.pacing.setState(migrated.pacing);
         if (migrated.trauma) this.trauma.setState(migrated.trauma);
+        if (migrated.coreTrauma) this.coreTrauma.setState(migrated.coreTrauma);
+        if (migrated.social) this.social.setState(migrated.social);
+        if (migrated.contagion && typeof this.contagion.setState === 'function') {
+            this.contagion.setState(migrated.contagion);
+        }
+        if (migrated.timeDiscipline && typeof this.timeDiscipline.setState === 'function') {
+            this.timeDiscipline.setState(migrated.timeDiscipline);
+        }
+        if (Array.isArray(migrated.lastContagion)) {
+            this.lastContagion = new Map(migrated.lastContagion);
+        } else {
+            this.lastContagion.clear();
+        }
+
+        if (migrated.flags && typeof migrated.flags === 'object') {
+            if (typeof migrated.flags.enableTrauma === 'boolean') this.enableTrauma = migrated.flags.enableTrauma;
+            if (typeof migrated.flags.enableCoreTrauma === 'boolean') this.enableCoreTrauma = migrated.flags.enableCoreTrauma;
+            if (typeof migrated.flags.enableTraumaFeedback === 'boolean') this.enableTraumaFeedback = migrated.flags.enableTraumaFeedback;
+            if (typeof migrated.flags.enableContagion === 'boolean') this.enableContagion = migrated.flags.enableContagion;
+            if (typeof migrated.flags.enablePacing === 'boolean') this.enablePacing = migrated.flags.enablePacing;
+            if (typeof migrated.flags.enablePacingCohesion === 'boolean') this.enablePacingCohesion = migrated.flags.enablePacingCohesion;
+            if (typeof migrated.flags.enableSocial === 'boolean') this.enableSocial = migrated.flags.enableSocial;
+        }
+
         if (migrated.customMetadata && typeof migrated.customMetadata === 'object') {
             this.customMetadata = { ...migrated.customMetadata };
         }

@@ -477,3 +477,4 @@ export {
     ENCIRCLEMENT_PATTERNS,
     DEFAULT_PACK_CONFIG
 } from './src/PackCoordinationEngine.js';
+

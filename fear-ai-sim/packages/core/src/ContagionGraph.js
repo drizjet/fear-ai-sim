@@ -147,6 +147,23 @@ export class ContagionGraph {
     getActiveEdges() {
         return [...this.activeEdges];
     }
+
+    getState() {
+        return {
+            config: { ...this.config },
+            activeEdges: Array.isArray(this.activeEdges) ? JSON.parse(JSON.stringify(this.activeEdges)) : []
+        };
+    }
+
+    setState(state) {
+        if (!state || typeof state !== 'object') return;
+        if (state.config && typeof state.config === 'object') {
+            this.config = { ...this.config, ...state.config };
+        }
+        if (Array.isArray(state.activeEdges)) {
+            this.activeEdges = JSON.parse(JSON.stringify(state.activeEdges));
+        }
+    }
 }
 
 export default ContagionGraph;
