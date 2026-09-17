@@ -867,3 +867,214 @@ This complete mechanical mapping guarantees that **Fear AI** interfaces with New
 1. **Perception**: Fear AI reads `WorldFacts`, `DensityInfo`, `Weather`, `TerrainTag`, `FaunaRelation`, and current `FearBand`.
 2. **Advisory Formulation**: Fear AI computes panic vectors, role allocations, and suggests actions selected strictly from the 22 whitelisted actions (`advisory_validation.rs`) or matches `PlannedAction` / `AutonomousAction` variants (`ManeuverFlank`, `SeekCover`, `Kite`, `RetreatTo`).
 3. **Execution**: The host game engine's `GoapPlanner` and `run_fixed_tick` pipeline fold the advisories into goal weights without mutating host transforms, collision, or entity state.
+
+---
+
+# PART IV (Continuation): SUBSYSTEMS 71–80 (V9.0.0 EXPANSION)
+
+## 4.71 Subsystem 71: External Trigger Drain & Asynchronous Middleware Bridge (`src/engine/trigger_drain.rs`)
+- **Core Architecture**: Provides a thread-safe, buffered egress queue for dispatching gameplay triggers, telemetry, and external notifications to asynchronous middleware (such as Fear AI or remote monitoring).
+- **Configuration & Queue Parameters (`TriggerDrainConfig`)**:
+  - `max_trigger_queue: usize = 100`: Maximum buffer capacity before queue backpressure sheds or stalls events.
+  - `external_timeout_ms: u64 = 5000` (5.0s): Maximum response latency window for external middleware acknowledgement before marking triggers as timed out.
+  - `batch_size: usize = 10`: Processing dispatch batch size per flush.
+  - `external_drain_enabled: bool = false`: Baseline safe default, ensuring the engine never blocks if middleware is offline.
+- **Trigger Lifecycle State Machine**:
+  - `Pending` -> Enqueued in FIFO ring buffer.
+  - `Sent(Instant)` -> Dispatched over middleware channel with monotonic timestamp.
+  - `Processing` -> Middleware acknowledged reception.
+  - `Completed(String)` -> Success termination with result payload.
+  - `Failed(String)` -> Execution error handled without panic.
+  - `Timeout` -> Exceeded 5000ms deadline; marked stale and discarded.
+- **Backpressure & Observability**:
+  - `TriggerDrainStats`: Tracks `triggers_enqueued`, `triggers_sent`, `triggers_completed`, `triggers_failed`, `triggers_timed_out`, and `current_backpressure`.
+
+---
+
+## 4.72 Subsystem 72: Procedural Terrain Resource Nodes & Extraction Densities (`src/engine/terrain_resources.rs`)
+- **Node Classification**: 12 canonical terrain resource node types grouped across 4 distinct categories:
+  - **Energy Category**:
+    - `EnergyCrystal`: Yields 50 base energy, 10 crystal resonance; extraction duration = 150 ticks.
+    - `ThermalVent`: Yields 40 base heat energy, 20 coal; extraction duration = 120 ticks.
+    - `SolarWell`: Yields 60 base solar energy, 30 energy; extraction duration = 180 ticks.
+  - **Material Category**:
+    - `OreDeposit`: Yields 40 scrap metal, 15 geode shards; extraction duration = 140 ticks.
+    - `ClayBed`: Yields 60 clay, 10 ceramic; extraction duration = 100 ticks.
+    - `SandDune`: Yields 50 sand, 20 heat distortion; extraction duration = 90 ticks.
+  - **Organic Category**:
+    - `FungalCluster`: Yields 40 spore clusters, 30 biomass; extraction duration = 110 ticks.
+    - `RootNetwork`: Yields 35 sap, 25 biomass; extraction duration = 130 ticks.
+    - `BiomassPool`: Yields 50 biomass, 20 gelatinous matter; extraction duration = 160 ticks.
+  - **Special Category**:
+    - `AncientRuins`: Yields 30 fossilized essence, 15 amber resin, 10 bone resonance; extraction duration = 200 ticks.
+    - `VoidTear`: Yields 45 void essence, 25 shadow matter; extraction duration = 220 ticks.
+    - `StarfallDebris`: Yields 35 stardust, 15 gravity crystals, 25 energy; extraction duration = 210 ticks.
+- **Extraction & Regeneration Mechanics**:
+  - Extraction tick progress decrements remaining node reserve.
+  - Special nodes regenerate after `1200` ticks (20.0s at 60 tps) if the terrain tile remains unobstructed.
+
+---
+
+## 4.73 Subsystem 73: Faction Relationship Ecosystem Matrix (`src/engine/ecosystem.rs`)
+- **Relationship Triad**:
+  - `Relationship::Synergy`: Factions cooperate, gain proximity buffs, and generate world harmony.
+  - `Relationship::Combat`: Factions engage hostiles on sight, generating world chaos.
+  - `Relationship::Neutral`: Peaceful coexistence or non-aggression baseline.
+- **Symmetric Interaction Topology**:
+  - **Synergy Pairings**:
+    - `lithodrom` <-> `terracotta`, `clockwork`, `coral-wrights`
+    - `mycelian` <-> `root-walkers`, `slime-lords`
+    - `cinder-kith` <-> `gale-stalkers`, `spark-mice`
+    - `hydrosanguines` <-> `coral-wrights`, `slime-lords`, `root-walkers`
+    - `weaver-imps` <-> `echo-bats`, `ink-squids`
+    - `bone-singers` <-> `gale-stalkers`, `spark-mice`
+    - `clockwork` <-> `terracotta`
+    - `void-leeches` <-> `glitch-ghost`, `the-overlooker`, `sand-phantoms`
+    - `amber-guards` <-> `root-walkers`, `t-shell`, `moss-beards`
+    - `gale-stalkers` <-> `ink-squids`
+    - `star-fallers` <-> `echo-bats`, `null-shades`
+  - **Combat Pairings**:
+    - `lithodrom` <-> `cinder-kith`, `weaver-imps`
+    - `mycelian` <-> `cinder-kith`, `hydrosanguines`, `amber-guards`
+    - `cinder-kith` <-> `hydrosanguines`, `weaver-imps`, `amber-guards`, `root-walkers`, `coral-wrights`, `echo-bats`, `glitch-wraiths`
+    - `hydrosanguines` <-> `spark-mice`, `sand-phantoms`
+    - `weaver-imps` <-> `gale-stalkers`
+    - `bone-singers` <-> `echo-bats`, `void-leeches`, `slime-lords`
+    - `clockwork` <-> `sand-phantoms`, `slime-lords`
+    - `void-leeches` <-> `star-fallers`
+    - `gale-stalkers` <-> `terracotta`, `moss-beards`
+    - `ink-squids` <-> `terracotta`, `slime-lords`
+    - `star-fallers` <-> `the-overlooker`, `terracotta`
+- **Resolution Contract**: Case-insensitive fallback to `Relationship::Neutral` for unlisted faction pairings. Guaranteed symmetric: `get_relationship(a, b) == get_relationship(b, a)`.
+
+---
+
+## 4.74 Subsystem 74: Deterministic RTS Command Replay Engine (`src/engine/replay.rs`)
+- **Deterministic Coordinate Abstraction**: Records world-level player commands rather than raw window/mouse coordinates, eliminating resolution, aspect ratio, and HUD layout divergence across replay runs.
+- **Log Structure**:
+  - `ReplayLog`: Captures `map_seed: u64`, `initial_faction: String`, and `events: Vec<ReplayEvent>`.
+  - `ReplayEvent`: `tick: u64`, `command: String`, `payload: String` (JSON payload).
+- **Canonical Replay Commands (`ReplayCommand`)**:
+  - `BuildStructure { faction_id, building_type, grid_q, grid_r }` -> maps to `"build_structure"`.
+  - `SelectEntity { target_id }` -> maps to `"select_entity"`.
+  - `SetRallyPoint { grid_q, grid_r }` -> maps to `"set_rally_point"`.
+- **Validation & Error Handling**:
+  - Command name mismatch validation: ensures tagged string matches serialized struct identifier.
+  - `ReplayError`: Typed error variants (`CommandNameMismatch`, `CommandRejected`, `SerializeCommand`, `DeserializeCommand`).
+
+---
+
+## 4.75 Subsystem 75: Pet & Unit Social Interaction Network (`src/engine/social.rs`)
+- **Configuration & Behavioral Modes (`SocialConfig`)**:
+  - `social_range: f32 = 100.0`: Spatial interaction threshold.
+  - `FlockBehavior`: `None`, `FollowLeader { leader_id }`, `Formation { pattern }`, `Swarm`, `School`, `Herd`, `VFormation`, `Circle`.
+  - `FormationPattern`: `Line`, `Column`, `Wedge`, `Diamond`, `Square`, `Circle`.
+  - `SocialInteraction`: `Neutral`, `Friendly`, `Playful`, `Aggressive`, `Shy`, `Curious`, `Avoidant`, `Submissive`, `Dominant`, `Protective`.
+- **Social State & Relationship Scoring**:
+  - Range: `[-1.0, 1.0]`. Uninitialized relationships initialize with base `0.5` upon first delta update.
+  - `is_friend(pet_id)`: Relationship score `> 0.3`.
+  - `is_rival(pet_id)`: Relationship score `< -0.3`.
+  - Neutral band: `[-0.3, 0.3]`.
+- **Interaction Decision Priority**:
+  1. Distance check: If `distance > social_range`, returns `None`.
+  2. Dislikes check: If `dislikes.contains(target_id)`, yields `SocialAction::Flee`.
+  3. Likes check: If `likes.contains(target_id)`, yields `SocialAction::Approach`.
+  4. Default interaction fallback: Maps to `Greet`, `Play (Chase)`, `Compete`, `Circle`, or `Flee`.
+- **Interaction FX Payloads**: Emits `Hearts`, `Sparks`, `Dust`, `Music`, `Friendship`, `Rivalry`, `Argument`, or `Laughter`.
+
+---
+
+## 4.76 Subsystem 76: Render Frame Budget & Dynamic Simulation Throttling (`src/engine/render_budget.rs`)
+- **Budget Thresholds (`RenderBudgetConfig`)**:
+  - `target_frame_time_us: 16_667` µs: 60 FPS baseline target.
+  - `warning_threshold_us: 25_000` µs: ~40 FPS warning threshold (1.5x target).
+  - `emergency_threshold_us: 33_333` µs: ~30 FPS emergency threshold (2.0x target).
+  - `consecutive_threshold: 3`: Frames over budget required before throttling kicks in.
+  - `max_sim_skip: 2`: Maximum simulation tick skip rate under severe pressure.
+- **Dynamic Scaling & Recovery Logic**:
+  - Under emergency: Sets `emergency_mode = true`, steps `sim_skip` up to 2.
+  - Simulation execution: `should_run_simulation(frame_number)` executes every `(sim_skip + 1)` frames.
+  - Hysteresis self-healing: When frame times return under target, `over_budget_streak` resets to 0. Every 60 clean frames, `sim_skip` decrements by 1 until fully restored.
+  - Health reporting: 100% (Clean), 75% (Minor streak), 50% (Throttled skip), 0% (Emergency).
+
+---
+
+## 4.77 Subsystem 77: Multi-Layer Animation Synchronization & Velocity Blending (`src/engine/animation_sync.rs`)
+- **Animation States & Transition Metrics**:
+  - `Idle`: Base speed = `0.0`, transition duration = `0.30s`.
+  - `Walk`: Base speed = `1.0`, transition duration = `0.20s`.
+  - `Run`: Base speed = `1.5`, transition duration = `0.25s`.
+  - `Sprint`: Base speed = `2.0`, transition duration = `0.15s`.
+- **Damped Velocity Smoothing**:
+  - Smoothing formula: `smooth_velocity += (current_velocity - smooth_velocity) * (5.0 * dt)`.
+  - Speed ratio (`smooth_velocity / base_speed`):
+    - `< 0.10` -> `AnimationState::Idle`
+    - `< 0.60` -> `AnimationState::Walk`
+    - `< 0.90` -> `AnimationState::Run`
+    - `>= 0.90` -> `AnimationState::Sprint`
+- **Visual Squeeze & Geometric Volume Preservation**:
+  - Crowding/walking bounce: `bounce = sin(progress * 2π) * 0.05`.
+  - Deformation: `scale_x = squeeze_factor + bounce`, `scale_y = 1.0 / scale_x` (preserves sprite area / volume during collision squash).
+  - Velocity freeze: Velocities below `1.0` px/s freeze animation progression to prevent sub-pixel jitter.
+
+---
+
+## 4.78 Subsystem 78: RTS Butterfly Effect & Chaos/Harmony Drift (`src/engine/rts/butterfly_effect.rs`)
+- **Equilibrium & Drift Constants**:
+  - `BUTTERFLY_EQUILIBRIUM: f32 = 0.50`
+  - `BUTTERFLY_DECAY_RATE: f32 = 0.005` / sec: Natural decay pulling world state toward 0.50.
+  - Proximity sampling cadence: Evaluated every 25 world ticks.
+  - Neighbor sampling radius: `100.0` px via spatial partition grid.
+- **Local Perturbation Weights**:
+  - Living unit within 100px of different faction:
+    - `Relationship::Combat`: Adds `+0.0005` to local chaos.
+    - `Relationship::Synergy`: Adds `+0.0008` to local harmony.
+  - `world.chaos_harmony_01 = (world.chaos_harmony_01 + local_chaos - local_harmony).clamp(0.0, 1.0)`.
+- **Macro Threshold Triggers (Evaluated Every 500 Ticks)**:
+  - **World Chaos** (`chaos_harmony_01 > 0.85`):
+    - UI Announcement: "WORLD CHAOS" (alert, 5.0s).
+    - Event cadence: Hastens next director event (`nudge_next_event_in_seconds(-3.0)`).
+    - Market hints: `apply_director_market_pressure_hint(0.05, 0.07)`.
+    - Faction penalties: `scarcity_pressure_01 += 0.035`, `economic_stability_01 -= 0.025`, `morale.panic_pressure_01 += 0.02`.
+  - **World Harmony** (`chaos_harmony_01 < 0.15`):
+    - UI Announcement: "WORLD HARMONY" (victory info, 5.0s).
+    - Event cadence: Delays next director event (`nudge_next_event_in_seconds(2.5)`).
+    - Market hints: `apply_director_market_pressure_hint(-0.04, -0.06)`.
+    - Faction buffs: `scarcity_pressure_01 -= 0.035`, `economic_stability_01 += 0.025`, `trade_efficiency_01 += 0.02`, `morale.panic_pressure_01 -= 0.02`.
+
+---
+
+## 4.79 Subsystem 79: RTS Save/Load Persistence Matrix & Rehydration Engine (`src/engine/rts/persistence_matrix.rs`)
+- **Tri-Category Classification Schema**:
+  - `PersistenceCategory::Persisting`: Byte-for-byte serialization/deserialization across save/load cycles.
+  - `PersistenceCategory::Recalculating`: Dropped on save; reinitialized to canonical zero/default upon load and derived freshly on subsequent ticks from global session clocks.
+  - `PersistenceCategory::Resetting`: Non-persisted; reset to type defaults upon load. Combat-fear and wave spikes are discarded across sessions.
+- **Canonical Dispatch Registry (`KNOWN_FIELD_IDS`)**:
+  - `RtsUnitState.time_of_day`: Recalculating -> reset to `0.0`, recomputed in `systems::unit_update`.
+  - `RtsUnitState.fear_score`: Resetting -> reset to `0.0`.
+  - `RtsUnitState.evolution_stage`: Persisting -> byte-for-byte fidelity.
+  - `RtsUnitState.xp`: Persisting -> byte-for-byte fidelity.
+  - `RtsUnitState.level`: Persisting -> byte-for-byte fidelity.
+  - `RtsWorldState.world_time_of_day`: Recalculating -> reset to `0.0`, recomputed from session clock.
+  - `RtsWorldState.fear_sector_wave_count`: Resetting -> reset to `0`.
+- **Rehydration Invariants**:
+  - Matrix enforced via `apply_persistence_classification` (and alias `rehydrate_rts_world_state`) in `validate_and_repair_after_load`.
+  - Builtin fallback matrix guarantees unparsed or missing JSON registries default safely without data corruption.
+
+---
+
+## 4.80 Subsystem 80: Three-Phase Macro Match Pacing & Economic Acceleration (`src/engine/rts/match_pacing.rs`)
+- **Pacing Phases (Derived from `world_elapsed_seconds`)**:
+  - Pure, non-persisted computation preventing save desynchronization.
+  - `Establishment`: `0.0 <= elapsed < 300.0s` (0–5 minutes). Opening phase; economic multiplier = `1.00x`, spawn severity multiplier = `1.00x`.
+  - `Development`: `300.0 <= elapsed < 900.0s` (5–15 minutes). Mid-game; economic multiplier = `1.15x`, spawn severity multiplier = `1.15x`.
+  - `Mastery`: `elapsed >= 900.0s` (15+ minutes). Late-game endgame; economic multiplier = `1.30x`, spawn severity multiplier = `1.30x`.
+- **Boundary Invariants**:
+  - `DEVELOPMENT_START_SECS = 300.0`
+  - `MASTERY_START_SECS = 900.0`
+  - Total function: Degenerate, negative, NaN, or infinite elapsed times clamp strictly to `MatchPacingPhase::Establishment`.
+- **Pacing Scaled Wave Intervals**:
+  - Formula: `effective_interval = base_interval_seconds / phase_spawn_severity_multiplier(phase)`.
+  - Accelerates hostile recurring wave frequency by 15% in Development and 30% in Mastery (interval reduced to 76.9% of base).
+- **Tech Unlock Gates**:
+  - `tech_phase_satisfied(req, current)`: Unlocks gating requirements when `current_phase >= required`.
