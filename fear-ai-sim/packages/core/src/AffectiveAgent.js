@@ -652,6 +652,28 @@ export class AffectiveAgent {
         if (typeof snapshot.traumaAdvanceClock === 'boolean') this.traumaAdvanceClock = snapshot.traumaAdvanceClock;
         this._traumaEpisodeOpen = snapshot.traumaEpisodeOpen === true;
     }
+
+    /**
+     * Reset agent affective, physiological, and emotional state to baseline
+     */
+    reset() {
+        this.fearCore.reset('CALM');
+        this.habituation.clear();
+        this.currentFear = 0.0;
+        this.currentAnger = 0.0;
+        this.valence = 0.5;
+        this.arousal = 0.1;
+        this.currentDominance = 0.5;
+        this.morale = 1.0;
+        this.energy = 1.0;
+        this.health = 1.0;
+        this.adrenaline = 0.0;
+        this.uncertainty = 0.5;
+        this.tickCount = 0;
+        this.lastVelocity = { x: 0, y: 0, z: 0 };
+        this.lastResult = null;
+        this._traumaEpisodeOpen = false;
+    }
 }
 
 export default AffectiveAgent;

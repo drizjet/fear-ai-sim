@@ -48,8 +48,17 @@ export class DesignerDashboardServer {
         this.port = Number.isFinite(Number(options.port)) && Number(options.port) >= 0
             ? Math.floor(Number(options.port))
             : 8766;
+        this.sim = options.sim || null;
         this.httpServer = null;
         this.isRunning = false;
+    }
+
+    /**
+     * Attach an active RuntimeSimulation instance for live read-only inspection
+     * @param {object} sim
+     */
+    attachSimulation(sim) {
+        this.sim = sim;
     }
 
     /**
@@ -138,6 +147,9 @@ export class DesignerDashboardServer {
             if (pathname === '/api/performance') {
                 return this._handlePerformance(res);
             }
+            if (pathname === '/api/sim/inspect') {
+                return this._handleSimInspect(res);
+            }
             this._sendJson(res, 404, { error: 'Endpoint Not Found' });
             return;
         }
@@ -221,6 +233,43 @@ export class DesignerDashboardServer {
         });
     }
 
+    _handleSimInspect(res) {
+        if (!this.sim) {
+            return this._sendJson(res, 200, {
+                attached: false,
+                status: 'NO_SIMULATION_ATTACHED',
+                message: 'No active RuntimeSimulation attached to dashboard server. Use server.attachSimulation(sim) or inspect demo vignettes.'
+            });
+        }
+        try {
+            const status = typeof this.sim.getStatus === 'function' ? this.sim.getStatus() : {};
+            const snapshot = typeof this.sim.saveSnapshot === 'function' ? this.sim.saveSnapshot() : null;
+            return this._sendJson(res, 200, {
+                attached: true,
+                status: 'ATTACHED_READ_ONLY',
+                tickCount: this.sim.tickCount,
+                agentCount: this.sim.agents?.size ?? 0,
+                agents: snapshot ? snapshot.agents.map(a => ({
+                    id: a.id,
+                    fearBand: a.fearCore?.state || 'CALM',
+                    currentFear: a.currentFear,
+                    valence: a.valence,
+                    arousal: a.arousal,
+                    dominance: a.currentDominance,
+                    morale: a.morale,
+                    energy: a.energy
+                })) : [],
+                traumaZonesCount: this.sim.trauma?.zones?.length ?? 0,
+                activeContagionEdgesCount: this.sim.contagion?.activeEdges?.length ?? 0,
+                timeDiscipline: this.sim.timeDiscipline?.getState() ?? null,
+                pacing: this.sim.pacing?.getState() ?? null,
+                flags: snapshot?.flags ?? null
+            });
+        } catch (err) {
+            return this._sendJson(res, 500, { error: `Failed to inspect simulation: ${err.message}` });
+        }
+    }
+
     _handleExplain(body, res) {
         const neuroticism = Number(body.neuroticism ?? 0.8);
         const resilience = Number(body.resilience ?? 0.2);
@@ -247,8 +296,8 @@ export class DesignerDashboardServer {
             peers
         };
         const context = {
-            traumaDread: 0.4,
-            contagionFear: panicPeers > 0 ? 0.6 : 0.0
+            traumaDread: typeof body.traumaDread === 'number' ? Math.max(0, Math.min(1.0, body.traumaDread)) : 0.4,
+            contagionFear: typeof body.contagionFear === 'number' ? Math.max(0, Math.min(1.0, body.contagionFear)) : (panicPeers > 0 ? 0.6 : 0.0)
         };
 
         // Tick agent through threat accumulation (AffectiveAgent clamps fear delta per tick)

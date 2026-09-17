@@ -147,6 +147,15 @@ export class HabituationSystem {
         return record ? record.count : 0;
     }
 
+    /**
+     * Clear all habituation state and exposures
+     */
+    clear() {
+        this.exposureMap.clear();
+        this.totalExposures = 0;
+        this.habituationEvents = 0;
+    }
+
     getState() {
         const entries = [];
         for (const [key, val] of this.exposureMap.entries()) {

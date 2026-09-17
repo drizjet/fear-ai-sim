@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Rust-JS FearCore Cross-Tree Parity Vectors",
+  "version": "1.0.0",
+  "date": "2026-09-17",
+  "provenance": {
+    "rust_canonical_source": "pixel-pets/src/engine/ai/fear.rs",
+    "rust_host_bridge": "pixel-pets/src/engine/ai/fear_ai_bridge.rs",
+    "rust_audit_bin": "pixel-pets/src/bin/audit_fear_ai_connection.rs",
+    "sibling_repo_commit": "db19d1fb6",
+    "js_canonical_source": "packages/core/src/FearCore.js",
+    "js_affective_agent": "packages/core/src/AffectiveAgent.js"
+  },
+  "nomenclature_mapping": {
+    "Calm": "CALM",
+    "Alert": "ALERT",
+    "Afraid": "ANXIOUS",
+    "Panicked": "PANIC",
+    "Routed": "ROUTED (Rust Core / JS Extended via IntentResolver)",
+    "BerserkOverride": "BERSERK (Rust State / JS Extended Band)"
+  },
+  "threshold_parity_matrix": [
+    {
+      "band": "Alert",
+      "js_state": "ALERT",
+      "enter_threshold": 0.80,
+      "exit_threshold": 0.55,
+      "parity_match": true
+    },
+    {
+      "band": "Afraid",
+      "js_state": "ANXIOUS",
+      "enter_threshold": 1.40,
+      "exit_threshold": 0.80,
+      "parity_match": true
+    },
+    {
+      "band": "Panicked",
+      "js_state": "PANIC",
+      "enter_threshold": 3.80,
+      "exit_threshold": 1.20,
+      "panic_lock_ticks": 10,
+      "parity_match": true
+    },
+    {
+      "band": "Routed",
+      "js_state": "ROUTED / FLEE",
+      "enter_threshold": 4.60,
+      "exit_threshold": 3.00,
+      "parity_match": "ADVISORY_PARITY (Rust 5th core band; JS handles 4.6+ via IntentResolver FLEE_FROM/PANIC and panic bias)"
+    }
+  ],
+  "boundary_test_vectors": [
+    {
+      "id": "VEC-01-CALM-BASELINE",
+      "initial_state": "CALM",
+      "stimulus_score": 0.0,
+      "expected_rust_band": "Calm",
+      "expected_js_state": "CALM"
+    },
+    {
+      "id": "VEC-02-ALERT-SUB-THRESHOLD",
+      "initial_state": "CALM",
+      "stimulus_score": 0.79,
+      "expected_rust_band": "Calm",
+      "expected_js_state": "CALM"
+    },
+    {
+      "id": "VEC-03-ALERT-EXACT-THRESHOLD",
+      "initial_state": "CALM",
+      "stimulus_score": 0.80,
+      "expected_rust_band": "Alert",
+      "expected_js_state": "ALERT"
+    },
+    {
+      "id": "VEC-04-ALERT-HYSTERESIS-HOLD",
+      "initial_state": "ALERT",
+      "stimulus_score": 0.55,
+      "expected_rust_band": "Alert",
+      "expected_js_state": "ALERT"
+    },
+    {
+      "id": "VEC-05-ALERT-EXIT-TO-CALM",
+      "initial_state": "ALERT",
+      "stimulus_score": 0.54,
+      "expected_rust_band": "Calm",
+      "expected_js_state": "CALM"
+    },
+    {
+      "id": "VEC-06-AFRAID-SUB-THRESHOLD",
+      "initial_state": "ALERT",
+      "stimulus_score": 1.39,
+      "expected_rust_band": "Alert",
+      "expected_js_state": "ALERT"
+    },
+    {
+      "id": "VEC-07-AFRAID-EXACT-THRESHOLD",
+      "initial_state": "ALERT",
+      "stimulus_score": 1.40,
+      "expected_rust_band": "Afraid",
+      "expected_js_state": "ANXIOUS"
+    },
+    {
+      "id": "VEC-08-AFRAID-HYSTERESIS-HOLD",
+      "initial_state": "ANXIOUS",
+      "stimulus_score": 0.80,
+      "expected_rust_band": "Afraid",
+      "expected_js_state": "ANXIOUS"
+    },
+    {
+      "id": "VEC-09-AFRAID-EXIT-TO-ALERT",
+      "initial_state": "ANXIOUS",
+      "stimulus_score": 0.79,
+      "expected_rust_band": "Alert",
+      "expected_js_state": "ALERT"
+    },
+    {
+      "id": "VEC-10-PANIC-SUB-THRESHOLD",
+      "initial_state": "ANXIOUS",
+      "stimulus_score": 3.79,
+      "expected_rust_band": "Afraid",
+      "expected_js_state": "ANXIOUS"
+    },
+    {
+      "id": "VEC-11-PANIC-EXACT-THRESHOLD",
+      "initial_state": "ANXIOUS",
+      "stimulus_score": 3.80,
+      "expected_rust_band": "Panicked",
+      "expected_js_state": "PANIC"
+    },
+    {
+      "id": "VEC-12-PANIC-LOCK-ACTIVE-ENFORCEMENT",
+      "initial_state": "PANIC",
+      "panic_locked": true,
+      "stimulus_score": 0.0,
+      "expected_rust_band": "Panicked",
+      "expected_js_state": "PANIC",
+      "note": "While panic lock is active (< 10 ticks), score 0.0 cannot break panic"
+    },
+    {
+      "id": "VEC-13-PANIC-POST-LOCK-HYSTERESIS-HOLD",
+      "initial_state": "PANIC",
+      "panic_locked": false,
+      "stimulus_score": 1.20,
+      "expected_rust_band": "Panicked",
+      "expected_js_state": "PANIC"
+    },
+    {
+      "id": "VEC-14-PANIC-POST-LOCK-EXIT-TO-AFRAID",
+      "initial_state": "PANIC",
+      "panic_locked": false,
+      "stimulus_score": 1.19,
+      "expected_rust_band": "Afraid",
+      "expected_js_state": "ANXIOUS"
+    },
+    {
+      "id": "VEC-15A-EXTREME-INPUT-FROM-ANXIOUS",
+      "initial_state": "ANXIOUS",
+      "stimulus_score": 999.0,
+      "expected_clamped_score": 5.0,
+      "expected_rust_band": "Routed",
+      "expected_js_state": "PANIC",
+      "note": "From ANXIOUS, extreme input immediately enters PANIC in both engines"
+    },
+    {
+      "id": "VEC-15B-EXTREME-INPUT-STEPPED-LADDER",
+      "initial_state": "CALM",
+      "stimulus_score": 999.0,
+      "expected_clamped_score": 5.0,
+      "expected_rust_band": "Routed",
+      "expected_js_state_tick1": "ALERT",
+      "expected_js_state_tick3": "PANIC",
+      "architectural_distinction": "Rust resolve_band evaluates multi-tier thresholds in a single tick (Calm -> Routed/Panicked), whereas JS FearCore enforces a 1-band-per-tick hysteresis ladder (Calm -> Alert -> Anxious -> Panic) unless an extended band override is triggered."
+    },
+    {
+      "id": "VEC-16-NAN-DEFENSIVE-SANITIZATION",
+      "initial_state": "CALM",
+      "stimulus_score": null,
+      "is_nan": true,
+      "expected_clamped_score": 0.0,
+      "expected_rust_band": "Calm",
+      "expected_js_state": "CALM"
+    }
+  ]
+}

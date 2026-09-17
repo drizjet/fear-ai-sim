@@ -490,13 +490,7 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             return;
         }
         for (const agent of this.agents.values()) {
-            agent.fearCore.reset('CALM');
-            agent.currentFear = 0;
-            agent.currentAnger = 0;
-            agent.arousal = 0.1;
-            agent.valence = 0.5;
-            agent.morale = 1.0;
-            agent.adrenaline = 0;
+            agent.reset();
             if (this.enableCoreTrauma) {
                 this.coreTrauma.registerAgent(agent.id, agent.traits);
             }
@@ -614,6 +608,9 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 });
                 agent.setState(aData);
                 this.agents.set(agent.id, agent);
+                if (this.enableCoreTrauma && !this.coreTrauma.agentRecords.has(agent.id)) {
+                    this.coreTrauma.registerAgent(agent.id, agent.traits);
+                }
             }
         }
 

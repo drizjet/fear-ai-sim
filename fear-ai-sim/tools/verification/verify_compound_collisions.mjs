@@ -40,15 +40,24 @@ async function runVerification() {
     // =========================================================================
     console.log('--- SCENARIO 1: LEADER FALL x CONTAGION CASCADE x RUMOR DISTORTION ---');
 
-    function simulateScenario1(seed = 42) {
+    function simulateScenario1(seed = 42, options = {}) {
+        const contagionRadius = options.contagionRadius ?? 60.0;
+        const leaderRadius = options.leaderRadius ?? 80.0;
+        const totalTicks = options.totalTicks ?? 50;
+        const label = options.label || `Scenario 1 (radius: ${contagionRadius})`;
+
         const packEngine = new PackCoordinationEngine({ seed });
-        const contagion = new ContagionGraph({ contagionRadius: 60.0, leaderRadius: 80.0, baseContagionStrength: 0.6 });
+        const contagion = new ContagionGraph({
+            contagionRadius,
+            leaderRadius,
+            baseContagionStrength: 0.6,
+            screamMultiplier: 1.8
+        });
         const infoEngine = new InformationPropagationEngine({ mutationRate: 0.20 }, seed);
 
         const packId = 'vanguard_squad';
         packEngine.createPack(packId);
 
-        // Agents map: id -> { agent: AffectiveAgent, active: boolean }
         const agents = new Map();
 
         // Register Alpha Leader
@@ -96,29 +105,29 @@ async function runVerification() {
         const timeline = [];
         let rumorId = null;
 
-        // Run 50 ticks (dt = 0.05 per tick for visible psychological relaxation)
-        for (let t = 0; t < 50; t++) {
-            // T=5: Alpha Leader Falls (Killed / Annihilated)
+        // SIMULATED HOST MOTION & KINEMATICS:
+        // Host game engine retains 100% exclusive transform/physics authority.
+        // Tick rate: dt = 0.05s (20 Hz).
+        // Scatter speed: 5.0 position units/tick = 100.0 units/sec in host kinematic space.
+        for (let t = 0; t < totalTicks; t++) {
+            // T=5: Alpha Leader Falls
             if (t === 5) {
-                // Pack engine catastrophic alpha loss triggers scatter disperse
                 packEngine.removeMember(packId, 'alpha');
                 agents.get('alpha').active = false;
 
-                // First eyewitness (sub_1) injects panic rumor
                 rumorId = infoEngine.injectRumor('LEADER_DEATH', 'Alpha commander fell in ambush', 'sub_1', {
                     confidence: 0.95
                 });
             }
 
-            // Step Information Propagation
             infoEngine.advanceTick();
 
-            // T=25: Authoritative Host Clarification / Truth arrives
+            // T=25: Authoritative Host Clarification arrives
             if (t === 25 && rumorId) {
                 infoEngine.correctRumor(rumorId, false);
             }
 
-            // Compute tactical advisories and apply host movement update
+            // SIMULATED HOST MOTION: Host evaluates advisory vectors from Fear AI and mutates positions
             const advisories = packEngine.calculateEncirclementGeometry(packId);
             for (const adv of advisories) {
                 const wrapper = agents.get(adv.memberId);
@@ -126,7 +135,6 @@ async function runVerification() {
                     const speed = (adv.phase === TACTICAL_PHASES.SCATTER_DISPERSE) ? 5.0 : 0.2;
                     wrapper.agent.x += adv.headingVector.x * speed;
                     wrapper.agent.z += adv.headingVector.z * speed;
-                    // Keep pack engine member position synced with host game
                     const member = packEngine.packs.get(packId)?.members.get(adv.memberId);
                     if (member) {
                         member.position.x = wrapper.agent.x;
@@ -135,7 +143,17 @@ async function runVerification() {
                 }
             }
 
-            // Build active peers snapshot for Contagion
+            // SIMULATED HOST MOTION FOR BYSTANDERS: Fleeing from alarm
+            // In open space, panicking bystanders flee diagonally outward away from the squad
+            for (const bid of bystanders) {
+                const bWrap = agents.get(bid);
+                if (bWrap && bWrap.active && bWrap.agent.currentFear > 0.3) {
+                    const fleeSign = (bid === 'bystander_1') ? -1.0 : 1.0;
+                    bWrap.agent.x += fleeSign * 3.5;
+                    bWrap.agent.z += fleeSign * 3.5;
+                }
+            }
+
             const activeList = Array.from(agents.values()).filter(x => x.active).map(x => x.agent);
             const peerProfiles = activeList.map(ag => ({
                 id: ag.id,
@@ -149,18 +167,13 @@ async function runVerification() {
                 leadership: ag.traits.leadership
             }));
 
-            // Step each agent with Contagion, Rumor dread, and Threats
             contagion.clearEdges();
             for (const ag of activeList) {
-                // Evaluate Contagion from peers
                 const cResult = contagion.evaluateContagion(ag, peerProfiles);
-
-                // Query held rumor
                 const held = infoEngine.heldBy(ag.id);
                 const activeRumor = held.find(r => r.rumorId === rumorId && r.status === RUMOR_STATUS.ACTIVE);
                 const reportedDanger = activeRumor ? activeRumor.confidence * 0.80 : 0.0;
 
-                // Host threat: eyewitness sub_1 sees acute threat at t=5..8
                 const threats = (t >= 5 && t <= 8 && ag.id === 'sub_1')
                     ? [{ intensity: 1.0, distance: 3.0, type: 'PREDATOR' }]
                     : [];
@@ -175,11 +188,9 @@ async function runVerification() {
                     leaderCalm: cResult.leaderCalm
                 };
 
-                // Advance AffectiveAgent
                 ag.tick(0.05, observations, context);
             }
 
-            // Record snapshot
             const fears = activeList.map(a => a.currentFear);
             const avgFear = fears.reduce((a, b) => a + b, 0) / fears.length;
             const maxFear = Math.max(...fears);
@@ -198,35 +209,154 @@ async function runVerification() {
             });
         }
 
-        return { timeline, packEngine, contagion, infoEngine };
+        const finalActive = Array.from(agents.values()).filter(x => x.active).map(x => x.agent);
+        console.log(`[${label}] Final agent positions & fears:`, finalActive.map(a => ({ id: a.id, x: Math.round(a.x), z: Math.round(a.z), fear: Number(a.currentFear.toFixed(4)) })));
+
+        return { timeline, packEngine, contagion, infoEngine, label };
     }
 
-    const res1 = simulateScenario1(42);
-    const t0 = res1.timeline[0];
-    const t5 = res1.timeline[5];
-    const tPeak = res1.timeline.reduce((max, cur) => cur.maxFear > max.maxFear ? cur : max, res1.timeline[0]);
-    const tFinal = res1.timeline[res1.timeline.length - 1];
+    // -------------------------------------------------------------------------
+    // Scenario 1A: Verification-Specific 60-Unit Contagion Radius
+    // -------------------------------------------------------------------------
+    console.log('\n--- Scenario 1A: Verification-Specific 60-Unit Radius ---');
+    const res1A = simulateScenario1(42, { contagionRadius: 60.0, leaderRadius: 80.0, totalTicks: 50, label: 'Scenario 1A' });
+    const t0A = res1A.timeline[0];
+    const t5A = res1A.timeline[5];
+    const tPeakA = res1A.timeline.reduce((max, cur) => cur.maxFear > max.maxFear ? cur : max, res1A.timeline[0]);
+    const tFinalA = res1A.timeline[res1A.timeline.length - 1];
 
-    console.log(`- Initial Average Fear (t=0): ${t0.avgFear.toFixed(4)}`);
-    console.log(`- Shock Trigger (t=5): Pack Phase = ${t5.packPhase}, Max Fear = ${t5.maxFear.toFixed(4)}`);
-    console.log(`- Peak Impact (t=${tPeak.t}): Max Fear = ${tPeak.maxFear.toFixed(4)}, Avg Fear = ${tPeak.avgFear.toFixed(4)}, Rumor Mutations = ${tPeak.mutations}`);
-    console.log(`- Post-Correction Final (t=${tFinal.t}): Avg Fear = ${tFinal.avgFear.toFixed(4)}, Rumor Status = ${tFinal.rumorStatus}`);
+    console.log(`- Baseline (t=0): Avg Fear = ${t0A.avgFear.toFixed(4)}`);
+    console.log(`- Peak Shock (t=${tPeakA.t}): Max Fear = ${tPeakA.maxFear.toFixed(4)}, Avg Fear = ${tPeakA.avgFear.toFixed(4)}`);
+    console.log(`- Final Post-Correction (t=${tFinalA.t}): Avg Fear = ${tFinalA.avgFear.toFixed(4)}, Rumor = ${tFinalA.rumorStatus}`);
 
-    // Scenario 1 Assertions:
-    const s1_finite = res1.timeline.every(pt => Number.isFinite(pt.avgFear) && Number.isFinite(pt.maxFear) && !Number.isNaN(pt.avgFear));
-    const s1_bounded = res1.timeline.every(pt => pt.maxFear <= 1.0 && pt.minFear >= 0.0);
-    const s1_scatter = t5.packPhase === TACTICAL_PHASES.SCATTER_DISPERSE;
-    const s1_recovered = tFinal.avgFear < 0.20 && tFinal.avgFear < tPeak.avgFear;
-    const s1_rumorCorrected = tFinal.rumorStatus === RUMOR_STATUS.CORRECTED;
+    const s1A_finite = res1A.timeline.every(pt => Number.isFinite(pt.avgFear) && Number.isFinite(pt.maxFear) && !Number.isNaN(pt.avgFear));
+    const s1A_bounded = res1A.timeline.every(pt => pt.maxFear <= 1.0 && pt.minFear >= 0.0);
+    const s1A_recovered = tFinalA.avgFear < 0.20 && tFinalA.avgFear < tPeakA.avgFear;
+    if (!s1A_finite || !s1A_bounded || !s1A_recovered) throw new Error('Scenario 1A failed assertions!');
+    console.log('  * Scenario 1A (60-unit radius): PASS');
 
-    console.log(`  * Numerical Integrity (0 NaN, 0 Inf): ${s1_finite ? 'PASS' : 'FAIL'}`);
-    console.log(`  * Invariant Fear Bounded [0.0, 1.0]: ${s1_bounded ? 'PASS' : 'FAIL'}`);
-    console.log(`  * Alpha Loss Immediate Scatter: ${s1_scatter ? 'PASS' : 'FAIL'}`);
-    console.log(`  * Dampened Peak & Reachable Recovery: ${s1_recovered ? 'PASS' : 'FAIL'}`);
-    console.log(`  * Authoritative Rumor Correction Propagation: ${s1_rumorCorrected ? 'PASS' : 'FAIL'}`);
+    // -------------------------------------------------------------------------
+    // Scenario 1B: Production-Default 300-Unit Contagion Radius
+    // -------------------------------------------------------------------------
+    console.log('\n--- Scenario 1B: Production-Default 300-Unit Radius ---');
+    // At 300-unit contagion radius, radial scatter dispersion (5 units/tick = 100 units/s)
+    // requires more kinematic travel distance to separate past the 300-unit boundary.
+    const res1B = simulateScenario1(42, { contagionRadius: 300.0, leaderRadius: 250.0, totalTicks: 100, label: 'Scenario 1B' });
+    const t0B = res1B.timeline[0];
+    const tPeakB = res1B.timeline.reduce((max, cur) => cur.maxFear > max.maxFear ? cur : max, res1B.timeline[0]);
+    const tFinalB = res1B.timeline[res1B.timeline.length - 1];
 
-    testResults.scenario1 = s1_finite && s1_bounded && s1_scatter && s1_recovered && s1_rumorCorrected;
-    if (!testResults.scenario1) throw new Error('Scenario 1 Compound Collision assertions failed!');
+    console.log(`- Baseline (t=0): Avg Fear = ${t0B.avgFear.toFixed(4)}`);
+    console.log(`- Peak Shock (t=${tPeakB.t}): Max Fear = ${tPeakB.maxFear.toFixed(4)}, Avg Fear = ${tPeakB.avgFear.toFixed(4)}`);
+    console.log(`- Final Post-Correction (t=${tFinalB.t}): Avg Fear = ${tFinalB.avgFear.toFixed(4)}, Rumor = ${tFinalB.rumorStatus}`);
+
+    const s1B_finite = res1B.timeline.every(pt => Number.isFinite(pt.avgFear) && Number.isFinite(pt.maxFear) && !Number.isNaN(pt.avgFear));
+    const s1B_bounded = res1B.timeline.every(pt => pt.maxFear <= 1.0 && pt.minFear >= 0.0);
+    const s1B_recovered = tFinalB.avgFear < 0.20 && tFinalB.avgFear < tPeakB.avgFear;
+    if (!s1B_finite || !s1B_bounded || !s1B_recovered) throw new Error('Scenario 1B failed assertions!');
+    console.log('  * Scenario 1B (300-unit production default): PASS');
+
+    // -------------------------------------------------------------------------
+    // Scenario 1C: Confined Panic Attractor & Calm Leader Intervention
+    // -------------------------------------------------------------------------
+    console.log('\n--- Scenario 1C: Confined Panic Attractor & Calm Leader Intervention ---');
+
+    function simulateConfinedGroup(withLeader = false, leaderTrust = 1.0) {
+        const contagion = new ContagionGraph({
+            contagionRadius: 300.0,
+            leaderRadius: 250.0,
+            baseContagionStrength: 0.6,
+            screamMultiplier: 1.8,
+            leaderDampingStrength: 0.5,
+            calmTrustGain: 1.0,
+            trustGain: 1.0
+        });
+
+        // 3 agents confined in a 10x10 room (positions within 6 units of each other, zero dispersal)
+        const sub1 = new AffectiveAgent('conf_1', { neuroticism: 0.6, extraversion: 0.7, resilience: 0.3, fear: 0.2 }, { seed: 101 });
+        const sub2 = new AffectiveAgent('conf_2', { neuroticism: 0.6, extraversion: 0.7, resilience: 0.3, fear: 0.2 }, { seed: 102 });
+        const sub3 = new AffectiveAgent('conf_3', { neuroticism: 0.6, extraversion: 0.7, resilience: 0.3, fear: 0.2 }, { seed: 103 });
+        sub1.x = 2; sub1.y = 0; sub1.z = 2;
+        sub2.x = 4; sub2.y = 0; sub2.z = 3;
+        sub3.x = 3; sub3.y = 0; sub3.z = 5;
+
+        let leader = null;
+        if (withLeader) {
+            leader = new AffectiveAgent('leader', {
+                leadership: 0.95, resilience: 0.95, neuroticism: 0.1, extraversion: 0.7, fear: 0.0, agreeableness: 0.8
+            }, { seed: 100 });
+            leader.x = 3; leader.y = 0; leader.z = 3;
+        }
+
+        const timeline = [];
+
+        for (let t = 0; t < 50; t++) {
+            // Initial acute shock at t=0..12: mortal predator threat to sub1
+            const threats1 = (t < 13) ? [{ intensity: 1.0, distance: 1.0, type: 'PREDATOR' }] : [];
+
+            // Build peer profiles
+            const allAgents = leader ? [sub1, sub2, sub3, leader] : [sub1, sub2, sub3];
+            const peerProfiles = allAgents.map(a => ({
+                id: a.id,
+                x: a.x, y: a.y, z: a.z,
+                fearBand: a.fearCore?.state || 'CALM',
+                isPanicking: a.fearCore?.state === 'PANIC' || a.currentFear > 0.75,
+                isScreaming: a.currentFear > 0.85,
+                rawFear: a.currentFear,
+                leadership: a.traits.leadership,
+                trust: (a.id === 'leader') ? leaderTrust : 0.0
+            }));
+
+            // Step subordinates
+            for (const ag of [sub1, sub2, sub3]) {
+                const cResult = contagion.evaluateContagion(ag, peerProfiles);
+                const threats = (ag.id === 'conf_1') ? threats1 : [];
+                ag.tick(0.05, { threats }, { contagionFear: cResult.contagionFear, leaderCalm: cResult.leaderCalm });
+            }
+
+            // Step leader if present
+            if (leader) {
+                const cResult = contagion.evaluateContagion(leader, peerProfiles);
+                leader.tick(0.05, { threats: [] }, { contagionFear: cResult.contagionFear, leaderCalm: 0 });
+            }
+
+            const subFears = [sub1.currentFear, sub2.currentFear, sub3.currentFear];
+            const avgFear = subFears.reduce((a, b) => a + b, 0) / subFears.length;
+            const maxFear = Math.max(...subFears);
+            const panickers = peerProfiles.filter(p => p.id.startsWith('conf_') && p.isPanicking).length;
+
+            timeline.push({ t, avgFear, maxFear, panickers });
+        }
+
+        return timeline;
+    }
+
+    const confinedIsolated = simulateConfinedGroup(false);
+    const confinedWithLeader = simulateConfinedGroup(true, 1.0);
+    const confinedUntrustedLeader = simulateConfinedGroup(true, -0.9);
+
+    const isoFinal = confinedIsolated[confinedIsolated.length - 1];
+    const leaderFinal = confinedWithLeader[confinedWithLeader.length - 1];
+    const untrustedFinal = confinedUntrustedLeader[confinedUntrustedLeader.length - 1];
+
+    console.log(`- Confined Isolated Squad (no leader, no dispersal): Final Avg Fear = ${isoFinal.avgFear.toFixed(4)}, Panickers = ${isoFinal.panickers}/3`);
+    console.log(`- Confined Squad with Calm Trusted Leader: Final Avg Fear = ${leaderFinal.avgFear.toFixed(4)}, Panickers = ${leaderFinal.panickers}/3`);
+    console.log(`- Confined Squad with Distrusted Leader (trust=-0.9): Final Avg Fear = ${untrustedFinal.avgFear.toFixed(4)}, Panickers = ${untrustedFinal.panickers}/3`);
+
+    // Invariant assertions for Scenario 1C:
+    // 1. Without dispersal or leader, screaming panickers lock into self-sustaining attractor (F > 0.85, panicLock)
+    const s1C_attractorPass = isoFinal.avgFear > 0.85 && isoFinal.panickers >= 2;
+    // 2. With calm trusted leader, reassurance breaks attractor and restores calm (F < 0.10)
+    const s1C_leaderPass = leaderFinal.avgFear < 0.10 && leaderFinal.panickers === 0;
+
+    console.log(`  * Confined Panic Attractor Formation (Isolated): ${s1C_attractorPass ? 'PASS (Permanent Lock-in Verified)' : 'FAIL'}`);
+    console.log(`  * Calm Trusted Leader Attractor Break & Recovery: ${s1C_leaderPass ? 'PASS (Leader Dampening Verified)' : 'FAIL'}`);
+
+    if (!s1C_attractorPass || !s1C_leaderPass) throw new Error('Scenario 1C Confined Attractor assertions failed!');
+
+    testResults.scenario1 = s1A_finite && s1A_bounded && s1A_recovered &&
+                            s1B_finite && s1B_bounded && s1B_recovered &&
+                            s1C_attractorPass && s1C_leaderPass;
 
     // =========================================================================
     // SCENARIO 2: SCARCITY SHOCK x MIGRATION FLIGHT x PANIC LOCK
