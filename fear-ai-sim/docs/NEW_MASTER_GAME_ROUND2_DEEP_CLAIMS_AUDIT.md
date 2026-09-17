@@ -1,6 +1,6 @@
 # New Master Game (Pixel-Pets) — Round 2 Deep Claims Audit & Engine Compendium
 
-**Document Version**: 3.0.0-DEFINITIVE-ENGINE-COMPENDIUM  
+**Document Version**: 4.0.0-DEFINITIVE-ENGINE-COMPENDIUM  
 **Date**: September 16, 2026  
 **Auditor**: Antigravity Cognitive Assistant  
 **Target Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (`pixel-pets`)  
@@ -21,7 +21,7 @@ Beyond verifying the initial 12 claims, this Round 2 audit uncovers the full tec
 - **Confirmed Accurate**: 5 claims (Architectural two-layer model, Win32 transparent overlay lifecycle, fear memory decay shape, async audio isolation, advisory whitelist isolation pattern).
 - **Substantially Expanded & Refined**: 5 claims (Faction count expanded from "6+" to 49; Autonomous actions expanded from 9 to 20; Needs meters expanded from 4 to 6; Combat postures corrected from 6 mixed concepts to 6 formal variants; Damage types expanded from 5 profiles to 28 concrete enum variants).
 - **Corrected Distinctions**: 2 claims (Separation of Match Pacing vs Fear Pacing, and TargetType enum vs Desktop Boundary Clamping).
-- **New Subsystems Cataloged**: 20 additional mechanical systems fully audited from first-principles source code (10 in v2.5.0 + 10 in v3.0.0).
+- **New Subsystems Cataloged**: 30 additional mechanical systems fully audited from first-principles source code (10 in v2.5.0 + 10 in v3.0.0 + 10 in v4.0.0).
 
 ---
 
@@ -291,6 +291,115 @@ In `src/engine/trigger_drain.rs:1-509`:
 - **Configuration**: `max_trigger_queue = 100`, `external_timeout_ms = 5000ms`, `batch_size = 10`.
 - **Lifecycle States**: `Pending -> Sent -> Processing -> Completed | Failed | Timeout`.
 - **Backpressure Mechanism**: Applies throttling when queues exceed capacity, protecting engine frame rate.
+
+
+### 4.21 Combat Runtime Modifiers & Dynamic Evasion Pipeline
+In `src/engine/rts/combat_runtime_modifiers.rs:1-1318`:
+- **Unconditional Faction Evasion Identity (`faction_evasion_identity`)**:
+  - Sand-Phantoms / Dune-Gliders: +0.12
+  - Dusk-Wings / Echo-Bats: +0.07
+  - Gale-Stalkers / Gale-Hunters: +0.05
+  - Hydrosanguines / Spark-Mice / Volt-Dashers: +0.04
+  - Void-Leeches / Glitch-Wraiths: +0.022
+  - Shell-Keepers / Resin-Guardians: -0.02
+- **Contextual Movement Class & Posture Evasion**:
+  - Movement: Heavy (-0.04), Amphibious in Water (+0.03), LavaAdapted in Lava (+0.02), WebAdapted in Web (+0.03), Skirmisher (+0.045), Flying (+0.08).
+  - Combat Posture: Skirmish (+0.01), Commit (-0.025), Hold (-0.02), Suppress (-0.015), Disengage (+0.035), Collapse (-0.03).
+  - FearBand Modulation: Calm (+0.0), Alert (+0.008), Afraid (+0.014), Panicked (-0.018), Routed (-0.04), BerserkOverride (-0.012).
+  - Hard Evasion Ceiling: Clamped to `[0.0, 0.26]`.
+
+### 4.22 Combat Critical Hits & Per-Faction Immunity Architecture
+In `src/engine/rts/combat_runtime_modifiers.rs:169-250`:
+- **Liquid Body Crit Immunity (`faction_crit_immune`)**:
+  - Hydrosanguines targets are strictly immune to critical hits (returns 1.0 normal damage).
+  - Gelatinous-Horde amorphous body is also crit-immune via S-Factor.
+- **Mirage Deflection (`faction_crit_negate_chance`)**:
+  - Sand-Phantoms have a flat 30% probability (`0.30`) to completely negate an incoming critical hit, collapsing the payload back to a standard normal hit.
+- **Faction Crit-Damage Multipliers (`faction_crit_modifier`)**:
+  - Glass-Folk (2.00x - brittle crystal shatters), Bone-Singers (1.50x), Spark-Mice (1.25x), Storm-Lancers (1.10x), Mycelian (0.50x - hive mind damage absorption), Hydrosanguines (0.00x), Sand-Phantoms (0.00x).
+
+### 4.23 On-Hit Crowd Control, Stun & Suppression Dynamics
+In `src/engine/rts/combat_runtime_on_hit.rs:1-278`:
+- **Suppression On-Hit (`suppression_on_hit_profile`)**:
+  - Attacker in Suppress posture applies stun (`[0.02, 0.16]s`), fear (`[0.02, 0.16]s`), and fear chance (`[0.08, 0.42]`).
+  - Target resistance: Heavy in Hold posture mitigates stun/fear by 0.74x.
+- **Defender Guard Stun (`defender_guard_stun_secs`)**:
+  - Units in Defender role with ready block cooldown apply 0.03s to 0.10s stun on target attack.
+- **Spear Thrust Stun**: Attack range $\le 42.0\text{px}$ applies a flat 0.42s stun.
+- **Movement Class On-Hit Effects**:
+  - Flanking Skirmishers deal fear procs (35% chance, 0.02–0.10s fear).
+  - WebAdapted in concealment deals guaranteed 100% fear chance (0.02–0.09s fear).
+  - Amphibious units in water regenerate 3% self-heal from damage dealt.
+
+### 4.24 S-Factor Suite 1: Lithodrom, Mycelian, Cinder-Kith & Bone-Singers
+In `src/engine/rts/combat_runtime_s_factors.rs:1-2161`:
+- **Lithodrom Prismatic Magic Reflection (BIBLE-1-01-M)**:
+  - Magic attacks reflect 30% of post-armor damage back to attacker as a distinct event: $\text{reflected} = \text{clamp}(0.5, 18.0, \text{damage} \cdot 0.30)$.
+- **Mycelian HiveMind Shared-HP Pool (BIBLE-1-02-M)**:
+  - Up to 24 units share a unified HP pool; absorbed damage is subtracted from the pool and overflow is distributed evenly among live members.
+- **Cinder-Kith 3-Tier Overdrive Combustion (BIBLE-1-03-M)**:
+  - Motion generates Coal: Tier 1 ($\ge 1.0$ Coal) $\to 1.2\times$ damage; Tier 2 ($\ge 20.0$ Coal) $\to 1.5\times$ damage + 5 DPS self-burn; Tier 3 ($\ge 50.0$ Coal) $\to 2.0\times$ damage + 15 DPS self-burn.
+- **Terracotta Formation Armor (BIBLE-1-04-M)**:
+  - $+10\%$ armor per neighbor sharing Formation trait up to $+30\%$ at 3+ neighbors (1.10x / 1.20x / 1.30x).
+- **Bone-Singers Harmonic Resonance (BIBLE-1-06-M)**:
+  - Grants 1 Rhythm stack per pulse to adjacent allies (max 10 stacks); decays at 1 stack/pulse when separated.
+
+### 4.25 S-Factor Suite 2: Root-Walkers, Moss-Beards, Ink-Squids & Coral-Wrights
+In `src/engine/rts/combat_runtime_s_factors_2.rs:1-682`:
+- **Root-Walkers Regrow Archetype (BIBLE-2-11-M)**:
+  - 3-stage pulse lifecycle: `healing_aura` (Nature's Blessing) $\to$ `root_network` (Root Bloom) $\to$ `root_eruption` (Root Eruption AoE).
+- **Moss-Beards Mass Sanctuary & Resurrection (BIBLE-2-16-M)**:
+  - Mass Healing Aura (+15 HP/s), Mass Sanctuary (3.0s total damage immunity within 80px), Mass Resurrection (revives fallen allies at 50% HP).
+- **Ink-Squids Chromatic Paint Palette (BIBLE-2-17-M)**:
+  - 6-color chromatic picker: Red, Blue, Green, Cyan, Gold, Magenta, driving specialized territory paint bonuses.
+- **Coral-Wrights Submerge Cloaking (BIBLE-2-19-M)**:
+  - State flips to Submerged on water cells when $\text{HP} < 30\%$, rendering the unit completely untargetable by enemy targeting loops.
+
+### 4.26 S-Factor Suite 3: Snow Wolves & Fire Golems
+In `src/engine/rts/combat_runtime_s_factors_3.rs:1-291`:
+- **Snow Wolves Frost Pack Tactics**:
+  - Incoming damage is evenly divided among pack members within 80px radius (up to 8 wolves).
+  - Pack Leader marks targets for $+30\%$ bonus damage from all wolves; leadership automatically transfers within 3 ticks of leader demise.
+- **Fire Golems Magma Core Overheat**:
+  - Ramping attack speed ($+10\%$ per stack up to 5 stacks); on death, triggers an explosive AoE fire detonation scaling with stack count.
+
+### 4.27 Faction Morale Doctrines & Psychology Archetypes
+In `src/engine/rts/morale_doctrines.rs:1-596`:
+- **Specialized Morale Profiles**:
+  - Bone-Singers & Clockwork: **100% Fear Immune**, `no_retreat: true`, `collapse_disabled: true`, high base morale floor ($0.50 - 0.55$).
+  - Void-Leeches & Gnaw-Legion: `fear_is_aggression: true` (fear translates directly into offensive fury rather than retreat); Gnaw-Legion gains $+35\%$ panic aggression bonus.
+  - Echo-Bats & Dusk-Wings: Ultrasonic Pulse grants 100% and 85% blindness resistance.
+  - Hydrosanguines: Fluid Adaptability reduces retreat penalty to 0.4x with 0.5x trauma resilience.
+  - Lithodrom: Crystal Network grants 1.0 formation synergy and 0.6 HQ stability bonus.
+
+### 4.28 Armor Mechanics, Magic Resistance & Movement Weight
+In `src/engine/rts/combat_runtime_armor.rs:1-803`:
+- **4-Tier Canon Armor Classification**:
+  - Light: 0% Magic Resist, 1.00x Movement Speed.
+  - Medium: 10% Magic Resist, 0.95x Movement Speed.
+  - Heavy: 25% Magic Resist, 0.85x Movement Speed.
+  - Siege: 40% Magic Resist, 0.70x Movement Speed.
+- **Role & Movement Armor Baseline**:
+  - Role Points: Defender (9.0), Generalist (4.0), Attacker (3.0), Support (3.0), Harvester (2.0).
+  - Movement Modifiers: Heavy (+2.2), Amphibious in Water (+1.0), LavaAdapted in Lava (+1.4), Skirmisher (-0.5), Flying (-0.5).
+
+### 4.29 Combat Resolution Pipeline & 0.5 Damage Floor
+In `src/engine/rts/combat_runtime_resolution.rs:1-538`:
+- **Strict Spec Mitigation Formula (M10.5)**:
+  $\text{Final Damage} = \max\left(0.5, (\text{Raw Damage} \cdot \prod \text{Multipliers}) - (\text{Armor} \cdot \text{Armor Modifier})\right)$
+- **Multipliers Product**:
+  $\prod \text{Multipliers} = \text{taken\_mult} \cdot \text{resist\_mult} \cdot \text{special\_trait\_mult} \cdot \text{tod\_mult} \cdot \text{weather\_mult} \cdot \text{fluid\_form\_mult}$
+- **0.5 Minimum Graze Floor**: Ensures heavily armored or mitigated hits always register non-zero damage.
+- **Cover & Concealment**: Cover bonus clamped to 0.30 provides up to $13.5\%$ damage reduction; blocking provides a flat $78\%$ reduction (0.22x multiplier).
+
+### 4.30 Hydrosanguines Fluid Form & Glitch-Wraiths Screen Tear
+In `src/engine/rts/fluid_form.rs` & `systems/movement.rs` & `world_helpers.rs`:
+- **Fluid Form Gap-Slipping (GAP-04)**:
+  - Hydrosanguines in `FluidFormState::Slipping` path through 1-block chokepoints and gaps that block all normal units.
+  - `FluidFormState::Merged { merge_count: 2..=5 }`: Combines units into super-units with unified HP & Damage scaling: $\text{multiplier} = 1.0 + (\text{count} - 1) \cdot 0.5$ ($1.5\times \text{ to } 3.0\times$).
+  - Built-in physical protection: -30% physical damage taken in any state.
+- **Glitch-Wraiths Screen Tear Wraparound**:
+  - Glitch-Wraiths moving beyond arena bounds don't clamp; they wrap seamlessly from left to right and top to bottom via `BoundaryResolution::Wrapped`.
 
 ### 4.20 Economy Engine, Signature Trickle Rates & Named Buildings
 In `src/engine/economy.rs:1-3438`:
