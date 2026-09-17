@@ -1,6 +1,6 @@
 # New Master Game (Pixel-Pets) — Round 2 Deep Claims Audit & Engine Compendium
 
-**Document Version**: 4.0.0-DEFINITIVE-ENGINE-COMPENDIUM  
+**Document Version**: 5.0.0-FINAL-AUTHORITATIVE-COMPENDIUM  
 **Date**: September 16, 2026  
 **Auditor**: Antigravity Cognitive Assistant  
 **Target Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (`pixel-pets`)  
@@ -21,7 +21,7 @@ Beyond verifying the initial 12 claims, this Round 2 audit uncovers the full tec
 - **Confirmed Accurate**: 5 claims (Architectural two-layer model, Win32 transparent overlay lifecycle, fear memory decay shape, async audio isolation, advisory whitelist isolation pattern).
 - **Substantially Expanded & Refined**: 5 claims (Faction count expanded from "6+" to 49; Autonomous actions expanded from 9 to 20; Needs meters expanded from 4 to 6; Combat postures corrected from 6 mixed concepts to 6 formal variants; Damage types expanded from 5 profiles to 28 concrete enum variants).
 - **Corrected Distinctions**: 2 claims (Separation of Match Pacing vs Fear Pacing, and TargetType enum vs Desktop Boundary Clamping).
-- **New Subsystems Cataloged**: 30 additional mechanical systems fully audited from first-principles source code (10 in v2.5.0 + 10 in v3.0.0 + 10 in v4.0.0).
+- **New Subsystems Cataloged**: 40 additional mechanical systems fully audited from first-principles source code across 5 exhaustive verification passes.
 
 ---
 
@@ -391,6 +391,84 @@ In `src/engine/rts/combat_runtime_resolution.rs:1-538`:
   $\prod \text{Multipliers} = \text{taken\_mult} \cdot \text{resist\_mult} \cdot \text{special\_trait\_mult} \cdot \text{tod\_mult} \cdot \text{weather\_mult} \cdot \text{fluid\_form\_mult}$
 - **0.5 Minimum Graze Floor**: Ensures heavily armored or mitigated hits always register non-zero damage.
 - **Cover & Concealment**: Cover bonus clamped to 0.30 provides up to $13.5\%$ damage reduction; blocking provides a flat $78\%$ reduction (0.22x multiplier).
+
+
+### 4.31 Panic Wave Topology & Front Wave Propagation
+In `src/engine/rts/fear_runtime_panic_waves/apply_front_wave.rs:1-75`:
+- **Wave Geometry**: Radial pulse with inner radius $220.0\text{px}$ and outer radius $420.0\text{px}$ (200px band). Units inside $<220\text{px}$ are in the shock zone; units $>420\text{px}$ are outside the wave.
+- **Linear Falloff Model**:
+  $\text{falloff} = 1.0 - \text{clamp}\left(0.0, 1.0, \frac{\text{dist} - 220.0}{200.0}\right)$
+- **Cluster Density Scaling**: Wave delta scales with the originating cluster size:
+  $\text{cluster\_mult} = \text{clamp}\left(1.0, 1.7, 1.0 + (\text{cluster\_size} - 2.0) \cdot 0.14\right)$
+- **Wave Transmission Formula**:
+  $\Delta f = \text{pulse\_strength} \cdot 0.18 \cdot \text{relation\_mult} \cdot \text{cluster\_mult} \cdot \text{falloff} \cdot \text{doctrine\_mult} \cdot \text{unit.fear\_spread\_factor}$
+  - Intra-faction transmission coefficient is $0.62$; cross-faction transmission routes through bilateral relationship matrix.
+
+### 4.32 Panic Shout Vocalization & Distress Propagation
+In `src/engine/rts/fear_runtime_panic_waves/apply_shout.rs:1-62`:
+- **Shout Radius**: Compact $90.0\text{px}$ radius with linear distance attenuation:
+  $\text{falloff} = 1.0 - \text{clamp}\left(0.0, 1.0, \frac{\text{dist}}{90.0}\right)$
+- **Cross-Faction Gate**: Allied units receive $1.0\times$ shout intensity; non-allied units are gated at $0.5\times$.
+- **Vocal Speech Dispatch**: When $\Delta f > 0.01$ and the target unit is in `Afraid` or `Alert` band with expired speech cooldown, the unit assigns `TacticalIntentTag::PanicShout`, locks `speak_timer = 2.4\text{s}`, and displays its doctrine-specific panic line.
+
+### 4.33 World Flesh Corruption & Nidus Lifecycle Engine
+In `src/engine/rts/flesh_manager/core.rs:1-511`:
+- **4 Nidus Maturation Stages**:
+  - Stage 1: 200 HP, Spread Radius 3 cells, Spawn Interval 80.0s.
+  - Stage 2: 400 HP, Spread Radius 5 cells, Spawn Interval 55.0s (advance threshold: 0.35 feed pressure).
+  - Stage 3: 700 HP, Spread Radius 8 cells, Spawn Interval 45.0s (advance threshold: 0.60 feed pressure).
+  - Stage 4: 1200 HP, Spread Radius 12 cells, Surge Interval 90.0s (advance threshold: 0.85 feed pressure).
+- **Feed Pressure Influx**: Small unit death (+0.04), Medium unit death (+0.10), Large unit death (+0.18), Building destruction (+0.25).
+- **Cellular Vein Growth**: Passive vein growth $0.0005/\text{s}$; pressure-driven growth $0.002/\text{s}$. Intensity transitions: Vein $\to$ Blight ($>0.25$), Blight $\to$ DeepFlesh ($>0.65$), DeepFlesh $\to$ Maw ($>0.90$).
+
+### 4.34 Biological Flesh Carriers & Maw Spawns
+In `src/engine/rts/flesh_manager/core.rs:64-125`:
+- **Specialized Carrier Units**:
+  - Crawler: 30 HP, 5 Damage, 75 px/s speed, seeds Veins (0.12 intensity/tick).
+  - Bloater: 200 HP, 20 Damage, 2-cell explosion radius seeding 0.20 feed pressure and 0.22 Blight intensity.
+  - Tender: 80 HP, 10 Damage, thickens existing Blight (+0.010 intensity/tick).
+  - Burrower: 50 HP, 8 Damage, 56 px/s speed, seeds 0.18 intensity in enemy territory.
+  - Choir Beast: 120 HP, 12 Damage, radiates continuous fear: $\Delta f = 0.06$ within $280.0\text{px}$ radius.
+  - Maw Spawn (Leviathan): 1200 HP, 60 Damage, radiates $\Delta f = 0.12$ fear across $400.0\text{px}$ and leaves DeepFlesh trails (radius 3) in its wake.
+- **Flesh Hunger Mechanics**: Gnaw-Legion, Bone-Singers, Hydrosanguines, and Slime-Lords gain $+0.002/\text{s}$ hunger fighting inside Blight, unlocking biological mutations.
+
+### 4.35 Ancient Hallow Cores & Sterilizing Light
+In `src/engine/rts/hallow_core.rs:1-563`:
+- **Core Parameters**: Indestructible relics with $300.0\text{px}$ aura radius, $5.0\text{px}$ capture radius, and 30.0s capture duration.
+- **Ignition Costs**: 500 Minerals, 200 Crystal, 100 Life. Unlocks Tier 4 Ultimate technologies and spreads Hallowed Ground at $0.1\text{ cells/s}$ up to $15.0\text{ cells}$ radius.
+- **Contest & Deadlock Mechanics**: 18.0s stable hold required to resolve; 12.0s capture deadlock timer; 20.0s hostile collapse timer on disputed cores.
+- **Sanctification Resonance**: Cleanse gain $+0.005$, Heal gain $+0.003$, No-casualty survival $+0.01$ (max 1.0 resonance), driving Miracle abilities with 300.0s cooldowns.
+
+### 4.36 Hallow Environmental Afflictions
+In `src/engine/rts/hallow_core.rs:33-42`:
+- **Blinding Fog**: Sterilizing fog drops hostile visual range down to $4.0\text{px}$ (effective complete blindness).
+- **Crystallizing Slow**: Units stepping on Hallowed Ground accumulate $0.10/\text{s}$ stacking movement slow up to 9 stacks (max $90\%$ speed penalty).
+- **Sun-Bleached Radiance**: Drains 2.0 crystal/s while providing +5.0 HP/s life regeneration to attuned units.
+
+### 4.37 Fickle Wildlife Neutral Ecosystem
+In `src/engine/rts/fickle_wildlife.rs:1-549`:
+- **Neutral Risk/Reward Fauna**:
+  - Echo-Fawn: 50 HP, 60 px/s speed. Grants 50–100 loot on death, but killing it inflicts an immediate debuff aura across $300.0\text{px}$ for 30.0s.
+  - Solar Anemone: 80 HP, stationary bio-turret. Heals nearby units (+5.0 HP/s, max 4 units). If attacked or overcharged (5.0s), detonates in an 80-damage explosion across $100.0\text{px}$.
+  - Wisp Collector: 30 HP. Hoards stolen energy and crystal; steals loot within $50.0\text{px}$ and retreats to hide between 30–80px.
+  - Whisper-Wasp Swarm (GAP-41): 18 HP, 95 px/s speed, 64.0px aura radius. Stings inflict a 0.8s paralysis stun and 3.0s poison DoT.
+
+### 4.38 Faction Tech-Tree & Research Progression Architecture
+In `src/engine/rts/tech_system.rs:1-384`:
+- **5 Tech Categories**: `Hallow`, `Production`, `Combat`, `FactionSpecific`, `Ultimate`.
+- **4 Progression Tiers**: Tier 1 (Foundational), Tier 2 (Specialization), Tier 3 (Advanced Doctrine), Tier 4 (Mastery/Hallow).
+- **Systemic Tech Effects**: Yield bonuses, Build speed, Building HP, Supply capacity, Unit rank speed, Movement speed, Armor bonuses, Miracle cooldown reductions, and `FearImmunityOnHallowed`.
+
+### 4.39 Roaming World Events & Neutral Leviathans
+In `src/engine/rts/world_events.rs:1-225`:
+- **Dynamic Roaming Boss Catalog**: Master data ingestion from `ROAMING_BOSSES_AND_NEUTRALS_MASTER_TABLE.json`.
+- **Severity Scaling**: High-severity events scale pressure and pulse intensity by $1.0\times$; standard events scale by $0.7\times$.
+- **Area Pulses**: Default boss ability `METEOR_SHOWER`; default non-boss ability `SHOCK_PULSE`. Computes continuous participant pressure, building damage events, and unit damage events across the simulation grid.
+
+### 4.40 Director Runtime Drama Pacing & Advisory Loop
+In `src/engine/rts/director_runtime.rs:1-294`:
+- **Director Fear Metrics Collection**: Evaluates global stress across 32 continuous metrics including trauma anchor density, ignited Hallow Core ratio, wildlife panic ratio, economic scarcity, active Apex pressure, and Luminary relief.
+- **Dynamic Action Directives**: Issues high-level tactical advisories (`apply_anchor_defense`, `apply_panic_breaker`, `apply_surge_counterpush`, `apply_stabilize_fear`) with weighted confidence scores and expiration timers, non-mutatingly steering the autonomous simulation.
 
 ### 4.30 Hydrosanguines Fluid Form & Glitch-Wraiths Screen Tear
 In `src/engine/rts/fluid_form.rs` & `systems/movement.rs` & `world_helpers.rs`:
