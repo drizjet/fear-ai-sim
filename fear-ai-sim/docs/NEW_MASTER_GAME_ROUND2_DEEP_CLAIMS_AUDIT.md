@@ -603,7 +603,7 @@ In `src/engine/economy.rs:1-3438`:
 
 ### 4.10 Expressive Presentation & Emotes
 In `src/engine/emotes.rs:30-100`:
-- 39 visual emote types rendered above entities, including affective emotes: `Scared`, `Dizzy`, `Confused`, `Sweat`, `Skull`, `Angry`, `Sad`, `Exclamation`.
+- 37 visual emote types (plus 28 speech bubble icon variants) rendered above entities, including affective emotes: `Scared`, `Dizzy`, `Confused`, `Sweat`, `Skull`, `Angry`, `Sad`, `Exclamation`.
 - Durations: `default_emote_duration = 2.0s`, `default_speech_duration = 3.0s`.
 - Overlays reactive speech bubbles showing fear warnings directly on the desktop overlay or RTS battlefield.
 
