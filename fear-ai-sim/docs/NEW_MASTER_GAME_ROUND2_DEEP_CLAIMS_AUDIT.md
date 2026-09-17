@@ -1,7 +1,7 @@
 # New Master Game (Pixel-Pets) — Round 2 Deep Claims Audit & Engine Compendium
 
-**Document Version**: 6.0.0-COMPLETE-SIMULATION-ATLAS  
-**Date**: September 16, 2026  
+**Document Version**: 7.0.0-COMPREHENSIVE-OMNIBUS  
+**Date**: September 17, 2026  
 **Auditor**: Antigravity Cognitive Assistant  
 **Target Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (`pixel-pets`)  
 **Companion Sync**: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`  
@@ -21,7 +21,7 @@ Beyond verifying the initial 12 claims, this Round 2 audit uncovers the full tec
 - **Confirmed Accurate**: 5 claims (Architectural two-layer model, Win32 transparent overlay lifecycle, fear memory decay shape, async audio isolation, advisory whitelist isolation pattern).
 - **Substantially Expanded & Refined**: 5 claims (Faction count expanded from "6+" to 49; Autonomous actions expanded from 9 to 20; Needs meters expanded from 4 to 6; Combat postures corrected from 6 mixed concepts to 6 formal variants; Damage types expanded from 5 profiles to 28 concrete enum variants).
 - **Corrected Distinctions**: 2 claims (Separation of Match Pacing vs Fear Pacing, and TargetType enum vs Desktop Boundary Clamping).
-- **New Subsystems Cataloged**: 50 additional mechanical systems fully audited from first-principles source code across 6 exhaustive verification passes.
+- **New Subsystems Cataloged**: 60 additional mechanical systems fully audited from first-principles source code across 7 exhaustive verification passes.
 
 ---
 
@@ -606,6 +606,170 @@ In `src/engine/emotes.rs:30-100`:
 - 39 visual emote types rendered above entities, including affective emotes: `Scared`, `Dizzy`, `Confused`, `Sweat`, `Skull`, `Angry`, `Sad`, `Exclamation`.
 - Durations: `default_emote_duration = 2.0s`, `default_speech_duration = 3.0s`.
 - Overlays reactive speech bubbles showing fear warnings directly on the desktop overlay or RTS battlefield.
+
+---
+
+
+### 4.51 Projectile Dynamics, Impact Raycasting & Element Tints
+In `src/engine/rts/systems/projectile_tick.rs:1-180`:
+- **Live Projectile Cap**: Hard-capped at `MAX_LIVE_PROJECTILES = 512` to guarantee deterministic frame budgets.
+- **Spawn & Impact Hold Windows**:
+  - `SPAWN_HOLD_SECONDS = 0.05` (initial muzzle/manifestation delay).
+  - `IMPACT_HOLD_SECONDS = 0.05` (terminal splash/detonation lingering).
+- **Target Hit Detection**:
+  - Direct target threshold: `TARGET_HIT_RADIUS_PX = 12.0px`.
+  - Proximity collision padding against generic unit boundaries: `UNIT_HIT_PADDING_PX = 6.0px`.
+- **Damage FX Visual Palette Tinting**:
+  - Fire / Explosive: Tint 1
+  - Ice / Frost: Tint 2
+  - Electric / Lightning: Tint 3
+  - Sonic / Kinetic: Tint 4
+  - Acid / Poison: Tint 5
+  - Water / Nature: Tint 6
+  - Wind / Air: Tint 7
+  - Cosmic / Holy / Void / Glitch: Tint 8
+
+### 4.52 Boss Abilities, Danger Tiers & Void Cadences
+In `src/engine/rts/systems/combat/tick_boss_abilities.rs` & `boss_*.rs`:
+- **Danger Tier Rotation Intervals**:
+  - `high` danger tier cadence: 4.0s cooldown between major ability cycles.
+  - `medium` danger tier cadence: 6.0s cooldown.
+  - `low` danger tier cadence: 8.0s cooldown.
+- **Behavior Pattern Rotations**:
+  - `swarm` boss pattern: alternates `boss_spawn_minions` $\rightarrow$ `boss_void_pulse`.
+  - `evasive` boss pattern: rotates `boss_teleport` $\rightarrow$ `boss_rally` $\rightarrow$ `boss_slam`.
+  - `default` boss pattern: cycles `boss_slam` $\rightarrow$ `boss_rally` $\rightarrow$ `boss_void_pulse`.
+- **Boss Spell Payload Radii & Scaling**:
+  - `Boss Slam`: 25.0 base damage to all hostile units within 48.0px radius.
+  - `Boss Void Pulse`: 18.0 base damage + 2.0s slow debuff to all units within 64.0px radius.
+  - `Boss Rally`: Grants temporary attack speed buff to all allied minions within 120.0px.
+
+### 4.53 Building Logistics, Supply Lines & Route Disruption
+In `src/engine/rts/systems/buildings/update_supply_lines.rs:1-180`:
+- **Lattice Transport Route Velocity**:
+  $\text{move\_speed} = \text{clamp}(1.0, 2.4, 1.0 + \text{transport\_bonus} \cdot 0.35)$
+- **Hostile Interception Radius**: Evaluates enemy unit presence within a 140.0px radius around source and destination node world coordinates.
+- **Supply Line Disruption Factor**:
+  $\text{disruption\_01} = \text{clamp}\left(0.0, 1.0, \frac{\text{hostiles}}{2.5 + \text{transport\_bonus}}\right)$
+- **Stockpile Batching**:
+  $\text{batch\_size} = \min(\text{local\_stockpile}, 6 + \text{transport\_bonus} \cdot 4)$
+- **Dynamic Delivery Transit Timer**:
+  $\text{delivery\_timer} = \max\left(0.35, \frac{\text{dist\_cells}}{\text{move\_speed}} \cdot (1.0 + \text{disruption\_01} \cdot 0.6)\right)$
+
+### 4.54 Archetype Counterplay & Terrain Affinity Dynamics
+In `src/engine/rts/systems/ability_archetypes/counterplay.rs:1-150`:
+- **Terrain Affinity Multiplier (Clamped $[0.72, 1.28]$)**:
+  - `DashBurst`: HighGround / Wind (+12% bonus); Quicksand / Webbed (-16% penalty).
+  - `FortifyShell`: Sanctuary / HighGround (+14% bonus); Lava for Cinder-kith / Terracotta (+8% bonus).
+  - `Regrow`: Water / Sanctuary / Fog (+16% bonus); Lava / Toxic (-18% penalty).
+  - `PulseNova`: Water for Hydro / Coral / Ink (+14% bonus); Lava for Cinder / Terracotta (+10% bonus); Void / Dark (+8% bonus); Sanctuary (-6% attenuation).
+
+### 4.55 Scripted Mobility, Dash Vectors & Leap Resolution
+In `src/engine/rts/systems/ability_scripted/mobility.rs:11-85` & `mobility_execute.rs:11-80`:
+- **Canonical Scripted Mobility Registry**:
+  - `Fungal Jump`: cooldown 4.8s, energy 0.0, cast 0.0, range = `distance`.
+  - `Dash Burst`: cooldown 4.2s, energy 0.0, cast 0.0, range = `distance`.
+  - `Blink Step`: cooldown 5.6s, energy 0.0, cast 0.0, range = `distance`.
+  - `Speed Burst`: cooldown 4.8s, energy 0.0, cast 0.0, range = `distance`.
+  - `Tidal Flow`: cooldown 5.2s, energy 0.0, cast 0.0, range = `distance`.
+- **Dash Execution Mechanics**:
+  - Target acquired via explicit `target_idx` or nearest living enemy within line-of-sight.
+  - Direction vector: $(dx, dy)$ normalized over $\text{dist} = \sqrt{dx^2 + dy^2}$.
+  - Movement distance: $\text{move\_dist} = \text{clamp}(0.0, \text{speed}, \text{dist} - \text{stop\_distance})$.
+  - Caster coordinate translation: $\Delta x = \frac{dx}{\text{dist}} \cdot \text{move\_dist}, \Delta y = \frac{dy}{\text{dist}} \cdot \text{move\_dist}$, clamped to arena boundaries with unit collision radius margin.
+
+### 4.56 Milestone One Control & Siphon Recovery
+In `src/engine/rts/systems/ability_resolve/milestone_one_mobility.rs:11-150`:
+- **Fungal Jump Trigger Range**: Triggers when enemy distance exceeds unit attack range but is within:
+  $\text{jump\_trigger} = \text{attack\_range} + 128.0 \cdot \text{arena\_scale} + 30.0$
+  $\text{jump\_dist} = \text{clamp}(0.0, 84.0 \cdot \text{arena\_scale} + 24.0, (\text{dist} - \text{desired\_gap}) \cdot \text{jump\_terrain\_mult})$
+  - Triggers effect flash timer (0.24s) and sets ability cooldown to 4.8s.
+- **Web Snare / Silk Thread**: Radius = $\text{attack\_range} + 20.0 \cdot \text{arena\_scale} + 10.0$; terrain mult clamped $[0.70, 1.34]$; cooldown 0.95s; triggers `"web_snare"` terrain pulse.
+- **Oil Slick / Steam Vent**: Radius = $\text{attack\_range} + 18.0 \cdot \text{arena\_scale} + 8.0$; terrain mult clamped $[0.72, 1.28]$; cooldown 0.85s; triggers `"oil_slick"` terrain pulse.
+- **Death Coil / Soul Siphon**: Siphon radius = $\text{attack\_range} + 24.0 \cdot \text{arena\_scale} + 12.0$.
+  $\text{heal} = \text{clamp}\left(2.0, 14.0, \text{hits} \cdot (2.4 + \text{arena\_scale} \cdot 1.5) \cdot \text{clamp}(0.9, 1.35, \text{recovery\_mult}) \cdot \text{terrain\_mult}\right)$
+  - Relieves caster fear by $\Delta \text{fear} = -0.18$ canonical delta; sets aura pulse cooldown to 1.05s.
+- **Tidal Flow Surge**: Triggers within $\text{attack\_range} + 92.0 \cdot \text{arena\_scale} + 26.0$; surge dist = $\min(\text{dist} - \text{attack\_range}, (22.0 \cdot \text{arena\_scale} + 18.0) \cdot \text{terrain\_mult})$.
+
+### 4.57 Biome Registry, 11 Canonical Biomes & Favored Factions
+In `src/engine/biome.rs:1-653`:
+- **11 Built-in Canonical Biomes**:
+  1. `volcanic`: Speed 0.9x, Regen 0.0, Yield 1.2x, Ash, Fear +0.03/s. Favored: Cinder-kith, Ember-runners.
+  2. `crystal_caverns`: Speed 1.1x, Regen +1.0, Yield 1.0x, Crystal Floor, Cover +0.06. Favored: Lithodrom, Prism-hoppers.
+  3. `fungal_swamp`: Speed 0.8x, Regen +0.5, Yield 1.5x, Mud, Fog|Forest, Cover +0.08, Concealment +0.12. Favored: Mycelian, Spore-brutes.
+  4. `clay_flats`: Speed 1.0x, Regen 0.0, Yield 1.1x, Standard Ground, Desert. Favored: Terracotta, Sand-phantoms.
+  5. `sanctuary_grove`: Speed 1.02x, Regen +0.8, Yield 1.0x, Sanctuary Floor, Sanctuary|Holy|Forest, Cover +0.10, Concealment +0.08, Fear -0.08/s, Sanctuary Strength 0.6.
+  6. `plains`: Speed 1.1x, Regen +0.1, Yield 1.0x, Standard Ground, Fear -0.02/s. Favored: Cinder-kith, Gale-stalkers, Spark-mice, Hydrosanguines.
+  7. `forest`: Speed 0.85x, Regen +0.4, Yield 1.2x, Forest Floor, Forest, Cover +0.18, Concealment +0.15. Favored: Amber-guards, Root-walkers, Moss-beards, Echo-bats.
+  8. `water`: Speed 0.7x, Regen 0.0, Yield 1.1x, Shallow Water, Fear +0.04/s. Favored: Coral-wrights, Ink-squids, Hydrosanguines.
+  9. `ice`: Speed 0.8x, Regen -0.2, Yield 0.85x, Ice Floor, Cover +0.04, Fear +0.06/s. Favored: Lithodrom, Prism-hoppers.
+  10. `mud`: Speed 0.5x, Regen 0.0, Yield 0.9x, Deep Mud, Cover +0.05, Fear +0.02/s. Favored: Hydrosanguines, Spore-brutes.
+  11. `snow`: Speed 0.75x, Regen -0.1, Yield 0.85x, Snow Floor, Cover +0.04, Fear +0.04/s. Favored: Snow-wolves.
+- **Universal Favored Faction Multipliers (`apply_biome_effects`)**:
+  - Speed: $\text{move\_speed} \cdot 1.2$ (+20% movement speed).
+  - Regeneration: $\text{regen} + 1.0$ HP/s.
+  - Gathering Yield: $\text{yield} \cdot 1.5$ (+50% resource yield).
+- **Day/Night Stat Modifiers (`TimeOfDay`)**:
+  - Root-Walkers: Day +0.6 regen, +1.2 flat armor; Night neutral.
+  - Void-Leeches: Night +1.5x damage multiplier (full power); Day neutral.
+  - Echo-Bats: Night +96.0px vision (echolocation); Fog +48.0px vision.
+  - Star-Fallers: Day +1.5x resource gathering yield.
+  - Lithodroms: Day +1.8 flat armor; Blizzard +1.0 flat armor.
+  - Bone-Singers: Night +25% damage multiplier (1.25x).
+  - Sand-Phantoms: Night +50% gathering yield (1.5x stealth yield).
+  - Fire Golems: +2.0 HP/s health regeneration on `TerrainTag::Lava` cells.
+
+### 4.58 Traversal Profiles & 26-Tag Terrain Runtime Resolution
+In `src/engine/terrain_runtime.rs:1-365`:
+- **Full 26-Bit Terrain Tag Spectrum**:
+  `Fog` (0), `Darkness` (1), `Sanctuary` (2), `Webbed` (3), `Quicksand` (4), `Water` (5), `Lava` (6), `Toxic` (7), `Wind` (8), `HighGround` (9), `Holy` (10), `Void` (11), `Burning` (12), `BrokenGround` (13), `Hallowed` (14), `BlindingFog` (15), `CrystallizingWater` (16), `SunBleached` (17), `Desert` (18), `Forest` (19), `FleshVeins` (20), `FleshBlight` (21), `DeepFlesh` (22), `Mawland` (23), `BoundaryStorm` (24), `ObsidianGround` (25).
+- **Dynamic Terrain Modifiers**:
+  - `Fog`: Fear +0.05/s, Awareness * 0.88.
+  - `Darkness`: Fear +0.04/s, Awareness * 0.90.
+  - `Sanctuary`: Fear -0.12/s, Retreat penalty * (1.0 - strength * 0.1).
+  - `Webbed`: Speed * 0.82, Path cost * 1.25, Retreat penalty * 1.20.
+  - `Quicksand`: Speed * 0.74, Path cost * 1.45, Retreat penalty * 1.28, Fear +0.06/s.
+  - `Water`: Path cost * $(1.18 + \text{depth} \cdot 0.3)$, Speed * $\text{clamp}(0.45, 1.0, 1.0 - \text{depth} \cdot 0.08)$.
+  - `Lava`: Hazard DPS $+ (1.6 + \text{intensity} \cdot 0.6)$, Buildable = false.
+  - `Burning`: Hazard DPS $+ (0.7 + \text{intensity} \cdot 0.25)$, Fear +0.05/s, Speed * 0.90.
+  - `BrokenGround`: Path cost * 1.35, Speed * 0.82, Retreat penalty * 1.15, Buildable = false.
+  - `Toxic`: Hazard DPS $+ (0.6 + \text{intensity} \cdot 0.35)$, Fear +0.03/s.
+  - `Wind`: Speed * 1.08.
+  - `BoundaryStorm`: Hazard DPS $+ \text{intensity} \cdot 0.75$ (`BOUNDARY_STORM_BASE_DOT`), Awareness * 0.85.
+  - `ObsidianGround`: Speed * 0.60 (-40%), Buildable = false.
+  - `FleshVeins`: Path cost * 1.05, Fear +0.01/s.
+  - `FleshBlight`: Path cost * 1.25, Slow +0.30s, Hazard DPS $+ (0.4 + \text{intensity} \cdot 0.2)$ if intensity > 0.6.
+  - `DeepFlesh`: Path cost * 1.55, Speed * 0.80, Hazard DPS $+ (1.0 + \text{intensity} \cdot 0.6)$.
+  - `Mawland`: Path cost * 1.80, Speed * 0.60, Hazard DPS $+ (2.0 + \text{intensity} \cdot 1.0)$, Blocks ground traversal.
+  - **World-Flesh Exemption**: All units of `world-flesh` faction force `path_cost_mult = 1.0` across all flesh tiles.
+
+### 4.59 Companion Physics, Ghost Teleport & Eye Tracking
+In `src/engine/pet.rs:720-745` & `pet/behavior_machine.rs:225-360, 1214-1272`:
+- **Follow Target Acceleration & Terminal Velocity**:
+  - Calculates vector acceleration $\vec{a}$ toward target with `follow_distance`, `acceleration`, and `dt`.
+  - Non-gravity: clamped to `behavior.max_speed`, damped via `apply_damping(&clamped, behavior.damping, dt)`.
+  - Gravity: $vel_y += 1800.0 \cdot dt$, clamped to 2000.0, terminal velocity capped at 1000.0.
+- **Ghost Phase Lifecycle**:
+  - Teleport trigger: $\text{distance\_to\_cursor} > 600.0\text{px}$ (`GHOST_TELEPORT_DISTANCE`).
+  - Fade out duration: 0.30s (`GHOST_FADE_DURATION`) with alpha fading $1.0 \rightarrow 0.0$ and wisp emission.
+  - Teleport wait delay: 0.15s (`GHOST_TELEPORT_WAIT`) invisible repositioning.
+  - Destination coordinates: Cursor offset with random angle $\theta \in [0, 2\pi]$ and radius $r \in [60.0, 120.0]$ (`GHOST_TELEPORT_RADIUS`).
+  - Fade in duration: 0.30s with 10 ghost wisps and 4 sparkle particles.
+- **Squash, Stretch & Eye Tracking**:
+  - Squash damping: `SQUASH_DAMPING = 10.0`, spring stiffness `SQUASH_STIFFNESS = 200.0`.
+  - Idle breathing cycle: $0.04 \cdot \sin(\text{breathe\_phase})$ scale modulation.
+  - Eye tracking: computes $\theta_{\text{look}} = \text{atan2}(dy, dx)$ targeting cursor or movement velocity vector when `FacingBehavior::ForwardLockedWithEyes` is active.
+
+### 4.60 Desktop Pet Click Escalation, Mood Feedback & Drag Hand
+In `src/pet_manager/update.rs:104-162` & `mouse_hand.rs:1-55`:
+- **Layered Click Escalation System**:
+  - Combo window: `state.click_reset_timer = 1.0s` window before `click_count` resets to 0.
+  - **Tier 1 (Single Click)**: `interaction_timer = 0.5s`, `mood = PetMood::Happy`, `squash_intensity = -0.15`, emits 1 heart particle, awards $+10$ XP.
+  - **Tier 2 (Double Click)**: `interaction_timer = 0.8s`, `mood = PetMood::Excited`, `squash_intensity = -0.25`, emits 5 star particles and 2 hearts, awards $+25$ XP.
+  - **Tier 3 (Rapid Click 3+)**: `interaction_timer = 1.0s`, `mood = PetMood::Playful`, `flash_timer = 0.08s`, `squash_intensity = -0.35`, emits 8 stars, 6 sparkles, 3 hearts, awards $+50$ XP.
+- **Drag-and-Drop Mouse Hand Engine**:
+  - Tracks pointer coordinate $(x, y)$, button down flag `is_down`, and `last_click_time`.
+  - Maintains `DragTarget::Pet(String)` and `DragTarget::Building(String)` handles for real-time physics manipulation and spatial placement.
 
 ---
 
