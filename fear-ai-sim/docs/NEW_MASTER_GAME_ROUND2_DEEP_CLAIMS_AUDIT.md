@@ -1,6 +1,6 @@
 # New Master Game (Pixel-Pets) — Round 2 Deep Claims Audit & Engine Compendium
 
-**Document Version**: 7.0.0-COMPREHENSIVE-OMNIBUS  
+**Document Version**: 8.0.0-DEFINITIVE-TOTAL-CANON-ATLAS  
 **Date**: September 17, 2026  
 **Auditor**: Antigravity Cognitive Assistant  
 **Target Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (`pixel-pets`)  
@@ -21,7 +21,7 @@ Beyond verifying the initial 12 claims, this Round 2 audit uncovers the full tec
 - **Confirmed Accurate**: 5 claims (Architectural two-layer model, Win32 transparent overlay lifecycle, fear memory decay shape, async audio isolation, advisory whitelist isolation pattern).
 - **Substantially Expanded & Refined**: 5 claims (Faction count expanded from "6+" to 49; Autonomous actions expanded from 9 to 20; Needs meters expanded from 4 to 6; Combat postures corrected from 6 mixed concepts to 6 formal variants; Damage types expanded from 5 profiles to 28 concrete enum variants).
 - **Corrected Distinctions**: 2 claims (Separation of Match Pacing vs Fear Pacing, and TargetType enum vs Desktop Boundary Clamping).
-- **New Subsystems Cataloged**: 60 additional mechanical systems fully audited from first-principles source code across 7 exhaustive verification passes.
+- **New Subsystems Cataloged**: 70 additional mechanical systems fully audited from first-principles source code across 8 exhaustive verification passes.
 
 ---
 
@@ -770,6 +770,94 @@ In `src/pet_manager/update.rs:104-162` & `mouse_hand.rs:1-55`:
 - **Drag-and-Drop Mouse Hand Engine**:
   - Tracks pointer coordinate $(x, y)$, button down flag `is_down`, and `last_click_time`.
   - Maintains `DragTarget::Pet(String)` and `DragTarget::Building(String)` handles for real-time physics manipulation and spatial placement.
+
+---
+
+
+### 4.61 Gnaw Necromancy, Lich-Lord Spells & Soul Traps
+In `src/engine/rts/gnaw_necromancy.rs:25-200`:
+- **Lich-Lord Spell Catalog**:
+  - `Raise Dead`: 25 Souls, 30.0s cooldown, max 3 corpses consumed within 200.0px radius, resurrects `gnawling_scurry_rat` minions.
+  - `Soul Harvest`: 50 Souls, 45.0s cooldown, 150.0px radius, drains 20.0 HP per enemy and grants 1 Soul per victim.
+  - `Death Pact`: 100 Souls, 120.0s cooldown, grants +50% damage multiplier (`1.5x`) for 15.0s (900 ticks), army dies upon expiration.
+- **Soul Trap Building (20-Block Auto-Capture)**:
+  - Radius: `SOUL_TRAP_CAPTURE_RADIUS_PX = 640.0px` (20 blocks * 32px cell size).
+  - Internal Cooldown: 5.0s per building (300 ticks).
+  - Output: 1 Soul per victim death within range, multiple traps stack by sum. Excludes friendly Gnaw units and Demilich pilots.
+- **Corpse Mechanics**: `DEFAULT_CORPSE_FRESHNESS_SECONDS = 60.0s`, `GNAW_CHASM_SLIP_MAX_RADIUS_PX = 12.0px` for Skul-Rat pilots.
+
+### 4.62 Vertebrae-Worm Chasm Bridges & Living Transport
+In `src/engine/rts/gnaw_necromancy.rs:1560-1796`:
+- **Living Transport Bridge**: Vertebrae-Worm units (`pack_id_hint` containing `"vertebrae_worm"`) create 1-cell-wide passable paths across blocked chasm cells.
+- **Bridge Duration**: `VERTEBRAE_WORM_BRIDGE_DURATION_SECONDS = 30.0s`.
+- **Adjacent-Cell Footprint**: Evaluates adjacent 4 cardinal cells, stamps `terrain_passable_override` with remaining-seconds duration, allowing ground units to cross otherwise impassable chasms.
+
+### 4.63 GAP-30 River Powers & Terraforming Action Registry
+In `src/engine/rts/terraform.rs:1-120`:
+- **4 Canonical Terraforming Actions**:
+  - `Flood`: Mutates rectangular grid radius to water tiles, stamping `TerrainTag::Water` and non-zero `water_depth`.
+  - `Divert`: Rewrites the river path to new coordinates, updating `terraform_river_path`.
+  - `Drain`: Inverse of flood, clears `TerrainTag::Water` and zeroes `water_depth`.
+  - `Whirlpool`: Applies 18.0 damage (`TERRAFORM_WHIRLPOOL_DAMAGE`) to all land units in target cell; completely skips water-adapted units (Coral-Wrights, Hydrosanguines, Amphibious).
+- **Faction Leader Authority Gate**: `is_faction_leader_present` verifies unit with `is_faction_leader == true` exists in source faction before executing any terraform mutation.
+
+### 4.64 Flow Field Pathfinding & 8-Direction Dijkstra Integration
+In `src/engine/flow_field.rs:1-180`:
+- **Cost Field Spectrum**: Cells clamped to $[0.1, 255.0]$; obstacles stamped as impassable at `255.0`.
+- **Integration Field (Dijkstra Wavefront)**:
+  - 8-direction neighbor expansion from goal: 4 cardinals (distance step 1.0), 4 diagonals (distance step 1.414).
+  - Cumulative distance: $d_{\text{new}} = d_{\text{curr}} + \text{move\_cost} \cdot \text{cost}[idx]$.
+- **Vector Field Derivation**: Computes normalized gradient descent vectors $(\Delta x / \text{dist}, \Delta y / \text{dist})$ toward lowest distance neighbor for instantaneous swarm guidance.
+
+### 4.65 Polygon NavMesh & Funnel String-Pulling Algorithm
+In `src/engine/navmesh.rs:1-260`:
+- **Convex Triangular Partitioning**: Decomposes walkable arena space into `NavTriangle` meshes, testing point containment via barycentric coordinates:
+  $w_1 = \frac{(b_y - c_y)(p_x - c_x) + (c_x - b_x)(p_y - c_y)}{\text{denom}}, \quad w_2 = \frac{(c_y - a_y)(p_x - c_x) + (a_x - c_x)(p_y - c_y)}{\text{denom}}$
+- **Portal Edges & Funneling**: Identifies shared edges between adjacent triangles; executes funnel string-pulling algorithm to eliminate zig-zag paths and generate smooth trajectories.
+
+### 4.66 GAP-46 Espionage Queue, Sabotage & Infiltration
+In `src/engine/rts/espionage.rs:1-100`:
+- **3 Canonical Espionage Actions**:
+  - `Sabotage`: Directly reduces target building HP by 50% ($hp \leftarrow hp \cdot 0.5$, floored at 0.0).
+  - `Scout`: Copies all live enemy unit positions into `source.known_unit_positions`, overriding stale fog-of-war data.
+  - `Bribe`: Reassigns enemy unit to source faction if unit's `loyalty < 0.30`.
+- **Per-Faction Queue Orchestrator**: `tick_espionage_actions` evaluates scheduled tick triggers and executes pure mutations without side-effect leaks.
+
+### 4.67 Apex Entities, Roaming Leviathans & Resonance Balance
+In `src/engine/rts/apex_entities.rs:1-100`:
+- **Light Leviathan (Luminary)**:
+  - 5000.0 HP, 150.0 damage, 200.0px range, 30.0px/s speed, 300.0px aura radius.
+  - Buffs: +50% life regen, +25% crystal yield, 0.6 sanctuary strength. Leaves `sanctuary_grove` wake biome.
+- **Dark Leviathan (Null-Beast)**:
+  - 5000.0 HP, 150.0 damage, 200.0px range, 30.0px/s speed, 300.0px aura radius.
+  - Debuffs: 0.15 fear damage, 0.12 dread pressure, +40% flesh buff, +35% void buff. Leaves `deadzone` wake biome.
+- **Enrage & Dual Wake Tension**: Enrages at $\le 30\%$ HP (`APEX_ENRAGED_HP_THRESHOLD = 0.30`), gaining $1.5\times$ damage multiplier and 2.0s attack cooldown. Dual wake tension doubles resonance decay rates for all factions across the map.
+
+### 4.68 Over-Pure Enemy Invasions, Sentinels & Sterilization
+In `src/engine/rts/over_pure_enemies.rs:1-100`:
+- **Over-Pure Roster**:
+  - `Prism Sentinel`: 300.0 HP, 25.0 damage, 150.0px range, 40.0px/s speed, 2.0s cooldown, 110.0px aura.
+  - `Glass-Winged Seraph`: 150.0 HP, 15.0 damage, 120.0px/s speed, 0.8s attack cooldown, 120.0px aura.
+  - `Lux Golem`: 800.0 HP, 45.0 damage, 30.0 flat armor, 25.0px/s speed, 2.5s attack cooldown, 170.0px aura.
+- **Spawn Cadence**: Spawns every 15.0s from Hallow Cores, capped at 3 enemies per core. Regroups when HP drops below 35% (`OVER_PURE_REGROUP_HP_RATIO = 0.35`).
+
+### 4.69 Player-Driven Unit Evolution & 4-Tier Progression
+In `src/engine/rts/evolution_progression.rs:1-80`:
+- **4 Progressive Evolution Tiers**:
+  - `Tier 1`: Levels 3-6, 100 XP required, 50 primary resource cost, instantaneous transition (0.0s).
+  - `Tier 2`: Levels 7-10, 300 XP required, 150 resource cost, 10.0s metamorphosis channel.
+  - `Tier 3`: Levels 11-16, 800 XP required, 400 resource cost, 30.0s metamorphosis channel.
+  - `Tier 4`: Levels 17-20, 2000 XP required, 1000 resource cost, 60.0s metamorphosis channel.
+- **Faction Path Specializations**: Lithodrom (`prism`, `titan`, `weaver`); Cinder-Kith (`inferno`, `magma`, `ash`); Terracotta (`general`, `phalanx`, `ceramic`).
+
+### 4.70 Hero Progression, Exponential XP Curves & Level Caps
+In `src/engine/rts/hero_progression.rs:1-100`:
+- **Exponential Level Curve**:
+  $\text{xp\_to\_next\_level}(\text{level}) = \min(5000.0, 100.0 \cdot 1.4^{\text{level}})$
+- **Progression Dynamics**:
+  - Growth rate: 40% increase per level ($1.4\times$ factor); clamped strictly at 5000.0 XP ceiling (reached at level 18).
+  - Hero XP Bonus: Multiplies incoming XP by `unit.hero_xp_bonus`.
+  - Hero Ability Gating: Hero abilities strictly unlocked at level $\ge 1$ for units with `is_hero == true` (e.g. Cinder-Kith `"furnace_saint_hero"`).
 
 ---
 
