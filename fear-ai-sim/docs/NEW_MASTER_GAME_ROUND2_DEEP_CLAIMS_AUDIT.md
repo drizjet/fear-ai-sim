@@ -1,6 +1,6 @@
 # New Master Game (Pixel-Pets) — Round 2 Deep Claims Audit & Engine Compendium
 
-**Document Version**: 8.0.0-DEFINITIVE-TOTAL-CANON-ATLAS  
+**Document Version**: 9.0.0-TOTAL-CANON-ENCYCLOPEDIA  
 **Date**: September 17, 2026  
 **Auditor**: Antigravity Cognitive Assistant  
 **Target Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (`pixel-pets`)  
@@ -21,7 +21,7 @@ Beyond verifying the initial 12 claims, this Round 2 audit uncovers the full tec
 - **Confirmed Accurate**: 5 claims (Architectural two-layer model, Win32 transparent overlay lifecycle, fear memory decay shape, async audio isolation, advisory whitelist isolation pattern).
 - **Substantially Expanded & Refined**: 5 claims (Faction count expanded from "6+" to 49; Autonomous actions expanded from 9 to 20; Needs meters expanded from 4 to 6; Combat postures corrected from 6 mixed concepts to 6 formal variants; Damage types expanded from 5 profiles to 28 concrete enum variants).
 - **Corrected Distinctions**: 2 claims (Separation of Match Pacing vs Fear Pacing, and TargetType enum vs Desktop Boundary Clamping).
-- **New Subsystems Cataloged**: 70 additional mechanical systems fully audited from first-principles source code across 8 exhaustive verification passes.
+- **New Subsystems Cataloged**: 80 additional mechanical systems fully audited from first-principles source code across 9 exhaustive verification passes.
 
 ---
 
