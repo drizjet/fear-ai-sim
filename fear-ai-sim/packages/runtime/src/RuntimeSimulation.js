@@ -60,6 +60,7 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // Betrayal-path chunk: host-reported semantic social events land on
         // advisory relationship state. Opt-out preserves observe-only runs.
         this.social = new RelationshipTensorSystem(options.socialConfig || {});
+        this.options = { ...options };
         this.socialEvents = new SocialEventEngine();
         this.enableSocial = options.enableSocial ?? true;
         // NEXT-152 (audit candidate 17): multi-rate social and trauma
@@ -135,6 +136,8 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // NEXT-20: core trauma records are keyed by agent; drop them with
         // the agent so long worlds cannot accumulate the dead.
         this.coreTrauma.agentRecords.delete(id);
+        this.coreTrauma.phobicRegistry.agentPhobias.delete(id);
+        this.lastContagion.delete(id);
         if (this.enableSocial) this.social.purgeAgent(id);
         return this.agents.delete(id);
     }
@@ -461,6 +464,27 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         this.trauma.clear();
         this.contagion.clearEdges();
         this.pacing.reset();
+
+        // NEXT-20 / Front B: completely reset coreTrauma records, phobias, and state
+        this.coreTrauma = new TraumaCrystallizationEngine(this.options.coreTraumaConfig || {});
+        // Front A / Social: completely reset directed relationship tensors
+        this.social = new RelationshipTensorSystem(this.options.socialConfig || {});
+        // Multi-rate time discipline reset
+        const cad = (v) => {
+            const n = Math.floor(Number(v) || 1);
+            return n >= 1 ? n : 1;
+        };
+        this.timeDiscipline = new HostTimeDiscipline({
+            cadences: {
+                affect: 1,
+                social: cad(this.options.socialCadence),
+                coreTrauma: cad(this.options.traumaCadence),
+                contagion: cad(this.options.contagionCadence),
+                faction: 20
+            }
+        });
+        this.lastContagion.clear();
+
         if (options.clearAgents) {
             this.agents.clear();
             return;
@@ -473,6 +497,9 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             agent.valence = 0.5;
             agent.morale = 1.0;
             agent.adrenaline = 0;
+            if (this.enableCoreTrauma) {
+                this.coreTrauma.registerAgent(agent.id, agent.traits);
+            }
         }
     }
 
@@ -535,13 +562,20 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             migrated = { ...snapshot, version: 1 };
         }
 
+        // Clean slate to prevent stale state contamination across loads
+        this.reset({ clearAgents: true });
+
         this.seed = migrated.seed ?? this.seed;
         this.tickCount = migrated.tickCount ?? 0;
         if (migrated.rng) this.rng.setState(migrated.rng);
         if (migrated.pacing) this.pacing.setState(migrated.pacing);
         if (migrated.trauma) this.trauma.setState(migrated.trauma);
-        if (migrated.coreTrauma) this.coreTrauma.setState(migrated.coreTrauma);
-        if (migrated.social) this.social.setState(migrated.social);
+        if (migrated.coreTrauma) {
+            this.coreTrauma.setState(migrated.coreTrauma);
+        }
+        if (migrated.social) {
+            this.social.setState(migrated.social);
+        }
         if (migrated.contagion && typeof this.contagion.setState === 'function') {
             this.contagion.setState(migrated.contagion);
         }

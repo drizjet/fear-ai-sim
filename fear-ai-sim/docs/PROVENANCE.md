@@ -202,32 +202,32 @@ BLOCKED_BY
 
 If a concept evolves, preserve each version. For example, “fear is combat-only” and “fear changes trade routes” may be different historical claims rather than one being silently replaced.
 
-## 8. Code verification procedure
+## 8. Static line audit procedure (`MANUAL_AUDIT_VERIFIED`)
 
-To mark a feature as `CODE_VERIFIED`:
+To mark a feature as `MANUAL_AUDIT_VERIFIED`:
 
-1. Identify the exact file and symbol.
-2. Inspect its callers and imports.
-3. Determine whether the path is reachable from a real entry point.
-4. Identify inputs, outputs, side effects, and guards.
-5. Check tests covering the behavior.
-6. Run the smallest relevant test or smoke scenario.
-7. Record limitations and unverified assumptions.
+1. Identify the exact repository file and symbol.
+2. Inspect its callers, imports, exports, and call hierarchy.
+3. Determine whether the path is reachable from a real production or diagnostic entry point.
+4. Line-by-line audit inputs, outputs, mathematical bounds, side effects, and authority guards.
+5. Verify that Host Game Authority is 100% preserved (zero direct mutations to transforms, physics, navmesh, combat damage, inventory, or entity spawning).
+6. Verify persistence contracts, state lifecycle reset behavior, and memory bounds.
+7. Record exact equations, constants, limitations, and unverified assumptions.
 
-A file existing is not proof that its feature is live. An import is not proof that the code is exercised. A test-only path is not product behavior.
+A file existing is not proof that its feature is live. An import is not proof that the code is exercised. Test-only scaffolding is not product behavior. Automated test runners (`cargo test`, `npm test`, Jest) are strictly retired under Hard Rule 9.
 
-## 9. Runtime verification procedure
+## 9. Deterministic scenario verification procedure (`REPRODUCIBLE_SCENARIO_EVIDENCE`)
 
-To mark a behavior `RUNTIME_VERIFIED`:
+To mark a behavior as supported by `REPRODUCIBLE_SCENARIO_EVIDENCE`:
 
-1. Record repository version, environment, configuration, and seed.
-2. Record exact command or interaction.
-3. Capture relevant output, state hash, event, or artifact.
-4. Repeat when nondeterminism is possible.
-5. State what the run does not prove.
-6. Link the result to the claim and test fixture.
+1. Record repository version, exact commit hash, environment, configuration, and deterministic seed.
+2. Record the exact single-pass command or CLI invocation (e.g. `node tools/verification/<script>.mjs` or `bin/fear-ai.js <subcommand>`). Under NO circumstances invoke automated test runners (`npm test`, `cargo test`, Jest).
+3. Capture relevant output, state hash, frame dump, or structured telemetry artifact in the repository.
+4. Verify bit-exact replay determinism across multiple runs with identical seeds.
+5. State explicitly what the scenario proves and what boundary conditions remain unproven.
+6. Link the reproducible output directly to the claim and permanent repository-local script fixture.
 
-Benchmarks must include scenario definition and population size. “It feels faster” is not a runtime verification.
+Benchmarks must include scenario definition, entity population size, warmup, and hardware environment. "It feels faster" or an HTTP 200 return code is not performance evidence.
 
 ## 10. Design proposal procedure
 

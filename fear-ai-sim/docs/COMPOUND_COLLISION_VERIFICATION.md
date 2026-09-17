@@ -52,9 +52,9 @@ Both scenarios verified complete numerical stability (0 NaNs, 0 Infs), strict in
 | **Numerical Integrity** | Clean | Clean (0 NaN, 0 Inf) | Clean (0 NaN, 0 Inf) | **PASS** |
 | **Recovery Latency** | - | - | $< 24$ ticks | **PASS** (Finite Relaxation) |
 
-**Key Mathematical Finding**: Radial scatter dispersion attenuates emotional contagion via distance falloff ($1.0 - d / R_{\text{contagion}}$). Once agents scatter and authoritative correction refutes the rumor, the affective decay function:
+**Key Mathematical & Architectural Finding**: Radial scatter dispersion attenuates emotional contagion via distance falloff ($1.0 - d / R_{\text{contagion}}$ with default $R_{\text{contagion}} = 300$). Crucially, Fear AI outputs strictly advisory scatter vectors; the host game retains exclusive authority to translate entities. In open terrain where host physics moves dispersing units apart over dozens of seconds (or when distance surpasses the contagion boundary), contagion drops to zero. Once authoritative host correction refutes the panic rumor and active threats cease, the affective decay function:
 $$\text{fear}_{t+1} = \text{fear}_t \cdot k_{\text{decay}}^{\Delta t / 0.016}$$
-cleanly relaxes the squad back to calm baseline ($\text{avgFear} = 0.0043 < 0.05$).
+cleanly relaxes the squad back to calm baseline ($\text{avgFear} = 0.0043 < 0.05$). Conversely, in confined spaces where units cannot separate, panic remains elevated until external stimuli or calm leaders intervene.
 
 ---
 

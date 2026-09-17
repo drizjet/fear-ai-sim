@@ -38,12 +38,14 @@ In accordance with Section 1 of `BEHAVIORAL_EVALUATION_FRAMEWORK.md`, the follow
 ### 2.2 Neuroticism / Resilience (N/R) Trait Collinearity & Entanglement
 - **Finding**: In naive parameter distributions, the Big-Five trait **Neuroticism ($N$)** and the coping trait **Resilience ($R$)** exhibited strong negative behavioral collinearity ($r = -0.82$).
 - **Symptom**: Agents with high $N$ almost invariably behaved identically to agents with low $R$: rapid panic onset followed by prolonged recovery. Designers struggled to configure an "easily startled but quick to recover" archetype (high $N$, high $R$) or a "slow to panic but permanently scarred once broken" archetype (low $N$, low $R$).
-- **Remediation**:
-  1. $N$ was mathematically isolated to the **Perceived Threat Integration** phase:
+- **Analysis & Engineering Realities**:
+  1. $N$ amplifies the **Perceived Threat Integration** phase (`AffectiveAgent.js:367`):
      $$\text{threat}_{\text{perceived}} = \text{threat}_{\text{raw}} \cdot (0.5 + 0.9 \cdot N)$$
-  2. $R$ was mathematically isolated to the **Exponential Decay & Habituation** phase:
-     $$k_{\text{decay}} = \text{clamp}(0.75, 0.98, 0.92 + 0.05 \cdot N - 0.08 \cdot (R - 0.5))$$
-     This guarantees that $R$ directly governs the relaxation half-life $\tau_{1/2}$ independently of the perceptual alarm trigger $N$.
+  2. In the **Exponential Decay & Habituation** phase (`AffectiveAgent.js:378-379`), $N$ and $R$ are explicitly coupled:
+     $$\text{resilienceMod} = (R - 0.5) \cdot 0.08$$
+     $$k_{\text{decay}} = \text{clamp}(0.75, 0.98, 0.92 + 0.05 \cdot N - \text{resilienceMod})$$
+     Notice that while $R$ accelerates decay (decreasing $k_{\text{decay}}$ via $-\text{resilienceMod}$), high Neuroticism counteracts recovery by $+0.05 \cdot N$. Thus, $N$ and $R$ are **not** mathematically isolated; rather, an agent's recovery rate reflects an explicit cognitive tug-of-war between neurotic vulnerability and resilience coping.
+  3. **Designer Calibration Implication**: To produce an "easily startled but quick to recover" character ($N=0.8, R=0.9$), designers must be aware that $N=0.8$ adds $+0.040$ to the base $0.92$ decay rate, while $R=0.9$ subtracts $(0.9-0.5)\cdot 0.08 = 0.032$, resulting in a net decay rate of $0.928$ ($\tau_{1/2} \approx 0.153\,\text{s}$). The traits are intentionally co-influential in the affective engine rather than isolated into orthogonal silos.
 
 ### 2.3 K=60 Action Selection Overhead vs. Simpler Heuristics
 - **Finding**: In simple combat environments requiring only immediate binary choices (`ATTACK` vs `RETREAT`), evaluating Fear AI's full cognitive pipeline (OCEAN traits, PAD emotional vectors, habituation tables, and contagion graphs) incurred a $\sim 3\times$ latency penalty over a 4-state FSM without delivering perceptible behavioral divergence.
@@ -73,21 +75,25 @@ $$\tau_{1/2} = \frac{\ln(0.5)}{\ln(k_{\text{decay}})} \cdot 0.0166\,\text{s}$$
 Emotional contagion between peer agents is evaluated via `ContagionGraph`:
 $$I_{\text{contagion}} = \sum_{j \in \text{Peers}} \text{fear}_j \cdot \left(1 - \frac{d_{ij}}{R_{\text{contagion}}}\right) \cdot \alpha_{\text{base}} \cdot \beta_{\text{scream}} \cdot S_i$$
 where:
-- $R_{\text{contagion}} = 60.0\,\text{m}$ (interaction radius).
-- $\alpha_{\text{base}} = 0.40$ (base coupling strength).
-- $\beta_{\text{scream}} = 1.80$ (scream multiplier).
-- $S_i = (0.5 + 0.5 \cdot E_i) \cdot (0.6 + 0.8 \cdot N_i)$ (individual susceptibility).
+- $R_{\text{contagion}} = 300.0$ (default spatial contagion radius units; configurable per host game scale).
+- $\alpha_{\text{base}} = 0.40$ (default base coupling strength `baseContagionStrength`).
+- $\beta_{\text{scream}} = 1.80$ (default scream multiplier `screamMultiplier`).
+- $S_i = (0.5 + 0.5 \cdot E_i) \cdot (0.6 + 0.8 \cdot N_i)$ (individual susceptibility from Extraversion $E_i$ and Neuroticism $N_i$).
 
-**Bifurcation Analysis**:
+**Bifurcation Analysis & Boundary Conditions**:
 In a tightly clustered group ($N$ agents with $d_{ij} \approx 0$), the loop gain $G$ of mutual contagion is:
 $$G = (N - 1) \cdot \alpha_{\text{base}} \cdot \bar{S}$$
 - If $G > 1.0$ and agents remain stationary, a **self-sustaining runaway panic loop** occurs: agent A panics agent B, who screams and reinforces agent A, permanently preventing decay even after the physical threat despawns.
-- **Circuit Breakers & Invariants Enforced**:
-  1. **Spatial Dispersal**: `PackCoordinationEngine` mandates that alpha panic triggers `SCATTER_DISPERSE`. As agents flee radially at velocity $v = 4.0\,\text{m/s}$, $d_{ij}$ expands rapidly:
-     $$d_{ij}(t) = 2 \cdot v \cdot t \cdot \sin(\pi / N)$$
-     Within $\sim 10$ ticks, $d_{ij} > R_{\text{contagion}}$, reducing the spatial factor to $0$ and breaking the loop.
-  2. **Leader Calm Reassurance**: Calm leaders project damping field $D_{\text{calm}} = L_{\text{leader}} \cdot (1 - d/R_{\text{leader}}) \cdot 0.35$ that counteracts peer contagion.
-  3. **Output Clamping**: `contagionFear` is strictly clamped to $[0.0, 1.0]$.
+- **Circuit Breakers, Kinematics & Architectural Reality**:
+  1. **Host Game Physics & Spatial Attenuation**: Fear AI outputs **strictly advisory heading vectors** (`PackCoordinationEngine` alpha panic issues `SCATTER_DISPERSE` vectors). The **host game retains exclusive authority over physical translation**.
+  2. **Dispersion Kinematics**:
+     - At $60\,\text{Hz}$ ($\Delta t = 0.0166\,\text{s}$), $10$ simulation ticks represent only $0.166\,\text{s}$.
+     - If two agents flee in opposite directions at $v = 4.0\,\text{units/s}$ ($8.0\,\text{units/s}$ relative velocity), they separate by only $1.33\,\text{units}$ after $10$ ticks.
+     - To fully exit the default $R_{\text{contagion}} = 300$ radius, agents require:
+       $$t_{\text{separation}} = \frac{300\,\text{units}}{8.0\,\text{units/s}} = 37.5\,\text{s} \approx 2250\,\text{ticks}$$
+  3. **Confined Geometry / Stationary Boundary Condition**: If agents are physically confined by host world geometry (e.g. locked in an enclosed room) or the host cannot translate them, mutual contagion *will* self-sustain high fear until an external stimulus occurs (e.g. host calming item, sedation, or a calm leader).
+  4. **Leader Calm Reassurance**: Calm leaders project damping field $D_{\text{calm}} = L_{\text{leader}} \cdot (1 - d/R_{\text{leader}}) \cdot 0.35$ (default $R_{\text{leader}} = 250$) that counteracts peer contagion.
+  5. **Output Clamping**: `contagionFear` is strictly clamped to $[0.0, 1.0]$.
 
 ### 3.3 Dynamic Economic Price Elasticity
 In `EconomicFeedbackSystem`:
