@@ -1,7 +1,7 @@
 ---
 title: "Fear AI — System Map (read this first)"
 created: 2026-09-07
-updated: 2026-09-14
+updated: 2026-09-17
 type: navigation
 status: active
 ---
@@ -30,6 +30,7 @@ We are **not** making a Fear AI Godot/Unity/Unreal game.
 
 - **NEVER RUN TEST RUNNERS.** Do not run `npm test`, Jest, or automated test runners to verify changes, certify milestones, or audit code. Green tests are not proof of correctness.
 - **100% MANUAL LINE-BY-LINE AUDITS ONLY.** All code verification across `packages/core/src/`, `packages/runtime/`, `packages/protocol/`, and `packages/adapters/` must be performed by manual inspection of mathematical derivations, edge cases, numerical stability, authority boundaries, determinism, and memory bounding against first principles.
+- **AUTHORITATIVE STATUS LEDGER.** See `docs/CURRENT_TRUTH_LEDGER.md` for the single canonical status matrix of every live capability, its live callers, consumers, persistence state, and known frontiers.
 
 ## Three live trees (siblings, not one binary)
 

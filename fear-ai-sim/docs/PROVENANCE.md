@@ -1,7 +1,7 @@
 ---
 title: "Fear AI / BadAI — Provenance and Evidence Protocol"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-17
 type: documentation
 status: active
 ---
@@ -62,11 +62,11 @@ Use these labels exactly.
 
 ### Evidence status
 
-- `CODE_VERIFIED` — current source inspection establishes the fact.
-- `TEST_VERIFIED` — an automated test currently passes for the fact.
-- `RUNTIME_VERIFIED` — a reproducible execution, benchmark, replay, or integration run establishes the fact.
+- `MANUAL_AUDIT_VERIFIED` — direct line-by-line first-principles inspection of source code, mathematical formulas, boundary logic, and memory lifecycles establishes the fact (Hard Rule 9 standard).
+- `REPRODUCIBLE_SCENARIO_EVIDENCE` — a deterministic single-pass CLI inspection, binary frame dump, or scenario output establishes the fact without automated regression test runners.
 - `SOURCE_SUPPORTED` — an external or project source supports the statement, but it is not implementation evidence.
 - `DOCUMENTED_CLAIM` — a project document or historical chat states it without current verification.
+- `HISTORICAL_TEST_EVIDENCE` — pre-Rule 9 automated test evidence preserved for historical regression provenance, but retired as current proof.
 - `UNKNOWN` — available evidence is insufficient.
 - `CONTRADICTED` — stronger or newer evidence conflicts with it.
 - `STALE` — previously true or plausible, but no longer current.
@@ -78,7 +78,6 @@ Use these labels exactly.
 - `PARTIALLY_IMPLEMENTED`
 - `WIRED_BUT_BROKEN`
 - `IMPLEMENTED_BUT_DEAD_CODE`
-- `TEST_ONLY`
 - `PROTOTYPE_ONLY`
 - `DESIGNED_NOT_IMPLEMENTED`
 - `RESEARCH_ONLY`
@@ -91,7 +90,6 @@ Use these labels exactly.
 - `IN_REVIEW`
 - `BLOCKED`
 - `IMPLEMENTING`
-- `TESTING`
 - `VERIFIED`
 - `DEFERRED`
 - `REJECTED`
@@ -101,13 +99,13 @@ Use these labels exactly.
 
 For current implementation questions, prefer evidence in this order:
 
-1. Reproducible runtime result and test output.
-2. Current source code plus verified runtime wiring.
-3. Build artifacts and configuration actually used.
-4. Current tests and fixtures.
-5. Current documentation.
+1. Current source code plus verified runtime wiring (first-principles manual audit).
+2. Reproducible deterministic scenario execution, CLI inspection, and binary replay dumps.
+3. Build artifacts, wire protocol schemas, and configuration actually used.
+4. Historical test records (preserved for context, retired as active proof under Hard Rule 9).
+5. Current documentation and system map.
 6. Historical chats, archives, audits, and status reports.
-7. External research and assistant suggestions.
+7. External research and assistant proposals.
 
 This order does not make a lower source unimportant. It determines what may be called a current implementation fact.
 
