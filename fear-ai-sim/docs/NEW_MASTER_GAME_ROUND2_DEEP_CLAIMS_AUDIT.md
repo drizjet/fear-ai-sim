@@ -1,6 +1,6 @@
 # New Master Game (Pixel-Pets) — Round 2 Deep Claims Audit & Engine Compendium
 
-**Document Version**: 2.5.0-PROD-VERIFIED-EXHAUSTIVE  
+**Document Version**: 3.0.0-DEFINITIVE-ENGINE-COMPENDIUM  
 **Date**: September 16, 2026  
 **Auditor**: Antigravity Cognitive Assistant  
 **Target Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (`pixel-pets`)  
@@ -21,7 +21,7 @@ Beyond verifying the initial 12 claims, this Round 2 audit uncovers the full tec
 - **Confirmed Accurate**: 5 claims (Architectural two-layer model, Win32 transparent overlay lifecycle, fear memory decay shape, async audio isolation, advisory whitelist isolation pattern).
 - **Substantially Expanded & Refined**: 5 claims (Faction count expanded from "6+" to 49; Autonomous actions expanded from 9 to 20; Needs meters expanded from 4 to 6; Combat postures corrected from 6 mixed concepts to 6 formal variants; Damage types expanded from 5 profiles to 28 concrete enum variants).
 - **Corrected Distinctions**: 2 claims (Separation of Match Pacing vs Fear Pacing, and TargetType enum vs Desktop Boundary Clamping).
-- **New Subsystems Cataloged**: 10 additional mechanical systems fully audited from first-principles source code.
+- **New Subsystems Cataloged**: 20 additional mechanical systems fully audited from first-principles source code (10 in v2.5.0 + 10 in v3.0.0).
 
 ---
 
@@ -191,6 +191,118 @@ In `src/engine/crowd_density.rs:18-40`:
 - `max_density = 0.9` (units stop completely / gridlock).
 - `lane_lookahead = 60.0px`, `lane_strength = 0.5`.
 - Computes local pressure, flow direction, and density to model realistic panic stampedes and bottleneck crushes.
+
+
+### 4.11 External Host Fear AI Bridge Pipeline
+In `src/engine/ai/fear_ai_bridge.rs:1-242`:
+- **Architecture**: Implements the official bidirectional bridge adhering strictly to the **Host Game Authority Invariant**.
+- **Sensory Perception (`create_observation`)**:
+  - Sensory search radius: `search_radius = 280.0px` (`search_radius_sq = 78400.0`).
+  - Scans active units for: `nearest_enemy_dist`, `nearby_allies_count`, `nearby_enemies_count`, `is_near_leader`, and `is_near_trauma` (trauma exposure > 0.5s or within radius of any world trauma anchor).
+- **Fear & Morale Advisory Dynamics (`evaluate_advisory`)**:
+  - Distance threat attenuation: $\text{max\_threat} = \frac{1.0}{1.0 + 0.01 \cdot \text{dist}}$.
+  - Bravery attenuation factor: $\text{bravery\_factor} = \text{bravery} \cdot 1.5 + 0.25$.
+  - Base ratio: $\text{base\_ratio} = \frac{\text{max\_threat} \cdot 3.5}{\text{bravery\_factor}}$.
+  - Numerical disadvantage pressure: $\text{numerical\_pressure} = 0.8 + \min\left(2.0, \frac{\text{enemies} + 1}{\text{allies} + 1} \cdot 0.4\right)$.
+  - Contextual modifiers: $\times 1.5$ if near trauma anchor; $\times 0.5$ if near faction leader.
+- **Psychoacoustic Cardiac & Shock Engine**:
+  - Heart rate mapping: $\text{cardiac\_bpm} = 60 + \text{norm\_fear} \cdot 120$ (60 to 180 BPM).
+  - Arrhythmia Shock trigger: $\text{norm\_fear} \ge 0.80 \land \Delta f \ge 2.0$ (sudden fear spike at high panic).
+- **Advisory Serialization (`to_brain_intent_json`)**:
+  - Packages advice into sanitized `BrainIntent` JSON with `intent_type: "morale_response"`, recommended actions, duration weights, and UI text, dispatched via `world.submit_brain_intent_json()` through host whitelist verification.
+
+### 4.12 Tactical Pack Coordination & Multi-Agent Swarm Dynamics
+In `src/engine/ai/pack_coordination.rs:1-214`:
+- **Role Assignments (`PackMemberRole`)**: `AlphaLeader`, `FlankerLeft`, `FlankerRight`, `Chaser`, `RearGuard`, `Bait`, `Harasser`.
+- **Formations (`SquadTacticalFormation`)**: `CircularPincer`, `VFormation`, `CrescentSurround`, `StaggeredLine`.
+- **Tactical Phases (`SquadTacticalPhase`)**: `Stalking`, `Encircling`, `FeintProbe`, `SynchronizedStrike`, `ScatterDisperse`, `Regrouping`.
+- **Alpha Leader Selection Algorithm**:
+  - Composite leadership score:
+    $S = 0.40 \cdot \text{role\_weight} + 0.35 \cdot \text{bravery} + 0.25 \cdot (1.0 - \text{norm\_fear}) + \text{continuity\_bonus}$
+  - Role weights: Defender (0.9), Attacker (0.8), Generalist (0.6), Support (0.4), Harvester (0.2).
+  - Continuity bonus: +0.15 for existing leader to prevent tactical hysteresis/flip-flopping.
+- **Alpha Fall Catastrophe**:
+  - If the Alpha panics (`is_panicked()`), squad formations immediately break (`active_formations = false`), squad objective transitions to `SquadObjective::DeepRetreat`, all members assign `TacticalIntentTag::SquadPanicRegroup`, and speech line "Leader panicked! Fall back!" triggers.
+- **Alpha Morale Damping**:
+  - When the Alpha is calm ($\text{norm\_alpha\_fear} < 0.28$):
+    $\text{buffer\_factor} = 1.0 - 0.35 \cdot (1.0 - \text{norm\_alpha\_fear})$
+  - Subordinate unit fear scores are dampened by `buffer_factor` each tick while non-panicked.
+
+### 4.13 Tactical Intent Speech & Communication Subsystem
+In `src/engine/rts/tactical_intent.rs:1-186`:
+- **Catalog**: 64 typed enum variants across 13 distinct tactical intent categories:
+  - *Core Movement / Retreat (7)*: `Idle`, `Retreat`, `RetreatToHQ`, `DeepRetreat`, `FallBack`, `FallbackAndRecover`, `FallbackSaferLane`, `ControlledWithdrawal`.
+  - *Comfort & Recovery (6)*: `SeekComfort`, `Recover`, `RecoverSafePocket`, `Regrouping`, `RegroupAtSanctuary`, `RegroupStableGround`.
+  - *Defensive Postures (5)*: `HoldCover`, `HoldLine`, `AnchorDefense`, `FortifySanctuary`, `Blocking`.
+  - *Avoidance (4)*: `AvoidRisk`, `AvoidHotspot`, `AvoidTransportChoke`, `AbandonFlank`.
+  - *Offensive / Aggression (6)*: `Flanking`, `Suppressing`, `HarassFlank`, `RaidExposedTarget`, `SurgeCounterpush`, `FocusBoss`.
+  - *Rally & Stabilize (4)*: `Rally`, `Stabilize`, `StabilizeFear`, `StabilizeSupportCorridor`.
+  - *Spread & Reposition (9)*: `SpreadOut`, `SecureObjective`, `PatrolPerimeter`, `ShiftSaferLane`, `ShiftAwayBadGround`, `RerouteHarvest`, `UseTransportCorridor`, `RotateOffFrontline`, `RotateOntoFrontline`.
+  - *Support & Escort (4)*: `ProtectSupport`, `EscortPriority`, `TriageSupportLane`, `CoverTriageCorridor`.
+  - *Alert Posture (4)*: `RaiseAlert`, `LowerAlert`, `EnableVoiceLines`, `StaggerRelief`.
+  - *Fear & Panic Dynamics (8)*: `PanicEnter`, `PanicShout`, `PanicBreaker`, `TurnFearIntoFury`, `SectorPanicFallback`, `SectorPanicHoldCorridor`, `PanicFrontRotate`, `SquadPanicRegroup`.
+  - *Event-Driven (2)*: `EventPressurePreserve`, `EventObjectivePush`.
+  - *Faction Flavor (4)*: `FactionRetreat`, `FactionFearBand`, `ForTheHomeworld`, `Freedom`.
+
+### 4.14 Neural Director AI & Battlefield Intervention Loop
+In `src/engine/rts/director.rs:1-102`:
+- **Stress Analysis Function**:
+  $\text{stress\_level} = \text{clamp}\left(0.0, 1.0, \text{trauma\_heatmap.len()} \cdot 0.05 + (1.0 - \text{chaos\_harmony\_01})\right)$
+- **Adaptive Interventions (Cadence: Every 300 Fixed Ticks / 4.8s)**:
+  - *MERCY Event* (Stress > 0.8): Triggers "MERCY: The Director grants a momentary respite", decrements chaos by 0.10.
+  - *ESCALATION Event* (Stress < 0.2): Triggers "ESCALATION: The Director demands entertainment. Factions are pushed to conflict", increments chaos by 0.15.
+- **Dynamic Diplomacy Shift (Cadence: Every 1,000 Fixed Ticks / 16.0s)**:
+  - Selects two random factions and mutates their bilateral diplomatic alignment.
+
+### 4.15 Butterfly Effect (Entropy & Equilibrium Drift)
+In `src/engine/rts/butterfly_effect.rs:1-130`:
+- **Equilibrium Constants**: `BUTTERFLY_EQUILIBRIUM = 0.5`, `BUTTERFLY_DECAY_RATE = 0.005/s`.
+- **Proximity Analysis (Every 25 Ticks)**:
+  - Scans units within 100px radius via Spatial Grid:
+    - Interspecies Combat: +0.0005 chaos.
+    - Interspecies Synergy: -0.0008 chaos (+0.0008 harmony).
+- **Threshold Events (Every 500 Ticks / 8.0s)**:
+  - Chaos > 0.85: Triggers "WORLD CHAOS: The battlefield is consumed by entropy. Bosses are drawn to the carnage."
+  - Harmony < 0.15: Triggers "WORLD HARMONY: Peaceful resonance envelops the land."
+
+### 4.16 Apex Entities (Roaming World Bosses: Luminary & Null-Beast)
+In `src/engine/rts/apex_entities.rs:1-795`:
+- Roaming neutral leviathans functioning as dynamic environmental forces:
+  - **Luminary** (Light / Sanctuary): 5,000 HP, 300px aura radius, 150 damage, 200px attack range, 30px/s speed, +50% life regen buff, +25% crystal yield buff, 0.6 sanctuary strength. Leaves behind `sanctuary_grove` biome.
+  - **Null-Beast** (Void / Dread): 5,000 HP, 300px aura radius, 150 damage, 200px attack range, 30px/s speed, 0.15 fear damage, 0.12 dread pressure, +40% flesh buff, +35% void buff. Leaves behind `deadzone` biome.
+- **Enraged Phase**: At < 30% HP, damage multiplier increases to 1.5x with 2.0s attack cooldown.
+- **Siphon & Scavenge**: Factions can deploy siphons (150px range, 2.0/s drain) or scavenge radiant shards/void matter (15-30 units).
+
+### 4.17 Triangulated Navmesh Pathfinding
+In `src/engine/navmesh.rs:1-851`:
+- **Architecture**: 2D triangulated mesh with portal-based pathfinding utilizing the **Funnel Algorithm** (Simple Stupid Funnel Algorithm / SSFA) for Euclidean shortest path generation.
+- **Point Containment**: Barycentric coordinate technique with floating-point tolerance $10^{-4}$.
+- **Dual Representation**: Complements Flow Fields; Navmesh is utilized for precision single-entity navigation around complex fortifications, while Flow Fields handle collective swarms.
+
+### 4.18 Flow Field Group Movement & Vector Fields
+In `src/engine/flow_field.rs:1-537`:
+- **Architecture**: Dense 2D grid storing precomputed normalized unit direction vectors $(dx, dy)$ pointing toward global goals.
+- **Traverse Cost Map**: Supports obstacle cost clamping `[0.1, 255.0]` with distance propagation queue via BFS.
+- **Cache Invalidation**: Generation timestamps (`generation: u64`) and dirty flags prevent redundant recalculations for identical squad targets.
+
+### 4.19 External IPC Trigger Drain Subsystem
+In `src/engine/trigger_drain.rs:1-509`:
+- **Purpose**: Dedicated IPC workflow allowing brain and intent computation to be offloaded to external processes/threads without blocking the main engine thread.
+- **Configuration**: `max_trigger_queue = 100`, `external_timeout_ms = 5000ms`, `batch_size = 10`.
+- **Lifecycle States**: `Pending -> Sent -> Processing -> Completed | Failed | Timeout`.
+- **Backpressure Mechanism**: Applies throttling when queues exceed capacity, protecting engine frame rate.
+
+### 4.20 Economy Engine, Signature Trickle Rates & Named Buildings
+In `src/engine/economy.rs:1-3438`:
+- **Signature Passive Generation**:
+  - Formula: $\text{base\_rate} = \text{clamp}(0.05, 2.0, \text{starting\_amount} \cdot 0.005)$.
+- **Signature Surcharges & Ability Costs**:
+  - Superstructure surcharge: 60 units.
+  - Production building surcharge: 25 units.
+  - Support building surcharge: 20 units.
+  - Activated ability cost: 30 units; Signature spell cost: 50 units.
+- **14 Canonical Named Gathering Buildings (MECH-24)**:
+  - Ossuary (2.0/s), Mineral Pool (3.0/s), Spore Colony (5.0/s), Coal Deposit (4.0/s), Liquid Spring (4.0/s), Web Spire (3.0/s), Amber Pool (2.0/s), Coral Reef (3.0/s), Lumber Mill (2.5/s), Carving Hall (3.5/s), Bone Tithe Altar (2.5/s), Kiln Works (3.0/s), Sunwell (4.0/s), Pearl Bed (3.5/s).
 
 ### 4.10 Expressive Presentation & Emotes
 In `src/engine/emotes.rs:30-100`:
