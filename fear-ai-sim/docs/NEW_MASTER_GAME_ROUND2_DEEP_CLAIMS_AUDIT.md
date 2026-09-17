@@ -1,6 +1,6 @@
 # New Master Game (Pixel-Pets) — Round 2 Deep Claims Audit & Engine Compendium
 
-**Document Version**: 5.0.0-FINAL-AUTHORITATIVE-COMPENDIUM  
+**Document Version**: 6.0.0-COMPLETE-SIMULATION-ATLAS  
 **Date**: September 16, 2026  
 **Auditor**: Antigravity Cognitive Assistant  
 **Target Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (`pixel-pets`)  
@@ -21,7 +21,7 @@ Beyond verifying the initial 12 claims, this Round 2 audit uncovers the full tec
 - **Confirmed Accurate**: 5 claims (Architectural two-layer model, Win32 transparent overlay lifecycle, fear memory decay shape, async audio isolation, advisory whitelist isolation pattern).
 - **Substantially Expanded & Refined**: 5 claims (Faction count expanded from "6+" to 49; Autonomous actions expanded from 9 to 20; Needs meters expanded from 4 to 6; Combat postures corrected from 6 mixed concepts to 6 formal variants; Damage types expanded from 5 profiles to 28 concrete enum variants).
 - **Corrected Distinctions**: 2 claims (Separation of Match Pacing vs Fear Pacing, and TargetType enum vs Desktop Boundary Clamping).
-- **New Subsystems Cataloged**: 40 additional mechanical systems fully audited from first-principles source code across 5 exhaustive verification passes.
+- **New Subsystems Cataloged**: 50 additional mechanical systems fully audited from first-principles source code across 6 exhaustive verification passes.
 
 ---
 
@@ -464,6 +464,116 @@ In `src/engine/rts/world_events.rs:1-225`:
 - **Dynamic Roaming Boss Catalog**: Master data ingestion from `ROAMING_BOSSES_AND_NEUTRALS_MASTER_TABLE.json`.
 - **Severity Scaling**: High-severity events scale pressure and pulse intensity by $1.0\times$; standard events scale by $0.7\times$.
 - **Area Pulses**: Default boss ability `METEOR_SHOWER`; default non-boss ability `SHOCK_PULSE`. Computes continuous participant pressure, building damage events, and unit damage events across the simulation grid.
+
+
+### 4.41 Live Fear Trigger & Tactical Posture Computation
+In `src/engine/rts/systems/unit_update_fear.rs:82-160`:
+- **Fear Trigger Base Formula**:
+  $\text{fear\_trigger} = 1.15 + (1.0 - \text{bravery}) \cdot 1.35 + (\text{morale\_01} - 0.5) \cdot 0.45 - (\text{panic\_pressure\_01} \cdot 0.34) - (\text{boss\_dread\_01} \cdot 0.2)$
+  - Network & Formation: $+ (0.12 + \text{network\_stacks} \cdot 0.04)$ and $+ (\text{formation\_bonus\_stacks} \cdot 0.06)$.
+  - Advisory Nudges: Hold Line ($+0.28$), Retreat to HQ ($-0.24$), Stabilize ($-0.08$), Fallback ($-0.10$), Panic Breaker ($-0.14$).
+  - Trauma Dampeners: Clamped penalty up to $-0.24$ from fresh/scar/legacy trauma pressures.
+  - Final Trigger Clamping: $\text{fear\_trigger} = \text{clamp}(0.45, 4.0)$.
+- **Combat Commit Condition**:
+  $\text{commit\_ready} = (\text{enemy\_strength} > 0) \land \left(\text{threat\_ratio} < \text{fear\_trigger} \cdot (0.72 + \text{stance\_bias}) \cdot \text{commit\_tol}\right) \land (\text{retreat\_timer} \le 0)$
+
+### 4.42 Unit Kill & Building Destruction Economy Bounties
+In `src/engine/rts/systems/unit_update_combat.rs:31-98`:
+- **Unit Kill Bounties (Banna Coins)**:
+  $\text{bounty} = \left\lceil \text{role\_base} \cdot (1.0 + \text{rank} \cdot 0.5) \right\rceil$
+  - Base values: Harvester (1), Support (2), Generalist (2), Attacker (3), Defender (4). Rank multiplier provides up to $+250\%$ at rank 5.
+- **Building Destruction Bounties**:
+  - HQ / World Wonder: 20 Banna Coins.
+  - SuperStructure / Castle: 15 Banna Coins.
+  - Production (Spawner, Tesla Coil, Phoenix Nest, Modular Workshop, Gravity Well): 8 Banna Coins.
+  - Support (Prism Tower, Hive Node, Web Anchor, Temporal Vault, Mirage Generator, Echo Chamber): 5 Banna Coins.
+  - Economy (Resource Generator, Solar Collector, Healing Garden, Fluid Pool): 3 Banna Coins.
+  - Walls: 2 Banna Coins.
+
+### 4.43 Asymmetric Alliance Shifts & Promotion Buffs (GAP-44 / GAP-45)
+In `src/engine/rts/systems/victory.rs:15-172`:
+- **Combat Aggression Attitude Erosion**: Every combat damage tick between faction pairs erodes attitude by $-1$ point per tick (`COMBAT_AGGRESSION_ATTITUDE_DELTA = -1`).
+- **7-State Political Threshold Promotion**:
+  - Threshold crossing into **Buff States** (`Allied`, `Hostile`, `War`, `AtWar`) registers an `AllianceBuff`:
+    - Allied: Damage Multiplier $1.25\times$, Vision $+2\text{ cells}$.
+    - Hostile: Damage Multiplier $0.85\times$, Vision $-1\text{ cells}$.
+    - War: Damage Multiplier $0.70\times$, Vision $-2\text{ cells}$.
+    - AtWar: Damage Multiplier $0.55\times$, Vision $-3\text{ cells}$.
+  - Non-buff states (`Neutral`, `Friendly`, `Tense`) purge registry rows.
+- **Post-Victory Trust Hit**: When a faction wins a match, all losing factions' attitudes toward the winner drop by $-10$ points (`POST_VICTORY_ATTITUDE_SHIFT = -10`).
+
+### 4.44 Alternative Faction Victory Conditions
+In `src/engine/rts/systems/victory.rs:218-287`:
+- **Bespoke Win Conditions Beyond Annihilation**:
+  - Star-Fallers: Meteor Accumulation (8 meteors needed).
+  - Moss-Beards: Healing Threshold (400.0 total healing done).
+  - Cinder-Kith: Building Destruction (3 enemy buildings destroyed).
+  - Bone-Singers: Necromancy Threshold (5 skeletons raised).
+  - Weaver-Imps: Map Control (control $\ge 25\%$ of territory with webs).
+  - Hydrosanguines: Mega-Merge (reach merge count of 2+).
+  - Ember-Runners: Ignition Threshold (ignite 8 enemy units).
+  - Void-Leeches: Essence Drain (drain 200.0 essence).
+  - Amber-Guards: Time Freeze Duration (accumulate 15.0s time freeze).
+  - Gale-Stalkers: Aerial Dominance (6 kills while flying).
+  - Clockwork: Automation Count (maintain 8 automated units).
+  - Bananafolk: Slip Score (8 successful slip points).
+
+### 4.45 Status Stacking Diminishing Returns & Base Rates
+In `src/engine/rts/systems/status_effects.rs:12-76`:
+- **Base DoT Rates**:
+  - Burn: 5.0 DPS base (`BURN_BASE_DPS = 5.0`).
+  - Poison: 3.0 DPS base (`POISON_BASE_DPS = 3.0`).
+  - Bleed: 3.0 DPS base (`BLEED_BASE_DPS = 3.0`, 5.0s hold duration).
+- **Cinder-Kith Fire Reversal**: Cinder-Kith units are not only immune to fire but heal $+2.0\text{ HP/s}$ while burning.
+- **3-Source Diminishing Returns (COMBAT_FORMULAS.md)**:
+  - Source 1: $100\%$ ($1.0\times$).
+  - Source 2: $70\%$ ($0.7\times$).
+  - Source 3: $40\%$ ($0.4\times$).
+  - 4th+ Source: Hard cap ($0.0\times$ multiplier, no additional stacking).
+
+### 4.46 Elemental Status Reactions & Interaction Matrix
+In `src/engine/rts/systems/status_interactions.rs:1-120`:
+- **6 Canonical Status Combos**:
+  1. *Burning + Wet* $\to$ **Steam**: Both effects clear immediately; targets suffer a $2.0\text{s}$ blind.
+  2. *Frozen + Fire* $\to$ **Thaw**: Frozen ends immediately; incoming fire damage is neutralized.
+  3. *Poison + Healing* $\to$ **Toxification**: Incoming healing magnitude is halved ($-50\%$ reduction).
+  4. *Stunned + Fear* $\to$ **Terror Lock**: Stun duration extended by $+2.0\text{s}$.
+  5. *Entangled + Burning* $\to$ **Flash Fire**: Fire spreads faster across connected web/root terrain.
+  6. *Bleeding + Bonecraft* $\to$ **Vampiric Drain**: Non-possessed Gnaw-Legion units heal from inflicted bleed.
+
+### 4.47 Faction Ultimate Abilities & Resolution Engine
+In `src/engine/rts/systems/ability_ultimates/resolve.rs:1-100`:
+- **Tier 3+ Faction Ultimates**:
+  - Cinder-Kith (*Cinder Wildfire*): AoE burst dealing 16.0 damage, 2.8s burn, 2.0s haste, and seeds `cinder_wildfire` terrain pulse.
+  - Lithodrom (*Crystal Aegis*): Self 4.0s shield and 3.0s fortify; allies within radius gain 2.4s shield; triggers deterministic `LITHODROM_CRYSTAL_AEGIS` visual presentation cue.
+  - Mycelian (*Spore Bloom*): Global network heal ($10.0\times$ recovery multiplier, min 4.0 HP).
+
+### 4.48 Post-Mortem Building & Unit Death Behaviors
+In `src/engine/rts/systems/cleanup/death_behaviors.rs:11-220`:
+- **Building Death Behaviors**:
+  - `AreaDamage`: Explodes on destruction, applying typed damage (Fire, Ice, Sonic, Void, etc.) scaled by cross-faction synergy registry.
+  - `AreaHeal`: Emits healing burst to nearby allies (or enemies if `heals_enemies: true`).
+  - `SpawnTerrain`: Plants persistent hazard tiles (Lava, Acid, Blight) upon collapse.
+  - `DiseaseCloud` & `SilenceScar`: Leaves behind lingering debuff zones.
+- **Combat Fx Death Dispatch**: Instantiates `CombatFxKind::Death` with coordinates and tick timestamp.
+
+### 4.49 Building Zone Control & Defensive Auras
+In `src/engine/rts/systems/zone_control/building_zone_control.rs:11-120`:
+- **Dynamic Aura Radii**:
+  $\text{radius} = \text{clamp}\left(24.0, 128.0, (\max(w, h) \cdot 0.55) \cdot \text{building\_defense\_radius\_multiplier}\right)$
+- **Integrated Zone Effects**: Resolves static defense coverage, hostile event crisis pressure, allied support auras, transport lattice routes, and passive status auras across 39 building patterns.
+
+### 4.50 Spawner Tech Progression & Faction Inherent Scaling
+In `src/engine/rts/systems/unit_spawner.rs:77-160`:
+- **Global Tech Tier Scaling**:
+  $\text{max\_hp\_mult} = \text{clamp}(1.0, 1.2, 1.0 + \text{tier} \cdot 0.06), \quad \text{damage\_mult} = \text{clamp}(1.0, 1.14, 1.0 + \text{tier} \cdot 0.045)$
+  - Bravery: $+ (\text{stability\_01} \cdot 0.18 + \text{tier} \cdot 0.04)$.
+  - Fear Recovery: $+ (\text{momentum\_01} \cdot 0.08 + \text{tier} \cdot 0.02)$.
+- **Faction-Specific Inherent Spawn Modifiers**:
+  - Lithodrom: $+0.06$ Fear Resistance, $-6\%$ block cooldown per tier.
+  - Cinder-Kith: $+3\%$ damage, $+2.5\%$ damage per tier, $+4\%$ speed from momentum.
+  - Clockwork: $-2\%$ attack cooldown, $-3\%$ block cooldown per tier.
+  - Spark-Mice: $+5\%$ speed baseline, $+2\%$ speed per tier, $-3\%$ attack cooldown.
 
 ### 4.40 Director Runtime Drama Pacing & Advisory Loop
 In `src/engine/rts/director_runtime.rs:1-294`:
