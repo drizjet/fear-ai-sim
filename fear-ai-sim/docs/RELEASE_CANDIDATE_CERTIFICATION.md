@@ -40,7 +40,7 @@ status: active
 | Adapter conformance (new) | `node tools/verification/verify_adapter_conformance.mjs` | PASS (123/123 assertions; C# handshake advertises `engine=CSharp`) |
 | Moral dissonance (new) | `node tools/verification/verify_moral_dissonance.mjs` | PASS (110/110 assertions) |
 | FABE personas (new) | `node tools/verification/verify_fabe_personas.mjs` | PASS (53/53 assertions) |
-| Host skirmish audit | `cargo run --bin audit_fear_ai_connection` | Recorded PASS in sibling evidence at named commits; not rerun against the current dirty host checkout during this audit |
+| Host skirmish audit | `cargo run --manifest-path pixel-pets/Cargo.toml --bin audit_fear_ai_connection` | Historical diagnostic PASS is recorded, but a clean descendant rebuild failed with E0583 because `src/overlay/persistence_restore.rs` is absent from the named commit; see `evidence/host_rebuild_attempt_2026-09-19.md` |
 | C# adapter build | `dotnet build packages/adapters/csharp/FearAI.Client.csproj` | Recorded 0 warnings, 0 errors in the Phase 1 evidence; not rerun in this audit |
 
 Current JS evidence: **13 runtime Node verification harnesses — zero failures in this audit — plus 1 release-claim document tripwire and 1 metadata-only performance measurement.** Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
@@ -92,7 +92,7 @@ Current JS evidence: **13 runtime Node verification harnesses — zero failures 
 - **Persistence attachment boundary**: serialized middleware state does not include host-owned identity-architecture objects; a host must reattach them before claiming attached identity parity.
 - **Dashboard causal boundary**: `/api/causal` verifies `CausalEventGraph`, not `WorldCounterfactualEngine`; the direct world-fork engine is proven separately and is not claimed as a dashboard wrapper.
 - **Reconnect ownership boundary**: reconnect identity continuity is proven for the server-scoped model; disconnect-driven retirement, per-connection ownership, and duplicate-client arbitration are not certified.
-- **Clean provenance gap**: the sibling host checkout is dirty at the time of this audit, so its named evidence commits are retained but not treated as a fresh clean-worktree certification.
+- **Clean provenance/build gap**: the sibling host checkout is dirty at the time of this audit, and the fresh clean descendant rebuild failed before the diagnostic binary ran because the named host commit lacks the untracked `src/overlay/persistence_restore.rs` module. Its named evidence is retained as historical bounded evidence, not as a reproducible clean-worktree certification.
 
 Human evaluation remains **BLOCKED / NOT EXECUTED** for the experimental FABE research, and the overall RC1 gate remains open.
 
@@ -128,8 +128,8 @@ The thirteen JS runtime verification commands and the release-claim document tri
 ---
 
 ## 5. Authority & provenance
-- Ledger: `docs/CURRENT_TRUTH_LEDGER.md` v1.3.2-PROVISIONAL (authoritative row-level mapping).
-- Evidence: `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, `evidence/js_runtime_performance_2026-09-19.md`, `evidence/rust_js_parity_vectors.json`.
+- Ledger: `docs/CURRENT_TRUTH_LEDGER.md` v1.3.3-PROVISIONAL (authoritative row-level mapping).
+- Evidence: `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, `evidence/host_rebuild_attempt_2026-09-19.md`, `evidence/js_runtime_performance_2026-09-19.md`, `evidence/rust_js_parity_vectors.json`.
 - Harness sources: `tools/verification/*.mjs` (13 current runtime proofs, the release-claim document tripwire, and the metadata-only performance measurement named above).
 - Host fixes: `pixel-pets/src/bin/audit_fear_ai_connection.rs`, `pixel-pets/src/engine/formation_geometry.rs`, `pixel-pets/src/overlay_audio.rs` (commit `91af8f957`); audit extended to the faction matrix + 2,000-tick + formation-stress pass in `e2090880a`; latency gate + live squad-path stress + tick scaling probe in `f3f5e8d25`.
 - Superseded records: `docs/CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `docs/NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md`, `docs/NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md`, `docs/NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md`, `docs/FAILURE_AND_LIFECYCLE_MATRIX.md`, and `evidence/manual-source-code-audit-dossier.md` are historical and must not be used to promote the current provisional verdict. `evidence/middleware-progress-evidence.json` is a dated progress ledger, not a current release authority.

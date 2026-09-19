@@ -43,7 +43,7 @@ const currentSurfaces = [
     ['docs/README.md', 'They are the authoritative current claim surfaces.'],
     ['docs/SYSTEM_MAP.md', 'not a blanket release certification'],
     ['docs/CURRENT_TRUTH_LEDGER.md', '`SCENARIO_VERIFIED`'],
-    ['docs/CURRENT_TRUTH_LEDGER.md', '`PARTIAL (RECORDED_HOST_EVIDENCE)`'],
+    ['docs/CURRENT_TRUTH_LEDGER.md', '`PARTIAL (UNREPRODUCIBLE_RECORDED_HOST_EVIDENCE)`'],
     ['docs/CLAIM_TO_CODE_AUDIT_2026-09-19.md', 'it is not a universal integration claim'],
     ['docs/RELEASE_CANDIDATE_CERTIFICATION.md', 'RELEASE CANDIDATE: PROVISIONAL / NOT CERTIFIED'],
     ['docs/RELEASE_CANDIDATE_CERTIFICATION.md', 'overall RC1 gate remains open'],

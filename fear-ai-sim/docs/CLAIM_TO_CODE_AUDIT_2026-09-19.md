@@ -164,7 +164,7 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** the proof is bounded to the `FrontierValleySimulation` summary fields and direct CLI/engine path. `DesignerDashboardServer` `/api/causal` constructs `CausalEventGraph`, a separate deterministic vignette, and is not presented as a dashboard wrapper for this world-fork engine.
 - **Last verified / strength:** 2026-09-19; deterministic report replay, source/factual-branch isolation, macro and settlement-only effects, no-op invariance, and invalid-input/target guards.
 
-### External Host Integration — `PARTIAL (RECORDED_HOST_EVIDENCE)`
+### External Host Integration — `PARTIAL (UNREPRODUCIBLE_RECORDED_HOST_EVIDENCE)`
 
 - **Repository / commit:** sibling `New Master Game@f3f5e8d25` and descendants recorded in `evidence/audit_fear_ai_connection_extended_2026-09-19.md`.
 - **Source / symbol:** `pixel-pets/src/engine/ai/fear_ai_bridge.rs::FearAiBridge::tick_unit_advisory`; audit binary `pixel-pets/src/bin/audit_fear_ai_connection.rs`.
@@ -172,9 +172,9 @@ and it does not certify the whole repository as RC1.
 - **Actual consumer:** host whitelist and `BrainDirector` → `GoapPlanner` advisory path.
 - **Persistence owner:** Pixel Pets host save matrix, not Fear AI JS.
 - **Authority boundary:** bridge reads host observations and submits advisory JSON; host owns transforms, HP, physics, and combat.
-- **Proof artifact:** `evidence/audit_fear_ai_connection_extended_2026-09-19.md` and `evidence/host_sim_tick_profiling_2026-09-19.md`.
-- **Known limitation:** evidence is tied to named sibling commits; the current sibling working tree is dirty and was not rebuilt in this audit.
-- **Last verified / strength:** recorded 2026-09-19; strong bounded diagnostic evidence, not a clean-worktree universal-host certification.
+- **Proof artifact:** `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, and the failed clean rebuild record `evidence/host_rebuild_attempt_2026-09-19.md`.
+- **Known limitation:** a fresh rebuild from clean descendant `d8ec1715c` failed before the diagnostic binary ran because `src/overlay/mod.rs` declares `persistence_restore` while `src/overlay/persistence_restore.rs` is absent from both `d8ec1715c` and the named evidence commit `f3f5e8d25`. That module exists only as an untracked file in the current dirty host checkout.
+- **Last verified / strength:** recorded diagnostic evidence exists, but clean provenance is currently unreproducible; this is not a clean-worktree universal-host certification.
 
 ## Downgraded or excluded claims
 
