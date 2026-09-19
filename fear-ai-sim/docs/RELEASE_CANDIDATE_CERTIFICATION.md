@@ -12,7 +12,7 @@ status: active
 **Date**: September 19, 2026
 **Campaign**: Continuous Closure Phases 1–4 (Muse Spark / OpenCode)
 **Repositories**:
-- Fear AI: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim` (current audited checkout: `48ba30a`; claim-boundary changes are documentation-only descendants of `625ce5b`; working tree is clean)
+- Fear AI: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim` (runtime audit baseline: `625ce5b`; current working tree is clean and later claim-boundary commits are documentation-only descendants)
 - Host: `C:\tools\03-Projects\lains Tools\New Master Game` (branch `codex/canonical-consolidation-2026-08-12`, commits `91af8f957` → `e2090880a` → `f3f5e8d25`)
 **Standard**: Reconciled Evidence Protocol — Hard Rule 9 (zero automated test runners; static review + standalone deterministic proofs only).
 **Invariants**: Host retains 100% authority over transforms, physics, collision, damage, inventory. Fear AI emits strictly non-mutating advisory intents and affective states.
