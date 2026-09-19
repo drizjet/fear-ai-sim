@@ -1,18 +1,19 @@
 ---
-title: Fear AI Failure, Transport, and Lifecycle Conformance Matrix
+title: Historical Fear AI Failure, Transport, and Lifecycle Conformance Matrix
 created: 2026-09-06
-updated: 2026-09-07
+updated: 2026-09-19
 type: specification
-status: active
+status: historical-superseded
+superseded_by: "RELEASE_CANDIDATE_CERTIFICATION.md and current standalone verification probes"
 ---
 
-> Middleware failure matrix. Passing it is not Unity/Unreal verification. See `SYSTEM_MAP.md`.
+> **Historical record — not a current release gate.** This matrix describes an older test-runner-era inventory. Its references to 42 automated tests are not current audit evidence; the current audit intentionally uses versioned standalone probes and does not claim these historical suites were rerun. Passing this matrix is not Unity/Unreal verification. See `SYSTEM_MAP.md` and `RELEASE_CANDIDATE_CERTIFICATION.md`.
 
 # Fear AI Failure, Transport, and Lifecycle Conformance Matrix (42-Case Matrix)
 
 ## 1. Overview & Architectural Scope
 
-The reliability, stability, and fault-tolerance of the Fear AI Universal Middleware is enforced across **five dedicated conformance test suites comprising 42 automated tests**, spanning network transport, process lifecycle, input boundary validation, protocol versioning, and defensive subsystem fallbacks.
+The historical reliability inventory described five dedicated conformance suites comprising **42 automated tests**. That count is retained for provenance only; it is not a current statement about the release candidate's executed evidence.
 
 > [!IMPORTANT]
 > **Subsystem Qualification Boundary**: Software Mulberry32 fallback upon PRNG native-loader failure certifies that specific subsystem only. It does not certify uninstalled C++/Rust engine extensions or full-system native extension coverage.
@@ -27,7 +28,7 @@ graph TD
         T5["5. Persistence Migration & Schema Evolution - 5 Tests"]
     end
 
-    T1 --> STABILITY[Host Game Production Stability]
+    T1 --> STABILITY[Historical Middleware Stability Inventory]
     T2 --> STABILITY
     T3 --> STABILITY
     T4 --> STABILITY

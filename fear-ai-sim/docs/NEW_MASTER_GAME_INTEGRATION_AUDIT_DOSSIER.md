@@ -1,22 +1,25 @@
 ---
-title: "Fear AI & New Master Game: Definitive Full-Form Architectural & First-Principles Audit Dossier"
+title: "Historical Fear AI & New Master Game Integration Audit Dossier"
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-09-19
 type: audit-dossier
-status: verified-and-certified
-certification: 100% invariant compliance (8/8 sections passed)
+status: historical-superseded
+certification: historical-record-only
+superseded_by: "CURRENT_TRUTH_LEDGER.md and RELEASE_CANDIDATE_CERTIFICATION.md"
 ---
 
-# Fear AI & New Master Game (Pixel Pets)
-## Definitive Full-Form Architectural & First-Principles Audit Dossier
+# Historical Fear AI & New Master Game (Pixel Pets) Audit Dossier
+
+> **Historical record — not current release certification.** This dossier records a September 15, 2026 host diagnostic run. The current audit retains it as bounded historical evidence, but the current sibling host checkout is dirty and the recorded run was not rebuilt from that checkout. It must not be read as a current universal, complete, or production certification. See [`CURRENT_TRUTH_LEDGER.md`](CURRENT_TRUTH_LEDGER.md), [`CLAIM_TO_CODE_AUDIT_2026-09-19.md`](CLAIM_TO_CODE_AUDIT_2026-09-19.md), and [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md).
 
 ### Executive Summary & Certification Verdict
 On September 15, 2026, an exhaustive, local, first-principles audit was conducted on the entire live integration pipeline connecting the **Fear AI Universal Middleware** (`fear-ai-sim`) to the custom game engine **New Master Game** (`C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets`).
 
 The audit was executed via a dedicated, headless verification binary (`src/bin/audit_fear_ai_connection.rs`) exercising the actual Rust RTS simulation runtime against live combat units, squads, tactical directors, and spatial territory.
 
-**Final Certification Verdict**:
-**100% VERIFIED & CERTIFIED FOR PRODUCTION**.
+**Historical certification verdict recorded at the time**:
+**100% VERIFIED & CERTIFIED FOR PRODUCTION in that named September 15 diagnostic scope**.
+This historical verdict is superseded and is not a current RC1 or universal-host certification.
 All 8 verification sections passed with zero errors, zero warnings, zero state leaks, and absolute zero-mutation host authority compliance.
 
 ---
@@ -208,8 +211,8 @@ Target Path: C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets
 
 ---
 
-### Conclusion & Final Sign-Off
-The connection between **Fear AI Universal Middleware** and **New Master Game (Pixel Pets)** is complete, structurally sound, mathematically verified, and fully compliant with all architectural invariants.
+### Historical Conclusion & Sign-Off (Superseded)
+The named September 15 diagnostic run concluded that the connection between **Fear AI Universal Middleware** and **New Master Game (Pixel Pets)** was structurally sound within its tested scope and compliant with its recorded architectural invariants. That conclusion is historical and does not replace the current provisional release boundary.
 
 Signed-off:
 - Universal Middleware: Fear AI Protocol v1.0 / v2.0

@@ -1,16 +1,19 @@
 ---
-title: "Fear AI & New Master Game Complete Integration Specification"
+title: "Historical Fear AI & New Master Game Integration Specification"
 created: 2026-09-15
-updated: 2026-09-15
+updated: 2026-09-19
 type: specification
-status: verified
+status: historical-superseded
+superseded_by: "CURRENT_TRUTH_LEDGER.md and RELEASE_CANDIDATE_CERTIFICATION.md"
 ---
 
-# Fear AI & New Master Game (Pixel Pets) Integration Specification
+# Historical Fear AI & New Master Game (Pixel Pets) Integration Specification
+
+> **Historical record — not current release certification.** This specification captures a September 15, 2026 integration snapshot and its named host evidence. The current audit found that the sibling host checkout is dirty, several adapter paths are recorded rather than freshly rerun, and optional JavaScript world-simulation modules are not automatic `RuntimeSimulation` services. Use [`CURRENT_TRUTH_LEDGER.md`](CURRENT_TRUTH_LEDGER.md), [`CLAIM_TO_CODE_AUDIT_2026-09-19.md`](CLAIM_TO_CODE_AUDIT_2026-09-19.md), and [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md) for current status.
 
 ## 1. Executive Summary & Verification Policy
 
-This specification formally establishes the complete, production-grade integration between the **Fear AI Universal Middleware** and the custom game engine **New Master Game** (`C:\tools\03-Projects\lains Tools\New Master Game`), specifically its core Rust RTS and pet engine **`pixel-pets`**.
+This historical specification recorded the intended and observed integration boundary between the **Fear AI Universal Middleware** and the custom game engine **New Master Game** (`C:\tools\03-Projects\lains Tools\New Master Game`), specifically its core Rust RTS and pet engine **`pixel-pets`**. It does not establish the current release as complete or production-certified.
 
 ### Absolute Verification Policy (Hard Rule 9)
 - **Zero Automated Test Runners**: Under NO circumstances are test runners (`npm test`, `cargo test`, Jest, or automated test harnesses) executed. All 465 legacy test suites were permanently retired (67,524 lines deleted at tag `v-test-retirement-complete`).
@@ -162,9 +165,9 @@ All actions pass through `advisory_validation::IntentValidator` without rejectio
 
 ---
 
-## 6. Adapter Distribution Ecosystem Status
+## 6. Historical Adapter Distribution Snapshot (Not Current Verification)
 
-All 6 official adapters have been packaged and verified:
+The historical snapshot listed six packaged adapter artifacts. Their hashes are retained for provenance only; current verification gates and integration status are documented in the current release dossier and adapter READMEs:
 1. `fear-ai-rust.zip` (SHA256: `126825b4460c82eeba216cd7eb8ff779b46b352241096a8376d9e063d17c9926`)
 2. `fear-ai-godot.zip` (SHA256: `6a356a15f35350d7d21112465c9e108ed9c6d65239b255170db0d63824802a36`)
 3. `fear-ai-unity.zip` (SHA256: `fa568045c18e5729ea5cdee785b52e81185fa16c88228ab1c88418992e32fd4f`)
@@ -174,10 +177,10 @@ All 6 official adapters have been packaged and verified:
 
 ---
 
-## 7. Certification & Sign-Off
+## 7. Historical Sign-Off (Superseded)
 
 - **Host Game Codebase**: `C:\tools\03-Projects\lains Tools\New Master Game` (`pixel-pets`)
 - **Universal Middleware Codebase**: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`
-- **Compiler Status**: `cargo check` passed with 0 errors across all targets.
-- **Host Game Authority Status**: 100% CLEAN. Zero host physics or state mutations.
-- **Hard Rule 9 Status**: 100% COMPLIANT. Zero automated test runners executed.
+- **Historical compiler status**: `cargo check` was recorded as passing with 0 errors across the named targets; this is not a current clean-worktree result.
+- **Historical host-authority result**: named runs recorded zero host physics or state mutations; this is not a current host certification.
+- **Historical Hard Rule 9 record**: the snapshot recorded zero automated test runners; current release evidence is governed by the provisional RC dossier and its standalone-proof policy.

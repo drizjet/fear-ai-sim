@@ -10,6 +10,7 @@
     "test": "npm run verify:hard-rule-9",
     "verify:hard-rule-9": "node -e \"console.log('Hard Rule 9: All 465 test suites retired across 47 manual audit batches. Zero automated test runners enforced.'); process.exit(0)\"",
     "lint:evidence": "node evidence/lint.mjs",
+    "verify:release-claims": "node tools/verification/verify_release_claim_boundaries.mjs",
     "evidence:migrate": "node evidence/migrate.mjs",
     "evidence:seed": "node evidence/seed-slice-coverage.mjs",
     "guardian:check": "node tools/guardian/authority-check.mjs --verify",
