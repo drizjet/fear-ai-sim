@@ -49,13 +49,33 @@ export class WorldCounterfactualEngine {
         if (!simulation || typeof simulation.fork !== 'function') {
             throw new Error('Simulation must implement .fork() to execute counterfactual experiments.');
         }
+        if (typeof simulation.advance !== 'function') {
+            throw new Error('Simulation must implement .advance() to execute counterfactual experiments.');
+        }
         if (!mutation || !mutation.type) {
             throw new Error('Valid mutation specification with type is required.');
         }
 
+        const normalizedForkTick = Number(forkTick);
+        const normalizedHorizonTicks = Number(horizonTicks);
+        if (!Number.isInteger(normalizedForkTick) || normalizedForkTick < 0) {
+            throw new Error('forkTick must be a non-negative integer.');
+        }
+        if (!Number.isInteger(normalizedHorizonTicks) || normalizedHorizonTicks < 1) {
+            throw new Error('horizonTicks must be a positive integer.');
+        }
+
+        const currentTick = simulation.currentTick == null ? 0 : Number(simulation.currentTick);
+        if (!Number.isInteger(currentTick) || currentTick < 0) {
+            throw new Error('Simulation currentTick must be a non-negative integer.');
+        }
+        if (currentTick > normalizedForkTick) {
+            throw new Error(`Simulation is already past forkTick (${currentTick} > ${normalizedForkTick}); rewind or choose a later forkTick.`);
+        }
+
         // 1. Advance simulation to forkTick if not already there
-        if (simulation.currentTick < forkTick) {
-            simulation.advance(forkTick - simulation.currentTick);
+        if (currentTick < normalizedForkTick) {
+            simulation.advance(normalizedForkTick - currentTick);
         }
 
         // 2. Clone identical parallel branches
@@ -64,15 +84,19 @@ export class WorldCounterfactualEngine {
 
         // 3. Apply atomic mutation exclusively to counterfactual branch
         const appliedIntervention = this._applyMutation(counterfactualSim, mutation);
+        if (appliedIntervention?.applied === false) {
+            throw new Error(`Counterfactual mutation did not apply: ${mutation.type}`);
+        }
 
         // 4. Advance both branches in lockstep tick-by-tick to record trajectory differences
         const factualTrajectory = [];
         const counterfactualTrajectory = [];
         let firstDivergenceTick = null;
+        let firstDivergenceDimensions = [];
         const causalEvents = [];
 
-        for (let step = 1; step <= horizonTicks; step++) {
-            const currentSimTick = forkTick + step;
+        for (let step = 1; step <= normalizedHorizonTicks; step++) {
+            const currentSimTick = normalizedForkTick + step;
 
             const factSummary = factualSim.advance(1);
             const counterSummary = counterfactualSim.advance(1);
@@ -80,26 +104,21 @@ export class WorldCounterfactualEngine {
             factualTrajectory.push({ tick: currentSimTick, ...factSummary });
             counterfactualTrajectory.push({ tick: currentSimTick, ...counterSummary });
 
-            // Check for first divergence (NOW-7: wars/alliances included;
-            // a war-only fork previously reported no divergence at all).
+            // Check for first divergence. This includes the original macro
+            // metrics plus settlement populations and faction survivals;
+            // otherwise a real world-state change (for example, scarcity
+            // moving population between settlements) can be reported as
+            // causally invariant.
             if (firstDivergenceTick === null) {
-                const diffFear = Math.abs(factSummary.meanPopulationFear - counterSummary.meanPopulationFear);
-                const diffEncounters = Math.abs(factSummary.totalEncounters - counterSummary.totalEncounters);
-                const diffFailures = Math.abs(factSummary.routeFailures - counterSummary.routeFailures);
-                const diffPanics = Math.abs(factSummary.panicIncidents - counterSummary.panicIncidents);
-                const diffWars = Math.abs((factSummary.warsDeclared ?? 0) - (counterSummary.warsDeclared ?? 0));
-                const diffAlliances = Math.abs((factSummary.alliancesFormed ?? 0) - (counterSummary.alliancesFormed ?? 0));
-                // NEXT-19: live phases catch peace-making (active 1→0) that
-                // sticky flags cannot see.
-                const diffWarsActive = Math.abs((factSummary.warsActive ?? 0) - (counterSummary.warsActive ?? 0));
-                const diffAlliancesActive = Math.abs((factSummary.alliancesActive ?? 0) - (counterSummary.alliancesActive ?? 0));
-
-                if (diffFear > 0.001 || diffEncounters > 0 || diffFailures > 0 || diffPanics > 0 || diffWars > 0 || diffAlliances > 0 || diffWarsActive > 0 || diffAlliancesActive > 0) {
+                const changedDimensions = this._findSummaryDifferences(factSummary, counterSummary);
+                if (changedDimensions.length > 0) {
                     firstDivergenceTick = currentSimTick;
+                    firstDivergenceDimensions = changedDimensions;
                     causalEvents.push({
                         tick: currentSimTick,
                         type: 'FIRST_DIVERGENCE',
-                        description: `First macro divergence detected: ΔFear=${(counterSummary.meanPopulationFear - factSummary.meanPopulationFear).toFixed(3)}, ΔFailures=${counterSummary.routeFailures - factSummary.routeFailures}, ΔWars=${counterSummary.warsDeclared - factSummary.warsDeclared}, ΔAlliances=${counterSummary.alliancesFormed - factSummary.alliancesFormed}`
+                        dimensions: changedDimensions,
+                        description: `First world-summary divergence detected in: ${changedDimensions.join(', ')}`
                     });
                 }
             }
@@ -113,33 +132,112 @@ export class WorldCounterfactualEngine {
         const fearSumCounter = counterfactualTrajectory.reduce((acc, t) => acc + t.meanPopulationFear, 0);
         const meanFearFact = fearSumFact / factualTrajectory.length;
         const meanFearCounter = fearSumCounter / counterfactualTrajectory.length;
+        const settlementPopulationDiff = this._getSettlementPopulationDiff(finalFact, finalCounter);
 
         const ate = {
             meanPopulationFearDiff: Number((meanFearCounter - meanFearFact).toFixed(4)),
             finalFearDiff: Number((finalCounter.meanPopulationFear - finalFact.meanPopulationFear).toFixed(4)),
             routeFailuresDiff: finalCounter.routeFailures - finalFact.routeFailures,
             totalEncountersDiff: finalCounter.totalEncounters - finalFact.totalEncounters,
+            deliveriesDiff: (finalCounter.deliveries ?? 0) - (finalFact.deliveries ?? 0),
+            deliveredVolumeDiff: (finalCounter.deliveredVolume ?? 0) - (finalFact.deliveredVolume ?? 0),
             panicIncidentsDiff: finalCounter.panicIncidents - finalFact.panicIncidents,
             warsDeclaredDiff: finalCounter.warsDeclared - finalFact.warsDeclared,
             alliancesFormedDiff: finalCounter.alliancesFormed - finalFact.alliancesFormed,
             warsActiveDiff: (finalCounter.warsActive ?? 0) - (finalFact.warsActive ?? 0),
-            alliancesActiveDiff: (finalCounter.alliancesActive ?? 0) - (finalFact.alliancesActive ?? 0)
+            alliancesActiveDiff: (finalCounter.alliancesActive ?? 0) - (finalFact.alliancesActive ?? 0),
+            settlementPopulationDiff
         };
 
         // 6. Formulate causal attribution narrative
-        const causalNarrative = this._buildCausalNarrative(appliedIntervention, ate, firstDivergenceTick);
+        const causalNarrative = this._buildCausalNarrative(
+            appliedIntervention,
+            ate,
+            firstDivergenceTick,
+            firstDivergenceDimensions
+        );
 
         return {
-            forkTick,
-            horizonTicks,
+            forkTick: normalizedForkTick,
+            horizonTicks: normalizedHorizonTicks,
             intervention: appliedIntervention,
             firstDivergenceTick,
+            firstDivergenceDimensions,
             ate,
             causalEvents,
             causalNarrative,
             factualSummary: finalFact,
             counterfactualSummary: finalCounter
         };
+    }
+
+    /**
+     * Compares the observable world summary used by causal reports.
+     * @private
+     */
+    static _findSummaryDifferences(factual, counterfactual) {
+        const differences = [];
+        const numericFields = [
+            ['meanPopulationFear', 0.001],
+            ['totalEncounters', 0],
+            ['routeFailures', 0],
+            ['deliveries', 0],
+            ['deliveredVolume', 0],
+            ['panicIncidents', 0],
+            ['warsDeclared', 0],
+            ['alliancesFormed', 0],
+            ['warsActive', 0],
+            ['alliancesActive', 0]
+        ];
+
+        for (const [field, tolerance] of numericFields) {
+            const a = Number(factual?.[field] ?? 0);
+            const b = Number(counterfactual?.[field] ?? 0);
+            if (!Number.isFinite(a) || !Number.isFinite(b) || Math.abs(a - b) > tolerance) {
+                differences.push(field);
+            }
+        }
+
+        const settlementIds = new Set([
+            ...Object.keys(factual?.settlements ?? {}),
+            ...Object.keys(counterfactual?.settlements ?? {})
+        ]);
+        for (const id of settlementIds) {
+            const a = Number(factual?.settlements?.[id] ?? 0);
+            const b = Number(counterfactual?.settlements?.[id] ?? 0);
+            if (!Number.isFinite(a) || !Number.isFinite(b) || a !== b) {
+                differences.push(`settlements.${id}.population`);
+            }
+        }
+
+        const factionIds = new Set([
+            ...Object.keys(factual?.factionSurvivals ?? {}),
+            ...Object.keys(counterfactual?.factionSurvivals ?? {})
+        ]);
+        for (const id of factionIds) {
+            if (Boolean(factual?.factionSurvivals?.[id]) !== Boolean(counterfactual?.factionSurvivals?.[id])) {
+                differences.push(`factionSurvivals.${id}`);
+            }
+        }
+
+        return differences;
+    }
+
+    /**
+     * Returns terminal population effects by settlement for the ATE report.
+     * @private
+     */
+    static _getSettlementPopulationDiff(factual, counterfactual) {
+        const diff = {};
+        const settlementIds = new Set([
+            ...Object.keys(factual?.settlements ?? {}),
+            ...Object.keys(counterfactual?.settlements ?? {})
+        ]);
+        for (const id of settlementIds) {
+            const delta = Number(counterfactual?.settlements?.[id] ?? 0) - Number(factual?.settlements?.[id] ?? 0);
+            if (Number.isFinite(delta) && delta !== 0) diff[id] = delta;
+        }
+        return diff;
     }
 
     /**
@@ -326,15 +424,33 @@ export class WorldCounterfactualEngine {
      * Synthesizes an empirical causal explanation connecting intervention to outcome.
      * @private
      */
-    static _buildCausalNarrative(intervention, ate, firstDivergenceTick) {
+    static _buildCausalNarrative(intervention, ate, firstDivergenceTick, divergenceDimensions = []) {
         if (firstDivergenceTick === null) {
-            return `Intervention [${intervention.type}] produced ZERO causal divergence across all traced macro metrics over the evaluation horizon. The system is causally invariant to this stimulus under current conditions.`;
+            return `Intervention [${intervention.type}] produced ZERO causal divergence across all traced world-summary fields over the evaluation horizon. The system is causally invariant to this stimulus under current conditions.`;
         }
 
-        const fearDirection = ate.meanPopulationFearDiff > 0 ? 'increased' : 'decreased';
-        const fearMagnitude = Math.abs(ate.meanPopulationFearDiff).toFixed(3);
-        const failureDirection = ate.routeFailuresDiff > 0 ? 'increased' : 'reduced';
+        const effects = [];
+        if (ate.meanPopulationFearDiff !== 0) {
+            const fearDirection = ate.meanPopulationFearDiff > 0 ? 'increased' : 'decreased';
+            effects.push(`${fearDirection} average world population fear by ${Math.abs(ate.meanPopulationFearDiff).toFixed(3)} units`);
+        }
+        if (ate.routeFailuresDiff !== 0) {
+            const failureDirection = ate.routeFailuresDiff > 0 ? 'increased' : 'reduced';
+            effects.push(`${failureDirection} trade route failures by ${Math.abs(ate.routeFailuresDiff)} incidents`);
+        }
+        if (ate.totalEncountersDiff !== 0) {
+            effects.push(`${ate.totalEncountersDiff > 0 ? 'increased' : 'reduced'} total encounters by ${Math.abs(ate.totalEncountersDiff)}`);
+        }
+        if (ate.deliveriesDiff !== 0 || ate.deliveredVolumeDiff !== 0) {
+            effects.push(`changed deliveries by ${ate.deliveriesDiff} and delivered volume by ${ate.deliveredVolumeDiff}`);
+        }
+        for (const [settlementId, delta] of Object.entries(ate.settlementPopulationDiff ?? {})) {
+            effects.push(`changed ${settlementId} population by ${delta > 0 ? '+' : ''}${delta}`);
+        }
+        if (effects.length === 0) {
+            effects.push(`changed observed state in ${divergenceDimensions.join(', ') || 'the world summary'}`);
+        }
 
-        return `Causal Intervention [${intervention.type}] emerged at Tick ${firstDivergenceTick}. Downstream propagation ${fearDirection} average world population fear by ${fearMagnitude} units and ${failureDirection} trade route failures by ${Math.abs(ate.routeFailuresDiff)} incidents.`;
+        return `Causal Intervention [${intervention.type}] emerged at Tick ${firstDivergenceTick}. Downstream propagation ${effects.join('; ')}.`;
     }
 }
