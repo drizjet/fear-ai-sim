@@ -27,7 +27,7 @@ and it does not certify the whole repository as RC1.
 - **Persistence owner:** none; the run records metadata and counters but does not certify snapshot or host persistence behavior.
 - **Authority boundary:** JavaScript middleware timing only; no host physics, movement, combat, inventory, or external-engine transport is included.
 - **Proof artifact:** `evidence/js_runtime_performance_2026-09-19.md`.
-- **Known limitation:** on the recorded Windows/Node host, 100 measured ticks after 10 warmups produced p99 values of 0.4307 ms at 32 agents, 0.9025 ms at 128 agents, and 3.6962 ms at 512 agents. These are not universal thresholds, a Rust host benchmark, or a release gate; target-environment reruns are required for capacity claims.
+- **Known limitation:** on the recorded Windows/Node host, the primary 100-tick run after 10 warmups produced p99 values of 0.4307 ms at 32 agents, 0.9025 ms at 128 agents, and 3.6962 ms at 512 agents; the clean-audit rerun produced 0.4226 ms, 0.8077 ms, and 4.0664 ms. These are not universal thresholds, a Rust host benchmark, or a release gate; target-environment reruns are required for capacity claims.
 - **Last verified / strength:** 2026-09-19; metadata-bearing measurement with explicit machine, runtime, scale, warmup, sample, clock, and memory fields. Observational and environment-specific.
 
 ### Runtime Wiring Boundary — `OBSERVED_CURRENT` (release-scope evidence)

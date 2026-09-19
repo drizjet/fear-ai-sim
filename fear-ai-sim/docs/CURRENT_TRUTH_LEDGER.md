@@ -152,6 +152,7 @@ Each capability retained as `VERIFIED_CURRENT` identifies a bounded proof artifa
 ### 12. JavaScript Runtime Performance Baseline (`evidence/js_runtime_performance_2026-09-19.md`)
 - **Reproducible metadata**: `tools/verification/measure_runtime_performance.mjs` records the Git commit, UTC timestamp, Node version object, OS release, architecture, CPU model/count, installed memory, warmup, sample count, timing clock, scale, and memory counters.
 - **Observed baseline**: under the documented default `RuntimeSimulation` configuration, 100 measured ticks after 10 warmups produced p99 values of 0.4307 ms at 32 agents, 0.9025 ms at 128 agents, and 3.6962 ms at 512 agents on the recorded Windows/Node host.
+- **Clean-audit rerun**: the documentation-only descendant `8853b51` produced p99 values of 0.4226 ms, 0.8077 ms, and 4.0664 ms at the same scales. The variation is retained in the evidence file and is part of the reason this baseline is not a hard gate.
 - **Scope boundary**: this is JavaScript middleware-only measurement with no host physics, movement, combat, or inventory. It is observational capacity evidence, not a universal threshold, not a Rust host benchmark, and not a release gate.
 
 ### 13. Runtime Wiring Boundary (`tools/verification/verify_runtime_wiring.mjs`)
