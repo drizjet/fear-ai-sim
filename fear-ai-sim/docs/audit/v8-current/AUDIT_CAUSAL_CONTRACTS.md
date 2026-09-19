@@ -1,12 +1,15 @@
 ---
 title: "V8 audit — causal contracts (candidate 79f287c)"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-19
 type: audit
-status: active
+status: historical-superseded
+superseded_by: "CURRENT_TRUTH_LEDGER.md and RELEASE_CANDIDATE_CERTIFICATION.md"
 ---
 
 # V8 audit — causal contracts (candidate 79f287c)
+
+> **Historical record — not current release evidence.** This causal-contract audit belongs to candidate `79f287c` from August 2026. Its findings remain historical context and do not certify current runtime wiring, external hosts, or release behavior.
 
 ## Truth → decision map (Auditor 3, grep-verified by manager)
 

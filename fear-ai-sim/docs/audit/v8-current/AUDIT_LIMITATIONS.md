@@ -1,12 +1,15 @@
 ---
 title: "V8 audit — limitations (candidate 79f287c)"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-19
 type: audit
-status: active
+status: historical-superseded
+superseded_by: "CURRENT_TRUTH_LEDGER.md and RELEASE_CANDIDATE_CERTIFICATION.md"
 ---
 
 # V8 audit — limitations (candidate 79f287c)
+
+> **Historical record — not current release evidence.** This limitations register belongs to candidate `79f287c` from August 2026. It remains useful context but does not supersede the current claim ledger or provisional RC dossier.
 
 1. Auditor independence is bounded: the five auditors are same-model
    scout subagents in the builder's session, not independent labs. They

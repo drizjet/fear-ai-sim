@@ -1,12 +1,15 @@
 ---
 title: "V8 audit — long-horizon validity (candidate 79f287c)"
 created: 2026-08-28
-updated: 2026-09-06
+updated: 2026-09-19
 type: audit
-status: active
+status: historical-superseded
+superseded_by: "CURRENT_TRUTH_LEDGER.md and RELEASE_CANDIDATE_CERTIFICATION.md"
 ---
 
 # V8 audit — long-horizon validity (candidate 79f287c)
+
+> **Historical record — not current release evidence.** This audit concerns candidate `79f287c` from August 2026. Its findings are retained as historical analysis and must not be used as current runtime or release certification. Current long-horizon evidence is named in `RELEASE_CANDIDATE_CERTIFICATION.md`.
 
 Verdict: the world runs long without crashing; the suites cannot tell a
 meaningfully dynamic world from a frozen-but-green one.

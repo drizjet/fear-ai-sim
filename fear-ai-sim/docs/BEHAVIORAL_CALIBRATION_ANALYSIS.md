@@ -8,6 +8,8 @@ status: active
 
 # Fear AI Behavioral Calibration & Parameter Sensitivity Analysis
 
+> **Research and calibration artifact — not release certification.** The equations, sensitivity boundaries, and named deterministic scenarios in this document describe bounded analysis. They do not prove live `RuntimeSimulation` wiring, external-host behavior, universal stability, or human validation. See [`BEHAVIORAL_EVALUATION_FRAMEWORK.md`](BEHAVIORAL_EVALUATION_FRAMEWORK.md) and [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md) for the current evaluation and release boundaries.
+
 **Document Version**: v1.0.0-CANON  
 **Scope**: Behavioral Science Calibration, Parameter Sensitivity, and Negative Benchmark Ledger  
 **Standard**: Hard Rule 9 Compliant (First-principles mathematical analysis & deterministic scenario evidence; 0 test runner frameworks).  

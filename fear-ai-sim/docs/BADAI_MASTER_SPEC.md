@@ -1,9 +1,9 @@
 ---
 title: "BadAI — Master Long-Term Spec, Roadmap & Execution Prompt"
 created: 2026-08-26
-updated: 2026-09-06
+updated: 2026-09-19
 type: master-specification
-status: active
+status: historical-plan
 ---
 
 # BADAI — MASTER LONG-TERM SPEC, ROADMAP & EXECUTION PROMPT (v3.0 — 2026-08-26)

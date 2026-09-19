@@ -61,7 +61,10 @@ const supersededRecords = [
     'docs/NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md',
     'docs/NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md',
     'docs/NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md',
-    'docs/FAILURE_AND_LIFECYCLE_MATRIX.md'
+    'docs/FAILURE_AND_LIFECYCLE_MATRIX.md',
+    'docs/audit/v8-current/AUDIT_LONG_HORIZON.md',
+    'docs/audit/v8-current/AUDIT_LIMITATIONS.md',
+    'docs/audit/v8-current/AUDIT_CAUSAL_CONTRACTS.md'
 ];
 for (const relativePath of supersededRecords) {
     includes(relativePath, 'status: historical-superseded');
