@@ -32,6 +32,10 @@ We are **not** making a Fear AI Godot/Unity/Unreal game.
 - **100% MANUAL LINE-BY-LINE AUDITS ONLY.** All code verification across `packages/core/src/`, `packages/runtime/`, `packages/protocol/`, and `packages/adapters/` must be performed by manual inspection of mathematical derivations, edge cases, numerical stability, authority boundaries, determinism, and memory bounding against first principles.
 - **AUTHORITATIVE STATUS LEDGER.** See `docs/CURRENT_TRUTH_LEDGER.md` for the single canonical status matrix of every live capability, its live callers, consumers, persistence state, and known frontiers.
 
+### Current release-claim boundary (2026-09-19)
+
+The inventory below is a navigation and architecture map, not a blanket release certification. Descriptions of optional world-simulation, research, and CLI systems identify available code paths; they do not imply automatic construction by `RuntimeSimulation`, attachment to every host session, or universal guarantees. Use `docs/CURRENT_TRUTH_LEDGER.md`, `docs/CLAIM_TO_CODE_AUDIT_2026-09-19.md`, and `docs/RELEASE_CANDIDATE_CERTIFICATION.md` for current claim status, evidence scope, and release gates. Historical benchmark numbers remain historical unless they are linked to a current metadata-bearing evidence artifact.
+
 ## Three live trees (siblings, not one binary)
 
 | Tree | Path | Role | Authority |

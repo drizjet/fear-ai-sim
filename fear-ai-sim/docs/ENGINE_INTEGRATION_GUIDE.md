@@ -56,7 +56,7 @@ Once running:
 ## 3. Godot 4 Integration (GDScript)
 
 > [!NOTE]
-> **Verification Gate Status**: `VERIFIED (GODOT_4_6_STABLE_OFFICIAL_HEADLESS)`
+> **Verification Gate Status**: `HEADLESS_ADAPTER_CONFORMANCE (GODOT_4_6_STABLE_OFFICIAL_HEADLESS)`
 > *Host Environment Notice: Tested and verified against official Godot v4.6-stable Windows 64-bit console binary (`Godot_v4.6-stable_win64_console.exe`) on this host with zero errors.*
 
 ### Setup
@@ -107,8 +107,8 @@ func _physics_process(_delta: float) -> void:
 ## 5. Custom Engines & Scripting (Python Zero-Dependency & C# / .NET 8)
 
 > [!NOTE]
-> **Verification Gate Status**: `VERIFIED (PYTHON_3_14_CONFORMANCE & DOTNET_8_SDK)`
-> *Host Environment Notice: Python 3.14 fixtures and .NET 8 library compile/round-trip were exercised against the local server. That is not a claim that every runtime is bit-identical, and it is not Unity/Unreal Editor verification.*
+> **Verification Gate Status**: `RECORDED_ADAPTER_EVIDENCE (PYTHON_3_14_CONFORMANCE & DOTNET_8_SDK)`
+> *Host Environment Notice: Python fixtures and .NET 8 library compile/round-trip evidence are recorded. They are not fresh current-audit client runs, are not a claim that every runtime is bit-identical, and are not Unity/Unreal Editor verification.*
 
 If you are building in Python (Pygame, Panda3D, Ursina) or custom C++/Rust engines:
 Use `packages/adapters/python/fear_ai_client.py` as a reference:

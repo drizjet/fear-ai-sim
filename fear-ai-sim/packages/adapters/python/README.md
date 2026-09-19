@@ -3,14 +3,14 @@
 # Fear AI - Python Client Adapter
 
 > [!NOTE]
-> **Verification Gate Status**: `VERIFIED (PYTHON_3_14_CONFORMANCE)`
-> *Host Environment Notice: Python 3.14 client ran canonical fixtures against the local server (reported fixture delta 0.000000 on that suite). That is not a claim that every runtime is bit-identical.*
+> **Verification Gate Status**: `RECORDED_ADAPTER_CONFORMANCE (PYTHON_3_14)`
+> *Host Environment Notice: A Python 3.14 fixture run against the local server is recorded evidence. It was not rerun in the current release audit, and it is not a claim that every runtime is bit-identical or that a game engine has been integrated.*
 
 This client library provides zero-dependency Python integration with the **Fear AI Universal Middleware Server** for Pygame, Panda3D, Ursina, Raylib, simulation harnesses, and headless test runners.
 
 ## Features
 - **Zero External Dependencies**: Uses only standard library modules `urllib.request` and `json`.
-- **Fast HTTP REST Loopback**: Queries complete in 1.0 - 2.5 ms per batch.
+- **HTTP REST Loopback**: Uses the local REST transport; latency depends on the host process and loopback environment.
 - **Convenient High-Level API**: Includes `handshake()`, `register_agent()`, `tick()`, `unregister_agent()`, `save_snapshot()`, and `load_snapshot()`.
 
 ## Usage

@@ -6,7 +6,7 @@ type: specification
 status: active
 ---
 
-> Evaluation spec, not a world-class certificate. Negative findings stay on the record (cross-scenario Utility AI win; K=60 raw Fear-vs-Utility not established). Product map: `SYSTEM_MAP.md`.
+> Evaluation and research artifact, not a release certificate or live-integration proof. Negative findings stay on the record (cross-scenario Utility AI win; K=60 raw Fear-vs-Utility not established). Layer 3 human evaluation is not executed. Reported benchmark figures are scoped to their named harnesses and should not be read as evidence that FABE is a live `RuntimeSimulation` service or an externally validated game behavior. Product map: `SYSTEM_MAP.md`.
 
 # Fear AI Behavioral Evaluation Benchmark (FABE & FABE v2) Specification
 
@@ -1075,7 +1075,6 @@ Milestone L evaluates Fear AI against standard game AI architectures (Finite Sta
 | **`ABLATION_NO_IDENTITY`** | Uniform traits ($0.5$) | Cross-archetype response variance collapses from **$0.165$ to $0.000$** (100% loss of personality). | Proves Big-Five identity drives behavioral diversity |
 | **`ABLATION_NO_TRAUMA`** | Dread zones disabled | Agents re-enter lethal ambush coordinates with zero dread amplification. | Validates persistent spatial trauma memory |
 | **`ABLATION_NO_CONTAGION`** | Group contagion disabled | Units fail to exhibit collective panic tipping points or heroic leader rallies. | Proves collective intelligence dynamics |
-
 
 
 

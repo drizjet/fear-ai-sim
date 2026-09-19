@@ -30,6 +30,18 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** on the recorded Windows/Node host, 100 measured ticks after 10 warmups produced p99 values of 0.4307 ms at 32 agents, 0.9025 ms at 128 agents, and 3.6962 ms at 512 agents. These are not universal thresholds, a Rust host benchmark, or a release gate; target-environment reruns are required for capacity claims.
 - **Last verified / strength:** 2026-09-19; metadata-bearing measurement with explicit machine, runtime, scale, warmup, sample, clock, and memory fields. Observational and environment-specific.
 
+### Runtime Wiring Boundary — `OBSERVED_CURRENT` (release-scope evidence)
+
+- **Repository / commit:** current Fear AI JS checkout; the probe is versioned with the release audit.
+- **Source / symbol:** `packages/runtime/src/RuntimeSimulation.js`, `packages/runtime/src/FearServer.js`, `packages/runtime/src/DesignerDashboardServer.js`, and direct CLI entry points in `bin/fear-ai.js`.
+- **Actual live caller:** a real `RuntimeSimulation` instance is registered, given an observation, and ticked; the probe also instantiates `FearServer` and an unattached dashboard.
+- **Actual consumer:** the live tick returns an affective state and semantic intent; the server owns that simulation, while the dashboard consumes a simulation only after explicit attachment.
+- **Persistence owner:** the core services remain owned by `RuntimeSimulation`; this probe does not replace the persistence proof.
+- **Authority boundary:** wiring inspection only; no host transform, physics, combat, inventory, or external-engine behavior is exercised.
+- **Proof artifact:** `tools/verification/verify_runtime_wiring.mjs`.
+- **Known limitation:** the probe proves the current construction and entry-point boundary, not the semantic correctness of every optional module or its adoption by an external host. It intentionally treats optional-module construction inside `RuntimeSimulation` as a release-scope change that would require ledger review.
+- **Last verified / strength:** 2026-09-19; standalone source/runtime inventory passed on the current JS checkout.
+
 ## Trace records
 
 ### Canonical Fear-Band & Panic Hysteresis — `VERIFIED_CURRENT`
@@ -172,3 +184,4 @@ and it does not certify the whole repository as RC1.
 - Unity remains `PARTIAL` until a real Unity Editor host is available.
 - Unreal remains `DEFERRED` by owner policy.
 - FABE and Moral Dissonance remain `EXPERIMENTAL`; human evaluation is not executed.
+- Pack, economic, epistemic, and world-simulation modules remain optional scenario/CLI surfaces unless an explicit `RuntimeSimulation` wiring path is documented and proven.

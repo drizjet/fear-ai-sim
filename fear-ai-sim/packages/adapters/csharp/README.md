@@ -3,10 +3,10 @@
 # Fear AI - C# / .NET 8 Adapter
 
 > [!NOTE]
-> **Verification Gate Status**: `VERIFIED (DOTNET_8_SDK / MSBUILD_17_11)`
-> *Host Environment Notice: Compiled against the .NET 8 SDK as a library. This is not Unity Editor Play Mode and not Unreal PIE.*
+> **Verification Gate Status**: `BUILD_VERIFIED (DOTNET_8_SDK / MSBUILD_17_11)`
+> *Host Environment Notice: The library has recorded .NET 8 compilation evidence. This is not Unity Editor Play Mode, Unreal PIE, or proof of adoption by an external game.*
 
-This client library provides high-performance C# integration with the **Fear AI Universal Middleware Server** for .NET standalone applications, custom game engines (Monogame, Stride, Godot C#), and server architectures.
+This client library provides C# integration with the **Fear AI Universal Middleware Server** for .NET standalone applications, custom game engines (Monogame, Stride, Godot C#), and server architectures.
 
 ## Features
 - **Zero Heavy Dependencies**: Uses .NET standard `System.Net.Http`, `System.Net.WebSockets`, and `System.Text.Json`.

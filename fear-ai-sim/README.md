@@ -40,10 +40,13 @@ Adapters live in `packages/adapters/`. Unreal is **kept so Unreal games can conn
 
 ### Verification honesty
 
-- Node / Python / C# clients: exercised against the local server
+- Node: current standalone probes exercise the local HTTP/WebSocket server and JavaScript middleware/protocol paths; they do not certify an arbitrary game runtime.
+- Python / C#: recorded fixture or build evidence exists, but this audit does not treat it as live external-engine adoption or a fresh current client run.
 - Godot 4.6: headless execution on this machine (not a shipped Godot game)
 - Unity: **not verified** (Editor not installed). Adapter kept for when a Unity host exists.
 - Unreal: **deferred, adapter kept.** Plugin source is how an Unreal game would connect. Do not install UE5 unless that host exists. You do not need Unreal to use Unity.
+
+For the current release boundary, use `docs/CURRENT_TRUTH_LEDGER.md` and `docs/RELEASE_CANDIDATE_CERTIFICATION.md`. The repository contains additional standalone world-simulation and research modules; their presence or CLI demos does not make them automatic `RuntimeSimulation` services.
 
 ## Research sim (not the SDK)
 

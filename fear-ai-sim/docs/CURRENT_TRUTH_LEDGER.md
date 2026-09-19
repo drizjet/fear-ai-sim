@@ -13,7 +13,7 @@ status: active
 **Auditor / Maintainer**: Muse Spark (OpenCode) — Continuous Closure Campaign Phases 1–4  
 **Repository**: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`  
 **Sibling Host Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (branch `codex/canonical-consolidation-2026-08-12`, commits `91af8f957` → `e2090880a` → `f3f5e8d25`)  
-**Current audit state**: JS checkout is clean; counterfactual hardening is at `51b6268`, transport/lifecycle hardening is at `88cf80b`, real-socket reconnect evidence is at `2a5e4e6`, the 5,000-tick lifecycle probe is at `2611d6f`, the protocol-abuse probe is at `57c7528`, and the current JS performance baseline is at `3edaf17`. The sibling host checkout currently has unrelated uncommitted changes at `d8ec1715c`; host evidence below is therefore tied to named historical commits and is not a fresh clean-worktree certification.
+**Current audit state**: JS checkout is clean; counterfactual hardening is at `51b6268`, transport/lifecycle hardening is at `88cf80b`, real-socket reconnect evidence is at `2a5e4e6`, the 5,000-tick lifecycle probe is at `2611d6f`, the protocol-abuse probe is at `57c7528`, the current JS performance baseline is at `3edaf17`, and the runtime wiring boundary probe is recorded in `tools/verification/verify_runtime_wiring.mjs`. The sibling host checkout currently has unrelated uncommitted changes at `d8ec1715c`; host evidence below is therefore tied to named historical commits and is not a fresh clean-worktree certification.
 **Standard**: Reconciled Evidence Protocol (First-Principles Manual Audit + Deterministic Scenario Proof; Hard Rule 9: Zero Automated Test Runners)
 
 ---
@@ -153,3 +153,9 @@ Each capability retained as `VERIFIED_CURRENT` identifies a bounded proof artifa
 - **Reproducible metadata**: `tools/verification/measure_runtime_performance.mjs` records the Git commit, UTC timestamp, Node version object, OS release, architecture, CPU model/count, installed memory, warmup, sample count, timing clock, scale, and memory counters.
 - **Observed baseline**: under the documented default `RuntimeSimulation` configuration, 100 measured ticks after 10 warmups produced p99 values of 0.4307 ms at 32 agents, 0.9025 ms at 128 agents, and 3.6962 ms at 512 agents on the recorded Windows/Node host.
 - **Scope boundary**: this is JavaScript middleware-only measurement with no host physics, movement, combat, or inventory. It is observational capacity evidence, not a universal threshold, not a Rust host benchmark, and not a release gate.
+
+### 13. Runtime Wiring Boundary (`tools/verification/verify_runtime_wiring.mjs`)
+- **Core runtime path**: a live `RuntimeSimulation` instance constructs and ticks its registered agent through the expected affective output path, with pacing, trauma, contagion, social, scheduling, and pending-observation services present.
+- **Optional-module boundary**: the probe confirms that pack, economic, epistemic, rumor, FABE, moral, and world-counterfactual modules are not constructed by `RuntimeSimulation`; their available CLI/scenario entry points are checked separately.
+- **Server/dashboard ownership**: `FearServer` owns the runtime simulation, while `DesignerDashboardServer` starts unattached and requires an explicit `attachSimulation(sim)` call before live inspection.
+- **Scope boundary**: this is a wiring inventory and regression tripwire. It does not certify optional-module semantics, external-engine adoption, dashboard production attachment, or host integration.

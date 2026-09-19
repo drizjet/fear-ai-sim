@@ -1,12 +1,14 @@
 ---
 title: Fear AI Universal Middleware - Performance & Scale Benchmark (V2)
 created: 2026-09-06
-updated: 2026-09-06
+updated: 2026-09-19
 type: benchmark-report
-status: active
+status: historical
 ---
 
-> Headless Node benchmarks only. Not in-engine Unity/Unreal/Godot frame time. Product map: `SYSTEM_MAP.md`.
+> Historical headless Node benchmark record. Not in-engine Unity/Unreal/Godot frame time and not the current release baseline. Product map: `SYSTEM_MAP.md`.
+
+> **Current-release boundary:** use `evidence/js_runtime_performance_2026-09-19.md` and `tools/verification/measure_runtime_performance.mjs` for the current JavaScript middleware baseline. The numbers below remain useful as historical workload evidence, but they are not a current universal capacity guarantee or release gate.
 
 # Fear AI Universal Middleware - Performance & Scale Benchmark (V2)
 

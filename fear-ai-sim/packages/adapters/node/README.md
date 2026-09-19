@@ -3,13 +3,13 @@
 # Fear AI - Node.js ES Module Client Adapter
 
 > [!NOTE]
-> **Verification Gate Status**: `VERIFIED (NODE_V20_RUNNER)`
-> *Host Environment Notice: Verified against Node.js v20+ with native ES modules and WebSocket streaming.*
+> **Verification Gate Status**: `ADAPTER_CONFORMANCE (NODE_V20+ runner)`
+> *Host Environment Notice: The current evidence covers the protocol/client shape and loopback middleware probes. It does not certify an arbitrary external game runtime or universal latency.*
 
-This client provides high-speed WebSocket and HTTP REST connectivity for Node.js / JavaScript game runtimes, Electron games, test harnesses, and simulation servers.
+This client provides WebSocket and HTTP REST connectivity for Node.js / JavaScript game runtimes, Electron games, test harnesses, and simulation servers.
 
 ## Features
-- **High-Speed WebSocket Streaming**: Uses `ws` library for full-duplex sub-millisecond game loop synchronization.
+- **WebSocket Streaming**: Uses the `ws` library for full-duplex game-loop transport; observed latency depends on the host process and loopback environment.
 - **Request/Response Correlation**: Matches server responses via message IDs (`id` / `message_id`).
 - **Full Wire Protocol Coverage**: Handshake, agent registration, batch observation streaming, snapshot persistence.
 

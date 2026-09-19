@@ -1,6 +1,6 @@
 # Fear AI - Godot 4 Integration Guide
 
-> **Verification Gate Status**: `VERIFIED (GODOT_4_6_STABLE_OFFICIAL_HEADLESS)` — headless binary only.
+> **Verification Gate Status**: `HEADLESS_ADAPTER_CONFORMANCE (GODOT_4_6_STABLE_OFFICIAL_HEADLESS)` — headless binary only.
 > This is **not** a Fear AI Godot game. The host Godot project owns physics.
 >
 > Adapter is advisory only: `FearAgent.get_movement_hint()`. Host calls `move_and_slide()`.
