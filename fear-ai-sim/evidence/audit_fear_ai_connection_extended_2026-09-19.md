@@ -1,10 +1,15 @@
-# Fear AI x Pixel Pets — Extended Audit: Faction Matrix + 2,000-Tick Skirmish + Formation Stress (2026-09-19)
+# Fear AI x Pixel Pets - Extended Audit (2026-09-19)
 
-Diagnostic binary: pixel-pets/src/bin/audit_fear_ai_connection.rs (8 sections).
+Diagnostic binary: `pixel-pets/src/bin/audit_fear_ai_connection.rs` (8 sections + profiling probe).
 
-This supersedes the 500-tick run as the deepest host-side proof: Section 7 now runs a 1v1..6v6 faction-configuration matrix, a 2,000-tick multi-faction skirmish, and a 719,600-offset exhaustive formation-geometry stress, with explicit finite-state (NaN/Inf) assertions replacing the previous print-only "zero NaN drift" claim.
+Section 7 now runs a 1v1..6v6 faction matrix, a 2,000-tick multi-faction skirmish, a 719,600-offset
+exhaustive formation-geometry stress, and a live squad-path formation cycle, all with explicit
+finite-state (NaN/Inf) assertions. Section 8B is a host-sim tick scaling probe (profiling, not gated).
+Section 8 latency is now actually gated (hard p99 < 1ms), replacing the previous print-only WARN.
 
 Hard Rule 9: standalone diagnostic binary, 0 test runners.
+
+## Debug build (`cargo run --bin audit_fear_ai_connection`)
 
 ```text
 warning: falling back to `f32` as the trait bound `f32: From<f64>` is not satisfied
@@ -450,24 +455,34 @@ Target Path: C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets
 │ 7. EXTENDED MULTI-CONFIG / LONG-HORIZON SKIRMISH & FORMATION STRESS         │
 └─────────────────────────────────────────────────────────────────────────────┘
   • Faction matrix (1v1, 2v2, 3v2, 4v4, 6v6): tick progress + finite state verified for every config.
-  • Stepped 2,000 Ticks: Completed in 34.393967s
-  • Average Per-Tick Runtime: 17.196983ms
+  • Stepped 2,000 Ticks: Completed in 33.6748242s
+  • Average Per-Tick Runtime: 16.837412ms
   • World Tick Index: 2000
   [PASS] 2,000-tick multi-faction skirmish stepped with zero panics and verified finite (non-NaN) unit state.
 
   • Formation geometry stress: 719600 offsets across 7 formations x 5 roles x 4 rotations x 4 spacings x 5 unit-counts x 257 slots — all finite.
 
+  • Live squad-path stress: 567 squad-ticks cycling all 7 formations, largest squad 6 units — finite positions verified.
+
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 8. HIGH-FREQUENCY MICRO-BENCHMARKING PROFILE (1,000 ITERATIONS)             │
 └─────────────────────────────────────────────────────────────────────────────┘
   • Benchmark Iterations: 1,000 complete tick_unit_advisory cycles
-  • Min Latency:         83 μs
-  • Median (p50):        90 μs
-  • Mean Latency:        94.88 μs
-  • 95th Percentile:     122 μs
-  • 99th Percentile:     189 μs
-  • Max Latency:         352 μs
-  [PASS] High-frequency latency profile certified: Mean=94.88μs, p95=122μs (Budget: <200μs).
+  • Min Latency:         81 μs
+  • Median (p50):        85 μs
+  • Mean Latency:        93.95 μs
+  • 95th Percentile:     143 μs
+  • 99th Percentile:     177 μs
+  • Max Latency:         253 μs
+  [PASS] High-frequency latency certified: Mean=93.95µs, p95=143µs, p99=177µs (advisory target <200µs met; hard p99 gate <1000µs).
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 8B. HOST SIM TICK SCALING PROBE (PROFILING)                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+  •   2 units (1v1):     4641.9 µs/tick
+  •  20 units (10v10):    25452.2 µs/tick
+  •  60 units (30v30):    69187.2 µs/tick
+  • Profiling probe only (not gated). Host sim tick ≠ middleware advisory cost (~95µs).
 
 ════════════════════════════════════════════════════════════════════════════════
   ★ ALL 8 AUDIT SECTIONS PASSED WITH ZERO ERRORS AND 100% INVARIANT COMPLIANCE ★
