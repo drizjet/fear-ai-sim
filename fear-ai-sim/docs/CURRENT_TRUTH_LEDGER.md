@@ -13,7 +13,7 @@ status: active
 **Auditor / Maintainer**: Muse Spark (OpenCode) — Continuous Closure Campaign Phases 1–4  
 **Repository**: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`  
 **Sibling Host Repository**: `C:\tools\03-Projects\lains Tools\New Master Game` (branch `codex/canonical-consolidation-2026-08-12`, commits `91af8f957` → `e2090880a` → `f3f5e8d25`)  
-**Current audit state**: JS checkout is clean; counterfactual hardening is at `51b6268`, transport/lifecycle hardening is at `88cf80b`, real-socket reconnect evidence is at `2a5e4e6`, the 5,000-tick lifecycle probe is at `2611d6f`, the protocol-abuse probe is at `57c7528`, the current JS performance baseline is at `3edaf17`, and runtime wiring/claim-boundary reconciliation is at `625ce5b`. The sibling host checkout currently has unrelated uncommitted changes at `d8ec1715c`; host evidence below is therefore tied to named historical commits and is not a fresh clean-worktree certification.
+**Current audit state**: JS checkout is clean; counterfactual hardening is at `51b6268`, transport/lifecycle hardening is at `88cf80b`, real-socket reconnect evidence is at `2a5e4e6`, the 5,000-tick lifecycle probe is at `2611d6f`, the protocol-abuse probe is at `57c7528`, the current JS performance baseline is at `3edaf17`, and runtime wiring/claim-boundary reconciliation is at `625ce5b`. The sibling host checkout currently has unrelated uncommitted changes at `11582382c`; host evidence below is therefore tied to named historical commits and is not a fresh clean-worktree certification.
 **Standard**: Reconciled Evidence Protocol (First-Principles Manual Audit + Deterministic Scenario Proof; Hard Rule 9: Zero Automated Test Runners)
 
 ---

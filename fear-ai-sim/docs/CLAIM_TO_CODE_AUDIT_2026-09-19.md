@@ -15,7 +15,7 @@ and it does not certify the whole repository as RC1.
 ## Repository boundary
 
 - Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean with counterfactual hardening at `51b6268`, transport/lifecycle hardening at `88cf80b`, real-socket reconnect evidence at `2a5e4e6`, the long-horizon lifecycle probe at `2611d6f`, protocol-abuse evidence at `57c7528`, runtime wiring and claim-boundary reconciliation at `625ce5b`, and the current JavaScript performance baseline at `3edaf17`.
-- Pixel Pets host: `C:\tools\03-Projects\lains Tools\New Master Game`, branch `codex/canonical-consolidation-2026-08-12`, checked out at `d8ec1715c` with unrelated uncommitted changes. Host evidence is referenced by named commits and recorded artifacts, not by the dirty working tree.
+- Pixel Pets host: `C:\tools\03-Projects\lains Tools\New Master Game`, branch `codex/canonical-consolidation-2026-08-12`, currently checked out at `11582382c` with unrelated uncommitted changes. Host evidence is referenced by named commits and recorded artifacts, not by the dirty working tree.
 - Elixir/NIF tree: outside this release scope; its normalized `[0,1]` model is intentionally not parity-equivalent to the Rust/JS 0–5 hysteresis model.
 
 ### JavaScript Runtime Performance Baseline — `OBSERVED_CURRENT` (not a capability certification)
