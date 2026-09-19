@@ -111,7 +111,15 @@ async function main() {
   const rUpThreat = evaluateResponseFunctions({ ...base, resilience: 0.8 }, 0.5).panicThreat;
   check('Raising N raises panicThreat', nUp > nBase, `${nBase} -> ${nUp}`);
   check('Raising R also raises panicThreat (weaker, same direction)', rUpThreat > nBase, `${nBase} -> ${rUpThreat}`);
-  check('N effect 3x stronger than R effect on panicThreat', (nUp - nBase) > (rUpThreat - nBase));
+  // Quantitative oracle for the claimed 3x relationship (previously only
+  // asserted nDelta > rDelta, which a 1.1x change would satisfy). Shipped
+  // thresholds: .75 - N*.30 - R*.10 give a 3x coefficient ratio; the observed
+  // output ratio runs slightly above 3.0 because N also widens the logistic
+  // slope (6 + N*4) while R leaves it fixed, so 3x floors the output ratio.
+  const nDelta = nUp - nBase;
+  const rDelta = rUpThreat - nBase;
+  const nOverR = nDelta / rDelta;
+  check('N effect ~3x stronger than R effect on panicThreat', nDelta > rDelta && nOverR > 2.5 && nOverR < 4.0, `N=${nDelta} R=${rDelta} ratio=${nOverR}`);
 
   // Opposite-sign proof on recoveryTime: R speeds recovery (lowers residual fear),
   // N slows it (raises residual).
