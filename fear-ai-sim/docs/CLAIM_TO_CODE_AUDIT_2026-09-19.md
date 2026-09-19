@@ -14,9 +14,21 @@ and it does not certify the whole repository as RC1.
 
 ## Repository boundary
 
-- Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean with counterfactual hardening at `51b6268`, transport/lifecycle hardening at `88cf80b`, real-socket reconnect evidence at `2a5e4e6`, the long-horizon lifecycle probe at `2611d6f`, and protocol-abuse evidence at `57c7528`.
+- Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean with counterfactual hardening at `51b6268`, transport/lifecycle hardening at `88cf80b`, real-socket reconnect evidence at `2a5e4e6`, the long-horizon lifecycle probe at `2611d6f`, protocol-abuse evidence at `57c7528`, and the current JavaScript performance baseline at `3edaf17`.
 - Pixel Pets host: `C:\tools\03-Projects\lains Tools\New Master Game`, branch `codex/canonical-consolidation-2026-08-12`, checked out at `d8ec1715c` with unrelated uncommitted changes. Host evidence is referenced by named commits and recorded artifacts, not by the dirty working tree.
 - Elixir/NIF tree: outside this release scope; its normalized `[0,1]` model is intentionally not parity-equivalent to the Rust/JS 0–5 hysteresis model.
+
+### JavaScript Runtime Performance Baseline — `OBSERVED_CURRENT` (not a capability certification)
+
+- **Repository / commit:** `fear-ai-sim@3edaf17`.
+- **Source / symbol:** `tools/verification/measure_runtime_performance.mjs` measures `RuntimeSimulation.tick()` under the documented default middleware configuration.
+- **Actual live caller:** the measurement script constructs and drives `RuntimeSimulation` directly; it is a reproducible middleware benchmark, not a host-engine integration path.
+- **Actual consumer:** release planning and capacity investigation may use the recorded baseline as one-machine observational evidence.
+- **Persistence owner:** none; the run records metadata and counters but does not certify snapshot or host persistence behavior.
+- **Authority boundary:** JavaScript middleware timing only; no host physics, movement, combat, inventory, or external-engine transport is included.
+- **Proof artifact:** `evidence/js_runtime_performance_2026-09-19.md`.
+- **Known limitation:** on the recorded Windows/Node host, 100 measured ticks after 10 warmups produced p99 values of 0.4307 ms at 32 agents, 0.9025 ms at 128 agents, and 3.6962 ms at 512 agents. These are not universal thresholds, a Rust host benchmark, or a release gate; target-environment reruns are required for capacity claims.
+- **Last verified / strength:** 2026-09-19; metadata-bearing measurement with explicit machine, runtime, scale, warmup, sample, clock, and memory fields. Observational and environment-specific.
 
 ## Trace records
 
