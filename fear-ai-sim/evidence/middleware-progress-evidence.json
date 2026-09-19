@@ -1,4 +1,6 @@
 {
+  "status": "historical-progress-record",
+  "scope_note": "Dated progress ledger from 2026-09-07. Its VERIFIED rows are historical implementation evidence, not current external adoption, universal RuntimeSimulation wiring, or release certification. Use docs/CURRENT_TRUTH_LEDGER.md and docs/RELEASE_CANDIDATE_CERTIFICATION.md for current claims.",
   "project": "Fear AI Universal Middleware",
   "version": "1.0.0",
   "last_audit": "2026-09-07T19:08:00-04:00",

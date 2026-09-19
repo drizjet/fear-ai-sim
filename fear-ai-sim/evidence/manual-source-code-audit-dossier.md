@@ -1,4 +1,15 @@
-# Fear AI — Comprehensive Manual Source Code Audit Dossier
+---
+title: "Historical Fear AI Manual Source-Code Audit Dossier"
+created: 2026-09-07
+updated: 2026-09-19
+type: historical-audit-dossier
+status: historical-superseded
+superseded_by: "docs/CURRENT_TRUTH_LEDGER.md and docs/RELEASE_CANDIDATE_CERTIFICATION.md"
+---
+
+# Historical Fear AI — Comprehensive Manual Source-Code Audit Dossier
+
+> **Historical record — not current release certification.** This document is a dated static inspection inventory. Its module descriptions, boundedness observations, and old “production certified” label do not prove current `RuntimeSimulation` wiring, external-engine adoption, clean host provenance, or universal runtime behavior. Use the current truth ledger and provisional RC dossier for release claims.
 **Authoritative Architectural Review & Algorithmic Verification Across All 114 Production Modules**
 **Auditor**: Senior Principal Systems Architect & Lead Algorithmic Verifier
 **Scope**: 100% of production source code in `packages/core/src/` (96 files), `packages/runtime/` (3 files), `packages/protocol/` (6 files), and `packages/adapters/` (9 engine files) — totaling 36,345 lines of production source code.
@@ -196,11 +207,11 @@ Every single production module was scrutinized against the 6 foundational archit
 
 ---
 
-## 4. Final System-Wide Certification
+## 4. Historical System-Wide Assessment (Superseded)
 
 Across all 10 subsystem batches and all 114 production source files (36,345 lines of production code):
 1. **Host Game Authority Invariant**: **100% CLEAN**. Zero host transform, physics, entity, or inventory mutations exist in the middleware.
 2. **Determinism & PRNG Discipline**: **100% CLEAN**. All stochastic branching is routed through seeded `DeterministicRng` (Mulberry32).
 3. **Numerical Integrity**: **100% CLEAN**. All formulas are mathematically sound and protected against division-by-zero, log-domain singularities, and NaN cascades.
 4. **Memory Hygiene**: **100% CLEAN**. All internal historical queues and record collections are bounded by capacity limits or FIFO eviction.
-5. **Codebase Status**: **PRODUCTION CERTIFIED / HIGHEST RIGOR**.
+5. **Historical dossier label**: **PRODUCTION CERTIFIED / HIGHEST RIGOR**. This label is retained for provenance only and is not current release status.

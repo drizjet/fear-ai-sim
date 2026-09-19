@@ -64,7 +64,8 @@ const supersededRecords = [
     'docs/FAILURE_AND_LIFECYCLE_MATRIX.md',
     'docs/audit/v8-current/AUDIT_LONG_HORIZON.md',
     'docs/audit/v8-current/AUDIT_LIMITATIONS.md',
-    'docs/audit/v8-current/AUDIT_CAUSAL_CONTRACTS.md'
+    'docs/audit/v8-current/AUDIT_CAUSAL_CONTRACTS.md',
+    'evidence/manual-source-code-audit-dossier.md'
 ];
 for (const relativePath of supersededRecords) {
     includes(relativePath, 'status: historical-superseded');
@@ -73,6 +74,14 @@ for (const relativePath of supersededRecords) {
     excludesPattern(relativePath, /^status:\s*(?:active|verified|verified-and-certified)\s*$/im);
 }
 console.log(`  * Superseded records are explicitly historical and non-authoritative (${supersededRecords.length}): PASS`);
+
+const historicalProgressRecords = ['evidence/middleware-progress-evidence.json'];
+for (const relativePath of historicalProgressRecords) {
+    includes(relativePath, '"status": "historical-progress-record"');
+    includes(relativePath, '"scope_note":');
+    excludesPattern(relativePath, /^ {2}"status":\s*"VERIFIED"\s*,?$/m);
+}
+console.log(`  * Historical progress ledgers carry an explicit non-certification scope (${historicalProgressRecords.length}): PASS`);
 
 // Guard against the exact unscoped certification markers that caused the
 // previous ambiguity. Historical prose may still quote an old result, but its

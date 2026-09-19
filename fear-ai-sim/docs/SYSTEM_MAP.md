@@ -36,7 +36,7 @@ We are **not** making a Fear AI Godot/Unity/Unreal game.
 
 The inventory below is a navigation and architecture map, not a blanket release certification. Descriptions of optional world-simulation, research, and CLI systems identify available code paths; they do not imply automatic construction by `RuntimeSimulation`, attachment to every host session, or universal guarantees. Use `docs/CURRENT_TRUTH_LEDGER.md`, `docs/CLAIM_TO_CODE_AUDIT_2026-09-19.md`, and `docs/RELEASE_CANDIDATE_CERTIFICATION.md` for current claim status, evidence scope, and release gates. Historical benchmark numbers remain historical unless they are linked to a current metadata-bearing evidence artifact.
 
-The older `CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md`, `NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md`, `NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md`, and `FAILURE_AND_LIFECYCLE_MATRIX.md` are explicitly historical-superseded records. Their earlier “verified,” “complete,” “zero friction,” or test-runner-era certification language is not current release status.
+The older `CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md`, `NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md`, `NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md`, `FAILURE_AND_LIFECYCLE_MATRIX.md`, and `evidence/manual-source-code-audit-dossier.md` are explicitly historical-superseded records. Their earlier “verified,” “complete,” “production certified,” “zero friction,” or test-runner-era certification language is not current release status. `evidence/middleware-progress-evidence.json` is a dated progress ledger, not a current authority.
 
 ## Three live trees (siblings, not one binary)
 
