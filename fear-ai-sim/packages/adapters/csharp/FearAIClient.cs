@@ -30,7 +30,8 @@ namespace FearAI.Client
                     type = "HANDSHAKE_REQUEST",
                     protocol_version = "1.0.0",
                     client_id = clientId,
-                    client_name = clientId
+                    client_name = clientId,
+                    engine = "CSharp"
                 };
 
                 var json = JsonSerializer.Serialize(payload);

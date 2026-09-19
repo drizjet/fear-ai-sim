@@ -86,13 +86,14 @@ async function main() {
   check('C# emits HANDSHAKE_REQUEST', csharpClient.includes('HANDSHAKE_REQUEST'));
   check('C# handshake pins protocol_version 1.0.0', csharpClient.includes('"1.0.0"'));
   check('C# handshake POSTs /api/v1/handshake', csharpClient.includes('/api/v1/handshake'));
+  check('C# handshake advertises engine field', csharpClient.includes('engine'));
 
   // Validator-level handshake semantics (canonical server contract)
   const vGodot = ProtocolValidator.validateHandshake({ type: 'HANDSHAKE_REQUEST', protocol_version: '1.0.0', client_id: 'godot_1', engine: 'Godot4' });
   check('Validator accepts Godot-shape handshake', vGodot.valid === true);
   const vUnity = ProtocolValidator.validateHandshake({ type: 'HANDSHAKE_REQUEST', protocol_version: '1.0.0', client_id: 'unity_x', engine: 'Unity' });
   check('Validator accepts Unity-shape handshake', vUnity.valid === true);
-  const vCsharp = ProtocolValidator.validateHandshake({ type: 'HANDSHAKE_REQUEST', protocol_version: '1.0.0', client_id: 'csharp_client', client_name: 'csharp_client' });
+  const vCsharp = ProtocolValidator.validateHandshake({ type: 'HANDSHAKE_REQUEST', protocol_version: '1.0.0', client_id: 'csharp_client', client_name: 'csharp_client', engine: 'CSharp' });
   check('Validator accepts C#-shape handshake', vCsharp.valid === true && vCsharp.value.client_id === 'csharp_client');
   const vBadMajor = ProtocolValidator.validateHandshake({ type: 'HANDSHAKE_REQUEST', protocol_version: '2.0.0', client_id: 'x' });
   check('Validator rejects incompatible major version', vBadMajor.valid === false);
