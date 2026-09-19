@@ -14,7 +14,7 @@ and it does not certify the whole repository as RC1.
 
 ## Repository boundary
 
-- Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean with counterfactual hardening at `51b6268`.
+- Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean with counterfactual hardening at `51b6268` and transport/lifecycle hardening at `88cf80b`.
 - Pixel Pets host: `C:\tools\03-Projects\lains Tools\New Master Game`, branch `codex/canonical-consolidation-2026-08-12`, checked out at `d8ec1715c` with unrelated uncommitted changes. Host evidence is referenced by named commits and recorded artifacts, not by the dirty working tree.
 - Elixir/NIF tree: outside this release scope; its normalized `[0,1]` model is intentionally not parity-equivalent to the Rust/JS 0–5 hysteresis model.
 
@@ -43,6 +43,18 @@ and it does not certify the whole repository as RC1.
 - **Proof artifact:** `tools/verification/verify_adapter_conformance.mjs`, Suite 3.
 - **Known limitation:** conformance is adapter-envelope evidence, not proof that an arbitrary external engine consumes every downgrade correctly.
 - **Last verified / strength:** 2026-09-19; 123-assertion deterministic harness plus static adapter inspection.
+
+### Runtime Transport, Registration & Lifecycle — `VERIFIED_CURRENT`
+
+- **Repository / commit:** `fear-ai-sim@88cf80b`.
+- **Source / symbol:** `packages/runtime/src/FearServer.js::_handleWsMessage/_routeHttpPost`, `packages/protocol/src/validator.js::validatePacingOverride`, and `RuntimeSimulation::unregisterAgent`.
+- **Actual live caller:** FearServer HTTP `/api/v1/*` routes and WebSocket message dispatch; engine adapters use the protocol boundary.
+- **Actual consumer:** local host clients receive validated acknowledgements, errors, and advisory outputs.
+- **Persistence owner:** server-scoped `RuntimeSimulation`; explicit unregister owns cleanup of per-agent middleware state.
+- **Authority boundary:** validation and lifecycle bookkeeping only; no transport path owns host transforms, physics, or combat.
+- **Proof artifact:** `tools/verification/verify_server_lifecycle.mjs`.
+- **Known limitation:** the proof directly exercises the dispatcher without opening a listener. WebSocket close removes the connection from `connectedClients` but does not automatically unregister server-scoped agents; reconnect/session ownership remains an explicit host contract and is not certified.
+- **Last verified / strength:** 2026-09-19; deterministic dispatcher proof covering HTTP/WS pacing guards, snapshot failure semantics, correlation IDs, and cross-subsystem unregister cleanup.
 
 ### Protocol V2 Binary Wire — `VERIFIED_CURRENT`
 
@@ -143,6 +155,7 @@ and it does not certify the whole repository as RC1.
 ## Downgraded or excluded claims
 
 - The dashboard's `/api/causal` endpoint remains a separate `CausalEventGraph` vignette; it is not evidence that the dashboard exposes `WorldCounterfactualEngine`.
+- WebSocket reconnect ownership remains open: explicit `UNREGISTER_AGENT` cleanup is proven, but disconnect-driven agent retirement is not claimed.
 - `Godot 4.6 Multi-Station Showcase` is `PARTIAL`: adapter conformance is proven, but the current proof registry does not assert every visual station.
 - Unity remains `PARTIAL` until a real Unity Editor host is available.
 - Unreal remains `DEFERRED` by owner policy.
