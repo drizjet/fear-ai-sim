@@ -14,7 +14,7 @@ and it does not certify the whole repository as RC1.
 
 ## Repository boundary
 
-- Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean with counterfactual hardening at `51b6268`, transport/lifecycle hardening at `88cf80b`, and real-socket reconnect evidence at `2a5e4e6`.
+- Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean with counterfactual hardening at `51b6268`, transport/lifecycle hardening at `88cf80b`, real-socket reconnect evidence at `2a5e4e6`, and the long-horizon lifecycle probe at `2611d6f`.
 - Pixel Pets host: `C:\tools\03-Projects\lains Tools\New Master Game`, branch `codex/canonical-consolidation-2026-08-12`, checked out at `d8ec1715c` with unrelated uncommitted changes. Host evidence is referenced by named commits and recorded artifacts, not by the dirty working tree.
 - Elixir/NIF tree: outside this release scope; its normalized `[0,1]` model is intentionally not parity-equivalent to the Rust/JS 0–5 hysteresis model.
 
@@ -76,9 +76,9 @@ and it does not certify the whole repository as RC1.
 - **Actual consumer:** a new or contaminated `RuntimeSimulation` instance after rehydration.
 - **Persistence owner:** `RuntimeSimulation` owns top-level state; agents and component serializers own nested state.
 - **Authority boundary:** snapshot loading restores middleware state only; host-owned identity architecture attachments are not serialized.
-- **Proof artifact:** `tools/verification/verify_persistence_roundtrip.mjs`.
-- **Known limitation:** V1 cannot recreate fields that did not exist; the migration initializes documented defaults. Identity architecture objects still require host reattachment.
-- **Last verified / strength:** 2026-09-19; canonical full-state comparisons at +1/+10/+100 ticks, custom configuration, queued observations, prior contagion output, dirty state, V1 defaults, and reset semantics.
+- **Proof artifact:** `tools/verification/verify_persistence_roundtrip.mjs` and `tools/verification/verify_long_horizon_lifecycle.mjs`.
+- **Known limitation:** V1 cannot recreate fields that did not exist; the migration initializes documented defaults. Identity architecture objects still require host reattachment. The 5,000-tick probe covers the named RuntimeSimulation configuration and does not certify arbitrary custom subsystems or external host identity ownership.
+- **Last verified / strength:** 2026-09-19; canonical full-state comparisons at +1/+10/+100 ticks, custom configuration, queued observations, prior contagion output, dirty state, V1 defaults, reset semantics, 5,000-tick bounded lifecycle, registration churn, finite snapshots, and post-load continuation.
 
 ### Multi-Agent Pack Coordination — `VERIFIED_CURRENT`
 

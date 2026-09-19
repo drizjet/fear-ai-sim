@@ -12,7 +12,7 @@ status: active
 **Date**: September 19, 2026
 **Campaign**: Continuous Closure Phases 1–4 (Muse Spark / OpenCode)
 **Repositories**:
-- Fear AI: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim` (master: `2a5e4e6` + this dossier update)
+- Fear AI: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim` (master: `2611d6f` + this dossier update)
 - Host: `C:\tools\03-Projects\lains Tools\New Master Game` (branch `codex/canonical-consolidation-2026-08-12`, commits `91af8f957` → `e2090880a` → `f3f5e8d25`)
 **Standard**: Reconciled Evidence Protocol — Hard Rule 9 (zero automated test runners; static review + standalone deterministic proofs only).
 **Invariants**: Host retains 100% authority over transforms, physics, collision, damage, inventory. Fear AI emits strictly non-mutating advisory intents and affective states.
@@ -26,6 +26,7 @@ status: active
 | Proof | Command | Result (2026-09-19) |
 |---|---|---|
 | Persistence round-trip | `node tools/verification/verify_persistence_roundtrip.mjs` | PASS (canonical full-state 1/10/100-tick parity, custom state, queued observations, V1 defaults + 50-tick parity, soft/hard reset) |
+| Long-horizon runtime lifecycle | `node tools/verification/verify_long_horizon_lifecycle.mjs` | PASS (5,000 ticks, registration churn, bounded caches/trauma/social state, finite snapshots, post-load continuation) |
 | Compound collisions | `node tools/verification/verify_compound_collisions.mjs` | PASS (60-unit + 300-unit dispersal recovery, confined attractor + leader break, famine conservation, bit-exact replay) |
 | Dashboard endpoints | `node tools/verification/verify_dashboard_endpoints.mjs` | PASS (12 endpoints, 10 tabs, attached read-only inspect) |
 | World counterfactual engine | `node tools/verification/verify_counterfactual_world.mjs` | PASS (determinism, source/factual isolation, macro + settlement-only divergence, no-op and invalid-input guards) |
@@ -38,7 +39,7 @@ status: active
 | Host skirmish audit | `cargo run --bin audit_fear_ai_connection` | Recorded PASS in sibling evidence at named commits; not rerun against the current dirty host checkout during this audit |
 | C# adapter build | `dotnet build packages/adapters/csharp/FearAI.Client.csproj` | Recorded 0 warnings, 0 errors in the Phase 1 evidence; not rerun in this audit |
 
-Current JS evidence: **10 Node harnesses — zero failures in this audit.** Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
+Current JS evidence: **11 Node harnesses — zero failures in this audit.** Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
 
 ---
 
@@ -66,6 +67,7 @@ Current JS evidence: **10 Node harnesses — zero failures in this audit.** Host
 - `WorldCounterfactualEngine` is now `VERIFIED_CURRENT` for the bounded `FrontierValleySimulation` and direct CLI/engine path after `51b6268` added world-summary divergence detection, explicit input/target guards, and `verify_counterfactual_world.mjs`.
 - Runtime transport/lifecycle is now `VERIFIED_CURRENT` for the bounded HTTP/WS dispatcher and explicit unregister path after `88cf80b` added finite pacing validation, truthful WebSocket snapshot errors, validation-error correlation IDs, and stale-state cleanup.
 - A real-listener probe at `2a5e4e6` verifies the intended reconnect contract: socket close removes the transport connection but preserves server-scoped agent state, which a reconnect can continue ticking; explicit unregister retires it.
+- The 5,000-tick lifecycle probe at `2611d6f` verifies bounded RuntimeSimulation state under repeated transient registration/removal and post-load continuation; this strengthens, but does not universalize, long-horizon claims.
 - The dashboard `/api/causal` endpoint remains explicitly separate: it exercises `CausalEventGraph`, not `WorldCounterfactualEngine`. `Godot 4.6 Multi-Station Showcase` remains `PARTIAL` until station-level proof is linked.
 - Per-connection ownership, duplicate-client arbitration, and automatic cleanup of abandoned WebSocket agents remain uncertified; the verified contract is server-scoped persistence plus explicit unregister.
 - The current JS harnesses pass, but the release gate remains open while external-host clean-worktree provenance and remaining live-wiring boundaries are reconciled.
@@ -92,6 +94,7 @@ Human evaluation remains **BLOCKED / NOT EXECUTED** for the experimental FABE re
 ```bash
 # Fear AI repo
 node tools/verification/verify_persistence_roundtrip.mjs
+node tools/verification/verify_long_horizon_lifecycle.mjs
 node tools/verification/verify_compound_collisions.mjs
 node tools/verification/verify_dashboard_endpoints.mjs
 node tools/verification/verify_counterfactual_world.mjs
@@ -107,12 +110,12 @@ node tools/verification/verify_fabe_personas.mjs
 cargo run --bin audit_fear_ai_connection
 ```
 
-The ten JS commands were rerun in this audit and exited 0. Host and C# results above are recorded evidence from named prior runs. No `cargo test` / `npm test` / Jest was used (Hard Rule 9).
+The eleven JS commands were rerun in this audit and exited 0. Host and C# results above are recorded evidence from named prior runs. No `cargo test` / `npm test` / Jest was used (Hard Rule 9).
 
 ---
 
 ## 5. Authority & provenance
 - Ledger: `docs/CURRENT_TRUTH_LEDGER.md` v1.3.1-PROVISIONAL (authoritative row-level mapping).
 - Evidence: `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, `evidence/rust_js_parity_vectors.json`.
-- Harness sources: `tools/verification/*.mjs` (10 current release proofs named above).
+- Harness sources: `tools/verification/*.mjs` (11 current release proofs named above).
 - Host fixes: `pixel-pets/src/bin/audit_fear_ai_connection.rs`, `pixel-pets/src/engine/formation_geometry.rs`, `pixel-pets/src/overlay_audio.rs` (commit `91af8f957`); audit extended to the faction matrix + 2,000-tick + formation-stress pass in `e2090880a`; latency gate + live squad-path stress + tick scaling probe in `f3f5e8d25`.
