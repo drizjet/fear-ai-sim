@@ -91,6 +91,7 @@ Use these labels exactly.
 - `BLOCKED`
 - `IMPLEMENTING`
 - `VERIFIED`
+- `SCENARIO_VERIFIED` — a standalone CLI, reference-world, or optional-module path has reproducible evidence, without implying automatic `RuntimeSimulation` wiring or external-host adoption.
 - `DEFERRED`
 - `REJECTED`
 - `SUPERSEDED`

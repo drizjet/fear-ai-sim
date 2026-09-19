@@ -8,7 +8,7 @@ status: active
 
 # Fear AI — Release Candidate Certification Dossier
 
-**Version**: 1.1.1-PROVISIONAL (ledger `1.3.1-PROVISIONAL`)
+**Version**: 1.1.2-PROVISIONAL (ledger `1.3.2-PROVISIONAL`)
 **Date**: September 19, 2026
 **Campaign**: Continuous Closure Phases 1–4 (Muse Spark / OpenCode)
 **Repositories**:
@@ -66,14 +66,15 @@ Current JS evidence: **13 Node verification harnesses — zero failures in this 
 - Proof recorded: `evidence/audit_fear_ai_connection_extended_2026-09-19.md` (supersedes `evidence/audit_fear_ai_connection_500tick_2026-09-19.md`).
 
 ### Phase 4 — Truth Ledger Reconciliation (reopened)
-- Ledger moved to `1.3.1-PROVISIONAL` and now records the JS/host repository boundary, bounded evidence language, the expanded persistence contract, and explicit claim-to-code traces in `docs/CLAIM_TO_CODE_AUDIT_2026-09-19.md`.
-- `WorldCounterfactualEngine` is now `VERIFIED_CURRENT` for the bounded `FrontierValleySimulation` and direct CLI/engine path after `51b6268` added world-summary divergence detection, explicit input/target guards, and `verify_counterfactual_world.mjs`.
+- Ledger moved to `1.3.2-PROVISIONAL` and now records the JS/host repository boundary, bounded evidence language, the expanded persistence contract, explicit claim-to-code traces, and a distinct standalone-scenario status in `docs/CLAIM_TO_CODE_AUDIT_2026-09-19.md`.
+- `WorldCounterfactualEngine` is now `SCENARIO_VERIFIED` for the bounded `FrontierValleySimulation` and direct CLI/engine path after `51b6268` added world-summary divergence detection, explicit input/target guards, and `verify_counterfactual_world.mjs`; it is not an automatic `RuntimeSimulation` service or dashboard wrapper.
 - Runtime transport/lifecycle is now `VERIFIED_CURRENT` for the bounded HTTP/WS dispatcher and explicit unregister path after `88cf80b` added finite pacing validation, truthful WebSocket snapshot errors, validation-error correlation IDs, and stale-state cleanup.
 - A real-listener probe at `2a5e4e6` verifies the intended reconnect contract: socket close removes the transport connection but preserves server-scoped agent state, which a reconnect can continue ticking; explicit unregister retires it.
 - The 5,000-tick lifecycle probe at `2611d6f` verifies bounded RuntimeSimulation state under repeated transient registration/removal and post-load continuation; this strengthens, but does not universalize, long-horizon claims.
 - The protocol-abuse probe at `57c7528` verifies bounded malformed-input handling and payload limits across real HTTP/WebSocket listeners; it is protocol hardening evidence, not cryptographic or universal denial-of-service certification.
 - The JavaScript runtime measurement records two one-machine middleware runs: primary p99 0.4307/0.9025/3.6962 ms and clean-audit rerun 0.4226/0.8077/4.0664 ms at 32/128/512 agents after the documented warmup. It is observational capacity evidence, not a universal threshold, Rust host benchmark, or release gate.
 - The runtime wiring probe verifies the current scope boundary: core services are constructed by `RuntimeSimulation`, optional world/research modules are not, their direct CLI/scenario paths are explicit, `FearServer` owns the runtime, and the dashboard requires explicit attachment. This is a scope tripwire, not optional-module or external-host certification.
+- The ledger now uses `SCENARIO_VERIFIED` for optional standalone/reference-world capabilities and `PARTIAL (RECORDED_HOST_EVIDENCE)` for Pixel Pets because its evidence is tied to a dirty sibling checkout. `VERIFIED_CURRENT` is reserved for the explicitly bounded current service/tool contracts that meet the stronger row-level evidence standard.
 - The dashboard `/api/causal` endpoint remains explicitly separate: it exercises `CausalEventGraph`, not `WorldCounterfactualEngine`. `Godot 4.6 Multi-Station Showcase` remains `PARTIAL` until station-level proof is linked.
 - Per-connection ownership, duplicate-client arbitration, and automatic cleanup of abandoned WebSocket agents remain uncertified; the verified contract is server-scoped persistence plus explicit unregister.
 - The current JS harnesses pass, but the release gate remains open while external-host clean-worktree provenance and remaining live-wiring boundaries are reconciled.
@@ -125,7 +126,7 @@ The thirteen JS verification commands were rerun in this audit and exited 0; the
 ---
 
 ## 5. Authority & provenance
-- Ledger: `docs/CURRENT_TRUTH_LEDGER.md` v1.3.1-PROVISIONAL (authoritative row-level mapping).
+- Ledger: `docs/CURRENT_TRUTH_LEDGER.md` v1.3.2-PROVISIONAL (authoritative row-level mapping).
 - Evidence: `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, `evidence/js_runtime_performance_2026-09-19.md`, `evidence/rust_js_parity_vectors.json`.
 - Harness sources: `tools/verification/*.mjs` (13 current release proofs plus the metadata-only performance measurement named above).
 - Host fixes: `pixel-pets/src/bin/audit_fear_ai_connection.rs`, `pixel-pets/src/engine/formation_geometry.rs`, `pixel-pets/src/overlay_audio.rs` (commit `91af8f957`); audit extended to the faction matrix + 2,000-tick + formation-stress pass in `e2090880a`; latency gate + live squad-path stress + tick scaling probe in `f3f5e8d25`.

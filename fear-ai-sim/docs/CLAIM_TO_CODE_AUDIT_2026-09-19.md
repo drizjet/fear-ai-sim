@@ -104,7 +104,7 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** V1 cannot recreate fields that did not exist; the migration initializes documented defaults. Identity architecture objects still require host reattachment. The 5,000-tick probe covers the named RuntimeSimulation configuration and does not certify arbitrary custom subsystems or external host identity ownership.
 - **Last verified / strength:** 2026-09-19; canonical full-state comparisons at +1/+10/+100 ticks, custom configuration, queued observations, prior contagion output, dirty state, V1 defaults, reset semantics, 5,000-tick bounded lifecycle, registration churn, finite snapshots, and post-load continuation.
 
-### Multi-Agent Pack Coordination — `VERIFIED_CURRENT`
+### Multi-Agent Pack Coordination — `SCENARIO_VERIFIED`
 
 - **Repository / commit:** `fear-ai-sim@3a56283`.
 - **Source / symbol:** `packages/core/src/PackCoordinationEngine.js::PackCoordinationEngine`.
@@ -116,7 +116,7 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** this is an optional standalone tactical module, not automatic middleware-session coordination.
 - **Last verified / strength:** 2026-09-19; deterministic collision scenario plus static caller trace.
 
-### Economic Feedback & Pathology — `VERIFIED_CURRENT`
+### Economic Feedback & Pathology — `SCENARIO_VERIFIED`
 
 - **Repository / commit:** `fear-ai-sim@3a56283`.
 - **Source / symbol:** `packages/core/src/EconomicFeedbackSystem.js::EconomicFeedbackSystem` and `SettlementMigrationSystem` scenario consumers.
@@ -128,7 +128,7 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** the observed scenario has bounded prices, conserved population, and finite values. That evidence cannot support a universal guarantee against every economic pathology.
 - **Last verified / strength:** 2026-09-19; one deterministic compound scenario plus static wiring inspection.
 
-### Epistemic Belief & Rumor Diffusion — `VERIFIED_CURRENT`
+### Epistemic Belief & Rumor Diffusion — `SCENARIO_VERIFIED`
 
 - **Repository / commit:** `fear-ai-sim@3a56283`.
 - **Source / symbol:** `EpistemicBeliefEngine`, `InformationPropagationEngine`, and `AnticipatoryFearEngine` in `packages/core/src`.
@@ -152,7 +152,7 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** seven surfaces are deterministic vignettes, two are live reference simulations, and only `/api/sim/inspect` is an attached middleware session. HTTP success is not evidence of a production host attachment.
 - **Last verified / strength:** 2026-09-19; 12-endpoint semantic harness with attached read-only inspection.
 
-### Causal Counterfactual World Forks — `VERIFIED_CURRENT`
+### Causal Counterfactual World Forks — `SCENARIO_VERIFIED`
 
 - **Repository / commit:** `fear-ai-sim@51b6268`.
 - **Source / symbol:** `packages/core/src/WorldCounterfactualEngine.js::WorldCounterfactualEngine` and `FrontierValleySimulation::fork/getState/setState`.
@@ -164,7 +164,7 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** the proof is bounded to the `FrontierValleySimulation` summary fields and direct CLI/engine path. `DesignerDashboardServer` `/api/causal` constructs `CausalEventGraph`, a separate deterministic vignette, and is not presented as a dashboard wrapper for this world-fork engine.
 - **Last verified / strength:** 2026-09-19; deterministic report replay, source/factual-branch isolation, macro and settlement-only effects, no-op invariance, and invalid-input/target guards.
 
-### External Host Integration — `VERIFIED_CURRENT`
+### External Host Integration — `PARTIAL (RECORDED_HOST_EVIDENCE)`
 
 - **Repository / commit:** sibling `New Master Game@f3f5e8d25` and descendants recorded in `evidence/audit_fear_ai_connection_extended_2026-09-19.md`.
 - **Source / symbol:** `pixel-pets/src/engine/ai/fear_ai_bridge.rs::FearAiBridge::tick_unit_advisory`; audit binary `pixel-pets/src/bin/audit_fear_ai_connection.rs`.
@@ -185,3 +185,4 @@ and it does not certify the whole repository as RC1.
 - Unreal remains `DEFERRED` by owner policy.
 - FABE and Moral Dissonance remain `EXPERIMENTAL`; human evaluation is not executed.
 - Pack, economic, epistemic, and world-simulation modules remain optional scenario/CLI surfaces unless an explicit `RuntimeSimulation` wiring path is documented and proven.
+- `SCENARIO_VERIFIED` is intentionally narrower than `VERIFIED_CURRENT`: it records a proven standalone or reference-world path without implying automatic runtime construction or external-host adoption.
