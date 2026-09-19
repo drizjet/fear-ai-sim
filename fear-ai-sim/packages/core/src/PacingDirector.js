@@ -131,6 +131,8 @@ export class PacingDirector {
             totalSessionTicks: this.totalSessionTicks,
             ddaIntensityModifier: this.ddaIntensityModifier,
             pacingOverride: this.pacingOverride,
+            recentPanicRate: this.recentPanicRate,
+            phases: this.phases.map(phase => ({ ...phase })),
             progress: this.getProgress(),
             phase: this.getCurrentPhase().name,
             targetIntensity: this.getTargetIntensity()
@@ -143,6 +145,12 @@ export class PacingDirector {
         this.totalSessionTicks = snapshot.totalSessionTicks || this.totalSessionTicks;
         this.ddaIntensityModifier = snapshot.ddaIntensityModifier ?? 1.0;
         this.pacingOverride = snapshot.pacingOverride ?? null;
+        if (typeof snapshot.recentPanicRate === 'number' && Number.isFinite(snapshot.recentPanicRate)) {
+            this.recentPanicRate = snapshot.recentPanicRate;
+        }
+        if (Array.isArray(snapshot.phases) && snapshot.phases.length > 0) {
+            this.phases = snapshot.phases.map(phase => ({ ...phase }));
+        }
     }
 }
 

@@ -528,6 +528,10 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 enablePacingCohesion: this.enablePacingCohesion,
                 enableSocial: this.enableSocial
             },
+            pendingObservations: Array.from(this.pendingObservations.entries()).map(([agentId, observation]) => [
+                agentId,
+                JSON.parse(JSON.stringify(observation))
+            ]),
             agents: agentsSnapshot,
             customMetadata: this.customMetadata ? { ...this.customMetadata } : {}
         };
@@ -559,7 +563,40 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // Clean slate to prevent stale state contamination across loads
         this.reset({ clearAgents: true });
 
+        // Rebuild every stateful container from construction options before
+        // applying snapshot fields. Older snapshots do not carry the newer
+        // subsystem state, so a load must never inherit mutated v2 state from
+        // the instance being reused.
+        this.trauma = new TraumaZoneSystem(this.options.traumaConfig || {});
+        this.pacing = new PacingDirector(this.options.pacingConfig || {});
+        this.contagion = new ContagionGraph(this.options.contagionConfig || {});
+        this.coreTrauma = new TraumaCrystallizationEngine(this.options.coreTraumaConfig || {});
+        this.social = new RelationshipTensorSystem(this.options.socialConfig || {});
+        const cad = (v) => {
+            const n = Math.floor(Number(v) || 1);
+            return n >= 1 ? n : 1;
+        };
+        this.timeDiscipline = new HostTimeDiscipline({
+            cadences: {
+                affect: 1,
+                social: cad(this.options.socialCadence),
+                coreTrauma: cad(this.options.traumaCadence),
+                contagion: cad(this.options.contagionCadence),
+                faction: 20
+            }
+        });
+        this.lastContagion = new Map();
+        this.customMetadata = {};
+        this.enableTrauma = this.options.enableTrauma ?? true;
+        this.enableCoreTrauma = this.options.enableCoreTrauma ?? true;
+        this.enableTraumaFeedback = this.options.enableTraumaFeedback ?? true;
+        this.enableContagion = this.options.enableContagion ?? true;
+        this.enablePacing = this.options.enablePacing ?? true;
+        this.enablePacingCohesion = this.options.enablePacingCohesion ?? true;
+        this.enableSocial = this.options.enableSocial ?? true;
+
         this.seed = migrated.seed ?? this.seed;
+        this.rng = new DeterministicRng(this.seed);
         this.tickCount = migrated.tickCount ?? 0;
         if (migrated.rng) this.rng.setState(migrated.rng);
         if (migrated.pacing) this.pacing.setState(migrated.pacing);
@@ -604,12 +641,26 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 if (!aData || typeof aData !== 'object' || !aData.id) continue;
                 const agent = new AffectiveAgent(aData.id, aData.traits, {
                     name: aData.name,
-                    rng: () => this.rng.random()
+                    seed: `${this.seed}:${aData.id}`,
+                    rng: () => this.rng.random(),
+                    ...(aData.agentConfig || {}),
+                    fearCoreConfig: aData.fearCore?.config || {},
+                    habituationConfig: aData.habituation?.config || {}
                 });
                 agent.setState(aData);
                 this.agents.set(agent.id, agent);
                 if (this.enableCoreTrauma && !this.coreTrauma.agentRecords.has(agent.id)) {
                     this.coreTrauma.registerAgent(agent.id, agent.traits);
+                }
+            }
+        }
+
+        if (Array.isArray(migrated.pendingObservations)) {
+            for (const entry of migrated.pendingObservations) {
+                if (!Array.isArray(entry) || entry.length !== 2) continue;
+                const [agentId, observation] = entry;
+                if (this.agents.has(String(agentId)) && observation && typeof observation === 'object') {
+                    this.pendingObservations.set(String(agentId), JSON.parse(JSON.stringify(observation)));
                 }
             }
         }

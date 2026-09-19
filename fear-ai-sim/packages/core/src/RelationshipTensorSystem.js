@@ -402,6 +402,7 @@ export class RelationshipTensorSystem {
         }
 
         return {
+            config: { ...this.config },
             tickCount: this.tickCount,
             relationships: serialized
         };
@@ -413,6 +414,9 @@ export class RelationshipTensorSystem {
      */
     setState(snapshot) {
         if (!snapshot) return;
+        if (snapshot.config && typeof snapshot.config === 'object') {
+            this.config = { ...this.config, ...snapshot.config };
+        }
         this.tickCount = Number(snapshot.tickCount) || 0;
         this.relationships.clear();
 

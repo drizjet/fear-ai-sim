@@ -112,15 +112,32 @@ export class HostTimeDiscipline {
     }
 
     getState() {
-        return { tick: this.tick, simTime: this.simTime, timeScale: this.timeScale, paused: this.paused };
+        return {
+            baseDt: this.baseDt,
+            cadences: { ...this.cadences },
+            tick: this.tick,
+            simTime: this.simTime,
+            timeScale: this.timeScale,
+            paused: this.paused,
+            corrections: this.corrections,
+            pausedTicks: this.pausedTicks
+        };
     }
 
     setState(state) {
         if (!state || typeof state !== 'object') return;
+        if (typeof state.baseDt === 'number' && Number.isFinite(state.baseDt) && state.baseDt >= 0) {
+            this.baseDt = state.baseDt;
+        }
+        if (state.cadences && typeof state.cadences === 'object') {
+            this.cadences = { ...this.cadences, ...state.cadences };
+        }
         if (typeof state.tick === 'number' && Number.isFinite(state.tick)) this.tick = Math.floor(state.tick);
         if (typeof state.simTime === 'number' && Number.isFinite(state.simTime)) this.simTime = state.simTime;
         if (typeof state.timeScale === 'number' && Number.isFinite(state.timeScale)) this.timeScale = state.timeScale;
         if (typeof state.paused === 'boolean') this.paused = state.paused;
+        if (typeof state.corrections === 'number' && Number.isFinite(state.corrections)) this.corrections = Math.max(0, Math.floor(state.corrections));
+        if (typeof state.pausedTicks === 'number' && Number.isFinite(state.pausedTicks)) this.pausedTicks = Math.max(0, Math.floor(state.pausedTicks));
     }
 
     auditImmutability() {

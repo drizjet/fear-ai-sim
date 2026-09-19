@@ -586,6 +586,12 @@ export class AffectiveAgent {
         return {
             id: this.id,
             name: this.name,
+            agentConfig: {
+                enableHabituation: this.enableHabituation,
+                enablePsychoacoustics: this.enablePsychoacoustics,
+                enableOCEAN: this.enableOCEAN,
+                enableHysteresis: this.enableHysteresis
+            },
             traits: { ...this.traits },
             x: this.x,
             y: this.y,
@@ -604,6 +610,7 @@ export class AffectiveAgent {
             tickCount: this.tickCount,
             fearCore: this.fearCore.getState(),
             habituation: this.habituation.getState(),
+            lastResult: this.lastResult ? JSON.parse(JSON.stringify(this.lastResult)) : null,
             // NEXT-117/NEXT-130: wire-attachment state. Engine instances stay
             // host-owned; config round-trips so a re-attached agent resumes
             // identically (episode latch included: without it a restored
@@ -638,8 +645,14 @@ export class AffectiveAgent {
         this.currentFear = snapshot.currentFear ?? 0.0;
         this.currentAnger = snapshot.currentAnger ?? 0.0;
         this.tickCount = snapshot.tickCount ?? 0;
+        if (snapshot.agentConfig && typeof snapshot.agentConfig === 'object') {
+            for (const key of ['enableHabituation', 'enablePsychoacoustics', 'enableOCEAN', 'enableHysteresis']) {
+                if (typeof snapshot.agentConfig[key] === 'boolean') this[key] = snapshot.agentConfig[key];
+            }
+        }
         if (snapshot.fearCore) this.fearCore.setState(snapshot.fearCore);
         if (snapshot.habituation) this.habituation.setState(snapshot.habituation);
+        this.lastResult = snapshot.lastResult ? JSON.parse(JSON.stringify(snapshot.lastResult)) : null;
         // NEXT-117: wire config plus the trauma episode latch. Instances
         // (identityArch, traumaEngine) are re-attached by the host.
         if (typeof snapshot.identityBlend === 'number') this.identityBlend = snapshot.identityBlend;

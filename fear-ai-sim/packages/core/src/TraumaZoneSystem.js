@@ -97,6 +97,7 @@ export class TraumaZoneSystem {
 
     getState() {
         return {
+            maxZones: this.maxZones,
             nextZoneId: this.nextZoneId,
             zones: this.zones.map(z => ({ ...z }))
         };
@@ -104,6 +105,9 @@ export class TraumaZoneSystem {
 
     setState(snapshot) {
         if (!snapshot) return;
+        if (Number.isFinite(snapshot.maxZones) && snapshot.maxZones >= 1) {
+            this.maxZones = Math.floor(snapshot.maxZones);
+        }
         this.nextZoneId = snapshot.nextZoneId || 1;
         this.zones = Array.isArray(snapshot.zones) ? snapshot.zones.map(z => ({ ...z })) : [];
     }

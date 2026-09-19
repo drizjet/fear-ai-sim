@@ -162,6 +162,7 @@ export class HabituationSystem {
             entries.push([key, { ...val }]);
         }
         return {
+            config: JSON.parse(JSON.stringify(this.config)),
             totalExposures: this.totalExposures,
             habituationEvents: this.habituationEvents,
             entries
@@ -170,6 +171,16 @@ export class HabituationSystem {
 
     setState(snapshot) {
         if (!snapshot) return;
+        if (snapshot.config && typeof snapshot.config === 'object') {
+            this.config = {
+                ...this.config,
+                ...snapshot.config,
+                stimulusTypes: {
+                    ...this.config.stimulusTypes,
+                    ...(snapshot.config.stimulusTypes || {})
+                }
+            };
+        }
         this.totalExposures = snapshot.totalExposures || 0;
         this.habituationEvents = snapshot.habituationEvents || 0;
         this.exposureMap = new Map();

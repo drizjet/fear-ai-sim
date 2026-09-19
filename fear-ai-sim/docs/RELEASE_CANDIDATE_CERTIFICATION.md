@@ -8,7 +8,7 @@ status: active
 
 # Fear AI — Release Candidate Certification Dossier
 
-**Version**: 1.0.0-RC (ledger `1.3.0-CERTIFIED`)
+**Version**: 1.1.0-PROVISIONAL (ledger `1.3.1-PROVISIONAL`)
 **Date**: September 19, 2026
 **Campaign**: Continuous Closure Phases 1–4 (Muse Spark / OpenCode)
 **Repositories**:
@@ -21,21 +21,21 @@ status: active
 
 ## 1. Verdict
 
-**RELEASE CANDIDATE: CERTIFIED** — all `VERIFIED_CURRENT` ledger rows map to live deterministic proofs; full suite passes with zero failures on 2026-09-19.
+**RELEASE CANDIDATE: PROVISIONAL / NOT CERTIFIED** — the named JavaScript harnesses pass in the current checkout, but the claim-to-code audit found scope mismatches that prevent final RC1 certification. Passing a bounded harness is evidence for that scenario; it is not proof that every repository subsystem is live-integrated or universally safe.
 
 | Proof | Command | Result (2026-09-19) |
 |---|---|---|
-| Persistence round-trip | `node tools/verification/verify_persistence_roundtrip.mjs` | PASS (bit-exact 1/10/100-tick parity, V1 migration + 50-tick parity, soft/hard reset) |
+| Persistence round-trip | `node tools/verification/verify_persistence_roundtrip.mjs` | PASS (canonical full-state 1/10/100-tick parity, custom state, queued observations, V1 defaults + 50-tick parity, soft/hard reset) |
 | Compound collisions | `node tools/verification/verify_compound_collisions.mjs` | PASS (60-unit + 300-unit dispersal recovery, confined attractor + leader break, famine conservation, bit-exact replay) |
 | Dashboard endpoints | `node tools/verification/verify_dashboard_endpoints.mjs` | PASS (12 endpoints, 10 tabs, attached read-only inspect) |
 | Cross-tree parity | `node tools/verification/verify_cross_tree_parity.mjs` | PASS (17/17 boundary vectors bit-identical) |
 | Adapter conformance (new) | `node tools/verification/verify_adapter_conformance.mjs` | PASS (123/123 assertions; C# handshake advertises `engine=CSharp`) |
 | Moral dissonance (new) | `node tools/verification/verify_moral_dissonance.mjs` | PASS (110/110 assertions) |
 | FABE personas (new) | `node tools/verification/verify_fabe_personas.mjs` | PASS (53/53 assertions) |
-| Host skirmish audit | `cargo run --bin audit_fear_ai_connection` | PASS (8/8 sections + profiling probe; 1v1–6v6 matrix + 2,000-tick multi-faction + 719,600-offset formation stress + live squad-path cycle; zero mutation; advisory p95 19µs release / 143µs debug, hard p99 gate <1ms) |
-| C# adapter build | `dotnet build packages/adapters/csharp/FearAI.Client.csproj` | 0 warnings, 0 errors |
+| Host skirmish audit | `cargo run --bin audit_fear_ai_connection` | Recorded PASS in sibling evidence at named commits; not rerun against the current dirty host checkout during this audit |
+| C# adapter build | `dotnet build packages/adapters/csharp/FearAI.Client.csproj` | Recorded 0 warnings, 0 errors in the Phase 1 evidence; not rerun in this audit |
 
-Total: **7 Node harnesses + 1 Rust diagnostic binary + 1 dotnet build — zero failures.**
+Current JS evidence: **7 Node harnesses — zero failures in this audit.** Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
 
 ---
 
@@ -58,9 +58,10 @@ Total: **7 Node harnesses + 1 Rust diagnostic binary + 1 dotnet build — zero f
 - Root-cause fixes (committed in host repo `91af8f957`): `formation_geometry::square_offset` ring≥1 safeguard (modulo-by-zero found by the 500-tick run and now regression-guarded by the 719,600-offset stress), `overlay_audio` `#[cfg(windows)]` gating so Linux headless diagnostics compile.
 - Proof recorded: `evidence/audit_fear_ai_connection_extended_2026-09-19.md` (supersedes `evidence/audit_fear_ai_connection_500tick_2026-09-19.md`).
 
-### Phase 4 — Truth Ledger Finalization (this dossier)
-- Ledger bumped `1.2.0` → `1.3.0-CERTIFIED`: every `VERIFIED_CURRENT` row now cites its proof script; Tier 5 rows cite decoupled harnesses while retaining `EXPERIMENTAL`; host row cites new sibling commit + evidence file + safeguards.
-- Full suite re-run sequentially on 2026-09-19: zero failures (table above).
+### Phase 4 — Truth Ledger Reconciliation (reopened)
+- Ledger moved to `1.3.1-PROVISIONAL` and now records the JS/host repository boundary, bounded evidence language, the expanded persistence contract, and explicit claim-to-code traces in `docs/CLAIM_TO_CODE_AUDIT_2026-09-19.md`.
+- `Causal Counterfactual World Forks` was downgraded to `PARTIAL` because the dashboard proof exercises a separate `CausalEventGraph`; `Godot 4.6 Multi-Station Showcase` was also downgraded to `PARTIAL` until station-level proof is linked.
+- The current JS harnesses pass, but the release gate remains open while external-host clean-worktree provenance, missing dedicated world-fork proof, and remaining live-wiring boundaries are reconciled.
 
 ---
 
@@ -70,8 +71,11 @@ Total: **7 Node harnesses + 1 Rust diagnostic binary + 1 dotnet build — zero f
 - **Tier 5 FABE/Moral**: `EXPERIMENTAL` — math certified advisory-only; no live host consumer; human evaluation blocked. Not blocking.
 - **Middleware latency**: advisory p95 19µs / p99 34µs (release) and p95 143µs / p99 177µs (debug). Debug p95 is genuinely noisy (observed 122–199µs), so the certification gate is the enforced **p99 < 1ms** (~6% of a frame); the 200µs p95 figure is an advisory target, not a gate.
 - **Host sim tick cost** (profiled in `evidence/host_sim_tick_profiling_2026-09-19.md`): **linear in unit count** (~0.3ms fixed base + ~89–112µs/unit in release; ~2.3ms + ~1.1ms/unit in debug). The earlier ~17.2ms/tick headline was an unoptimized **debug** measurement; release is ~1.28ms/tick (~13× faster) for the same 3v2 long-horizon run. No quadratic hotspot. This is the host simulation, not the middleware.
+- **Persistence attachment boundary**: serialized middleware state does not include host-owned identity-architecture objects; a host must reattach them before claiming attached identity parity.
+- **Claim-to-code mismatch found**: `/api/causal` verifies `CausalEventGraph`, not `WorldCounterfactualEngine`; the ledger now marks the world-fork capability `PARTIAL` until a dedicated proof exists.
+- **Clean provenance gap**: the sibling host checkout is dirty at the time of this audit, so its named evidence commits are retained but not treated as a fresh clean-worktree certification.
 
-No `BLOCKED` items remain in the Fear AI release path.
+Human evaluation remains **BLOCKED / NOT EXECUTED** for the experimental FABE research, and the overall RC1 gate remains open.
 
 ---
 
@@ -88,11 +92,11 @@ node tools/verification/verify_moral_dissonance.mjs
 node tools/verification/verify_fabe_personas.mjs
 "/mnt/c/Program Files/dotnet/dotnet.exe" build "C:\\tools\\03-Projects\\lains Tools\\lainself\\fear-ai-sim\\fear-ai-sim\\packages\\adapters\\csharp\\FearAI.Client.csproj"
 
-# Host repo (Linux headless; needs cargo)
+# Host repo (Linux headless; targeted diagnostic only; needs cargo)
 cargo run --bin audit_fear_ai_connection
 ```
 
-All commands exit 0. No `cargo test` / `npm test` / Jest used anywhere (Hard Rule 9).
+The seven JS commands were rerun in this audit and exited 0. Host and C# results above are recorded evidence from named prior runs. No `cargo test` / `npm test` / Jest was used (Hard Rule 9).
 
 ---
 

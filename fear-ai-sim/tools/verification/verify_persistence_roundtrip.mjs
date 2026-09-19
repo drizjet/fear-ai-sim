@@ -18,6 +18,14 @@ import { RuntimeSimulation } from '../../packages/runtime/src/RuntimeSimulation.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+function canonicalize(value) {
+    if (Array.isArray(value)) return value.map(canonicalize);
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalize(value[key])]));
+    }
+    return value;
+}
+
 function normalizeSnapshot(snap) {
     const copy = JSON.parse(JSON.stringify(snap));
     if (Array.isArray(copy.agents)) {
@@ -27,21 +35,39 @@ function normalizeSnapshot(snap) {
             }
         }
     }
-    return copy;
+    return canonicalize(copy);
+}
+
+function firstDifference(a, b, path = 'root') {
+    if (Object.is(a, b)) return null;
+    if (Array.isArray(a) || Array.isArray(b)) {
+        if (!Array.isArray(a) || !Array.isArray(b)) return `${path}: array/object type differs`;
+        if (a.length !== b.length) return `${path}.length: ${a.length} != ${b.length}`;
+        for (let i = 0; i < a.length; i++) {
+            const difference = firstDifference(a[i], b[i], `${path}[${i}]`);
+            if (difference) return difference;
+        }
+        return null;
+    }
+    if (a && typeof a === 'object' || b && typeof b === 'object') {
+        if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return `${path}: value type differs`;
+        const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])].sort();
+        for (const key of keys) {
+            if (!(key in a)) return `${path}.${key}: missing from A`;
+            if (!(key in b)) return `${path}.${key}: missing from B`;
+            const difference = firstDifference(a[key], b[key], `${path}.${key}`);
+            if (difference) return difference;
+        }
+        return null;
+    }
+    return `${path}: ${String(a)} != ${String(b)}`;
 }
 
 function assertBitExact(a, b, label) {
     const sA = JSON.stringify(a);
     const sB = JSON.stringify(b);
     if (sA !== sB) {
-        for (let i = 0; i < Math.max(sA.length, sB.length); i++) {
-            if (sA[i] !== sB[i]) {
-                const contextA = sA.substring(Math.max(0, i - 30), Math.min(sA.length, i + 30));
-                const contextB = sB.substring(Math.max(0, i - 30), Math.min(sB.length, i + 30));
-                throw new Error(`${label} mismatch at char ${i}!\nA: ...${contextA}...\nB: ...${contextB}...`);
-            }
-        }
-        throw new Error(`${label} mismatch (length ${sA.length} vs ${sB.length})`);
+        throw new Error(`${label} mismatch: ${firstDifference(a, b)}`);
     }
 }
 
@@ -54,8 +80,30 @@ async function main() {
     // TEST SUITE 1: Full-state Bit-Exact Round-Trip Across 1, 10, and 100 Future Ticks
     // ------------------------------------------------------------------------
     console.log('--- TEST SUITE 1: Full-state Bit-Exact Parity (1, 10, 100 Ticks) ---');
-    const simOriginal = new RuntimeSimulation({ seed: 42 });
-    simOriginal.registerAgent('agent-1', { extraversion: 0.8, neuroticism: 0.6, resilience: 0.4 });
+    const simOriginal = new RuntimeSimulation({
+        seed: 42,
+        traumaConfig: { maxZones: 13 },
+        contagionConfig: { contagionRadius: 180, maxEdges: 37, trustGain: 0.25 },
+        pacingConfig: {
+            totalSessionTicks: 1234,
+            phases: [
+                { name: 'CUSTOM_OPEN', startRatio: 0, endRatio: 0.5, baseIntensity: 0.25, label: 'Custom open' },
+                { name: 'CUSTOM_CLOSE', startRatio: 0.5, endRatio: 1, baseIntensity: 0.9, label: 'Custom close' }
+            ]
+        },
+        socialConfig: { maxRelationshipsPerAgent: 7, grievanceDecayRate: 0.002 },
+        socialCadence: 3,
+        traumaCadence: 4,
+        contagionCadence: 2,
+        enablePacingCohesion: false
+    });
+    simOriginal.customMetadata = { release: 'state-contract', nested: { checkpoint: 7 } };
+    simOriginal.registerAgent('agent-1', { extraversion: 0.8, neuroticism: 0.6, resilience: 0.4 }, {
+        enablePsychoacoustics: false,
+        enableHabituation: false,
+        fearCoreConfig: { enter: { ALERT: 0.65 }, panicLockTicks: 4, maxTraceLength: 17 },
+        habituationConfig: { habituationRate: 0.12 }
+    });
     simOriginal.registerAgent('agent-2', { extraversion: 0.4, neuroticism: 0.3, resilience: 0.8 });
 
     // Seed 5 initial ticks with observations
@@ -76,6 +124,12 @@ async function main() {
         simOriginal.tick(0.0166);
     }
 
+    simOriginal.queueObservation('agent-1', {
+        agent_id: 'agent-1',
+        threat_level: 0.91,
+        sounds: [{ type: 'scream', intensity: 1.0, distance: 2 }],
+        x: 105, y: 100, z: 0
+    });
     const snapshotV2 = simOriginal.saveSnapshot();
     console.log(`Captured V2 Snapshot: tickCount=${snapshotV2.tickCount}, version=${snapshotV2.version}, agents=${snapshotV2.agents.length}`);
 
@@ -95,6 +149,15 @@ async function main() {
     }
     simDirty.lastContagion.set('dirty-ghost', { contagionFear: 0.9 });
     simDirty.trauma.addZone({ x: 999, y: 999, z: 0, intensity: 0.9, radius: 200, lifetimeTicks: 500 });
+    simDirty.pendingObservations.set('dirty-ghost', { agent_id: 'dirty-ghost', threat_level: 1.0 });
+    simDirty.customMetadata = { dirty: true };
+    simDirty.enableContagion = false;
+    simDirty.contagion.config.contagionRadius = 1;
+    simDirty.contagion.maxEdges = 1;
+    simDirty.contagion.activeEdges.push({ from: 'dirty-ghost', to: 'someone', strength: 1 });
+    simDirty.timeDiscipline.pause();
+    simDirty.timeDiscipline.corrections = 99;
+    simDirty.pacing.setOverride(1.5);
     simDirty.tickCount = 777;
 
     const loadDirtyResult = simDirty.loadSnapshot(snapshotV2);
@@ -174,6 +237,17 @@ async function main() {
     const simV1Dirty = new RuntimeSimulation({ seed: 2002 });
     simV1Dirty.registerAgent('stale-agent-xyz', { neuroticism: 0.99 });
     simV1Dirty.trauma.addZone({ x: 50, y: 50, z: 0, intensity: 1.0, radius: 100, lifetimeTicks: 300 });
+    simV1Dirty.pendingObservations.set('stale-agent-xyz', { agent_id: 'stale-agent-xyz', threat_level: 1.0 });
+    simV1Dirty.customMetadata = { stale: true };
+    simV1Dirty.enableContagion = false;
+    simV1Dirty.enableSocial = false;
+    simV1Dirty.enablePacing = false;
+    simV1Dirty.contagion.config.contagionRadius = 1;
+    simV1Dirty.contagion.maxEdges = 1;
+    simV1Dirty.contagion.activeEdges.push({ from: 'stale-agent-xyz', to: 'survivor_01', strength: 1 });
+    simV1Dirty.lastContagion.set('stale-agent-xyz', { contagionFear: 1 });
+    simV1Dirty.social.getRelationship('stale-agent-xyz', 'survivor_01').trust = -1;
+    simV1Dirty.coreTrauma.incurTrauma('stale-agent-xyz', { severity: 1, description: 'stale' });
 
     const resV1Clean = simV1Clean.loadSnapshot(v1Snapshot);
     const resV1Dirty = simV1Dirty.loadSnapshot(v1Snapshot);
@@ -190,6 +264,41 @@ async function main() {
     if (!simV1Clean.coreTrauma.agentRecords.has('survivor_01') || !simV1Dirty.coreTrauma.agentRecords.has('survivor_01')) {
         throw new Error('V1 rehydrated agent not registered in coreTrauma!');
     }
+
+    const v1Defaults = new RuntimeSimulation({ seed: 9001 });
+    assertBitExact(
+        normalizeSnapshot(simV1Clean.contagion.getState()),
+        normalizeSnapshot(v1Defaults.contagion.getState()),
+        'V1 missing contagion state uses construction defaults'
+    );
+    if (simV1Clean.lastContagion.size !== 0 || simV1Dirty.lastContagion.size !== 0) {
+        throw new Error('V1 missing lastContagion state inherited stale cache');
+    }
+    if (simV1Clean.pendingObservations.size !== 0 || simV1Dirty.pendingObservations.size !== 0) {
+        throw new Error('V1 missing pending observations inherited stale queue');
+    }
+    if (simV1Clean.social.getState().relationships.length !== 0 || simV1Dirty.social.getState().relationships.length !== 0) {
+        throw new Error('V1 missing social state inherited relationships');
+    }
+    const v1CoreIds = Object.keys(simV1Clean.coreTrauma.getState().agentRecords).sort();
+    if (JSON.stringify(v1CoreIds) !== JSON.stringify(['survivor_01'])) {
+        throw new Error(`V1 coreTrauma migration keys incorrect: ${v1CoreIds.join(',')}`);
+    }
+    for (const [key, value] of Object.entries({
+        enableTrauma: simV1Clean.enableTrauma,
+        enableCoreTrauma: simV1Clean.enableCoreTrauma,
+        enableTraumaFeedback: simV1Clean.enableTraumaFeedback,
+        enableContagion: simV1Clean.enableContagion,
+        enablePacing: simV1Clean.enablePacing,
+        enablePacingCohesion: simV1Clean.enablePacingCohesion,
+        enableSocial: simV1Clean.enableSocial
+    })) {
+        if (value !== true) throw new Error(`V1 migration flag ${key} did not use documented default true`);
+    }
+    if (simV1Clean.customMetadata.gameLevel !== 'Bunker_04') {
+        throw new Error('V1 legacy customMetadata did not survive migration');
+    }
+    console.log('  * V1 missing v2-only state uses clean documented defaults: PASS');
 
     // Step 50 ticks with identical observations
     for (let tick = 0; tick < 50; tick++) {

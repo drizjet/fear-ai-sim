@@ -375,6 +375,9 @@ export class FearCore {
 
     getState() {
         return {
+            config: JSON.parse(JSON.stringify(this.config)),
+            maxTraceLength: this.maxTraceLength,
+            rng: this._defaultRng.getState(),
             state: this.state,
             tickCount: this.tickCount,
             panicLockedUntil: this.panicLockedUntil,
@@ -386,6 +389,27 @@ export class FearCore {
 
     setState(snapshot) {
         if (!snapshot) return;
+        if (snapshot.config && typeof snapshot.config === 'object') {
+            const nextConfig = snapshot.config;
+            this.config = {
+                enter: { ...this.config.enter, ...(nextConfig.enter || {}) },
+                exit: { ...this.config.exit, ...(nextConfig.exit || {}) },
+                panicLockTicks: Number.isFinite(nextConfig.panicLockTicks)
+                    ? Math.max(0, Math.floor(nextConfig.panicLockTicks))
+                    : this.config.panicLockTicks,
+                extended: { ...this.config.extended }
+            };
+            for (const band of EXTENDED_BANDS) {
+                this.config.extended[band] = {
+                    ...(this.config.extended[band] || {}),
+                    ...((nextConfig.extended && nextConfig.extended[band]) || {})
+                };
+            }
+        }
+        if (Number.isFinite(snapshot.maxTraceLength) && snapshot.maxTraceLength >= 1) {
+            this.maxTraceLength = Math.floor(snapshot.maxTraceLength);
+        }
+        if (snapshot.rng) this._defaultRng.setState(snapshot.rng);
         this.state = snapshot.state || 'CALM';
         this.tickCount = snapshot.tickCount || 0;
         this.panicLockedUntil = snapshot.panicLockedUntil ?? null;

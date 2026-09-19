@@ -151,6 +151,7 @@ export class ContagionGraph {
     getState() {
         return {
             config: { ...this.config },
+            maxEdges: this.maxEdges,
             activeEdges: Array.isArray(this.activeEdges) ? JSON.parse(JSON.stringify(this.activeEdges)) : []
         };
     }
@@ -159,6 +160,9 @@ export class ContagionGraph {
         if (!state || typeof state !== 'object') return;
         if (state.config && typeof state.config === 'object') {
             this.config = { ...this.config, ...state.config };
+        }
+        if (Number.isFinite(state.maxEdges) && state.maxEdges >= 1) {
+            this.maxEdges = Math.floor(state.maxEdges);
         }
         if (Array.isArray(state.activeEdges)) {
             this.activeEdges = JSON.parse(JSON.stringify(state.activeEdges));
