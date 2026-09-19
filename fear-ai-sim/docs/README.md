@@ -24,7 +24,7 @@ For the current release decision, read [`CURRENT_TRUTH_LEDGER.md`](CURRENT_TRUTH
 
 Everything else in this folder is **sim-era, closed-world, or dated**. Useful as history. Not the plug-in mission.
 
-The following documents are explicitly historical-superseded and must not be used as current release certification: `CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md`, and `FAILURE_AND_LIFECYCLE_MATRIX.md`.
+The following documents are explicitly historical-superseded and must not be used as current release certification: `CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md`, `NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md`, `NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md`, and `FAILURE_AND_LIFECYCLE_MATRIX.md`.
 
 Do not start from `PART_1_EXECUTION_PROMPT.md`, `BADAI_MASTER_PLAN.md`, `BASELINE.md`, or `ARCHITECTURE.md` unless the user asked for that historical slice.
 

@@ -1,12 +1,15 @@
 ---
-title: "New Master Game (Pixel Pets) Complete Architecture, Logic & Systems Analysis Dossier"
+title: "Historical New Master Game (Pixel Pets) Architecture, Logic & Systems Analysis Dossier"
 created: 2026-09-16
-updated: 2026-09-16
+updated: 2026-09-19
 type: research-dossier
-status: complete
+status: historical-superseded
+superseded_by: "CURRENT_TRUTH_LEDGER.md and RELEASE_CANDIDATE_CERTIFICATION.md"
 ---
 
-# New Master Game (`pixel-pets`) — Deep Architectural & Logic Analysis
+# Historical New Master Game (`pixel-pets`) — Deep Architectural & Logic Analysis
+
+> **Historical record — not current Fear AI release certification.** This dossier describes a dated host-engine architecture snapshot and integration opportunities. Its “complete” status and bridge descriptions do not establish current clean-worktree provenance, universal host adoption, or live wiring of every Fear AI subsystem. Use [`CURRENT_TRUTH_LEDGER.md`](CURRENT_TRUTH_LEDGER.md), [`CLAIM_TO_CODE_AUDIT_2026-09-19.md`](CLAIM_TO_CODE_AUDIT_2026-09-19.md), and [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md) for current status.
 
 ## 1. Executive Summary & Core Identity
 

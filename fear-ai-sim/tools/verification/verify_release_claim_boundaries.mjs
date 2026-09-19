@@ -59,6 +59,8 @@ console.log(`  * Current release surfaces retain explicit scope boundaries (${cu
 const supersededRecords = [
     'docs/CUSTOM_ENGINE_INTEGRATION_SPEC.md',
     'docs/NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md',
+    'docs/NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md',
+    'docs/NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md',
     'docs/FAILURE_AND_LIFECYCLE_MATRIX.md'
 ];
 for (const relativePath of supersededRecords) {

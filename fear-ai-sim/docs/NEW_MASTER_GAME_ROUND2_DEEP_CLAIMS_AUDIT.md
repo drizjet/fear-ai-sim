@@ -1,4 +1,15 @@
-# New Master Game (Pixel-Pets) — Round 2 Deep Claims Audit & Engine Compendium
+---
+title: "Historical New Master Game (Pixel-Pets) Round 2 Claims Audit"
+created: 2026-09-17
+updated: 2026-09-19
+type: historical-audit-compendium
+status: historical-superseded
+superseded_by: "CURRENT_TRUTH_LEDGER.md and RELEASE_CANDIDATE_CERTIFICATION.md"
+---
+
+# Historical New Master Game (Pixel-Pets) — Round 2 Claims Audit & Engine Compendium
+
+> **Historical record — not current Fear AI release certification.** This host-engine compendium records a dated static audit and source map. “Confirmed,” “verified,” and subsystem-level claims are scoped to its named sources and do not prove current clean-worktree execution, automatic `RuntimeSimulation` wiring, universal external-host adoption, or production safety. The current Fear AI release boundary is defined by [`CURRENT_TRUTH_LEDGER.md`](CURRENT_TRUTH_LEDGER.md), [`CLAIM_TO_CODE_AUDIT_2026-09-19.md`](CLAIM_TO_CODE_AUDIT_2026-09-19.md), and [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md).
 
 **Document Version**: 9.0.0-TOTAL-CANON-ENCYCLOPEDIA  
 **Date**: September 17, 2026  
@@ -863,7 +874,7 @@ In `src/engine/rts/hero_progression.rs:1-100`:
 
 ## 5. Host Authority & Integration Blueprint
 
-This complete mechanical mapping guarantees that **Fear AI** interfaces with New Master Game with zero friction and absolute safety:
+This historical mechanical mapping describes how the named **Fear AI** interface was intended to connect to New Master Game. It does not guarantee zero-friction integration or absolute safety; those claims require current host-specific execution and evidence.
 1. **Perception**: Fear AI reads `WorldFacts`, `DensityInfo`, `Weather`, `TerrainTag`, `FaunaRelation`, and current `FearBand`.
 2. **Advisory Formulation**: Fear AI computes panic vectors, role allocations, and suggests actions selected strictly from the 22 whitelisted actions (`advisory_validation.rs`) or matches `PlannedAction` / `AutonomousAction` variants (`ManeuverFlank`, `SeekCover`, `Kite`, `RetreatTo`).
 3. **Execution**: The host game engine's `GoapPlanner` and `run_fixed_tick` pipeline fold the advisories into goal weights without mutating host transforms, collision, or entity state.
