@@ -103,7 +103,7 @@ export class ProtocolValidator {
                 }
                 break;
             case MESSAGE_TYPES.SET_PACING_OVERRIDE:
-                result = { valid: true, value: raw };
+                result = ProtocolValidator.validatePacingOverride(raw);
                 break;
             default:
                 // Accept unknown messages defensively
@@ -188,6 +188,24 @@ export class ProtocolValidator {
             }
         };
     }
+
+    static validatePacingOverride(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Pacing override must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const intensity = raw.intensity ?? null;
+        if (intensity !== null && (typeof intensity !== 'number' || !Number.isFinite(intensity))) {
+            return { valid: false, errors: ['Property "intensity" must be a finite number or null'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.SET_PACING_OVERRIDE,
+                intensity: intensity === null ? null : Math.max(0, Math.min(1.5, intensity))
+            }
+        };
+    }
+
     /**
      * R36: sanitize per-tick host capability advertisements. Accepts an
      * array (or capability->bool map); keeps strings, drops garbage,

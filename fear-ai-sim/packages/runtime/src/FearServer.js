@@ -423,7 +423,11 @@ export class FearServer {
             }
 
             case '/api/v1/pacing': {
-                this.simulation.pacing.setOverride(body.intensity ?? null);
+                const val = ProtocolValidator.validatePacingOverride(body || {});
+                if (!val.valid) {
+                    return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                }
+                this.simulation.pacing.setOverride(val.value.intensity);
                 return this._sendJson(res, 200, { status: 'UPDATED', pacing: this.simulation.pacing.getState() });
             }
 
@@ -647,13 +651,20 @@ export class FearServer {
     }
 
     _handleWsMessage(ws, msg) {
+        const correlationId = msg && typeof msg === 'object'
+            ? (msg.message_id || msg.id || null)
+            : null;
         const validated = ProtocolValidator.validateIncomingMessage(msg);
         if (!validated.valid) {
-            return this._sendWsError(ws, validated.errors?.join(', ') || 'Validation failed', validated.code);
+            return this._sendWsError(
+                ws,
+                validated.errors?.join(', ') || 'Validation failed',
+                validated.code,
+                correlationId
+            );
         }
 
         const payload = validated.value;
-        const correlationId = payload.message_id || msg.message_id || msg.id || null;
 
         switch (payload.type) {
             case MESSAGE_TYPES.HANDSHAKE_REQUEST: {
@@ -791,7 +802,10 @@ export class FearServer {
             }
 
             case MESSAGE_TYPES.LOAD_SNAPSHOT_REQUEST: {
-                this.simulation.loadSnapshot(payload.snapshot);
+                const loadResult = this.simulation.loadSnapshot(payload.snapshot);
+                if (!loadResult.success) {
+                    return this._sendWsError(ws, loadResult.error, ERROR_CODES.SNAPSHOT_ERROR, correlationId);
+                }
                 this._sendWs(ws, {
                     type: 'LOAD_SNAPSHOT_ACK',
                     status: 'LOADED',

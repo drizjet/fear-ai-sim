@@ -133,6 +133,10 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
     unregisterAgent(agentId) {
         const id = String(agentId);
         this.pendingObservations.delete(id);
+        // Active contagion edges are frame telemetry. Removing one endpoint
+        // invalidates the whole frame, so do not expose stale edges through
+        // getStatus() between this removal and the next tick.
+        this.contagion.clearEdges();
         // NEXT-20: core trauma records are keyed by agent; drop them with
         // the agent so long worlds cannot accumulate the dead.
         this.coreTrauma.agentRecords.delete(id);
