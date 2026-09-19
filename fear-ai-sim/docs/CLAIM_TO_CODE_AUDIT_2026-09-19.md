@@ -14,7 +14,7 @@ and it does not certify the whole repository as RC1.
 
 ## Repository boundary
 
-- Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean at `3a56283` during this audit.
+- Fear AI JS checkout: `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim`, clean with counterfactual hardening at `51b6268`.
 - Pixel Pets host: `C:\tools\03-Projects\lains Tools\New Master Game`, branch `codex/canonical-consolidation-2026-08-12`, checked out at `d8ec1715c` with unrelated uncommitted changes. Host evidence is referenced by named commits and recorded artifacts, not by the dirty working tree.
 - Elixir/NIF tree: outside this release scope; its normalized `[0,1]` model is intentionally not parity-equivalent to the Rust/JS 0–5 hysteresis model.
 
@@ -58,7 +58,7 @@ and it does not certify the whole repository as RC1.
 
 ### Runtime State Snapshot & Persistence — `VERIFIED_CURRENT`
 
-- **Repository / commit:** `fear-ai-sim@3a56283` plus the current uncommitted hardening changes being audited.
+- **Repository / commit:** `fear-ai-sim@5b53907` for the persistence hardening and `51b6268` for the counterfactual audit follow-up.
 - **Source / symbol:** `packages/runtime/src/RuntimeSimulation.js::saveSnapshot/loadSnapshot` and component `getState/setState` methods.
 - **Actual live caller:** `FearServer` snapshot routes and CLI `fear-ai stepper` checkpoint flow.
 - **Actual consumer:** a new or contaminated `RuntimeSimulation` instance after rehydration.
@@ -116,6 +116,18 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** seven surfaces are deterministic vignettes, two are live reference simulations, and only `/api/sim/inspect` is an attached middleware session. HTTP success is not evidence of a production host attachment.
 - **Last verified / strength:** 2026-09-19; 12-endpoint semantic harness with attached read-only inspection.
 
+### Causal Counterfactual World Forks — `VERIFIED_CURRENT`
+
+- **Repository / commit:** `fear-ai-sim@51b6268`.
+- **Source / symbol:** `packages/core/src/WorldCounterfactualEngine.js::WorldCounterfactualEngine` and `FrontierValleySimulation::fork/getState/setState`.
+- **Actual live caller:** `bin/fear-ai.js` `counterfactual-world` command; direct engine callers can supply the same `FrontierValleySimulation` contract.
+- **Actual consumer:** causal ATE report, first-divergence dimensions, and CLI scenario output; this is an observability/analytics path, not a host mutation path.
+- **Persistence owner:** in-memory simulation state cloned by `FrontierValleySimulation.fork()`; no external host identity attachments are claimed.
+- **Authority boundary:** the engine mutates only the counterfactual clone and emits advisory analytics; the source simulation and host state remain outside the mutation boundary.
+- **Proof artifact:** `tools/verification/verify_counterfactual_world.mjs`.
+- **Known limitation:** the proof is bounded to the `FrontierValleySimulation` summary fields and direct CLI/engine path. `DesignerDashboardServer` `/api/causal` constructs `CausalEventGraph`, a separate deterministic vignette, and is not presented as a dashboard wrapper for this world-fork engine.
+- **Last verified / strength:** 2026-09-19; deterministic report replay, source/factual-branch isolation, macro and settlement-only effects, no-op invariance, and invalid-input/target guards.
+
 ### External Host Integration — `VERIFIED_CURRENT`
 
 - **Repository / commit:** sibling `New Master Game@f3f5e8d25` and descendants recorded in `evidence/audit_fear_ai_connection_extended_2026-09-19.md`.
@@ -130,7 +142,7 @@ and it does not certify the whole repository as RC1.
 
 ## Downgraded or excluded claims
 
-- `Causal Counterfactual World Forks` is `PARTIAL`: the dashboard verifier exercises `CausalEventGraph`, not `WorldCounterfactualEngine`; a dedicated world-fork proof is still required.
+- The dashboard's `/api/causal` endpoint remains a separate `CausalEventGraph` vignette; it is not evidence that the dashboard exposes `WorldCounterfactualEngine`.
 - `Godot 4.6 Multi-Station Showcase` is `PARTIAL`: adapter conformance is proven, but the current proof registry does not assert every visual station.
 - Unity remains `PARTIAL` until a real Unity Editor host is available.
 - Unreal remains `DEFERRED` by owner policy.
