@@ -83,6 +83,16 @@ for (const relativePath of historicalProgressRecords) {
 }
 console.log(`  * Historical progress ledgers carry an explicit non-certification scope (${historicalProgressRecords.length}): PASS`);
 
+const recordedHostEvidence = [
+    'evidence/audit_fear_ai_connection_extended_2026-09-19.md',
+    'evidence/audit_fear_ai_connection_500tick_2026-09-19.md'
+];
+for (const relativePath of recordedHostEvidence) {
+    includes(relativePath, 'Recorded host evidence — not current release certification.');
+    excludesPattern(relativePath, /Connection is CERTIFIED FOR PRODUCTION\./i);
+}
+console.log(`  * Recorded host transcripts cannot present themselves as current production certification (${recordedHostEvidence.length}): PASS`);
+
 // Guard against the exact unscoped certification markers that caused the
 // previous ambiguity. Historical prose may still quote an old result, but its
 // frontmatter and warning must keep it outside the current release surface.

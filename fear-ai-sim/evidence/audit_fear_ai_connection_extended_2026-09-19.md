@@ -1,4 +1,6 @@
-# Fear AI x Pixel Pets - Extended Audit (2026-09-19)
+# Historical Fear AI x Pixel Pets - Extended Audit (2026-09-19)
+
+> **Recorded host evidence — not current release certification.** This diagnostic output is tied to the named historical Pixel Pets commits and was not rebuilt from the current dirty host checkout. It supports the bounded `PARTIAL (RECORDED_HOST_EVIDENCE)` ledger row only; it does not establish current clean-worktree, universal-host, or RC1 certification.
 
 Diagnostic binary: `pixel-pets/src/bin/audit_fear_ai_connection.rs` (8 sections + profiling probe).
 
@@ -485,8 +487,8 @@ Target Path: C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets
   • Profiling probe only (not gated). Host sim tick ≠ middleware advisory cost (~95µs).
 
 ════════════════════════════════════════════════════════════════════════════════
-  ★ ALL 8 AUDIT SECTIONS PASSED WITH ZERO ERRORS AND 100% INVARIANT COMPLIANCE ★
-  Fear AI <-> New Master Game Connection is CERTIFIED FOR PRODUCTION.
+  ★ HISTORICAL DIAGNOSTIC: ALL 8 NAMED SECTIONS PASSED IN RECORDED SCOPE ★
+  Historical diagnostic scope passed; current host release certification remains unproven.
 ════════════════════════════════════════════════════════════════════════════════
 
 ```

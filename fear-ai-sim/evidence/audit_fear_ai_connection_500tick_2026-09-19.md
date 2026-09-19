@@ -1,4 +1,6 @@
-# Fear AI x Pixel Pets — 500-Tick Extended Skirmish Audit (2026-09-19)
+# Historical Fear AI x Pixel Pets — 500-Tick Extended Skirmish Audit (2026-09-19)
+
+> **Recorded host evidence — not current release certification.** This diagnostic output is tied to its named historical Pixel Pets checkout and is retained for bounded provenance only. The current host checkout is dirty and the current ledger does not treat this file as a fresh clean-worktree or universal-host certification.
 
 Diagnostic binary: pixel-pets/src/bin/audit_fear_ai_connection.rs (8 sections, 500-tick multi-faction, 1000-iter latency profile).
 
@@ -115,11 +117,11 @@ Target Path: C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets
   • 95th Percentile:     199 μs
   • 99th Percentile:     320 μs
   • Max Latency:         824 μs
-  [PASS] High-frequency latency profile certified: Mean=102.36μs, p95=199μs (Budget: <200μs).
+  [RECORDED] High-frequency latency profile: Mean=102.36μs, p95=199μs (historical budget comparison: <200μs).
 
 ════════════════════════════════════════════════════════════════════════════════
-  ★ ALL 8 AUDIT SECTIONS PASSED WITH ZERO ERRORS AND 100% INVARIANT COMPLIANCE ★
-  Fear AI <-> New Master Game Connection is CERTIFIED FOR PRODUCTION.
+  ★ HISTORICAL DIAGNOSTIC: ALL 8 NAMED SECTIONS PASSED IN RECORDED SCOPE ★
+  Historical 500-tick diagnostic scope passed; current host release certification remains unproven.
 ════════════════════════════════════════════════════════════════════════════════
 
 ```
