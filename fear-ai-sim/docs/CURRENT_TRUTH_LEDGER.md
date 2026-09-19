@@ -96,7 +96,7 @@ All claims marked `VERIFIED_CURRENT` in this ledger are backed by reproducible s
   - Panicked / Panic: Enter = 3.80, Exit = 1.20, Panic Lock = 10 ticks
 - **Boundary Test Vectors (`evidence/rust_js_parity_vectors.json`)**: 17 boundary vectors executed bit-identically, validating hysteresis hold, panic recovery lock enforcement, NaN/Inf sanitization, and documenting the architectural distinction between Rust's single-tick multi-tier jump and JS FearCore's stepped 1-band-per-tick ladder.
 
-### 5. Engine Adapter Conformance (`tools/verification/verify_adapter_conformance.mjs`) — 122 assertions
+### 5. Engine Adapter Conformance (`tools/verification/verify_adapter_conformance.mjs`) — 123 assertions
 - **Suite 1 (Handshake)**: Godot/Unity/C# emit `HANDSHAKE_REQUEST` pinned to `1.0.0`; validator accepts all three shapes, rejects major-version mismatch; server advertises `host_capabilities` + `capability_requirements`.
 - **Suite 2 (Binary Wire)**: Intent/observation batch round-trip (16-byte header, 32-byte records, FEAR magic, version 2); truncated/magic/version guards throw; zero-copy reader parity; Godot binary constants match JS (`INTENT_MAP`, `BAND_MAP`).
 - **Suite 3 (Capability Downgrade)**: Full caps pass `SEEK_COVER`; empty caps downgrade `SEEK_COVER`/`WARN_GROUP` $\to$ `FLEE_FROM` with `capability_downgrade` annotation; `sanitize(undefined)=null` (legacy) vs `sanitize([])=[]` (filter-all); all three adapters omit `capabilities` when empty.

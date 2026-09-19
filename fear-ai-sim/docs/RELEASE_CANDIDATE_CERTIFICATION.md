@@ -29,7 +29,7 @@ status: active
 | Compound collisions | `node tools/verification/verify_compound_collisions.mjs` | PASS (60-unit + 300-unit dispersal recovery, confined attractor + leader break, famine conservation, bit-exact replay) |
 | Dashboard endpoints | `node tools/verification/verify_dashboard_endpoints.mjs` | PASS (12 endpoints, 10 tabs, attached read-only inspect) |
 | Cross-tree parity | `node tools/verification/verify_cross_tree_parity.mjs` | PASS (17/17 boundary vectors bit-identical) |
-| Adapter conformance (new) | `node tools/verification/verify_adapter_conformance.mjs` | PASS (122/122 assertions) |
+| Adapter conformance (new) | `node tools/verification/verify_adapter_conformance.mjs` | PASS (123/123 assertions; C# handshake advertises `engine=CSharp`) |
 | Moral dissonance (new) | `node tools/verification/verify_moral_dissonance.mjs` | PASS (110/110 assertions) |
 | FABE personas (new) | `node tools/verification/verify_fabe_personas.mjs` | PASS (53/53 assertions) |
 | Host skirmish audit | `cargo run --bin audit_fear_ai_connection` | PASS (8/8 sections; 500-tick multi-faction; zero mutation; p95 199µs) |
@@ -44,7 +44,7 @@ Total: **7 Node harnesses + 1 Rust diagnostic binary + 1 dotnet build — zero f
 ### Phase 1 — Engine Adapter Verification & Conformance Hardening
 - `dotnet build` on `FearAI.Client.csproj` (netstandard2.0 + net8.0): **0 warnings, 0 errors**.
 - Static audit of Godot (`fear_ai_client.gd`, `fear_agent.gd`, `fear_types.gd`) and Unity (`FearAIClient.cs`, `FearAgent.cs`, `Runtime/FearTypes.cs`) against Canonical Protocol V1: handshake `HANDSHAKE_REQUEST/1.0.0`, `BATCH_TICK_REQUEST` with omitted-when-empty `capabilities` (legacy preservation), opt-in `peers`, `INTENT_OUTCOME_REPORT` → `/api/v1/outcome` → `INTENT_OUTCOME_ACK`, binary V2 constants (magic `0x52414546`, v2, 16/32 bytes, intent/band maps), advisory-only motors.
-- New harness `verify_adapter_conformance.mjs` (122 assertions, Suites 1–4) passes 100%.
+- New harness `verify_adapter_conformance.mjs` (123 assertions, Suites 1–4) passes 100%.
 
 ### Phase 2 — Tier 5 Research Decoupling & Standalone Verification
 - `MoralDissonanceEngine.js` audited: Haidt 5-vector dot product (hand-verified .6525), Festinger caps (fear .60, order `AUTH×.50`, necessity .40, total .75), guilt integration `net×.80`, half-lives 138.3/346.2 ticks, injury at exactly 50 severe ticks with remodeling deltas, atonement floor 0, compliance deliberation, `auditImmutability` CLEAN with transforms/HP untouched.
