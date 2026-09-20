@@ -40,10 +40,11 @@ status: active
 | Adapter conformance (new) | `node tools/verification/verify_adapter_conformance.mjs` | PASS (123/123 assertions; C# handshake advertises `engine=CSharp`) |
 | Moral dissonance (new) | `node tools/verification/verify_moral_dissonance.mjs` | PASS (110/110 assertions) |
 | FABE personas (new) | `node tools/verification/verify_fabe_personas.mjs` | PASS (53/53 assertions) |
-| Host skirmish audit | `cargo run --manifest-path pixel-pets/Cargo.toml --bin audit_fear_ai_connection` | Historical diagnostic PASS is recorded, but a clean descendant rebuild failed with E0583 because `src/overlay/persistence_restore.rs` is absent from the named commit; see `evidence/host_rebuild_attempt_2026-09-19.md` |
+| Host skirmish audit | `cargo run --manifest-path pixel-pets/Cargo.toml --bin audit_fear_ai_connection` | PASS — reproduced 2026-09-20 from a **clean checkout of host commit `6867da9f4`** (offline build 50.15 s, exit 0, all 8 sections pass, zero mutation `ΔX=ΔY=ΔHP=0`, p99 `188 µs`). `6867da9f4` landed the one previously missing module (`persistence_restore.rs`) on `codex/canonical-consolidation-2026-08-12`, which already carried the formation-geometry safeguard. See `evidence/host_clean_commit_reproduction_2026-09-20.md` |
+| Host provenance reconciliation | `node tools/verification/verify_host_provenance.mjs` | PASS (re-derives the divergent-lineage root cause read-only; gracefully records a skip when the sibling checkout is unavailable) |
 | C# adapter build | `dotnet build packages/adapters/csharp/FearAI.Client.csproj` | Recorded 0 warnings, 0 errors in the Phase 1 evidence; not rerun in this audit |
 
-Current JS evidence: **13 runtime Node verification harnesses — zero failures in this audit — plus 1 release-claim document tripwire and 1 metadata-only performance measurement.** Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
+Current JS evidence: **13 runtime Node verification harnesses — zero failures in this audit — plus 1 release-claim document tripwire, 1 host-provenance reconciliation probe, and 1 metadata-only performance measurement.** Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
 
 ---
 
@@ -92,7 +93,7 @@ Current JS evidence: **13 runtime Node verification harnesses — zero failures 
 - **Persistence attachment boundary**: serialized middleware state does not include host-owned identity-architecture objects; a host must reattach them before claiming attached identity parity.
 - **Dashboard causal boundary**: `/api/causal` verifies `CausalEventGraph`, not `WorldCounterfactualEngine`; the direct world-fork engine is proven separately and is not claimed as a dashboard wrapper.
 - **Reconnect ownership boundary**: reconnect identity continuity is proven for the server-scoped model; disconnect-driven retirement, per-connection ownership, and duplicate-client arbitration are not certified.
-- **Clean provenance/build gap**: the sibling host checkout is dirty at the time of this audit, and the fresh clean descendant rebuild failed before the diagnostic binary ran because the named host commit lacks the untracked `src/overlay/persistence_restore.rs` module. Its named evidence is retained as historical bounded evidence, not as a reproducible clean-worktree certification.
+- **Host provenance gap (resolved 2026-09-20)**: the earlier clean rebuild failed because the named evidence commit `f3f5e8d25` declared `mod persistence_restore` without committing the module, which lived only on the unmerged `reconcile/dirty-canonical-2026-09-16` lineage that lacked the `formation_geometry.rs` safeguard. That one missing file was landed as host commit `6867da9f4`, and the diagnostic was rebuilt and run from a clean checkout of that commit (offline, exit 0, all 8 sections pass). The Pixel Pets row is promoted to `VERIFIED_CURRENT (HOST_DIAGNOSTIC_CLEAN_COMMIT)`, bounded to the committed diagnostic scope — not a universal host-game or multi-engine certification. The checkout's other unrelated uncommitted changes remain out of scope.
 
 Human evaluation remains **BLOCKED / NOT EXECUTED** for the experimental FABE research, and the overall RC1 gate remains open.
 
@@ -107,6 +108,7 @@ node tools/verification/verify_long_horizon_lifecycle.mjs
 node tools/verification/verify_compound_collisions.mjs
 node tools/verification/verify_runtime_wiring.mjs
 node tools/verification/verify_release_claim_boundaries.mjs
+node tools/verification/verify_host_provenance.mjs
 node tools/verification/verify_dashboard_endpoints.mjs
 node tools/verification/verify_counterfactual_world.mjs
 node tools/verification/verify_server_lifecycle.mjs
@@ -123,13 +125,13 @@ node tools/verification/measure_runtime_performance.mjs
 cargo run --bin audit_fear_ai_connection
 ```
 
-The thirteen JS runtime verification commands and the release-claim document tripwire were rerun in this audit and exited 0; the additional measurement command recorded metadata and the baseline above. Host and C# results above are recorded evidence from named prior runs. No `cargo test` / `npm test` / Jest was used (Hard Rule 9).
+The thirteen JS runtime verification commands, the release-claim document tripwire, and the host-provenance reconciliation probe were rerun in this audit and exited 0; the additional measurement command recorded metadata and the baseline above. Host and C# results above are recorded evidence from named prior runs. No `cargo test` / `npm test` / Jest was used (Hard Rule 9).
 
 ---
 
 ## 5. Authority & provenance
 - Ledger: `docs/CURRENT_TRUTH_LEDGER.md` v1.3.3-PROVISIONAL (authoritative row-level mapping).
-- Evidence: `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, `evidence/host_rebuild_attempt_2026-09-19.md`, `evidence/js_runtime_performance_2026-09-19.md`, `evidence/rust_js_parity_vectors.json`.
-- Harness sources: `tools/verification/*.mjs` (13 current runtime proofs, the release-claim document tripwire, and the metadata-only performance measurement named above).
-- Host fixes: `pixel-pets/src/bin/audit_fear_ai_connection.rs`, `pixel-pets/src/engine/formation_geometry.rs`, `pixel-pets/src/overlay_audio.rs` (commit `91af8f957`); audit extended to the faction matrix + 2,000-tick + formation-stress pass in `e2090880a`; latency gate + live squad-path stress + tick scaling probe in `f3f5e8d25`.
+- Evidence: `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, `evidence/host_rebuild_attempt_2026-09-19.md`, `evidence/host_provenance_reconciliation_2026-09-20.md`, `evidence/host_union_reproduction_2026-09-20.md`, `evidence/host_union_change_2026-09-20.patch`, `evidence/host_clean_commit_reproduction_2026-09-20.md`, `evidence/js_runtime_performance_2026-09-19.md`, `evidence/rust_js_parity_vectors.json`.
+- Harness sources: `tools/verification/*.mjs` (13 current runtime proofs, the release-claim document tripwire, the host-provenance reconciliation probe, and the metadata-only performance measurement named above).
+- Host fixes: `pixel-pets/src/bin/audit_fear_ai_connection.rs`, `pixel-pets/src/engine/formation_geometry.rs`, `pixel-pets/src/overlay_audio.rs` (commit `91af8f957`); audit extended to the faction matrix + 2,000-tick + formation-stress pass in `e2090880a`; latency gate + live squad-path stress + tick scaling probe in `f3f5e8d25`; missing persistence module landed to make a clean checkout build in `6867da9f4`.
 - Superseded records: `docs/CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `docs/NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md`, `docs/NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md`, `docs/NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md`, `docs/FAILURE_AND_LIFECYCLE_MATRIX.md`, and `evidence/manual-source-code-audit-dossier.md` are historical and must not be used to promote the current provisional verdict. `evidence/middleware-progress-evidence.json` is a dated progress ledger, not a current release authority.

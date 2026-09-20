@@ -55,3 +55,20 @@ committing and reviewing that dependency in the host repository.
 This is a provenance/build reproducibility finding, not a finding that the
 current dirty host implementation is semantically invalid. The Fear AI ledger
 must retain the host row as recorded, partial, and currently unreproducible.
+
+## Reconciliation update (2026-09-20)
+
+The root cause was subsequently refined in
+`evidence/host_provenance_reconciliation_2026-09-20.md`: the named evidence
+commit `f3f5e8d25` carries the formation-geometry safeguard **and** a dangling
+`pub(crate) mod persistence_restore;` declaration, while
+`persistence_restore.rs` is committed only on the separate, unmerged
+`reconcile/dirty-canonical-2026-09-16` lineage. No single ref contains both
+pieces, so the recorded run depended on the *union of two unmerged lineages*
+and can never build from any one commit. Re-derive it with
+`node tools/verification/verify_host_provenance.mjs`.
+
+A follow-up clean-tree union reproduction is recorded in
+`evidence/host_union_reproduction_2026-09-20.md`: a `git archive f3f5e8d25`
+source tree plus the one-file patch `evidence/host_union_change_2026-09-20.patch`
+builds offline and runs the diagnostic to exit 0 with all 8 sections passing.

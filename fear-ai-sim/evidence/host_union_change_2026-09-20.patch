@@ -1,0 +1,113 @@
+diff --git a/pixel-pets/src/overlay/persistence_restore.rs b/pixel-pets/src/overlay/persistence_restore.rs
+new file mode 100644
+index 000000000..a0a80daec
+--- /dev/null
++++ b/pixel-pets/src/overlay/persistence_restore.rs
+@@ -0,0 +1,107 @@
++//! Shared persistence boundary for desktop RTS snapshots.
++//!
++//! A desktop RTS snapshot recreates its visual pets from the persisted world.
++//! The pet-to-world maps are runtime indexes, so they must not cross a save or
++//! load boundary.
++
++use crate::config::SavedState;
++use crate::engine::RtsWorldState;
++
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) struct RestorePlan {
++    pub(crate) restore_rich_pets: bool,
++}
++
++pub(crate) fn restore_plan(saved: &SavedState) -> RestorePlan {
++    RestorePlan {
++        restore_rich_pets: !(saved.overlay.desktop_rts_mode && saved.rts_world.is_some()),
++    }
++}
++
++/// Creates a persisted RTS snapshot without transient sprite-pet indexes.
++pub(crate) fn snapshot_rts_world(world: &RtsWorldState) -> RtsWorldState {
++    sanitize_rts_world(world.clone())
++}
++
++/// Installs a loaded RTS world after removing runtime-only sprite-pet indexes.
++pub(crate) fn install_loaded_rts_world(world: RtsWorldState) -> RtsWorldState {
++    sanitize_rts_world(world)
++}
++
++fn sanitize_rts_world(mut world: RtsWorldState) -> RtsWorldState {
++    world.unit_to_pet.clear();
++    world.building_to_pet.clear();
++    world
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++    use crate::config::{OverlayRuntimeSettings, SAVED_STATE_VERSION};
++
++    fn saved_state(desktop_rts_mode: bool, rts_world: Option<RtsWorldState>) -> SavedState {
++        SavedState {
++            version: SAVED_STATE_VERSION,
++            pets: Vec::new(),
++            settings: crate::pet_manager::GlobalSettings {
++                follow_cursor: true,
++                collision_avoidance: true,
++                collision_radius: 50.0,
++                global_speed_multiplier: 1.0,
++                framerate_limit: 60,
++            },
++            overlay: OverlayRuntimeSettings {
++                desktop_rts_mode,
++                ..Default::default()
++            },
++            rts_world,
++        }
++    }
++
++    #[test]
++    fn restore_plan_skips_recreatable_pets_only_for_desktop_rts_worlds() {
++        let desktop_rts = saved_state(true, Some(RtsWorldState::default()));
++        let non_desktop_rts = saved_state(false, Some(RtsWorldState::default()));
++        let desktop_without_world = saved_state(true, None);
++
++        assert!(!restore_plan(&desktop_rts).restore_rich_pets);
++        assert!(restore_plan(&non_desktop_rts).restore_rich_pets);
++        assert!(restore_plan(&desktop_without_world).restore_rich_pets);
++    }
++
++    #[test]
++    fn snapshot_and_install_clear_both_runtime_pet_indexes() {
++        let mut world = RtsWorldState::default();
++        world
++            .unit_to_pet
++            .insert("unit-1".to_string(), "pet-1".to_string());
++        world
++            .building_to_pet
++            .insert("building-1".to_string(), "pet-2".to_string());
++
++        let snapshot = snapshot_rts_world(&world);
++        assert!(snapshot.unit_to_pet.is_empty());
++        assert!(snapshot.building_to_pet.is_empty());
++        assert_eq!(
++            world.unit_to_pet.len(),
++            1,
++            "snapshot must not mutate live world"
++        );
++        assert_eq!(
++            world.building_to_pet.len(),
++            1,
++            "snapshot must not mutate live world"
++        );
++
++        let installed = install_loaded_rts_world(world);
++        assert!(installed.unit_to_pet.is_empty());
++        assert!(installed.building_to_pet.is_empty());
++    }
++
++    #[test]
++    fn restore_plan_retains_rich_pets_for_non_rts_saves() {
++        let saved = saved_state(false, None);
++
++        assert!(restore_plan(&saved).restore_rich_pets);
++    }
++}

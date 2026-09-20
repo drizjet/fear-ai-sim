@@ -164,17 +164,17 @@ and it does not certify the whole repository as RC1.
 - **Known limitation:** the proof is bounded to the `FrontierValleySimulation` summary fields and direct CLI/engine path. `DesignerDashboardServer` `/api/causal` constructs `CausalEventGraph`, a separate deterministic vignette, and is not presented as a dashboard wrapper for this world-fork engine.
 - **Last verified / strength:** 2026-09-19; deterministic report replay, source/factual-branch isolation, macro and settlement-only effects, no-op invariance, and invalid-input/target guards.
 
-### External Host Integration — `PARTIAL (UNREPRODUCIBLE_RECORDED_HOST_EVIDENCE)`
+### External Host Integration — `VERIFIED_CURRENT` (`HOST_DIAGNOSTIC_CLEAN_COMMIT`)
 
-- **Repository / commit:** sibling `New Master Game@f3f5e8d25` and descendants recorded in `evidence/audit_fear_ai_connection_extended_2026-09-19.md`.
+- **Repository / commit:** sibling `New Master Game@6867da9f4` (clean-checkout diagnostic reproduction) on `codex/canonical-consolidation-2026-08-12`; historical recorded evidence at `f3f5e8d25` in `evidence/audit_fear_ai_connection_extended_2026-09-19.md`.
 - **Source / symbol:** `pixel-pets/src/engine/ai/fear_ai_bridge.rs::FearAiBridge::tick_unit_advisory`; audit binary `pixel-pets/src/bin/audit_fear_ai_connection.rs`.
 - **Actual live caller:** Pixel Pets diagnostic/host path calls `FearAiBridge::tick_unit_advisory`.
 - **Actual consumer:** host whitelist and `BrainDirector` → `GoapPlanner` advisory path.
 - **Persistence owner:** Pixel Pets host save matrix, not Fear AI JS.
 - **Authority boundary:** bridge reads host observations and submits advisory JSON; host owns transforms, HP, physics, and combat.
-- **Proof artifact:** `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, and the failed clean rebuild record `evidence/host_rebuild_attempt_2026-09-19.md`.
-- **Known limitation:** a fresh rebuild from clean descendant `d8ec1715c` failed before the diagnostic binary ran because `src/overlay/mod.rs` declares `persistence_restore` while `src/overlay/persistence_restore.rs` is absent from both `d8ec1715c` and the named evidence commit `f3f5e8d25`. That module exists only as an untracked file in the current dirty host checkout.
-- **Last verified / strength:** recorded diagnostic evidence exists, but clean provenance is currently unreproducible; this is not a clean-worktree universal-host certification.
+- **Proof artifact:** `evidence/host_clean_commit_reproduction_2026-09-20.md`, `evidence/host_union_change_2026-09-20.patch`, `evidence/host_union_reproduction_2026-09-20.md`, `evidence/host_provenance_reconciliation_2026-09-20.md`, `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, the historical rebuild record `evidence/host_rebuild_attempt_2026-09-19.md`, and the read-only probe `tools/verification/verify_host_provenance.mjs`.
+- **Known limitation:** the promotion is bounded to the committed host diagnostic. The 2026-09-20 provenance work established that the original evidence split across two unmerged lineages (`f3f5e8d25` declared `mod persistence_restore` without committing the module; the module lived only on `reconcile/dirty-canonical-2026-09-16`, which lacked `formation_geometry.rs`). The one missing module was landed as host commit `6867da9f4` on `codex/canonical-consolidation-2026-08-12`, and the diagnostic was rebuilt and run from a clean checkout of that commit (offline, exit 0, all 8 sections pass, zero mutation `ΔX=ΔY=ΔHP=0`). This certifies the committed diagnostic scope only: it is not a universal host-game or multi-engine certification, does not cover Unity/Unreal, does not establish per-connection ownership, and does not adopt the diagnostic binary's own production banner. The `reconcile/dirty-canonical-2026-09-16` lineage still carries a duplicate module for a future merge to reconcile.
+- **Last verified / strength:** 2026-09-20; clean checkout of the landed host commit builds offline and the diagnostic passes all 8 sections. Strong for the committed diagnostic scope, bounded beyond it.
 
 ## Downgraded or excluded claims
 
