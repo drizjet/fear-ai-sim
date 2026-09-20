@@ -101,6 +101,30 @@ excludesPattern('docs/CURRENT_TRUTH_LEDGER.md', /^status:\s*(?:verified|verified
 excludesPattern('docs/RELEASE_CANDIDATE_CERTIFICATION.md', /^status:\s*certified\s*$/im);
 console.log('  * Current authority docs cannot revert to an unconditional certification status: PASS');
 
+// The RC1 release surface must stay explicitly bounded: the in-scope middleware
+// contract versus the standalone/research modules that are out of scope. If this
+// drifts, the scope-out decision is no longer recorded.
+const releaseSurface = 'docs/RELEASE_SURFACE.md';
+includes(releaseSurface, '## 1. In scope');
+includes(releaseSurface, '## 2. Out of scope');
+includes(releaseSurface, 'verify_runtime_wiring.mjs');
+for (const outOfScopeModule of [
+    'PackCoordinationEngine',
+    'EconomicFeedbackSystem',
+    'SettlementMigrationSystem',
+    'EpistemicBeliefEngine',
+    'InformationPropagationEngine',
+    'WorldCounterfactualEngine',
+    'FunctionalPersonaSignatures',
+    'MoralDissonanceEngine',
+    'adapters/unreal'
+]) {
+    includes(releaseSurface, outOfScopeModule);
+}
+includes('docs/CURRENT_TRUTH_LEDGER.md', 'docs/RELEASE_SURFACE.md');
+includes('docs/CURRENT_TRUTH_LEDGER.md', 'out of RC surface');
+console.log('  * RC1 release surface is defined and the optional modules are scoped out of it: PASS');
+
 console.log('\nScope: this probe audits release-claim document boundaries only.');
 console.log('It does not certify runtime behavior, external hosts, adapters, or research semantics.');
 console.log('\nSUCCESS: Release-claim document boundaries are explicit.');

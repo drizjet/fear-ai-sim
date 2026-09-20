@@ -84,6 +84,7 @@ Current JS evidence: **13 runtime Node verification harnesses — zero failures 
 ---
 
 ## 3. Known gaps / non-blocking items (unchanged policy)
+- **Release surface (RC1)**: the release candidate is the in-scope middleware contract defined in `docs/RELEASE_SURFACE.md` — core affective SDK, protocol, runtime transport, adapters, and designer tooling. Tier 2 optional modules (`PackCoordinationEngine`, `EconomicFeedbackSystem`, `EpistemicBeliefEngine`, `InformationPropagationEngine`, `SettlementMigrationSystem`), Tier 3 analytics beyond the dashboard (`WorldCounterfactualEngine`), the standalone world-sim/research tail, the Tier 5 research models (FABE, Moral), the Elixir tree, and the deferred Unreal adapter are **explicitly out of scope**: they ship as separate standalone tools or remain research. `verify_runtime_wiring.mjs` (code) and `verify_release_claim_boundaries.mjs` (document) enforce the boundary.
 - **Unity UPM**: `PARTIAL (IMPLEMENTED_NOT_EDITOR_VERIFIED)` — package declared, protocol-conformant by static audit + harness; live Unity Editor verification still requires the editor GUI (external resource). Not blocking.
 - **Unreal Engine 5**: `DEFERRED` per owner policy. Not blocking.
 - **Tier 5 FABE/Moral**: `EXPERIMENTAL` — math certified advisory-only; no live host consumer; human evaluation blocked. Not blocking.

@@ -19,8 +19,9 @@ Read in this order:
 | 5 | [`RUST_PARITY.md`](RUST_PARITY.md) | Rust `fear.rs` is in Pixel Pets, not Tauri |
 | 6 | [`PROVENANCE.md`](PROVENANCE.md) | How to label evidence |
 | 7 | [`BEHAVIORAL_EVALUATION_FRAMEWORK.md`](BEHAVIORAL_EVALUATION_FRAMEWORK.md) | FABE; keep negative findings |
+| 8 | [`RELEASE_SURFACE.md`](RELEASE_SURFACE.md) | What the RC ships vs what is explicitly out of scope |
 
-For the current release decision, read [`CURRENT_TRUTH_LEDGER.md`](CURRENT_TRUTH_LEDGER.md), [`CLAIM_TO_CODE_AUDIT_2026-09-19.md`](CLAIM_TO_CODE_AUDIT_2026-09-19.md), and [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md) together. They are the authoritative current claim surfaces.
+For the current release decision, read [`CURRENT_TRUTH_LEDGER.md`](CURRENT_TRUTH_LEDGER.md), [`RELEASE_SURFACE.md`](RELEASE_SURFACE.md), [`CLAIM_TO_CODE_AUDIT_2026-09-19.md`](CLAIM_TO_CODE_AUDIT_2026-09-19.md), and [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md) together. They are the authoritative current claim surfaces.
 
 Everything else in this folder is **sim-era, closed-world, or dated**. Useful as history. Not the plug-in mission.
 
