@@ -76,6 +76,27 @@ exists for every machine that has not declared it.
 - `npm run verify:hard-rule-9` → **25/25**; `verify:release-claims`,
   `codegen:release-dossier:check` and `codegen:maturity-map:check` all exit 0.
 
+## The outcome, from CI
+
+- Run `35612560773` (`a5f7f85`) is **green**: `repository-integrity` and `probes`
+  both success, the probe suite reporting **24 passed, 1 passed with declared
+  skips, 0 failed**. That tally is the proof the Python half ran: this job
+  *declares* `transport_signing` proven, so a declared skip there fails the job,
+  and exactly one probe reports skips — the Unity Editor one.
+- A dispatched run (`35613387433`) took the nightly path off the rehearsal bench
+  for the first time: **25 probes STABLE across three repetitions each**, then
+  the stability regression against the committed recording reported
+  `OK — nothing gated (25 probes compared, 25 timing comparison(s) skipped as
+  incomparable)` — the timing gate refusing a Node 20 runner against a Node 24
+  recording, which is the designed conservatism rather than a gap.
+- It appended a **third** night to the ledger, moving the bound on any probe's
+  flake rate from **65.8% over 2 nights to 56.1% over 3**, and uploaded the
+  report, ledger and comparison as one artifact.
+- The ledger pull request step did **not** run, because it is gated to `schedule`
+  on the default branch. That is the first evidence the gate behaves as asserted
+  rather than as rehearsed — the loop it prevents had never been at risk before
+  because the step had never run at all.
+
 ## Stated limits
 
 The pin is a **version** pin, not a digest pin like the engine's: the wheel is
@@ -83,6 +104,10 @@ fetched from PyPI at run time, so this evidence depends on PyPI continuing to se
 `cryptography==50.0.1` for the runner's Python. The number of assertions a green run
 reports now depends on whether the backend is present (61 vs 55), which is visible
 in the count and on the skip line but is a difference a reader has to notice. And
-this is one CI outcome on one commit: the nightly job, the ledger fold and the
-ledger pull request have still never executed anywhere but in a local rehearsal —
-the next scheduled run is the first test of those.
+the nightly job's *scheduled* half is still unexercised — the dispatched run above
+was a `workflow_dispatch`, where the fold-and-open-a-pull-request step is gated off
+by design, so **the ledger pull request has still never been opened by CI**. The
+next scheduled run (04:00 UTC) is the first real test of the fold onto
+`ci/stability-ledger`, the union with an unmerged night, the lease push and the
+dispatch that makes the pull request show checks. The ledger fold tool itself is
+still only rehearsed against throwaway repositories.
