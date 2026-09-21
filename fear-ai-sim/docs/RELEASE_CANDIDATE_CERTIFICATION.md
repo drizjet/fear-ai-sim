@@ -23,6 +23,49 @@ status: active
 
 **RELEASE CANDIDATE: PROVISIONAL / NOT CERTIFIED** — the named JavaScript harnesses pass in the current checkout, but the claim-to-code audit found scope mismatches that prevent final RC1 certification. Passing a bounded harness is evidence for that scenario; it is not proof that every repository subsystem is live-integrated or universally safe.
 
+---
+
+## 1b. Surface freeze declaration — 2026-09-21
+
+**The release surface is frozen as of 2026-09-21.** `docs/RELEASE_SURFACE.md` §1
+and §2 are the binding statement of what ships and what does not, and they are
+now closed: no module joins §1, and no claim changes scope, except by the §3
+policy — an explicit opt-in service, a verifier proving both the opt-in and the
+unchanged default path, a promoted ledger row, and a simultaneous update of the
+negative tripwire and that document. `InformationPropagationEngine` is the only
+module to have made that crossing, and its row records exactly what was and was
+not proven by it. **No further verification work is scheduled against this RC**;
+the campaigns that preceded this date found real defects, and the last round's
+remaining findings were documentation-count drift rather than product faults.
+
+The verdict above is unchanged and is not made conditional by this freeze. What
+freezing changes is that the following are now **permanent declared limits of
+this RC** rather than open work items — a host reading them is reading a
+boundary, not a backlog:
+
+| Declared limit | Standing |
+|---|---|
+| The Unity **Editor** has never executed the fixtures; lifecycle timing, script execution order, the player scripting profile and anything rendered remain unverified | **Permanent for this RC.** The control plane is executed against a live server, the 41 EditMode fixtures compile and run against the shims, and the lifecycle bodies are driven in Unity's order — none of which is an Editor result. Closing it requires an Editor machine, which this effort does not have |
+| Unreal | **Deferred by policy.** The adapter is kept so a UE5 host can connect later; no work is scheduled |
+| Godot beyond headless | **Out of scope.** Four suites run inside the real 4.6 binary `--headless`; no rendering, visual-fidelity or frame-presentation claim is made anywhere |
+| Tier 2/3 world-simulation and research modules | **Out of scope by declaration**, reachable only through their own CLI/scenario paths. FABE and Moral Dissonance stay `EXPERIMENTAL`; their human evaluation is blocked on external participants and no engineering here unblocks it |
+| Transport confidentiality, per-route scoping, the binary wire's session identity | **Not claimed.** Loopback plaintext; no TLS; signing is authenticity and non-replayability, explicitly not confidentiality; the binary wire carries no session identity at all |
+| Security certification, penetration testing, formal threat model | **Not claimed.** The encrypted store defeats a leaked file, not a leaked machine |
+| Performance on any machine or workload but the recorded one | **Not claimed.** One Windows/Node box, one loopback workload, no soak beyond 5,000 ticks |
+| Adapters other than Godot and Unity | **Compile- and static-conformance-checked only**; the generic C# client has no live runner in this repository |
+
+**What ships**: the bounded middleware contract in `RELEASE_SURFACE.md` §1 —
+the affective core and the services `RuntimeSimulation` constructs, intent and
+host-capability negotiation, the HTTP/WebSocket control plane with its batched
+transport, request signing and session ownership, the encrypted session store,
+the protocol and binary wire, the Godot and Unity adapters within their stated
+qualifiers, the generic C# client, the designer dashboard, the opt-in
+information-propagation service, and the verification and measurement harnesses
+listed there.
+
+**What does not**: everything in §2, the deferred Unreal adapter, and the
+Elixir + Rust NIF tree. Presence in this repository is not a release claim.
+
 | Proof | Command | Result (2026-09-19) |
 |---|---|---|
 | Persistence round-trip | `node tools/verification/verify_persistence_roundtrip.mjs` | PASS (canonical full-state 1/10/100-tick parity, custom state, queued observations, V1 defaults + 50-tick parity, soft/hard reset) |
@@ -59,7 +102,7 @@ status: active
 | Host provenance reconciliation | `node tools/verification/verify_host_provenance.mjs` | PASS (re-derives the divergent-lineage root cause read-only; gracefully records a skip when the sibling checkout is unavailable) |
 | C# adapter build | `dotnet build packages/adapters/csharp/FearAI.Client.csproj` | Recorded 0 warnings, 0 errors in the Phase 1 evidence; not rerun in this audit |
 
-Current JS evidence: **25 standalone verification probes — 18 runtime/behaviour Node harnesses (including the multi-process probes `verify_unity_adapter_behavior.mjs` and `verify_host_token_persistence.mjs`, the new `verify_transport_signing.mjs` and `verify_fuzz_arbitration.mjs`, and the host-provenance reconciliation probe `verify_host_provenance.mjs`), 3 Godot source probes (`verify_godot_stations.mjs`, `verify_godot_fallback_parity.mjs`, `verify_godot_live_pipeline.mjs`), 1 .NET compile-and-run check (`verify_dotnet_adapters_compile.mjs`, which also executes the package's EditMode fixtures), 1 Unity behaviour harness (`verify_unity_adapter_behavior.mjs`), 1 release-claim document tripwire, and 1 Unity Editor gate — with zero failures in this audit.** One of them, `verify_unity_editor_tests.mjs`, reports `SKIPPED` rather than `PASS` because no Unity Editor is installed here; its exit code stays 0 by design, and it is not counted as a pass anywhere. The metadata-only performance measurement (`measure_runtime_performance.mjs`) is counted separately, because it is not a pass/fail gate. The Godot **live in-engine** evidence is separate from all of these: it requires the external Godot binary and is captured by `run-godot-inengine-evidence.mjs`, which runs four suites including the live-session showcase. Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
+Current JS evidence: **28 standalone verification probes — 20 runtime/behaviour Node harnesses (including the multi-process probes `verify_unity_adapter_behavior.mjs` and `verify_host_token_persistence.mjs`, `verify_transport_signing.mjs`, `verify_fuzz_arbitration.mjs`, the host-provenance reconciliation probe `verify_host_provenance.mjs`, and the two probes added by the latest landing: `verify_contagion_transmission.mjs`, which covers end-to-end fear transmission through the runtime's own peer-gathering path and gates the narrative demo, and `verify_information_propagation_optin.mjs`, which carries the opt-in promotion of `InformationPropagationEngine` and, above all, asserts that enabling it changes nothing), 3 Godot source probes (`verify_godot_stations.mjs`, `verify_godot_fallback_parity.mjs`, `verify_godot_live_pipeline.mjs`), 1 .NET compile-and-run check (`verify_dotnet_adapters_compile.mjs`, which also executes the package's EditMode fixtures), 1 Unity behaviour harness (`verify_unity_adapter_behavior.mjs`), 1 release-claim document tripwire, 1 examples-inventory gate (`verify_examples_inventory.mjs`, which refuses a success verdict from any example nothing runs), and 1 Unity Editor gate — with zero failures in this audit.** One of them, `verify_unity_editor_tests.mjs`, reports `SKIPPED` rather than `PASS` because no Unity Editor is installed here; its exit code stays 0 by design, and it is not counted as a pass anywhere. The metadata-only performance measurement (`measure_runtime_performance.mjs`) is counted separately, because it is not a pass/fail gate. The Godot **live in-engine** evidence is separate from all of these: it requires the external Godot binary and is captured by `run-godot-inengine-evidence.mjs`, which runs four suites including the live-session showcase. Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
 
 ---
 
@@ -160,7 +203,7 @@ All twenty-five JS verification probes in `tools/verification/` were rerun in th
 
 ### Probe roster (recorded run, generated)
 
-**Recorded 2026-09-21T15:24:59.760Z — 25 probes, 24 passed, 1 passed with declared skips, 0 failed, on Node v24.19.0 / win32.**
+**Recorded 2026-09-21T19:08:23.069Z — 28 probes, 27 passed, 1 passed with declared skips, 0 failed, on Node v24.19.0 / win32.**
 This is a **recorded** run of the same suite CI re-runs (`npm run verify:probes`, the `probes`
 job, `windows-latest`), taken from `evidence/probe_suite_report.json`. A row marked
 **PASSED WITH DECLARED SKIPS** is *not* a pass: it is a probe that reported, in its own words,
@@ -171,10 +214,12 @@ here too — the roster renders whatever happened rather than only what succeede
 |---|---|---|---|
 | `verify_adapter_conformance.mjs` | PASSED | 210 | SUCCESS: All 210 adapter conformance assertions PASSED. |
 | `verify_compound_collisions.mjs` | PASSED | — | ALL CROSS-SYSTEM COMPOUND COLLISION TESTS PASSED CLEANLY. |
+| `verify_contagion_transmission.mjs` | PASSED | 57 | SUCCESS: contagion transmission is real, bounded, opt-outable, deterministic, and gated. |
 | `verify_counterfactual_world.mjs` | PASSED | — | SUCCESS: WorldCounterfactualEngine verification passed. |
 | `verify_cross_tree_parity.mjs` | PASSED | — | SUCCESS: All 17 cross-tree parity vectors PASSED bit-identically! |
 | `verify_dashboard_endpoints.mjs` | PASSED | — | Server stopped cleanly. |
 | `verify_dotnet_adapters_compile.mjs` | PASSED | — | SUCCESS: both .NET adapters compile and the Unity EditMode fixtures RUN (27 checks). |
+| `verify_examples_inventory.mjs` | PASSED | 23 | SUCCESS: every example is classified, and every stated verdict is earned or absent. |
 | `verify_fabe_personas.mjs` | PASSED | 53 | SUCCESS: All 53 FABE persona assertions PASSED. |
 | `verify_fuzz_arbitration.mjs` | PASSED | 16 | SUCCESS: 16 fuzz-arbitration assertions passed. |
 | `verify_godot_fallback_parity.mjs` | PASSED | 37 | SUCCESS: All 37 Godot fallback parity assertions PASSED. |
@@ -182,6 +227,7 @@ here too — the roster renders whatever happened rather than only what succeede
 | `verify_godot_stations.mjs` | PASSED | 169 | SUCCESS: All 169 Godot station-level assertions PASSED. |
 | `verify_host_provenance.mjs` | PASSED | — | SUCCESS: Host provenance root cause and resolution re-derived. |
 | `verify_host_token_persistence.mjs` | PASSED | 44 | SUCCESS: 44 host persistence assertions passed across 6 separate engine processes. |
+| `verify_information_propagation_optin.mjs` | PASSED | 41 | SUCCESS: the service is opt-in, advisory, roster-tracking, refusing and deterministic. |
 | `verify_long_horizon_lifecycle.mjs` | PASSED | — | SUCCESS: Long-horizon runtime lifecycle verification passed. |
 | `verify_moral_dissonance.mjs` | PASSED | 110 | SUCCESS: All 110 moral dissonance assertions PASSED. |
 | `verify_persistence_roundtrip.mjs` | PASSED | — | SUCCESS: All persistence, migration, and reset tests PASSED! |
@@ -250,7 +296,11 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 
 **No probe disagreed with itself across the recorded runs.** That is a statement about these 25 probes on this machine over up to 3 attempts each, not about determinism in general, and not about any machine but the recorded one.
 
-**Every probe in the recorded single run also appears in the repeated run**, so no probe in the roster above is left without a repetition result.
+**Never repeated at all (3) — in the recorded single run, absent from the repeated one, so nothing is known about whether they are deterministic:**
+
+- `verify_contagion_transmission.mjs`
+- `verify_examples_inventory.mjs`
+- `verify_information_propagation_optin.mjs`
 
 **Across the ledger of recorded repeated runs (2 night(s), 150 probe attempts):**
 
@@ -260,7 +310,10 @@ No probe has ever disagreed with itself in the ledger. That is a statement about
 
 **Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 0 of 1 do; 1 predates per-run duration recording and is excluded rather than treated as zero. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
 
-**Every probe in the roster appears in the ledger**, so no probe is left without a cross-night result.
+**Never recorded in the ledger (3)** — nothing is known about whether these are deterministic:
+- `verify_contagion_transmission.mjs`
+- `verify_examples_inventory.mjs`
+- `verify_information_propagation_optin.mjs`
 
 **Repeatable but still not proven** — these probes gave the same answer every time, and that answer was that part of their claim had no evidence on this machine:
 

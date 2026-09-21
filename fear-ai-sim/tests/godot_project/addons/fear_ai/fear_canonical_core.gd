@@ -16,6 +16,10 @@ extends RefCounted
 
 # --- Scale and integration (AffectiveAgent) --------------------------------
 const FEAR_SCALE := 4.2
+# Normalized fear at which the PANIC band is entered, DERIVED in the JS core as
+# enter.PANIC / FEAR_SCALE. Emitted rather than recomputed so a GDScript
+# fallback cannot pick its own onset.
+const PANIC_ONSET_RAW_FEAR := 0.9047619047619047
 const FEAR_STEP_UP := 0.05
 
 # --- Core band thresholds (FearCore.config) --------------------------------

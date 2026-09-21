@@ -4,12 +4,17 @@
  * deterministic FearCore hysteresis, habituation, trauma memory, and semantic action intents.
  */
 
-import { FearCore } from './FearCore.js';
+import { FearCore, FEAR_SCALE, isPanicClass } from './FearCore.js';
 import { HabituationSystem } from './HabituationSystem.js';
 import { IntentResolver } from './IntentResolver.js';
 import { PsychoacousticSynthesizer } from './PsychoacousticSynthesizer.js';
 import { DeterministicRng } from './DeterministicRng.js';
 
+// Last-resort fallback only. Anything that constructs agents on behalf of a
+// seeded owner (see RuntimeSimulation.registerAgent) passes an explicit `seed`,
+// because this module-global counter is PROCESS-wide: two simulations built with
+// the same seed in one process would otherwise hand the same agent different
+// fallback seeds, and a long-lived process would drift with every registration.
 let AGENT_FALLBACK_RNG_COUNTER = 0;
 export const DEFAULT_TRAITS = Object.freeze({
     openness: 0.5,
@@ -35,7 +40,10 @@ export class AffectiveAgent {
         // Deterministic fallback RNG (CCIII red-team fix): Math.random as a
         // default made identical cross-process runs diverge on PANIC/FREEZE
         // branches. Seed derives from id plus construction order, so replay
-        // with the same construction sequence is bit-identical.
+        // with the same construction sequence is bit-identical. Owners that know
+        // their own seed pass it explicitly (see RuntimeSimulation.registerAgent),
+        // which makes the seed a function of the OWNER's seed rather than of how
+        // much unrelated work this process happened to do first.
         this.fallbackSeed = options.seed ?? `${this.id}#${AGENT_FALLBACK_RNG_COUNTER++}`;
         this._defaultRng = new DeterministicRng(this.fallbackSeed);
         this._defaultRngFn = () => this._defaultRng.random();
@@ -207,7 +215,23 @@ export class AffectiveAgent {
      * (PANIC threshold is 3.8)
      */
     _fearScale(normalizedFear) {
-        return Math.max(0, normalizedFear * 4.2);
+        return Math.max(0, normalizedFear * FEAR_SCALE);
+    }
+
+    /**
+     * Is this agent in the panic class? Single source of truth:
+     * `FearCore.isPanicClass`, evaluated against THIS agent's own thresholds, so
+     * an agent constructed with a custom `enter.PANIC` still answers correctly.
+     *
+     * Consumers (the `RuntimeSimulation` peer snapshot and trauma recorder, group
+     * contagion) must use this rather than testing a band or a raw-fear literal,
+     * because three disagreeing literals is exactly the defect this replaced.
+     */
+    get panicClass() {
+        return isPanicClass(
+            { fearBand: this.fearCore.state, rawFear: this.currentFear },
+            this.fearCore.config.enter
+        );
     }
 
     /**

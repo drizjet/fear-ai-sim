@@ -13,6 +13,8 @@
  * SCATTER_AND_FLEE, RALLY_TO_LEADER) while host game retains authority over movement, physics, and damage.
  */
 
+import { isPanicClass } from './FearCore.js';
+
 export const GROUP_TYPES = Object.freeze({
     SQUAD: 'SQUAD',
     PATROL: 'PATROL',
@@ -186,7 +188,12 @@ export class GroupContagionSystem {
         for (const memberId of activeMembers) {
             const memberData = stateMap.get(memberId) || {};
             const fear = Number(memberData.currentFear ?? memberData.fear ?? 0.0);
-            const isPanicking = Boolean(memberData.isPanicking || memberData.fearBand === 'PANIC' || fear >= 0.70);
+            // Single source of truth. This used to add a THIRD threshold of its
+            // own (`fear >= 0.70`), which disagreed with both the runtime's 0.8
+            // and the band's own derived 0.9048 onset. A caller that already
+            // classified a member may pass `isPanicking` and it is honoured; a
+            // member classified by band and fear is judged by the shared rule.
+            const isPanicking = memberData.isPanicking ?? isPanicClass({ fearBand: memberData.fearBand, rawFear: fear });
 
             totalFear += fear;
             if (fear > highestFear) highestFear = fear;
