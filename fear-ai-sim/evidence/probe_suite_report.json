@@ -1,7 +1,7 @@
 {
   "kind": "recorded-probe-suite-run",
   "note": "A RECORDED run of the deterministic probe suite. Verdicts, durations and skip lines are properties of THIS machine on THIS date. CI re-runs the suite and uploads its own summary; a PARTIAL here means the claim had no evidence on this machine, not that it failed.",
-  "recordedAt": "2026-09-21T03:53:53.386Z",
+  "recordedAt": "2026-09-21T15:24:59.760Z",
   "node": "v24.19.0",
   "platform": "win32",
   "repeat": 1,
@@ -25,7 +25,10 @@
       "name": "verify_adapter_conformance.mjs",
       "verdict": "PASSED",
       "assertions": 210,
-      "durationMs": 71,
+      "durationsMs": [
+        69
+      ],
+      "durationMs": 69,
       "summaryLine": "SUCCESS: All 210 adapter conformance assertions PASSED.",
       "skipLines": []
     },
@@ -33,7 +36,10 @@
       "name": "verify_compound_collisions.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 82,
+      "durationsMs": [
+        78
+      ],
+      "durationMs": 78,
       "summaryLine": "ALL CROSS-SYSTEM COMPOUND COLLISION TESTS PASSED CLEANLY.",
       "skipLines": []
     },
@@ -41,7 +47,10 @@
       "name": "verify_counterfactual_world.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 131,
+      "durationsMs": [
+        121
+      ],
+      "durationMs": 121,
       "summaryLine": "SUCCESS: WorldCounterfactualEngine verification passed.",
       "skipLines": []
     },
@@ -49,7 +58,10 @@
       "name": "verify_cross_tree_parity.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 50,
+      "durationsMs": [
+        46
+      ],
+      "durationMs": 46,
       "summaryLine": "SUCCESS: All 17 cross-tree parity vectors PASSED bit-identically!",
       "skipLines": []
     },
@@ -57,7 +69,10 @@
       "name": "verify_dashboard_endpoints.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 237,
+      "durationsMs": [
+        213
+      ],
+      "durationMs": 213,
       "summaryLine": "Server stopped cleanly.",
       "skipLines": []
     },
@@ -65,15 +80,21 @@
       "name": "verify_dotnet_adapters_compile.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 2986,
-      "summaryLine": "SUCCESS: both .NET adapters and the Unity EditMode tests compile (17 checks).",
+      "durationsMs": [
+        3338
+      ],
+      "durationMs": 3338,
+      "summaryLine": "SUCCESS: both .NET adapters compile and the Unity EditMode fixtures RUN (27 checks).",
       "skipLines": []
     },
     {
       "name": "verify_fabe_personas.mjs",
       "verdict": "PASSED",
       "assertions": 53,
-      "durationMs": 73,
+      "durationsMs": [
+        71
+      ],
+      "durationMs": 71,
       "summaryLine": "SUCCESS: All 53 FABE persona assertions PASSED.",
       "skipLines": []
     },
@@ -81,7 +102,10 @@
       "name": "verify_fuzz_arbitration.mjs",
       "verdict": "PASSED",
       "assertions": 16,
-      "durationMs": 11273,
+      "durationsMs": [
+        11631
+      ],
+      "durationMs": 11631,
       "summaryLine": "SUCCESS: 16 fuzz-arbitration assertions passed.",
       "skipLines": []
     },
@@ -89,7 +113,10 @@
       "name": "verify_godot_fallback_parity.mjs",
       "verdict": "PASSED",
       "assertions": 37,
-      "durationMs": 57,
+      "durationsMs": [
+        60
+      ],
+      "durationMs": 60,
       "summaryLine": "SUCCESS: All 37 Godot fallback parity assertions PASSED.",
       "skipLines": []
     },
@@ -97,7 +124,10 @@
       "name": "verify_godot_live_pipeline.mjs",
       "verdict": "PASSED",
       "assertions": 128,
-      "durationMs": 52,
+      "durationsMs": [
+        51
+      ],
+      "durationMs": 51,
       "summaryLine": "SUCCESS: All 128 Godot live-pipeline wiring assertions PASSED.",
       "skipLines": []
     },
@@ -105,7 +135,10 @@
       "name": "verify_godot_stations.mjs",
       "verdict": "PASSED",
       "assertions": 169,
-      "durationMs": 174,
+      "durationsMs": [
+        168
+      ],
+      "durationMs": 168,
       "summaryLine": "SUCCESS: All 169 Godot station-level assertions PASSED.",
       "skipLines": []
     },
@@ -113,7 +146,10 @@
       "name": "verify_host_provenance.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 797,
+      "durationsMs": [
+        745
+      ],
+      "durationMs": 745,
       "summaryLine": "SUCCESS: Host provenance root cause and resolution re-derived.",
       "skipLines": []
     },
@@ -121,7 +157,10 @@
       "name": "verify_host_token_persistence.mjs",
       "verdict": "PASSED",
       "assertions": 44,
-      "durationMs": 5435,
+      "durationsMs": [
+        5298
+      ],
+      "durationMs": 5298,
       "summaryLine": "SUCCESS: 44 host persistence assertions passed across 6 separate engine processes.",
       "skipLines": []
     },
@@ -129,7 +168,10 @@
       "name": "verify_long_horizon_lifecycle.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 236,
+      "durationsMs": [
+        262
+      ],
+      "durationMs": 262,
       "summaryLine": "SUCCESS: Long-horizon runtime lifecycle verification passed.",
       "skipLines": []
     },
@@ -137,7 +179,10 @@
       "name": "verify_moral_dissonance.mjs",
       "verdict": "PASSED",
       "assertions": 110,
-      "durationMs": 46,
+      "durationsMs": [
+        48
+      ],
+      "durationMs": 48,
       "summaryLine": "SUCCESS: All 110 moral dissonance assertions PASSED.",
       "skipLines": []
     },
@@ -145,7 +190,10 @@
       "name": "verify_persistence_roundtrip.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 125,
+      "durationsMs": [
+        112
+      ],
+      "durationMs": 112,
       "summaryLine": "SUCCESS: All persistence, migration, and reset tests PASSED!",
       "skipLines": []
     },
@@ -153,7 +201,10 @@
       "name": "verify_protocol_abuse.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 295,
+      "durationsMs": [
+        274
+      ],
+      "durationMs": 274,
       "summaryLine": "SUCCESS: Protocol abuse verification passed.",
       "skipLines": []
     },
@@ -161,7 +212,10 @@
       "name": "verify_release_claim_boundaries.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 455,
+      "durationsMs": [
+        432
+      ],
+      "durationMs": 432,
       "summaryLine": "SUCCESS: Release-claim document boundaries are explicit.",
       "skipLines": []
     },
@@ -169,7 +223,10 @@
       "name": "verify_runtime_wiring.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 161,
+      "durationsMs": [
+        148
+      ],
+      "durationMs": 148,
       "summaryLine": "SUCCESS: Runtime wiring boundary verification passed.",
       "skipLines": []
     },
@@ -177,7 +234,10 @@
       "name": "verify_server_lifecycle.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 304,
+      "durationsMs": [
+        285
+      ],
+      "durationMs": 285,
       "summaryLine": "SUCCESS: Fear Server lifecycle and protocol verification passed.",
       "skipLines": []
     },
@@ -185,7 +245,10 @@
       "name": "verify_server_reconnect.mjs",
       "verdict": "PASSED",
       "assertions": null,
-      "durationMs": 203,
+      "durationsMs": [
+        206
+      ],
+      "durationMs": 206,
       "summaryLine": "SUCCESS: Real WebSocket reconnect verification passed.",
       "skipLines": []
     },
@@ -193,7 +256,10 @@
       "name": "verify_store_encryption.mjs",
       "verdict": "PASSED",
       "assertions": 46,
-      "durationMs": 1531,
+      "durationsMs": [
+        1489
+      ],
+      "durationMs": 1489,
       "summaryLine": "SUCCESS: 46 encrypted-store assertions passed.",
       "skipLines": []
     },
@@ -201,7 +267,10 @@
       "name": "verify_transport_signing.mjs",
       "verdict": "PASSED",
       "assertions": 61,
-      "durationMs": 1492,
+      "durationsMs": [
+        1567
+      ],
+      "durationMs": 1567,
       "summaryLine": "SUCCESS: 61 transport-signing assertions passed.",
       "skipLines": []
     },
@@ -209,7 +278,10 @@
       "name": "verify_unity_adapter_behavior.mjs",
       "verdict": "PASSED",
       "assertions": 37,
-      "durationMs": 1874,
+      "durationsMs": [
+        1886
+      ],
+      "durationMs": 1886,
       "summaryLine": "SUCCESS: 37 Unity behavioural assertions passed across 4 separate processes.",
       "skipLines": []
     },
@@ -217,7 +289,10 @@
       "name": "verify_unity_editor_tests.mjs",
       "verdict": "PARTIAL",
       "assertions": null,
-      "durationMs": 48,
+      "durationsMs": [
+        46
+      ],
+      "durationMs": 46,
       "summaryLine": "SKIPPED: no Unity Editor found on this machine.",
       "skipLines": [
         "SKIPPED: no Unity Editor found on this machine."
