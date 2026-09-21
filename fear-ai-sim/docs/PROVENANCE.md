@@ -215,7 +215,7 @@ To mark a feature as `MANUAL_AUDIT_VERIFIED`:
 6. Verify persistence contracts, state lifecycle reset behavior, and memory bounds.
 7. Record exact equations, constants, limitations, and unverified assumptions.
 
-A file existing is not proof that its feature is live. An import is not proof that the code is exercised. Test-only scaffolding is not product behavior. Automated test runners (`cargo test`, `npm test`, Jest) are strictly retired under Hard Rule 9.
+A file existing is not proof that its feature is live. An import is not proof that the code is exercised. Test-only scaffolding is not product behavior. Automated test runners (`cargo test`, `npm test`, Jest) are strictly retired under Hard Rule 9. `npm test` is a **tombstone**: it prints the retirement (465 suites / 67,524 lines deleted 2026-09-15 at tag `v-test-retirement-complete`) and exits with a non-zero code (9) instead of reporting a green no-op, because a retired runner that reads as passing is worse than no entry point at all. `npm run verify:hard-rule-9` is the advisory gate that asserts the retirement is intact — no runner dependencies, no test/spec files, no workflow copy GitHub cannot read, and CI running nothing outside a declared allowlist (the integrity check rejects any `run:` command that is not in it). The **evidence ledger's** gate is retired the same way and for the same reason: the ledger closed on 2026-09-06, so `npm run lint:evidence` **refuses with a non-zero exit (9)** rather than reporting a verdict that could only be made green by bulk-invalidating the unproved rows — and `npm run evidence:report` prints what the closed record still re-proves without claiming currency.
 
 ## 9. Deterministic scenario verification procedure (`REPRODUCIBLE_SCENARIO_EVIDENCE`)
 

@@ -6,6 +6,13 @@ type: documentation
 status: historical
 ---
 
+> **Superseded (2026-09-20):** the `npm test` step below is retired under Hard
+> Rule 9. `npm test` is now a tombstone that refuses with a non-zero exit
+> (code 9) and the suites it refers to no longer exist; its non-zero exit is
+> expected, not a regression. Use `npm run verify:hard-rule-9` to check the
+> retirement and `node tools/verification/<probe>.mjs` for evidence. See
+> `docs/SYSTEM_MAP.md` ("Verification Policy").
+
 > **Historical Part 1 prompt (sim-era FearCore).** Do not paste this as a fresh mission.
 > Current product: plug-in fear middleware. Read `AGENTS.md` and `docs/SYSTEM_MAP.md` first.
 > Canonical Rust fear model: Pixel Pets `src/engine/ai/fear.rs` (sibling tree). Tauri `src-tauri` in this repo is not that model.

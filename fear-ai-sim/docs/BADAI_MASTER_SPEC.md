@@ -6,6 +6,13 @@ type: master-specification
 status: historical-plan
 ---
 
+> **Superseded (2026-09-20):** the `npm test` acceptance step below is retired
+> under Hard Rule 9. `npm test` is now a tombstone that refuses with a non-zero
+> exit (code 9) and the suites it refers to no longer exist; its non-zero exit
+> is expected, not a regression. Use `npm run verify:hard-rule-9` to check the
+> retirement and `node tools/verification/<probe>.mjs` for evidence. See
+> `docs/SYSTEM_MAP.md` ("Verification Policy").
+
 # BADAI — MASTER LONG-TERM SPEC, ROADMAP & EXECUTION PROMPT (v3.0 — 2026-08-26)
 
 > **Historical spec.** The live product goal is **plug-in fear middleware** (`SYSTEM_MAP.md`), not “replace Fear AI with BadAI.”
