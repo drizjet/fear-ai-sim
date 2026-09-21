@@ -15,6 +15,12 @@
  *     adapter omission guards).
  *  4. Intent vocabulary & outcome receipts (ACTION_INTENTS parity across all
  *     adapters, INTENT_OUTCOME taxonomy, advisory-only host authority).
+ *  5. Canonical band vocabulary (no adapter may carry a non-canonical fear
+ *     band literal; every HUD palette is a subset of the core four).
+ *  6. Control-plane parity: every adapter carries session identity, the batched
+ *     register/unregister/trauma routes, a legacy 404 fallback, and refusal
+ *     reporting - so a host is never a second-class citizen of the middleware
+ *     because of which engine it happens to be.
  *
  * Hard Rule 9 Compliant: 0 test runners. Standalone deterministic script.
  */
@@ -43,6 +49,8 @@ import {
 import { ProtocolValidator } from '../../packages/protocol/src/validator.js';
 import { INTENT_OUTCOMES, FAILURE_REASONS } from '../../packages/core/src/HostFeedbackLoop.js';
 import { ACTION_INTENTS } from '../../packages/core/src/IntentResolver.js';
+import { FEAR_BANDS, CORE_BANDS } from '../../packages/core/src/FearCore.js';
+import { MAX_BATCH_CONTROL_ITEMS, MAX_BATCH_REGISTRATION_AGENTS } from '../../packages/protocol/src/types.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -275,6 +283,264 @@ async function main() {
   check('Godot agent notes host-owned motor', godotAgent.includes('Host-owned motor') || godotAgent.includes('host'));
   check('Unity agent stores RecommendedVector (advisory)', unityAgent.includes('RecommendedVector'));
   check('Unity agent notes host applies NavMesh', unityAgent.includes('Host game applies'));
+
+  // ------------------------------------------------------------------
+  // SUITE 5: Canonical band vocabulary across every engine adapter
+  // ------------------------------------------------------------------
+  console.log('\n--- Suite 5: Canonical band vocabulary across adapters ---');
+  check('JS canonical band set carries the four core bands',
+    CORE_BANDS.every((b) => FEAR_BANDS.includes(b)) && FEAR_BANDS.includes('ANXIOUS'));
+
+  const NON_CANONICAL_BANDS = ['FEAR', 'UNEASY', 'SCARED', 'TERRIFIED', 'NERVOUS', 'WARY', 'DREAD'];
+  const stripComments = (src) => src
+    .split('\n')
+    .map((line) => line.replace(/\/\/.*$/, '').replace(/(^|[^:])\s#.*$/, '$1'))
+    .join('\n');
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => {
+    const p = path.join(dir, d.name);
+    if (d.isDirectory()) {
+      // Skip build products: Godot's `.godot` import cache and the .NET
+      // bin/obj trees hold no authored adapter source.
+      return ['bin', 'obj', '__pycache__', '.godot', 'node_modules'].includes(d.name) ? [] : walk(p);
+    }
+    return [p];
+  });
+  // Both the packaged adapters and the Godot showcase's own adapter copies are
+  // swept. The showcase carries a second `fear_agent.gd` (its offline fallback),
+  // and that duplicate is exactly where a non-canonical band literal can hide
+  // while the packaged copy stays clean.
+  const adapterFiles = [
+    ...['godot', 'unity', 'csharp', 'node', 'python', 'rust']
+      .flatMap((name) => walk(path.join(REPO, 'packages/adapters', name))),
+    ...walk(path.join(REPO, 'tests/godot_project'))
+  ].filter((p) => /\.(gd|cs|py|mjs|js|rs)$/.test(p));
+  check('Adapter trees expose source files to scan', adapterFiles.length >= 10, `found ${adapterFiles.length}`);
+
+  const violations = [];
+  for (const file of adapterFiles) {
+    const src = stripComments(fs.readFileSync(file, 'utf8'));
+    for (const m of src.matchAll(/"([A-Z][A-Z_]{2,})"/g)) {
+      if (NON_CANONICAL_BANDS.includes(m[1])) violations.push(`${path.relative(REPO, file)}: "${m[1]}"`);
+    }
+  }
+  check('No engine adapter carries a non-canonical fear band literal', violations.length === 0,
+    violations.join('; '));
+
+  const unityHud = readRepo('packages/adapters/unity/Runtime/FearAgentHUD.cs');
+  const unityHudBands = [...unityHud.matchAll(/case "([A-Z_]+)":/g)].map((m) => m[1]).sort();
+  check('Unity HUD band palette covers only canonical core bands',
+    unityHudBands.length >= 4 && unityHudBands.every((b) => CORE_BANDS.includes(b)), `got [${unityHudBands}]`);
+  const godotHud = readRepo('packages/adapters/godot/fear_agent_hud_2d.gd');
+  const godotHudBands = [...godotHud.matchAll(/"([A-Z_]+)":\s*return COLOR_/g)].map((m) => m[1]).sort();
+  check('Godot HUD band palette covers only canonical core bands',
+    godotHudBands.length >= 4 && godotHudBands.every((b) => CORE_BANDS.includes(b)), `got [${godotHudBands}]`);
+
+  const unityAgentBands = new Set([
+    ...[...unityAgent.matchAll(/currentFearBand == "([A-Z_]+)"/g)].map((m) => m[1]),
+    ...[...unityAgent.matchAll(/currentFearBand = "([A-Z_]+)"/g)].map((m) => m[1])
+  ]);
+  check('Unity agent band checks and defaults use only canonical bands',
+    [...unityAgentBands].every((b) => FEAR_BANDS.includes(b)), `got [${[...unityAgentBands]}]`);
+  check('Godot wire type enum exposes the canonical four core bands',
+    CORE_BANDS.every((b) => new RegExp(`^\\t${b},$`, 'm').test(godotTypes)),
+    `missing=[${CORE_BANDS.filter((b) => !new RegExp(`^\\t${b},$`, 'm').test(godotTypes))}]`);
+  check('No adapter declares a FEAR or UNEASY band anywhere in its band surface',
+    !violations.some((v) => v.includes('"FEAR"') || v.includes('"UNEASY"')));
+
+  // ------------------------------------------------------------------
+  // SUITE 6: Control-plane parity
+  // ------------------------------------------------------------------
+  console.log('\n--- Suite 6: Control-plane parity (session identity, batching, fallback) ---');
+  // Suite 7, at the end of this file, covers the DESTRUCTIVE half of the control
+  // plane: teardown now requires the credential too, and an adapter that sends a
+  // name without it would be refused its own crowd.
+
+  // The server contract every adapter is written against, asserted first so an
+  // adapter can never be the only place a route or a limit is defined.
+  check('Server caps a control batch at 512 items', MAX_BATCH_CONTROL_ITEMS === 512, `got ${MAX_BATCH_CONTROL_ITEMS}`);
+  check('Batch-registration cap is an ALIAS of the control cap, not a second limit',
+    MAX_BATCH_REGISTRATION_AGENTS === MAX_BATCH_CONTROL_ITEMS);
+  for (const route of ['/api/v1/register/batch', '/api/v1/unregister/batch', '/api/v1/trauma/batch', '/api/v1/sessions']) {
+    check(`Server exposes ${route}`, fearServerSrc.includes(route));
+  }
+
+  const pythonClient = readRepo('packages/adapters/python/fear_ai_client.py');
+  const PARITY_MATRIX = [
+    {
+      name: 'Godot',
+      src: godotClient,
+      cap: 'BATCH_REGISTRATION_LIMIT',
+      refusals: 'refused_claims',
+      trauma: true,
+      // Godot inlines the identity into each payload rather than funnelling it
+      // through a helper, so the assertion names the two sites that matter: the
+      // singular registration and the batch body.
+      identitySites: ['payload["session_id"] = session_id', 'batch_body["session_id"] = session_id', '["claim"] = claim_mode']
+    },
+    {
+      name: 'Unity',
+      src: readRepo('packages/adapters/unity/Runtime/FearAIClient.cs'),
+      cap: 'MaxBatchControlItems',
+      refusals: 'RefusedClaims',
+      trauma: true,
+      identitySites: ['AppendClaimFields', 'SessionToken', 'claimMode']
+    },
+    {
+      name: 'C#',
+      src: csharpClient,
+      cap: 'MaxBatchControlItems',
+      refusals: 'RefusedClaims',
+      trauma: true,
+      identitySites: ['ClaimFields()', 'SessionToken', 'ClaimMode']
+    },
+    {
+      name: 'Python',
+      src: pythonClient,
+      cap: 'BATCH_LIMIT',
+      refusals: 'refused_claims',
+      trauma: true,
+      identitySites: ['def _claim_fields', 'session_token', '"claim": self.claim']
+    }
+  ];
+
+  for (const adapter of PARITY_MATRIX) {
+    check(`${adapter.name} carries a session name and token`,
+      adapter.src.includes('session_id') && adapter.src.includes('session_token'));
+    // The identity has to TRAVEL with the claim, not merely be stored: an
+    // adapter that holds a token but never sends it is still anonymous to the
+    // server on every reconnect.
+    for (const site of adapter.identitySites) {
+      check(`${adapter.name} attaches identity at \`${site}\``, adapter.src.includes(site));
+    }
+    check(`${adapter.name} registers in batches`, adapter.src.includes('/api/v1/register/batch'));
+    check(`${adapter.name} tears down in batches`, adapter.src.includes('/api/v1/unregister/batch'));
+    if (adapter.trauma) {
+      check(`${adapter.name} authors trauma in batches`, adapter.src.includes('/api/v1/trauma/batch'));
+    }
+    // A 404 is the ONLY signal that a server predates batching, so an adapter
+    // without it cannot degrade - it would retry a route that is not there.
+    check(`${adapter.name} degrades on a 404 batch route`, /404/.test(adapter.src));
+    check(`${adapter.name} counts refused claims instead of dropping them`,
+      adapter.src.includes(adapter.refusals));
+    check(`${adapter.name} surfaces rejected batch entries`,
+      adapter.src.includes('rejected'));
+  }
+
+  // The cap is duplicated in four languages by necessity, so it is asserted to
+  // EQUAL the server's constant rather than merely to exist: bumping the server
+  // limit must not silently leave every adapter sending a different number.
+  for (const adapter of PARITY_MATRIX) {
+    const m = adapter.src.match(new RegExp(`${adapter.cap}\\s*[:=]\\s*(?:int\\s*=\\s*)?(\\d+)`));
+    check(`${adapter.name} batch cap matches the server (${MAX_BATCH_CONTROL_ITEMS})`,
+      Boolean(m) && Number(m[1]) === MAX_BATCH_CONTROL_ITEMS,
+      m ? `got ${m[1]}` : `no ${adapter.cap} declaration found`);
+  }
+
+  // A refused claim must be distinguishable from a failed request: 409 means the
+  // server refused and mutated nothing, which is a different decision for the
+  // host than a transport error it should retry.
+  check('Python distinguishes a refused claim (409) from a transport failure',
+    pythonClient.includes('status == 409'));
+  check('C# distinguishes a refused claim (409) from a transport failure',
+    csharpClient.includes('status == 409'));
+  check('Python exposes a runnable live self-check for its control plane',
+    pythonClient.includes('--self-check') && pythonClient.includes('def run_self_check'));
+  check('Python self-check verifies a name-only rival is refused',
+    pythonClient.includes('name_only_rival_is_refused'));
+  check('Python self-check verifies a proven token reconnects',
+    pythonClient.includes('proven_token_reconnects'));
+
+  // ------------------------------------------------------------------
+  // SUITE 7: Teardown carries the credential, and its refusals are reported
+  // ------------------------------------------------------------------
+  // Added when teardown became ownership-gated on the server. Every adapter
+  // already sent `session_id` when retiring agents and NONE of them sent the
+  // token, which the Unity behavioural harness caught by running the real client:
+  // an honest host was locked out of retiring its own crowd. A name is a label, so
+  // the gate correctly treats a name-only teardown as a stranger's request.
+  //
+  // This is a source-level tripwire, not a behaviour check - the behaviour is
+  // `verify_host_token_persistence.mjs` (Godot, in engine) and
+  // `verify_unity_adapter_behavior.mjs` (Unity, live server). What it prevents is
+  // the gap reopening silently in an adapter that has no behavioural harness yet.
+  console.log('\n--- Suite 7: Teardown carries the credential, refusals are reported ---');
+
+  const claimsSrc = readRepo('packages/runtime/src/ClaimArbitration.js');
+  check('Server gates teardown on ownership', claimsSrc.includes('authorizeTeardown'));
+  check('Server gates a world wipe on ownership', claimsSrc.includes('authorizeReset'));
+  check('Server separates destruction outcomes from claim outcomes',
+    claimsSrc.includes('TEARDOWN_OUTCOMES') && claimsSrc.includes('REFUSED_NOT_OWNER'));
+  check('Server can end a session on the host\'s own instruction', claimsSrc.includes('revoke('));
+  check('Server exposes a revocation route', fearServerSrc.includes('/api/v1/session/revoke'));
+  check('Server reports teardown refusals per id on the batch route',
+    /refused: refusedTeardown/.test(fearServerSrc));
+  check('Server reports teardown refusals on the WebSocket batch route',
+    /refused: refusedTeardown/.test(fearServerSrc));
+  check('Server distinguishes a stale owner release from an attack',
+    claimsSrc.includes('RELEASED_OWNER_STALE'));
+  check('Server never promotes ownership to liveness on an unproven claim',
+    /No liveness refresh here|touch`\./.test(claimsSrc));
+
+  const TEARDOWN_IDENTITY = [
+    {
+      name: 'Godot',
+      // Both the batch body and the singular fallback payload, asserted inside a
+      // bounded window so the match cannot come from an unrelated registration site.
+      patterns: [
+        { label: 'batch teardown body', re: /ubody\["session_token"\][\s\S]{0,0}/ },
+        { label: 'singular teardown payload', re: /unreg_payload\["session_token"\]/ }
+      ],
+      refusalCounter: 'unregistration_refusals',
+      refusalSignal: 'unregister_refused_not_owner'
+    },
+    {
+      name: 'Unity',
+      patterns: [
+        { label: 'batch teardown body', re: /UnregistrationBatchJson\([\s\S]{0,900}?session_token/ },
+        { label: 'singular teardown payload', re: /UnregistrationJson\([\s\S]{0,600}?session_token/ }
+      ],
+      refusalCounter: 'UnregistrationRefusals',
+      refusalSignal: 'unregister_refused_not_owner'
+    },
+    {
+      name: 'C#',
+      patterns: [
+        { label: 'batch teardown body', re: /batchFields\["session_token"\]/ },
+        { label: 'singular teardown payload', re: /singleFields\["session_token"\]/ }
+      ],
+      refusalCounter: 'UnregistrationRefusals',
+      refusalSignal: 'Refused'
+    },
+    {
+      name: 'Python',
+      patterns: [
+        { label: 'batch teardown body', re: /unregister\/batch"[\s\S]{0,200}?_claim_fields\(\)/ }
+      ],
+      // Python's singular teardown already funnelled through `_claim_fields`,
+      // which is why only the batch route had the gap - asserted so a future
+      // refactor cannot quietly remove it from both.
+      refusalCounter: 'unregistration_refusals',
+      refusalSignal: 'refused'
+    }
+  ];
+
+  const ADAPTER_SOURCES = {
+    Godot: godotClient,
+    Unity: readRepo('packages/adapters/unity/Runtime/FearAIClient.cs'),
+    'C#': csharpClient,
+    Python: pythonClient
+  };
+
+  for (const adapter of TEARDOWN_IDENTITY) {
+    const src = ADAPTER_SOURCES[adapter.name];
+    for (const pattern of adapter.patterns) {
+      check(`${adapter.name} sends its credential with the ${pattern.label}`, pattern.re.test(src));
+    }
+    check(`${adapter.name} counts teardown refusals separately from rejected entries`,
+      src.includes(adapter.refusalCounter), adapter.refusalCounter);
+    check(`${adapter.name} reports a not-owner teardown rather than dropping it`,
+      src.includes(adapter.refusalSignal), adapter.refusalSignal);
+  }
 
   console.log('\n============================================================');
   console.log(`SUCCESS: All ${PASS} adapter conformance assertions PASSED.`);

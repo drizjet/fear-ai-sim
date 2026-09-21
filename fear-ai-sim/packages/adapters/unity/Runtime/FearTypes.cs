@@ -148,6 +148,68 @@ namespace FearAI
         public string id;
     }
 
+    // --- Control plane (registration, teardown, trauma authoring) ---------
+    // JsonUtility only serializes public FIELDS on [Serializable] types, which
+    // is why these carry public fields rather than properties.
+
+    [Serializable]
+    public class AgentRegistration
+    {
+        public string agent_id;
+        public string name;
+        public PersonalityTraits traits;
+        public Vector3Hint initial_position;
+    }
+
+    [Serializable]
+    public class TraumaZone
+    {
+        public float x;
+        public float y;
+        public float z;
+        public float intensity = 1.0f;
+        public float radius = 150.0f;
+        public int lifetimeTicks = 1800;
+    }
+
+    [Serializable]
+    public class RefusalEnvelope
+    {
+        public string agent_id;
+        public string reason;
+        public string owner_session_id;
+        public int index = -1;
+    }
+
+    /// <summary>Union of the fields the control plane can hand back. One
+    /// envelope type keeps the response handlers from guessing shapes; absent
+    /// fields simply deserialize to their defaults.</summary>
+    [Serializable]
+    public class ControlEnvelope
+    {
+        public string type;
+        public string status;
+        public string session_id;
+        public string session_token;
+        public int count;
+        public List<string> registered;
+        public List<string> unregistered;
+        public List<string> not_found;
+        public List<RefusalEnvelope> refused;
+        public List<RefusalEnvelope> rejected;
+        /// <summary>Request-level claim outcome: GRANTED, ADOPTED or TAKEN_OVER.
+        /// After a host restart the value that matters is GRANTED - an ADOPTED here
+        /// means the host came back as a stranger to its own crowd.</summary>
+        public string claim;
+        /// <summary>True when this response replaced an existing credential, which
+        /// means the previously stored token is now dead and MUST be overwritten.</summary>
+        public bool token_rotated;
+        /// <summary>True when the replacement happened because the stored
+        /// credential had passed its usable window, rather than because the host
+        /// asked for a rotation.</summary>
+        public bool token_expired;
+    }
+
     [Serializable]
     public class AgentObservation
     {

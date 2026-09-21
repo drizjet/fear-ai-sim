@@ -6,7 +6,9 @@ import {
     PROTOCOL_VERSION,
     MESSAGE_TYPES,
     STIMULUS_TYPES,
-    ERROR_CODES
+    ERROR_CODES,
+    MAX_BATCH_CONTROL_ITEMS,
+    CLAIM_MODES
 } from './types.js';
 import { FEAR_BANDS } from '../../core/src/FearCore.js';
 import { ACTION_INTENTS } from '../../core/src/IntentResolver.js';
@@ -74,8 +76,17 @@ export class ProtocolValidator {
             case MESSAGE_TYPES.REGISTER_AGENT:
                 result = ProtocolValidator.validateRegisterAgent(raw);
                 break;
+            case MESSAGE_TYPES.REGISTER_AGENT_BATCH:
+                result = ProtocolValidator.validateRegisterBatch(raw);
+                break;
             case MESSAGE_TYPES.UNREGISTER_AGENT:
                 result = ProtocolValidator.validateUnregisterAgent(raw);
+                break;
+            case MESSAGE_TYPES.UNREGISTER_AGENT_BATCH:
+                result = ProtocolValidator.validateUnregisterBatch(raw);
+                break;
+            case MESSAGE_TYPES.TRAUMA_ZONE_BATCH:
+                result = ProtocolValidator.validateTraumaZoneBatch(raw);
                 break;
             case MESSAGE_TYPES.SOCIAL_EVENT:
                 result = ProtocolValidator.validateSocialEvent(raw);
@@ -104,6 +115,9 @@ export class ProtocolValidator {
                 break;
             case MESSAGE_TYPES.SET_PACING_OVERRIDE:
                 result = ProtocolValidator.validatePacingOverride(raw);
+                break;
+            case MESSAGE_TYPES.AUTH_RESPONSE:
+                result = ProtocolValidator.validateAuthResponse(raw);
                 break;
             default:
                 // Accept unknown messages defensively
@@ -171,8 +185,294 @@ export class ProtocolValidator {
                 agent_id: String(raw.agent_id).trim().slice(0, 256),
                 name: raw.name ? String(raw.name).slice(0, 256) : String(raw.agent_id).trim().slice(0, 256),
                 traits: sanitizedTraits,
-                initial_position: raw.initial_position || { x: 0, y: 0, z: 0 }
+                initial_position: raw.initial_position || { x: 0, y: 0, z: 0 },
+                ...ProtocolValidator.sanitizeClaim(raw)
             }
+        };
+    }
+
+    /**
+     * Extract the optional ownership-claim fields shared by the singular and
+     * batch registration paths.
+     *
+     * `session_id` is what makes a reconnect an identity instead of a guess: a
+     * returning host presents the same session id and the server can tell it
+     * from a second host that merely happens to name the same agents.
+     * A caller that omits it keeps today's behaviour exactly - registration is
+     * accepted with no ownership recorded, and no arbitration is claimed for
+     * it. `claim` defaults to `join`, which never displaces a live owner.
+     */
+    static sanitizeClaim(raw) {
+        const out = {};
+        if (raw && typeof raw.session_id === 'string' && raw.session_id.trim().length > 0) {
+            out.session_id = raw.session_id.trim().slice(0, 256);
+        }
+        // The token proves continuity of the same host process. It is the
+        // server's own 256-bit value echoed back, so it is length-bounded but
+        // otherwise never interpreted: no structure to validate.
+        if (raw && typeof raw.session_token === 'string' && raw.session_token.trim().length > 0) {
+            out.session_token = raw.session_token.trim().slice(0, 512);
+        }
+        const claim = raw && typeof raw.claim === 'string' ? raw.claim.toLowerCase() : 'join';
+        out.claim = CLAIM_MODES.includes(claim) ? claim : 'join';
+        // "replace my credential with a fresh one". Only REGISTRATION acts on
+        // this, and only for an identity that already proved itself with a
+        // matching token; on the teardown routes it is carried and ignored, so a
+        // client can send one consistent claim envelope everywhere.
+        if (raw && raw.rotate_token === true) out.rotate_token = true;
+        // The session's PUBLIC signing key, if the host registers one. Only the
+        // PEM envelope is checked here - whether it is a real, usable key is a
+        // cryptographic question the arbitration layer answers, and it refuses
+        // an unparseable one rather than storing a key it could never verify
+        // against. Bounded so a hostile client cannot push a megabyte of PEM
+        // through the control plane.
+        if (raw && typeof raw.signing_public_key === 'string'
+            && raw.signing_public_key.includes('-----BEGIN PUBLIC KEY-----')) {
+            out.signing_public_key = raw.signing_public_key.trim().slice(0, 4096);
+        }
+        return out;
+    }
+
+    /**
+     * Validate a response to a WebSocket authentication challenge.
+     *
+     * Both fields are opaque to this layer: the challenge is echoed back because
+     * the server needs to find the question it asked (and must not accept an
+     * answer to a question it never asked), and the signature is base64 the
+     * verifier either accepts or refuses.
+     */
+    static validateAuthResponse(raw) {
+        const challenge = raw && typeof raw.challenge === 'string' ? raw.challenge.trim() : '';
+        const signature = raw && typeof raw.signature === 'string' ? raw.signature.trim() : '';
+        const errors = [];
+        if (challenge.length === 0) errors.push('Missing required property "challenge"');
+        if (signature.length === 0) errors.push('Missing required property "signature"');
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.AUTH_RESPONSE,
+                challenge: challenge.slice(0, 256),
+                signature: signature.slice(0, 4096),
+                ...ProtocolValidator.sanitizeClaim(raw)
+            }
+        };
+    }
+
+    /**
+     * Validate a batch of agent registrations.
+     *
+     * Semantics chosen deliberately: a malformed ENTRY is reported, not fatal.
+     * A host registering a crowd must not lose 27 NPCs because one entry has a
+     * bad trait, and it has to be able to see exactly which entries to fix. The
+     * batch as a whole is rejected only when the envelope itself is unusable:
+     * not an object, no `agents` array, an empty array, or more entries than
+     * `MAX_BATCH_REGISTRATION_AGENTS`.
+     *
+     * Duplicate ids inside one batch collapse to the last entry, so a single
+     * request can never register the same agent twice.
+     */
+    static validateRegisterBatch(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Batch registration must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (!Array.isArray(raw.agents)) {
+            return { valid: false, errors: ['Missing required property "agents" (array)'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (raw.agents.length === 0) {
+            return { valid: false, errors: ['Property "agents" cannot be empty'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (raw.agents.length > MAX_BATCH_CONTROL_ITEMS) {
+            return {
+                valid: false,
+                errors: [`Property "agents" exceeds the ${MAX_BATCH_CONTROL_ITEMS}-agent batch limit; split the batch`],
+                code: ERROR_CODES.VALIDATION_FAILED
+            };
+        }
+
+        // Envelope-level ownership applies to every entry that does not state
+        // its own, so a host naming one session for a whole crowd does not have
+        // to repeat it 512 times.
+        const envelopeClaim = ProtocolValidator.sanitizeClaim(raw);
+        const agents = [];
+        const rejected = [];
+        const seenIndex = new Map();
+        for (let i = 0; i < raw.agents.length; i++) {
+            const entry = raw.agents[i];
+            const res = ProtocolValidator.validateRegisterAgent(entry);
+            if (!res.valid) {
+                rejected.push({
+                    index: i,
+                    agent_id: entry && entry.agent_id !== undefined && entry.agent_id !== null ? String(entry.agent_id) : null,
+                    errors: res.errors
+                });
+                continue;
+            }
+            const merged = { ...res.value };
+            if (!entry || entry.session_id === undefined) merged.session_id = envelopeClaim.session_id;
+            if (!entry || entry.session_token === undefined) merged.session_token = envelopeClaim.session_token;
+            if (!entry || entry.claim === undefined) merged.claim = envelopeClaim.claim;
+            if (seenIndex.has(merged.agent_id)) {
+                agents[seenIndex.get(merged.agent_id)] = merged;
+            } else {
+                seenIndex.set(merged.agent_id, agents.length);
+                agents.push(merged);
+            }
+        }
+
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.REGISTER_AGENT_BATCH,
+                session_id: envelopeClaim.session_id,
+                // The envelope token must survive validation: it is the request's
+                // proof of identity, and a batch establishes identity ONCE for
+                // the whole request rather than per entry.
+                session_token: envelopeClaim.session_token,
+                claim: envelopeClaim.claim,
+                rotate_token: envelopeClaim.rotate_token === true,
+                // A signing key belongs to the REQUEST's identity, not to an
+                // individual agent entry, so it is carried at the envelope level
+                // exactly like the token.
+                signing_public_key: envelopeClaim.signing_public_key,
+                agents,
+                rejected
+            }
+        };
+    }
+
+    /**
+     * Validate a batch of agent unregistrations.
+     *
+     * Same non-fatal-per-entry discipline as registration, with one deliberate
+     * difference in what counts as success: an agent that was not registered is
+     * a terminal, non-error outcome. The caller's intent is "this agent is not
+     * in the session", and that is already true - but the client still has to
+     * be told, or it would requeue the id forever waiting for a confirmation
+     * that will never come.
+     */
+    static validateUnregisterBatch(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Batch unregistration must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (!Array.isArray(raw.agent_ids)) {
+            return { valid: false, errors: ['Missing required property "agent_ids" (array)'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (raw.agent_ids.length === 0) {
+            return { valid: false, errors: ['Property "agent_ids" cannot be empty'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (raw.agent_ids.length > MAX_BATCH_CONTROL_ITEMS) {
+            return {
+                valid: false,
+                errors: [`Property "agent_ids" exceeds the ${MAX_BATCH_CONTROL_ITEMS}-item batch limit; split the batch`],
+                code: ERROR_CODES.VALIDATION_FAILED
+            };
+        }
+
+        const agentIds = [];
+        const rejected = [];
+        const seen = new Set();
+        for (let i = 0; i < raw.agent_ids.length; i++) {
+            const res = ProtocolValidator.validateUnregisterAgent({ agent_id: raw.agent_ids[i] });
+            if (!res.valid) {
+                rejected.push({
+                    index: i,
+                    agent_id: raw.agent_ids[i] === undefined || raw.agent_ids[i] === null ? null : String(raw.agent_ids[i]),
+                    errors: res.errors
+                });
+                continue;
+            }
+            // A duplicate id is idempotent here rather than last-write-wins:
+            // unregistering twice cannot mean anything different from once.
+            if (seen.has(res.value.agent_id)) continue;
+            seen.add(res.value.agent_id);
+            agentIds.push(res.value.agent_id);
+        }
+
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.UNREGISTER_AGENT_BATCH,
+                session_id: ProtocolValidator.sanitizeClaim(raw).session_id,
+                session_token: ProtocolValidator.sanitizeClaim(raw).session_token,
+                agent_ids: agentIds,
+                rejected
+            }
+        };
+    }
+
+    /**
+     * Validate a batch of trauma-zone authorings.
+     *
+     * Unlike the other two, entries here are world state rather than identity,
+     * so a malformed entry is rejected with its index and the rest are still
+     * applied. Zones are independent: partial application is the correct
+     * outcome, because a settlement with 40 authored zone positions should not
+     * lose all of them to one typo.
+     */
+    static validateTraumaZoneBatch(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Batch trauma authoring must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (!Array.isArray(raw.zones)) {
+            return { valid: false, errors: ['Missing required property "zones" (array)'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (raw.zones.length === 0) {
+            return { valid: false, errors: ['Property "zones" cannot be empty'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (raw.zones.length > MAX_BATCH_CONTROL_ITEMS) {
+            return {
+                valid: false,
+                errors: [`Property "zones" exceeds the ${MAX_BATCH_CONTROL_ITEMS}-item batch limit; split the batch`],
+                code: ERROR_CODES.VALIDATION_FAILED
+            };
+        }
+
+        const zones = [];
+        const rejected = [];
+        for (let i = 0; i < raw.zones.length; i++) {
+            const entry = raw.zones[i];
+            const errors = [];
+            if (!entry || typeof entry !== 'object' || Array.isArray(entry)) {
+                rejected.push({ index: i, errors: ['Zone must be a non-null object'] });
+                continue;
+            }
+            for (const axis of ['x', 'y']) {
+                if (typeof entry[axis] !== 'number' || !Number.isFinite(entry[axis])) {
+                    errors.push(`Property "${axis}" must be a finite number`);
+                }
+            }
+            if (entry.z !== undefined && (typeof entry.z !== 'number' || !Number.isFinite(entry.z))) {
+                errors.push('Property "z" must be a finite number when present');
+            }
+            if (entry.intensity !== undefined && (typeof entry.intensity !== 'number' || !Number.isFinite(entry.intensity) || entry.intensity < 0 || entry.intensity > 1)) {
+                errors.push('Property "intensity" must be a finite number in [0, 1]');
+            }
+            if (entry.radius !== undefined && (typeof entry.radius !== 'number' || !Number.isFinite(entry.radius) || entry.radius <= 0)) {
+                errors.push('Property "radius" must be a finite number greater than 0');
+            }
+            if (entry.lifetimeTicks !== undefined && (!Number.isInteger(entry.lifetimeTicks) || entry.lifetimeTicks < 0)) {
+                errors.push('Property "lifetimeTicks" must be a non-negative integer');
+            }
+            if (errors.length > 0) {
+                rejected.push({ index: i, errors });
+                continue;
+            }
+            zones.push({
+                x: entry.x,
+                y: entry.y,
+                z: entry.z ?? 0,
+                intensity: entry.intensity ?? 1.0,
+                radius: entry.radius ?? 150,
+                lifetimeTicks: entry.lifetimeTicks ?? 1800
+            });
+        }
+
+        return {
+            valid: true,
+            value: { type: MESSAGE_TYPES.TRAUMA_ZONE_BATCH, zones, rejected }
         };
     }
 
@@ -184,7 +484,39 @@ export class ProtocolValidator {
             valid: true,
             value: {
                 type: MESSAGE_TYPES.UNREGISTER_AGENT,
-                agent_id: String(raw.agent_id).trim().slice(0, 256)
+                agent_id: String(raw.agent_id).trim().slice(0, 256),
+                // Teardown is ownership-gated, so it has to be able to carry the
+                // same identity a claim does. Without this a host could not
+                // prove it owns the agent it is retiring, and the gate would
+                // read its own host as a stranger.
+                ...ProtocolValidator.sanitizeClaim(raw)
+            }
+        };
+    }
+
+    /**
+     * Validate a session revocation: the host ending its own session.
+     *
+     * Both fields are required, because a name alone must never be enough to
+     * destroy a session - that would make revocation the cheapest denial-of-
+     * service in the protocol.
+     */
+    static validateSessionRevoke(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Revocation must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (typeof raw.session_id !== 'string' || raw.session_id.trim().length === 0) {
+            return { valid: false, errors: ['Missing or empty "session_id"'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        if (typeof raw.session_token !== 'string' || raw.session_token.trim().length === 0) {
+            return { valid: false, errors: ['Missing or empty "session_token"'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: 'SESSION_REVOKE',
+                session_id: raw.session_id.trim().slice(0, 256),
+                session_token: raw.session_token.trim().slice(0, 512)
             }
         };
     }

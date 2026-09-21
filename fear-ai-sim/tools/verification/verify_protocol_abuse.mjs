@@ -5,6 +5,12 @@
  * loopback FearServer listener. The probe verifies bounded rejection and that
  * recoverable protocol errors do not poison a connection.
  *
+ * It also runs the HOSTILE HOST the ownership model is meant to answer, over the
+ * real wire rather than against the arbitration class in isolation: a client that
+ * knows a live session's NAME and nothing else. Such a client must not be able to
+ * claim that session's agents, destroy them, wipe the world, replace the owner's
+ * credential, or keep the owner's session alive by refusing to stop naming it.
+ *
  * Hard Rule 9 Compliant: standalone deterministic abuse probe; no test runner.
  */
 
@@ -197,6 +203,85 @@ async function main() {
         });
         assert(closeCode === 1009, `oversized WebSocket payload must close with 1009, got ${closeCode}.`);
         console.log('--- WebSocket max-payload enforcement: PASS');
+
+        // ---------------------------------------------------------------
+        // The hostile host: a name it saw, and nothing else.
+        // ---------------------------------------------------------------
+        const owner = await httpPost(bound.port, '/api/v1/register/batch', {
+            session_id: 'victim_host',
+            agents: [{ agent_id: 'victim_1' }, { agent_id: 'victim_2' }]
+        });
+        assert(owner.status === 200 && owner.body.count === 2, 'setup: the owner registers its crowd.');
+        assert(typeof owner.body.session_token === 'string', 'setup: the owner holds a credential.');
+        const victimToken = owner.body.session_token;
+
+        // 1. Knowing the name is not knowing the host: the agents stay with their
+        //    owner, and the refusal names who holds them.
+        const steal = await httpPost(bound.port, '/api/v1/register/batch', {
+            session_id: 'attacker', agents: [{ agent_id: 'victim_1' }, { agent_id: 'victim_2' }]
+        });
+        assert(steal.status === 200 && steal.body.count === 0, 'a rival session must not be handed a live owner\'s agents.');
+        assert(steal.body.refused.length === 2, 'each stolen agent must be refused individually.');
+        assert(steal.body.refused.every((r) => r.owner_session_id === 'victim_host'),
+            'the refusal must name the session that owns the agent.');
+        assert(Number.isFinite(steal.body.refused[0].retry_after_ms) === false || steal.body.refused[0].retry_after_ms === null,
+            'no retry countdown is offered while the owner can still prove itself at any moment.');
+
+        // 2. The name alone must not authorize destruction, a world wipe, or a
+        //    credential replacement.
+        const nameOnlyTeardown = await httpPost(bound.port, '/api/v1/unregister', {
+            agent_id: 'victim_1', session_id: 'victim_host'
+        });
+        assert(nameOnlyTeardown.status === 409, 'a name without the token must not authorize teardown.');
+        const nameOnlyReset = await httpPost(bound.port, '/api/v1/reset', {
+            clear_agents: true, session_id: 'victim_host'
+        });
+        assert(nameOnlyReset.status === 409, 'a name without the token must not wipe the world.');
+        const nameOnlyRevoke = await httpPost(bound.port, '/api/v1/session/revoke', {
+            session_id: 'victim_host', session_token: 'guessed'
+        });
+        assert(nameOnlyRevoke.status === 403, 'a guessed token must not revoke a session.');
+        const nameOnlyRotate = await httpPost(bound.port, '/api/v1/register', {
+            agent_id: 'victim_3', session_id: 'victim_host', rotate_token: true
+        });
+        assert(nameOnlyRotate.status === 409, 'a rotation request must not be honoured without the credential.');
+
+        // 3. Nothing above may have changed anything: same owners, same agents,
+        //    same working credential.
+        assert(server.simulation.agents.has('victim_1') && server.simulation.agents.has('victim_2'),
+            'the hostile traffic must not have removed an agent.');
+        assert(server.claims.ownerOf('victim_1') === 'victim_host', 'the hostile traffic must not have moved ownership.');
+        const ownerStillWorks = await httpPost(bound.port, '/api/v1/register', {
+            agent_id: 'victim_3', session_id: 'victim_host', session_token: victimToken
+        });
+        assert(ownerStillWorks.status === 200, 'the owner\'s own credential must survive the attack untouched.');
+
+        // 4. Refusing to stop naming a session must not hold it open: liveness
+        //    moves on proven traffic only, so a spammer cannot pin a crowd to a
+        //    credential. Proven by the clock rather than by a counter, with a
+        //    short staleness window so it is deterministic.
+        const patience = new FearServer({ host: '127.0.0.1', port: 0, seed: 4242, sessionStalenessMs: 40 });
+        const patienceBound = await patience.start();
+        try {
+            await httpPost(patienceBound.port, '/api/v1/register', { agent_id: 'idle_1', session_id: 'idle_host' });
+            // A stranger naming the session repeatedly, faster than the window.
+            for (let i = 0; i < 6; i++) {
+                await httpPost(patienceBound.port, '/api/v1/register', {
+                    agent_id: 'idle_1', session_id: 'idle_host', session_token: 'wrong'
+                });
+                await new Promise((resolve) => setTimeout(resolve, 12));
+            }
+            assert(patience.claims.isLive('idle_host') === false,
+                'name-spamming must not keep an idle session live; only proven traffic may refresh liveness.');
+            const recovery = await httpPost(patienceBound.port, '/api/v1/register', {
+                agent_id: 'idle_1', session_id: 'idle_host'
+            });
+            assert(recovery.body.claim === 'ADOPTED',
+                'once the spam stops, the name must lapse on schedule rather than being pinned forever.');
+        } finally {
+            await patience.stop();
+        }
+        console.log('--- hostile host armed with only a session name: PASS');
     } finally {
         await closeSocket(ws);
         await closeSocket(oversizedWs);

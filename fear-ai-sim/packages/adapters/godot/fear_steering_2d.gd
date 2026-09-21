@@ -34,20 +34,20 @@ func _physics_process(delta: float) -> void:
 		return
 		
 	var speed = _agent.base_speed
-	if _agent.current_fear_band == "PANIC" or _agent.current_fear_band == "FEAR":
+	if _agent.current_fear_band == "PANIC" or _agent.current_fear_band == "ANXIOUS":
 		speed *= _agent.panic_speed_mult
 	
 	var rec_vec = Vector2(_agent.recommended_vector.x, _agent.recommended_vector.y)
 	
-	# Apply advisory intent semantics
+	# Apply advisory intent semantics (canonical IntentResolver.ACTION_INTENTS).
 	match _agent.current_intent:
-		"FLEE_FROM":
+		"FLEE_FROM", "SEEK_COVER", "DESPERATE_FLAIL":
 			_desired_velocity = rec_vec.normalized() * speed
-		"CONFRONT_THREAT", "DEFEND_SELF":
+		"CONFRONT_THREAT":
 			_desired_velocity = rec_vec.normalized() * (speed * 0.45)
-		"APPROACH_ALLY", "RALLY_TO_LEADER":
+		"APPROACH_ALLY", "WARN_GROUP":
 			_desired_velocity = rec_vec.normalized() * (speed * 0.80)
-		"CAUTIOUS_EXPLORE", "PATROL":
+		"CAUTIOUS_EXPLORE", "INVESTIGATE_SOUND":
 			_desired_velocity = rec_vec.normalized() * (speed * 0.50)
 		_:
 			_desired_velocity = Vector2.ZERO

@@ -116,6 +116,89 @@ namespace FearAI.Client
         [JsonPropertyName("results")] public List<AgentTickResult> Results { get; set; } = new();
     }
 
+    /// <summary>A host-authored dread coordinate. The host owns where and how
+    /// strong the shock was; the middleware owns the dread memory.</summary>
+    public class TraumaZone
+    {
+        [JsonPropertyName("x")] public float X { get; set; }
+        [JsonPropertyName("y")] public float Y { get; set; }
+        [JsonPropertyName("z")] public float Z { get; set; }
+        [JsonPropertyName("intensity")] public float Intensity { get; set; } = 1.0f;
+        [JsonPropertyName("radius")] public float Radius { get; set; } = 150f;
+        [JsonPropertyName("lifetimeTicks")] public int LifetimeTicks { get; set; } = 1800;
+    }
+
+    /// <summary>A single agent's registration claim.</summary>
+    public class AgentRegistration
+    {
+        [JsonPropertyName("agent_id")] public string AgentId { get; set; } = "";
+        [JsonPropertyName("name")] public string? Name { get; set; }
+        [JsonPropertyName("traits")] public PersonalityTraits? Traits { get; set; }
+        [JsonPropertyName("initial_position")] public Vector3D? InitialPosition { get; set; }
+    }
+
+    /// <summary>Why one agent was not granted. Retrying this is pointless: a
+    /// live session holds it, and only an explicit takeover displaces that.</summary>
+    public class ClaimRefusal
+    {
+        [JsonPropertyName("agent_id")] public string AgentId { get; set; } = "";
+        [JsonPropertyName("reason")] public string? Reason { get; set; }
+        [JsonPropertyName("owner_session_id")] public string? OwnerSessionId { get; set; }
+    }
+
+    /// <summary>Response to a batched registration. `SessionToken` is present
+    /// only when a NEW session was established, and must be persisted by the
+    /// host: it is what proves continuity on the next claim.</summary>
+    public class BatchRegistrationResult
+    {
+        [JsonPropertyName("type")] public string? Type { get; set; }
+        [JsonPropertyName("status")] public string Status { get; set; } = "";
+        [JsonPropertyName("count")] public int Count { get; set; }
+        [JsonPropertyName("registered")] public List<string> Registered { get; set; } = new();
+        [JsonPropertyName("refused")] public List<ClaimRefusal> Refused { get; set; } = new();
+        [JsonPropertyName("rejected")] public List<ClaimRefusal> Rejected { get; set; } = new();
+        [JsonPropertyName("session_id")] public string? SessionId { get; set; }
+        [JsonPropertyName("session_token")] public string? SessionToken { get; set; }
+    }
+
+    /// <summary>Response to a batched teardown. `NotFound` is terminal and not
+    /// an error; `Rejected` is the only set the server did NOT remove.</summary>
+    public class BatchUnregisterResult
+    {
+        [JsonPropertyName("type")] public string? Type { get; set; }
+        [JsonPropertyName("status")] public string Status { get; set; } = "";
+        [JsonPropertyName("count")] public int Count { get; set; }
+        [JsonPropertyName("unregistered")] public List<string> Unregistered { get; set; } = new();
+        [JsonPropertyName("not_found")] public List<string> NotFound { get; set; } = new();
+        [JsonPropertyName("rejected")] public List<ClaimRefusal> Rejected { get; set; } = new();
+        /// <summary>Ids the server REFUSED to remove because a live session owned
+        /// them. A different outcome from <see cref="Rejected"/>: the entry was
+        /// well-formed, this host is simply not the owner. Reported rather than
+        /// skipped, because an id the host believes it retired while the server
+        /// still simulates it is a divergence nothing else would surface.</summary>
+        [JsonPropertyName("refused")] public List<ClaimRefusal> Refused { get; set; } = new();
+    }
+
+    /// <summary>Response to batched trauma authoring. Zones are world state, so
+    /// partial application is normal; only `Rejected` entries were dropped.</summary>
+    public class BatchTraumaResult
+    {
+        [JsonPropertyName("type")] public string? Type { get; set; }
+        [JsonPropertyName("status")] public string Status { get; set; } = "";
+        [JsonPropertyName("count")] public int Count { get; set; }
+        [JsonPropertyName("zone_ids")] public List<string> ZoneIds { get; set; } = new();
+        [JsonPropertyName("rejected")] public List<ClaimRefusal> Rejected { get; set; } = new();
+    }
+
+    /// <summary>The identity half of a handshake response, including a
+    /// freshly-issued session token when the session was just established.</summary>
+    public class HandshakeResponse
+    {
+        [JsonPropertyName("status")] public string? Status { get; set; }
+        [JsonPropertyName("session_id")] public string? SessionId { get; set; }
+        [JsonPropertyName("session_token")] public string? SessionToken { get; set; }
+    }
+
     public class OutcomeReceipt
     {
         [JsonPropertyName("type")] public string Type { get; set; } = "INTENT_OUTCOME_ACK";

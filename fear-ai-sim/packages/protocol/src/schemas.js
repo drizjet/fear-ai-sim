@@ -2,7 +2,7 @@
  * Canonical Fear AI Protocol v1.0.0 - JSON Schemas
  */
 
-import { PROTOCOL_VERSION, STIMULUS_TYPES } from './types.js';
+import { PROTOCOL_VERSION, STIMULUS_TYPES, MAX_BATCH_CONTROL_ITEMS } from './types.js';
 import { FEAR_BANDS } from '../../core/src/FearCore.js';
 import { ACTION_INTENTS } from '../../core/src/IntentResolver.js';
 
@@ -45,6 +45,71 @@ export const REGISTER_AGENT_SCHEMA = {
                 x: { type: 'number' },
                 y: { type: 'number' },
                 z: { type: 'number' }
+            }
+        }
+    }
+};
+
+/**
+ * Batch counterpart of REGISTER_AGENT. Each element is a REGISTER_AGENT body
+ * minus its `type`, so one request can carry a whole host population.
+ * `maxItems` mirrors MAX_BATCH_CONTROL_ITEMS. `session_id` and `claim` name
+ * the requesting session and what it is allowed to displace (see
+ * `ClaimArbitration` in the runtime), so a batch can be attributed ownership.
+ */
+export const REGISTER_AGENT_BATCH_SCHEMA = {
+    type: 'object',
+    required: ['type', 'agents'],
+    properties: {
+        type: { type: 'string', const: 'REGISTER_AGENT_BATCH' },
+        agents: {
+            type: 'array',
+            minItems: 1,
+            maxItems: MAX_BATCH_CONTROL_ITEMS,
+            items: {
+                type: 'object',
+                required: ['agent_id'],
+                properties: REGISTER_AGENT_SCHEMA.properties
+            }
+        }
+    }
+};
+
+export const UNREGISTER_AGENT_BATCH_SCHEMA = {
+    type: 'object',
+    required: ['type', 'agent_ids'],
+    properties: {
+        type: { type: 'string', const: 'UNREGISTER_AGENT_BATCH' },
+        session_id: { type: 'string' },
+        agent_ids: {
+            type: 'array',
+            minItems: 1,
+            maxItems: MAX_BATCH_CONTROL_ITEMS,
+            items: { type: 'string' }
+        }
+    }
+};
+
+export const TRAUMA_ZONE_BATCH_SCHEMA = {
+    type: 'object',
+    required: ['type', 'zones'],
+    properties: {
+        type: { type: 'string', const: 'TRAUMA_ZONE_BATCH' },
+        zones: {
+            type: 'array',
+            minItems: 1,
+            maxItems: MAX_BATCH_CONTROL_ITEMS,
+            items: {
+                type: 'object',
+                required: ['x', 'y'],
+                properties: {
+                    x: { type: 'number' },
+                    y: { type: 'number' },
+                    z: { type: 'number', default: 0 },
+                    intensity: { type: 'number', minimum: 0, maximum: 1, default: 1.0 },
+                    radius: { type: 'number', exclusiveMinimum: 0, default: 150 },
+                    lifetimeTicks: { type: 'integer', minimum: 0, default: 1800 }
+                }
             }
         }
     }

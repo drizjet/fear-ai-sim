@@ -79,7 +79,14 @@ export function runAdapterConformance(adapter = {}) {
     }
 
     // 7. Message-type constants exist for the core verbs.
-    for (const verb of ['HANDSHAKE_REQUEST', 'REGISTER_AGENT', 'BATCH_TICK_REQUEST']) {
+    for (const verb of [
+        'HANDSHAKE_REQUEST',
+        'REGISTER_AGENT',
+        'REGISTER_AGENT_BATCH',
+        'UNREGISTER_AGENT_BATCH',
+        'TRAUMA_ZONE_BATCH',
+        'BATCH_TICK_REQUEST'
+    ]) {
         checks.push(check(`message-type-${verb}`, typeof MESSAGE_TYPES[verb] === 'string'));
     }
 
@@ -98,6 +105,29 @@ export function canonicalAdapterSample() {
         register: {
             type: 'REGISTER_AGENT', agent_id: 'a1', name: 'a1',
             traits: { neuroticism: 0.5, resilience: 0.5 }
+        },
+        registerBatch: {
+            type: 'REGISTER_AGENT_BATCH',
+            // `session_id` is what lets the server attribute ownership so a
+            // returning host is recognised instead of fought with.
+            session_id: 'host-session-1',
+            claim: 'adopt',
+            agents: [
+                { agent_id: 'a1', name: 'a1', traits: { neuroticism: 0.5, resilience: 0.5 } },
+                { agent_id: 'a2', name: 'a2', traits: { neuroticism: 0.2, resilience: 0.8 } }
+            ]
+        },
+        unregisterBatch: {
+            type: 'UNREGISTER_AGENT_BATCH',
+            session_id: 'host-session-1',
+            agent_ids: ['a1', 'a2']
+        },
+        traumaBatch: {
+            type: 'TRAUMA_ZONE_BATCH',
+            zones: [
+                { x: 12, y: 0, z: 0, intensity: 0.9, radius: 120, lifetimeTicks: 900 },
+                { x: 44, y: 8, z: 0, intensity: 0.4, radius: 150 }
+            ]
         },
         tickRequest: {
             type: 'BATCH_TICK_REQUEST', dt: 0.016,

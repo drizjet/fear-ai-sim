@@ -13,6 +13,12 @@
  * 9. POST /api/memory (Episodic + Semantic + Rumor relevance recall)
  * 10. POST /api/relationships (Directed RelationshipTensor matrix)
  * 11. POST /api/causal (CausalEventGraph root-cause trace)
+ * 12. GET /api/sim/inspect (live attached middleware session)
+ * 13. GET /api/ownership (live session ownership: attached/unattached states,
+ *     refusal drill-down with blocker, cause and retry countdown,
+ *     refusal visibility, read-only, and no token material in the view;
+ *     identity AUDIT TIMELINE: grants and refusals on one ordered, bounded,
+ *     token-free stream scoped to this process)
  * 
  * Hard Rule 9 Compliant: 0 test runner frameworks.
  */
@@ -22,6 +28,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DesignerDashboardServer } from '../../packages/runtime/src/DesignerDashboardServer.js';
 import { RuntimeSimulation } from '../../packages/runtime/src/RuntimeSimulation.js';
+import { ClaimArbitration, EVENT_LOG_LIMIT } from '../../packages/runtime/src/ClaimArbitration.js';
 
 async function main() {
     console.log('=== DESIGNER DASHBOARD SERVER & ATTACHED INSPECTION VERIFICATION ===\n');
@@ -38,6 +45,7 @@ async function main() {
         'causal-tab': 'DETERMINISTIC DIAGNOSTIC VIGNETTE',
         'trade-tab': 'LIVE REFERENCE SIMULATION',
         'perf-tab': 'DETERMINISTIC DIAGNOSTIC VIGNETTE',
+        'ownership-tab': 'LIVE ATTACHED SERVER SESSION STATE',
         'sim-inspect': 'LIVE ATTACHED MIDDLEWARE SESSION'
     };
 
@@ -61,11 +69,11 @@ async function main() {
         });
     }
 
-    function post(pathStr, payload) {
+    function post(pathStr, payload, method = 'POST') {
         return new Promise((resolve, reject) => {
             const bodyStr = JSON.stringify(payload);
             const req = http.request(`${url}${pathStr}`, {
-                method: 'POST',
+                method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Content-Length': Buffer.byteLength(bodyStr)
@@ -90,12 +98,13 @@ async function main() {
         }
         const tabs = [
             'explain-tab', 'personas-tab', 'factions-tab', 'lod-tab', 'replay-tab',
-            'memory-tab', 'relations-tab', 'causal-tab', 'trade-tab', 'perf-tab'
+            'memory-tab', 'relations-tab', 'causal-tab', 'trade-tab', 'perf-tab',
+            'ownership-tab'
         ];
         for (const t of tabs) {
             if (!rIndex.body.includes(t)) throw new Error(`Missing tab ${t} in HTML!`);
         }
-        console.log('  * HTML served with all 10 tabs present: PASS');
+        console.log('  * HTML served with all 11 tabs present: PASS');
 
         // 2. GET /api/status
         console.log('Testing GET /api/status...');
@@ -103,6 +112,7 @@ async function main() {
         const statusJson = JSON.parse(rStatus.body);
         if (rStatus.status !== 200 || statusJson.status !== 'online') throw new Error('Status failed');
         if (!Array.isArray(statusJson.features) || statusJson.features.length < 5) throw new Error('Feature list incomplete');
+        if (!statusJson.features.includes('SESSION_OWNERSHIP')) throw new Error('Feature list does not advertise SESSION_OWNERSHIP');
         console.log(`  * Status: ${statusJson.status}, Features: ${statusJson.features.length} listed: PASS`);
 
         // 3. GET /api/personas
@@ -244,8 +254,310 @@ async function main() {
         }
         console.log(`  * Attached status verified: ATTACHED_READ_ONLY (agents: ${attachedJson.agentCount}, tickCount: ${attachedJson.tickCount}, scout: ${scout.id} [${scout.fearBand}]): PASS`);
 
+        // 13. GET /api/ownership (live session ownership, read-only, token-free)
+        console.log('\nTesting GET /api/ownership (Unattached / Attached / Refusal visibility)...');
+        const rOwnUnattached = await get('/api/ownership');
+        const ownUnattached = JSON.parse(rOwnUnattached.body);
+        if (ownUnattached.attached !== false || ownUnattached.status !== 'NO_OWNERSHIP_SOURCE_ATTACHED') {
+            throw new Error('Unattached ownership failed: ' + rOwnUnattached.body);
+        }
+        if (ownUnattached.simAttached !== true) {
+            throw new Error('Unattached ownership did not report the separately-attached simulation');
+        }
+        console.log('  * Unattached ownership verified: NO_OWNERSHIP_SOURCE_ATTACHED, distinguished from "nothing owned" (PASS)');
+
+        const rOwnPost = await post('/api/ownership', {});
+        if (rOwnPost.status !== 404) {
+            throw new Error(`Ownership must not be writable over POST; got status ${rOwnPost.status}`);
+        }
+        console.log('  * Ownership is read-only over HTTP: POST /api/ownership is 404, not an arbitration path (PASS)');
+
+        // A live owner and a rival: the refusal is the behaviour a designer
+        // needs to be able to SEE, so it is asserted here and must appear in
+        // the rendered view rather than existing only inside the server.
+        const claims = new ClaimArbitration({ tokenFactory: () => 'a'.repeat(64) });
+        const granted = claims.claim('alpha-scout', { sessionId: 'host_a' });
+        if (!granted.granted || !granted.sessionToken) throw new Error('Ownership fixture failed to establish a tokenized session');
+        const rival = claims.claim('alpha-scout', { sessionId: 'host_b' });
+        if (rival.granted) throw new Error('A live owner must not be displaced by a name-only rival');
+        // A PROVEN re-claim, so the timeline has both kinds of successful
+        // identity decision in it: a fresh name that was handed a credential, and
+        // a returning host that produced the one it already had. Without this the
+        // timeline assertions below would only ever exercise the first kind.
+        const reproof = claims.claim('alpha-scout', { sessionId: 'host_a', token: granted.sessionToken });
+        if (!reproof.granted || reproof.sessionToken) throw new Error('A proven re-claim must be granted without minting a new credential');
+        server.attachOwnership(claims);
+
+        const rOwnAttached = await get('/api/ownership');
+        const ownAttached = JSON.parse(rOwnAttached.body);
+        if (ownAttached.attached !== true || ownAttached.status !== 'ATTACHED_READ_ONLY') {
+            throw new Error('Attached ownership failed: ' + rOwnAttached.body);
+        }
+        if (ownAttached.scope !== 'SERVER_SESSION_STATE' || ownAttached.readOnly !== true) {
+            throw new Error('Ownership view did not label itself as read-only server session state');
+        }
+        const hostA = ownAttached.summary.sessions.find((s) => s.session_id === 'host_a');
+        if (!hostA || hostA.agent_count !== 1 || hostA.live !== true || hostA.has_token !== true) {
+            throw new Error(`Ownership summary missing the live tokenized owner: ${JSON.stringify(hostA)}`);
+        }
+        if (ownAttached.summary.refusals < 1) {
+            throw new Error('The refused rival claim is not visible in the ownership summary');
+        }
+        const hostBRows = ownAttached.summary.sessions.filter((s) => s.session_id === 'host_b');
+        if (hostBRows.length !== 1 || hostBRows[0].agent_count !== 0) {
+            throw new Error('A refused claimant must be visible with zero agents, not hidden');
+        }
+        console.log(`  * Attached ownership verified: host_a owns ${hostA.agent_count} agent(s) [live, tokenized], refusals visible: ${ownAttached.summary.refusals} (PASS)`);
+
+        // No credential may reach a browser: neither the raw token nor any
+        // token-keyed field may appear anywhere in the serialized response.
+        if (rOwnAttached.body.includes(granted.sessionToken)) {
+            throw new Error('CREDENTIAL LEAK: the rendered ownership view contains the raw session token');
+        }
+        // Precise, not blunt: `has_token` is a boolean the view NEEDS, so a bare
+        // "no token-ish key" check would fail a correct response. The real
+        // contract is that no token-keyed field may hold a STRING.
+        const credentialFields = [];
+        const walkTokenFields = (node, trail) => {
+            if (Array.isArray(node)) return node.forEach((v, i) => walkTokenFields(v, `${trail}[${i}]`));
+            if (node && typeof node === 'object') {
+                for (const [k, v] of Object.entries(node)) {
+                    if (/token/i.test(k) && typeof v === 'string') credentialFields.push(`${trail}.${k}`);
+                    walkTokenFields(v, `${trail}.${k}`);
+                }
+            }
+        };
+        walkTokenFields(ownAttached, 'summary');
+        if (credentialFields.length > 0) {
+            throw new Error(`CREDENTIAL LEAK: token-keyed string field(s) rendered: ${credentialFields.join(', ')}`);
+        }
+        console.log('  * Ownership view is token-free: no token-keyed field holds credential material (PASS)');
+
+        // The leak guard is drift-tested rather than assumed: a source whose
+        // summary DOES carry token material must come back stripped, while
+        // ordinary view fields survive. Otherwise a future rename on the
+        // arbitration side would silently turn the dashboard into a credential
+        // display and this probe would not notice.
+        const leaky = {
+            owned_agents: 2,
+            tokenized_sessions: 1,
+            sessions: [{
+                session_id: 'leaky',
+                token_hash: 'deadbeefcafe',
+                session_token: 'raw-secret',
+                has_token: true,
+                token_mismatches: 0,
+                nested: { api_token: 'nested-secret', agent_count: 2 }
+            }]
+        };
+        const strippedBody = JSON.stringify(DesignerDashboardServer._stripTokenMaterial(leaky));
+        for (const secret of ['deadbeefcafe', 'raw-secret', 'nested-secret']) {
+            if (strippedBody.includes(secret)) throw new Error(`Ownership sanitizer failed to strip ${secret}`);
+        }
+        // Over-stripping is a defect too: it would erase the capability flag
+        // the view exists to show and read as "no credential".
+        for (const kept of ['"has_token":true', '"token_mismatches":0', '"tokenized_sessions":1', '"agent_count":2', '"owned_agents":2', 'leaky']) {
+            if (!strippedBody.includes(kept)) throw new Error(`Ownership sanitizer removed non-credential view field ${kept}: ${strippedBody}`);
+        }
+        console.log('  * Credential sanitizer is drift-tested both ways: credentials stripped, capability flags & counters preserved (PASS)');
+
+        // The refusal DRILL-DOWN: a count is an alert, an explanation is a
+        // diagnosis. A refusal record has to name the verb, the agent, who asked,
+        // who blocked it, and how long the block lasts, and it has to do that for
+        // teardown refusals as well as claim refusals - otherwise the most
+        // damaging refusal in the system (a crowd that cannot be retired) is the
+        // one with no explanation on screen.
+        console.log('\nTesting the refusal drill-down (GET /api/ownership -> refusals[])...');
+        const teardownRefusal = claims.authorizeTeardown('alpha-scout', { sessionId: 'host_b' });
+        if (teardownRefusal.allowed) throw new Error('Fixture failed: a name-only rival must not be authorized to tear down');
+        const rDrill = await get('/api/ownership');
+        const drill = JSON.parse(rDrill.body);
+        if (!Array.isArray(drill.refusals) || drill.refusals.length < 2) {
+            throw new Error(`Refusal drill-down missing: ${rDrill.body}`);
+        }
+        const claimRefusal = drill.refusals.find((r) => r.verb === 'claim_agent');
+        if (!claimRefusal) throw new Error('A refused claim is not explained in the drill-down');
+        if (claimRefusal.agent_id !== 'alpha-scout') throw new Error('The refused claim does not name the contested agent');
+        if (claimRefusal.attempted_session_id !== 'host_b') throw new Error('The refused claim does not name who asked');
+        if (!Array.isArray(claimRefusal.blocked_by) || claimRefusal.blocked_by[0] !== 'host_a') {
+            throw new Error('The refused claim does not name the session that blocked it');
+        }
+        if (!Number.isFinite(claimRefusal.retry_in_ms) || claimRefusal.retry_in_ms < 0 || claimRefusal.retry_in_ms > 30000) {
+            throw new Error(`The refusal renders an unusable retry countdown: ${JSON.stringify(claimRefusal)}`);
+        }
+        if (claimRefusal.blocking_socket_held !== false) {
+            throw new Error('A refusal blocked by a connectionless session must not claim a socket is held');
+        }
+        if (!/lifts in/.test(claimRefusal.resolution)) {
+            throw new Error('The refusal resolution does not say when the block lifts');
+        }
+        if (typeof claimRefusal.headline !== 'string' || !claimRefusal.headline.includes('alpha-scout')) {
+            throw new Error('The refusal headline does not name the agent a designer is looking for');
+        }
+        const teardownRow = drill.refusals.find((r) => r.verb === 'unregister');
+        if (!teardownRow || !teardownRow.headline.includes('remove agent alpha-scout')) {
+            throw new Error('A refused teardown is not explained in the drill-down');
+        }
+        if (drill.summary.refusals_by_reason.REFUSED_OWNED_BY_LIVE_SESSION_REQUIRES_TAKEOVER < 1
+            || drill.summary.refusals_by_reason.REFUSED_NOT_OWNER < 1) {
+            throw new Error('Refusals are not tallied by reason');
+        }
+        // A null countdown is a DIFFERENT answer from "retry now", so the two
+        // must not be collapsed into one another.
+        const socketBlocker = { verb: 'claim_agent', agent_id: 'x', attempted_session_id: 'y', reason: 'R', blocked_by: 'z', retry_after_ms: null };
+        const explainedSocket = DesignerDashboardServer._explainRefusals([socketBlocker])[0];
+        if (explainedSocket.retry_in_ms !== null || explainedSocket.retry_at_ms !== null
+            || explainedSocket.blocking_socket_held !== true
+            || !/open connection/.test(explainedSocket.resolution)) {
+            throw new Error('A blocker holding an open socket must be reported as having no deadline');
+        }
+        const staleBlocker = { verb: 'claim_agent', agent_id: 'x', attempted_session_id: 'y', reason: 'R', blocked_by: 'z', retry_after_ms: 0 };
+        const explainedStale = DesignerDashboardServer._explainRefusals([staleBlocker])[0];
+        if (!/will succeed now/.test(explainedStale.resolution)) {
+            throw new Error('A zero countdown must read as "this claim will succeed now", not as a deadline');
+        }
+        console.log(`  * Refusal drill-down verified: ${drill.refusals.length} refusal(s) explained with verb, blocker and countdown (PASS)`);
+
+        // The AUDIT TIMELINE: the same surface, one ordered stream that includes
+        // the decisions that were GRANTED. A refusal log answers "why was my NPC
+        // not registered"; it cannot answer "what happened to my session",
+        // because the answer usually starts with a grant the host did not expect.
+        console.log('\nTesting the identity audit timeline (GET /api/ownership -> timeline[])...');
+        const rTimeline = await get('/api/ownership');
+        const tl = JSON.parse(rTimeline.body);
+        if (!Array.isArray(tl.timeline) || tl.timeline.length < 3) {
+            throw new Error(`Audit timeline missing or too short: ${JSON.stringify(tl.timeline)}`);
+        }
+        for (let i = 1; i < tl.timeline.length; i++) {
+            if (tl.timeline[i - 1].at < tl.timeline[i].at) {
+                throw new Error('The audit timeline is not newest-first');
+            }
+        }
+        // The row nobody would have found from a counter: the FIRST grant, which
+        // is where a crowd's ownership actually starts.
+        // `.pop()`, not `.find()`: the timeline is NEWEST first, so `find` returns
+        // the most recent matching row. The row under test is the oldest one - the
+        // grant that started the session - and asserting the wrong end of an
+        // ordered ring is exactly the mistake this probe exists to catch elsewhere.
+        const firstGrant = tl.timeline
+            .filter((e) => e.kind === 'identity' && e.decision === 'granted' && e.session_id === 'host_a')
+            .pop();
+        if (!firstGrant) throw new Error('The timeline does not record the granted identity that started host_a');
+        if (firstGrant.outcome !== 'GRANTED' || firstGrant.proof !== 'new_credential_issued') {
+            throw new Error(`The granted identity row does not say how it was proven: ${JSON.stringify(firstGrant)}`);
+        }
+        // And the OTHER proof must be distinguishable: a returning host that
+        // presents a credential it already holds is a different row from one that
+        // just named itself and was handed a fresh one.
+        const returningGrant = tl.timeline.find((e) => e.kind === 'identity' && e.decision === 'granted' && e.proof === 'presented_valid_token');
+        if (!returningGrant) {
+            throw new Error('The timeline does not distinguish a credential-proven grant from a fresh name claim');
+        }
+        // Matched on `kind` as well as timestamp: a claim and its identity
+        // decision land in the same millisecond, so a row found by time alone
+        // could be the per-agent claim instead of the identity decision.
+        const returningRaw = tl.summary.timeline.find((e) => e.kind === 'identity'
+            && e.decision === 'granted' && e.at === returningGrant.at && e.session_id === returningGrant.session_id);
+        if (!returningRaw || returningRaw.token_issued !== false) {
+            throw new Error(`A credential-proven grant must not report a newly issued token: ${JSON.stringify(returningRaw)}`);
+        }
+        if (!/proven with its credential/.test(returningGrant.headline)) {
+            throw new Error(`A credential-proven grant is not described as proven: ${returningGrant.headline}`);
+        }
+        if (typeof firstGrant.headline !== 'string' || !firstGrant.headline.includes('host_a')) {
+            throw new Error('The granted identity row has no readable headline naming the session');
+        }
+        // The GRANTED per-agent claim, at agent granularity: which NPC, not how many.
+        const claimGrant = tl.timeline.find((e) => e.kind === 'claim' && e.decision === 'granted' && e.agent_id === 'alpha-scout');
+        if (!claimGrant || claimGrant.session_id !== 'host_a') {
+            throw new Error('The timeline does not record which session took which agent');
+        }
+        // Both refusals are on the SAME stream as the grants, with the SAME
+        // rendering as the drill-down. Two descriptions of one refusal, drifting
+        // apart, is the failure this asserts against.
+        const tlRefused = tl.timeline.filter((e) => e.decision === 'refused');
+        if (tlRefused.length < 2) throw new Error('The timeline does not carry the refusals alongside the grants');
+        const tlClaimRefusal = tlRefused.find((e) => e.verb === 'claim_agent');
+        const drillClaimRefusal = drill.refusals.find((r) => r.verb === 'claim_agent');
+        if (!tlClaimRefusal || tlClaimRefusal.headline !== drillClaimRefusal.headline) {
+            throw new Error('A refused claim is described differently in the timeline than in the drill-down');
+        }
+        const MEANINGS = new Set(['info', 'granted', 'recovered', 'handover', 'refused']);
+        for (const e of tl.timeline) {
+            if (typeof e.headline !== 'string' || e.headline.length === 0) {
+                throw new Error(`A timeline row has no headline: ${JSON.stringify(e)}`);
+            }
+            if (!MEANINGS.has(e.meaning)) {
+                throw new Error(`A timeline row has an unrenderable meaning '${e.meaning}': ${JSON.stringify(e)}`);
+            }
+        }
+        // Token-free, on the timeline's own rows rather than only on the summary.
+        const timelineCredentialFields = [];
+        const walkTimeline = (node, trail) => {
+            if (Array.isArray(node)) return node.forEach((v, i) => walkTimeline(v, `${trail}[${i}]`));
+            if (node && typeof node === 'object') {
+                for (const [k, v] of Object.entries(node)) {
+                    if (/token/i.test(k) && typeof v === 'string') timelineCredentialFields.push(`${trail}.${k}`);
+                    walkTimeline(v, `${trail}.${k}`);
+                }
+            }
+        };
+        walkTimeline(tl.timeline, 'timeline');
+        if (timelineCredentialFields.length > 0) {
+            throw new Error(`CREDENTIAL LEAK: timeline carries token-keyed string field(s): ${timelineCredentialFields.join(', ')}`);
+        }
+        console.log(`  * Audit timeline verified: ${tl.timeline.length} ordered decision(s), grants and refusals on one stream (PASS)`);
+
+        // BOUNDED, and honestly scoped. The ring is written by anything that can
+        // reach the claim path, so an unbounded log here would be a memory leak a
+        // hostile client could drive; and because it is a per-process ring, a
+        // restarted server must SAY so rather than let an empty list read as
+        // "nothing ever happened to my session".
+        if (tl.summary.timeline_scope !== 'THIS_PROCESS') {
+            throw new Error(`The timeline does not state its scope: ${tl.summary.timeline_scope}`);
+        }
+        const bounded = new ClaimArbitration({ tokenFactory: () => 'b'.repeat(64) });
+        const boundGranted = bounded.claim('npc_bound', { sessionId: 'bound_owner' });
+        if (!boundGranted.granted) throw new Error('Fixture failed to establish the bounded-timeline owner');
+        // The rival is established FIRST, so every call in the loop below is the
+        // same shape: an existing live session whose caller cannot produce its
+        // credential, refused at the identity step. Without this the first
+        // iteration would be granted instead (the name did not exist yet), and the
+        // assertion would be counting a different decision than the other 199.
+        const rivalSetup = bounded.claim('rival_own_agent', { sessionId: 'bound_rival' });
+        if (!rivalSetup.granted) throw new Error('Fixture failed to establish the bounded-timeline rival');
+        const overflow = EVENT_LOG_LIMIT * 2;
+        const eventsBefore = bounded.eventsRecorded;
+        for (let i = 0; i < overflow; i++) {
+            bounded.claim(`npc_bound_${i}`, { sessionId: 'bound_rival' });
+        }
+        const eventsFromLoop = bounded.eventsRecorded - eventsBefore;
+        const boundedSummary = bounded.summary();
+        if (boundedSummary.timeline.length !== EVENT_LOG_LIMIT) {
+            throw new Error(`Timeline ring is not bounded to ${EVENT_LOG_LIMIT}: ${boundedSummary.timeline.length}`);
+        }
+        if (eventsFromLoop !== overflow) {
+            throw new Error(`Each refused rival claim must record exactly one decision: ${overflow} calls produced ${eventsFromLoop}`);
+        }
+        // The establishing decisions happened FIRST, so a ring that trims the
+        // correct end has evicted them and kept the newest refusal - and the
+        // counter keeps rising past the ring, which is what makes "the last 100"
+        // honest rather than "all there were".
+        const madeEvents = boundedSummary.events_recorded;
+        if (madeEvents <= EVENT_LOG_LIMIT) {
+            throw new Error(`events_recorded must keep counting past the ring: ${madeEvents}`);
+        }
+        if (boundedSummary.timeline[0].verb !== 'claim_identity' || boundedSummary.timeline[0].attempted_session_id !== 'bound_rival') {
+            throw new Error(`The bounded timeline trimmed the wrong end: ${JSON.stringify(boundedSummary.timeline[0])}`);
+        }
+        if (boundedSummary.timeline.some((e) => e.kind === 'identity') || boundedSummary.timeline.some((e) => e.agent_id === 'npc_bound')) {
+            throw new Error('The bounded timeline kept the oldest rows instead of evicting them');
+        }
+        console.log(`  * Timeline ring verified: bounded to ${EVENT_LOG_LIMIT} rows, oldest evicted, newest kept, ${madeEvents} decisions counted, scope ${boundedSummary.timeline_scope} (PASS)`);
+
         console.log('\n============================================================');
-        console.log('ALL 12 DASHBOARD ENDPOINTS, 10 TABS & ATTACHED INSPECTION PASSED CLEANLY');
+        console.log('ALL 13 DASHBOARD ENDPOINTS, 11 TABS, ATTACHED INSPECTION, LIVE OWNERSHIP,');
+        console.log('REFUSAL DRILL-DOWN & IDENTITY AUDIT TIMELINE PASSED CLEANLY');
         console.log('============================================================\n');
 
     } finally {

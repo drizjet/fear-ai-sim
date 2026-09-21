@@ -63,5 +63,9 @@ func _physics_process(delta: float) -> void:
 			"x": player.global_position.x,
 			"y": player.global_position.y
 		})
-	npc_agent.evaluate_local(threats, 0.0, 0.0, delta * 3.5)
+	# One canonical appraisal tick per physics frame (the canonical cadence).
+	# Guarded so this example also runs against the packaged transport-only
+	# adapter, which has no local evaluator and reads state from the server.
+	if npc_agent.has_method("evaluate_local"):
+		npc_agent.evaluate_local(threats)
 

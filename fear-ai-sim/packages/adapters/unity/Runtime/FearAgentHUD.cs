@@ -91,10 +91,10 @@ namespace FearAI.Unity
         {
             switch (band)
             {
+                // Canonical core bands only (FearCore: CALM/ALERT/ANXIOUS/PANIC).
                 case "CALM": return new Color(0.06f, 0.72f, 0.51f);
-                case "UNEASY": return new Color(0.52f, 0.80f, 0.09f);
+                case "ALERT": return new Color(0.52f, 0.80f, 0.09f);
                 case "ANXIOUS": return new Color(0.96f, 0.62f, 0.04f);
-                case "FEAR": return new Color(0.98f, 0.45f, 0.09f);
                 case "PANIC": return new Color(0.94f, 0.27f, 0.27f);
                 default: return Color.green;
             }

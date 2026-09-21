@@ -49,6 +49,11 @@ export class DesignerDashboardServer {
             ? Math.floor(Number(options.port))
             : 8766;
         this.sim = options.sim || null;
+        // Session ownership is SERVER-level state (it lives on the FearServer's
+        // ClaimArbitration, not on the simulation), so it is attached
+        // separately. A dashboard can legitimately show one and not the other,
+        // and the ownership view says which it is holding.
+        this.ownership = options.ownership || null;
         this.httpServer = null;
         this.isRunning = false;
     }
@@ -59,6 +64,21 @@ export class DesignerDashboardServer {
      */
     attachSimulation(sim) {
         this.sim = sim;
+    }
+
+    /**
+     * Attach a live claim-arbitration source so the dashboard can show which
+     * host owns which agents.
+     *
+     * Read-only in both directions: the dashboard only ever calls `summary()`.
+     * It cannot claim, release or reset ownership, so a designer watching the
+     * view cannot change who owns a crowd.
+     *
+     * @param {object} arbitration a ClaimArbitration instance (or anything
+     *        exposing `summary()`)
+     */
+    attachOwnership(arbitration) {
+        this.ownership = arbitration;
     }
 
     /**
@@ -135,7 +155,7 @@ export class DesignerDashboardServer {
                     status: 'online',
                     version: '1.0.0',
                     engine: 'Fear AI Universal Middleware',
-                    features: ['EXPLAINABILITY_INSPECTOR', 'FUNCTIONAL_PERSONAS', 'FACTION_ESCALATION', 'CIVILIZATION_LOD', 'REFERENCE_REPLAY', 'MEMORY_EXPLORER', 'RELATIONSHIP_GRAPH', 'CAUSAL_GRAPH', 'TRADE_MAP', 'PERFORMANCE']
+                    features: ['EXPLAINABILITY_INSPECTOR', 'FUNCTIONAL_PERSONAS', 'FACTION_ESCALATION', 'CIVILIZATION_LOD', 'REFERENCE_REPLAY', 'MEMORY_EXPLORER', 'RELATIONSHIP_GRAPH', 'CAUSAL_GRAPH', 'TRADE_MAP', 'PERFORMANCE', 'SESSION_OWNERSHIP']
                 });
             }
             if (pathname === '/api/personas') {
@@ -149,6 +169,9 @@ export class DesignerDashboardServer {
             }
             if (pathname === '/api/sim/inspect') {
                 return this._handleSimInspect(res);
+            }
+            if (pathname === '/api/ownership') {
+                return this._handleOwnership(res);
             }
             this._sendJson(res, 404, { error: 'Endpoint Not Found' });
             return;
@@ -268,6 +291,260 @@ export class DesignerDashboardServer {
         } catch (err) {
             return this._sendJson(res, 500, { error: `Failed to inspect simulation: ${err.message}` });
         }
+    }
+
+    /**
+     * Live session-ownership view: who owns which agents right now.
+     *
+     * The two honest states mirror `/api/sim/inspect`: either an ownership
+     * source is attached, or the endpoint says so instead of rendering an empty
+     * table that a reader would mistake for "nobody owns anything".
+     *
+     * Ownership is deliberately presented as SERVER-scope state. It gates
+     * registration claims only: it never gates a tick, an observation or an
+     * intent, and it does not make the middleware authoritative over the host.
+     */
+    _handleOwnership(res) {
+        if (!this.ownership || typeof this.ownership.summary !== 'function') {
+            return this._sendJson(res, 200, {
+                attached: false,
+                status: 'NO_OWNERSHIP_SOURCE_ATTACHED',
+                message: 'No live claim-arbitration source attached to dashboard server. Use server.attachOwnership(fearServer.claims) to inspect session ownership.',
+                simAttached: Boolean(this.sim)
+            });
+        }
+        try {
+            const summary = this.ownership.summary();
+            const view = DesignerDashboardServer._stripTokenMaterial(summary);
+            return this._sendJson(res, 200, {
+                attached: true,
+                status: 'ATTACHED_READ_ONLY',
+                simAttached: Boolean(this.sim),
+                scope: 'SERVER_SESSION_STATE',
+                // Read-only by construction: the view can observe ownership but
+                // never arbitrate it. There is no POST route here, so the display
+                // layer has no path to a claim, a release or a reset.
+                readOnly: true,
+                note: 'Ownership gates registration claims only. It is not consulted on ticks, and the host retains authority over agents.',
+                summary: view,
+                // The drill-down: a refusal count is an alert, this is the
+                // explanation. Rendered from the server so a designer reading the
+                // JSON sees the same sentences the tab shows.
+                refusals: DesignerDashboardServer._explainRefusals(view.recent_refusals),
+                // The ordered audit trail: who spoke as which session, who took
+                // which agent, whose key was registered or replaced, and which
+                // verb was refused - one stream, newest first. A refusal counter
+                // tells a designer something is wrong; this tells them what
+                // changed and in which order, which is the question they actually
+                // arrive with after losing a crowd.
+                timeline: DesignerDashboardServer._explainTimeline(view.timeline)
+            });
+        } catch (err) {
+            return this._sendJson(res, 500, { error: `Failed to inspect ownership: ${err.message}` });
+        }
+    }
+
+    /**
+     * Turn raw refusal records into something a designer can act on.
+     *
+     * The arbitration layer knows the verb, the agent, who asked, who blocked it
+     * and how long the block is expected to last. A dashboard has to say the same
+     * thing in one line, because "3 refusals" is an alert and "PREDATOR_A asked
+     * for npc_7 and was refused: hostA owns it and goes quiet in 18s" is a
+     * diagnosis.
+     *
+     * `retry_at_ms` is absolute and `retry_in_ms` is the same fact at the moment
+     * of the request: a browser rendering a countdown needs the absolute value, or
+     * its clock drift becomes the server's problem. A `null` retry means the
+     * blocker holds an open connection and has no deadline at all, which is a
+     * different answer from "retry immediately".
+     */
+    static _explainRefusals(refusals) {
+        if (!Array.isArray(refusals)) return [];
+        const now = Date.now();
+        return refusals.map((entry) => {
+            const blockers = Array.isArray(entry.blocked_by)
+                ? entry.blocked_by
+                : (entry.blocked_by ? [entry.blocked_by] : []);
+            const blocker = blockers.length > 0 ? blockers[0] : null;
+            const retryIn = entry.retry_after_ms === null || entry.retry_after_ms === undefined
+                ? null
+                : Number(entry.retry_after_ms);
+            const asked = entry.attempted_session_id || '(anonymous caller)';
+            const agent = entry.agent_id || null;
+            const who = blocker ? `session "${blocker}"` : 'another session';
+
+            let headline;
+            switch (entry.verb) {
+                case 'claim_agent':
+                    headline = agent
+                        ? `${asked} asked for agent ${agent} and was refused: ${who} owns it`
+                        : `${asked} was refused an agent owned by ${who}`;
+                    break;
+                case 'claim_identity':
+                    headline = `${asked} tried to speak as a session that is live and could not prove it`;
+                    break;
+                case 'unregister':
+                    headline = agent
+                        ? `${asked || '(anonymous caller)'} tried to remove agent ${agent} and was refused: ${who} owns it`
+                        : `${asked || '(anonymous caller)'} was refused a teardown owned by ${who}`;
+                    break;
+                case 'reset':
+                    headline = `${asked || '(anonymous caller)'} tried to clear the world and was refused: ${blockers.length} live session(s) own agents`;
+                    break;
+                case 'revoke':
+                    headline = `${asked} tried to revoke a session with a credential that did not match`;
+                    break;
+                default:
+                    headline = `a ${entry.verb || 'control'} request was refused (${entry.reason})`;
+            }
+
+            return {
+                at: entry.at,
+                verb: entry.verb || null,
+                reason: entry.reason,
+                agent_id: agent,
+                attempted_session_id: entry.attempted_session_id || null,
+                blocked_by: blockers,
+                headline,
+                retry_in_ms: retryIn,
+                retry_at_ms: retryIn === null ? null : now + retryIn,
+                blocking_socket_held: retryIn === null,
+                resolution: retryIn === null
+                    ? 'the blocking session holds an open connection: it will not lapse on a timer'
+                    : (retryIn === 0
+                        ? 'the blocking session is already past its liveness window: this claim will succeed now'
+                        : `the block lifts in ~${Math.ceil(retryIn / 1000)}s if the blocking session stays silent`)
+            };
+        });
+    }
+
+    /**
+     * Turn the identity timeline into one line per decision.
+     *
+     * The arbitration layer records WHAT was decided; this says what it MEANS.
+     * Refusals are already explained by `_explainRefusals`, so they are routed
+     * through it rather than described a second time here - two renderings of the
+     * same refusal, drifting apart, is exactly the failure this avoids.
+     *
+     * Every row also carries `meaning`, which is the one-word answer to "is this
+     * good or bad for the host reading it": a designer scanning a wall of
+     * `granted` rows needs the one `refused` row to stand out, and colouring by
+     * verb would not do that (a grant can be a hostile takeover).
+     */
+    static _explainTimeline(events) {
+        if (!Array.isArray(events)) return [];
+        return events.map((entry) => {
+            const who = entry.session_id || '(anonymous caller)';
+            const agent = entry.agent_id || null;
+            let headline;
+            let meaning = 'info';
+
+            if (entry.decision === 'refused') {
+                const explained = DesignerDashboardServer._explainRefusals([entry])[0];
+                headline = explained.headline;
+                meaning = 'refused';
+            } else if (entry.kind === 'identity') {
+                const proof = entry.proof === 'presented_valid_token'
+                    ? 'proven with its credential'
+                    : 'and a new credential was issued';
+                switch (entry.outcome) {
+                    case 'ADOPTED':
+                        headline = `${who} re-established an abandoned session ${proof}`;
+                        meaning = 'recovered';
+                        break;
+                    case 'TAKEN_OVER':
+                        headline = `${who} took over the session with a valid credential`;
+                        meaning = 'handover';
+                        break;
+                    default:
+                        headline = `${who} claimed the session name ${proof}`;
+                }
+                if (entry.token_expired === true) {
+                    headline += ' (its credential had expired and was rotated) ';
+                }
+            } else if (entry.kind === 'claim') {
+                headline = agent ? `${who} took agent ${agent}` : `${who} took an agent`;
+                if (entry.previous_owner_session_id) {
+                    headline += entry.outcome === 'TAKEN_OVER'
+                        ? ` from ${entry.previous_owner_session_id}, which was still live`
+                        : ` from ${entry.previous_owner_session_id}, which had gone quiet`;
+                    meaning = entry.outcome === 'TAKEN_OVER' ? 'handover' : 'recovered';
+                }
+            } else if (entry.kind === 'signing_key') {
+                headline = entry.decision === 'replaced'
+                    ? `${who} REPLACED its request-signing key with ${entry.key_id}`
+                    : `${who} registered request-signing key ${entry.key_id}`;
+                // An UNPROVEN registration is the one that deserves a second look:
+                // it can only happen on a session that had no key yet.
+                meaning = entry.decision === 'replaced' ? 'handover' : (entry.proved_token ? 'info' : 'granted');
+            } else if (entry.kind === 'revoke') {
+                headline = `${who} revoked its session, releasing ${entry.released_agent_count} agent(s)`;
+                meaning = 'handover';
+            } else {
+                headline = `a ${entry.kind || 'control'} event (${entry.outcome || entry.decision || '?'})`;
+            }
+
+            return {
+                at: entry.at,
+                kind: entry.kind || (entry.decision === 'refused' ? 'refused' : 'event'),
+                decision: entry.decision || null,
+                // Kept, because for a refused row it is the ONLY thing that says
+                // which verb was denied. A timeline that renders every refusal as
+                // "refused" cannot answer "what was it I tried to do".
+                verb: entry.verb || null,
+                outcome: entry.outcome || null,
+                session_id: entry.session_id || entry.attempted_session_id || null,
+                agent_id: agent,
+                key_id: entry.key_id || null,
+                // HOW the identity was proven, kept as a field rather than only
+                // folded into the sentence: "adopted" and "claimed with a valid
+                // credential" both mean the claim succeeded, and only this says
+                // which one happened. It is the difference between a host
+                // recovering its own crowd and a stranger taking it.
+                proof: entry.proof || null,
+                meaning,
+                headline
+            };
+        });
+    }
+
+    /**
+     * Defence in depth for the ownership view: remove anything that looks like
+     * token material before it can reach a browser.
+     *
+     * `ClaimArbitration.summary()` already omits token hashes, and this does not
+     * exist to duplicate that. It exists so a future field rename on the
+     * arbitration side cannot silently turn the dashboard into a credential
+     * display, which is exactly the kind of regression a display layer is not
+     * trusted to notice.
+     */
+    static _stripTokenMaterial(value) {
+        if (Array.isArray(value)) return value.map((v) => DesignerDashboardServer._stripTokenMaterial(v));
+        if (value && typeof value === 'object') {
+            const out = {};
+            for (const [k, v] of Object.entries(value)) {
+                if (DesignerDashboardServer._isCredentialField(k, v)) continue;
+                out[k] = DesignerDashboardServer._stripTokenMaterial(v);
+            }
+            return out;
+        }
+        return value;
+    }
+
+    /**
+     * A credential is token-keyed STRING (or container) material.
+     *
+     * Derived flags and counters are deliberately KEPT. `has_token` is the most
+     * important field in this view — it answers "can this host prove continuity,
+     * or does it only know a name?" — and stripping it would make the filter
+     * itself misleading, because a designer would read the absence as "no
+     * credential". Booleans and numbers cannot carry a secret; strings and
+     * containers can.
+     */
+    static _isCredentialField(key, value) {
+        if (typeof value === 'boolean' || typeof value === 'number') return false;
+        return /token/i.test(key);
     }
 
     _handleExplain(body, res) {
@@ -499,6 +776,8 @@ export class DesignerDashboardServer {
         .tab-btn { background: transparent; border: 1px solid transparent; color: var(--text-muted); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; font-weight: 500; transition: all 0.2s; }
         .tab-btn:hover { background: var(--bg-hover); color: var(--text-main); }
         .tab-btn.active { background: var(--accent-cyan); color: #0f172a; font-weight: 600; }
+        .ownership-table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+        .ownership-table th, .ownership-table td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border-color); }
         .tab-pane { display: none; }
         .tab-pane.active { display: block; }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
@@ -548,6 +827,7 @@ export class DesignerDashboardServer {
         <button class="tab-btn" onclick="switchTab('causal-tab')">Causal Graph</button>
         <button class="tab-btn" onclick="switchTab('trade-tab')">Trade Map</button>
         <button class="tab-btn" onclick="switchTab('perf-tab')">Performance</button>
+        <button class="tab-btn" onclick="switchTab('ownership-tab')">Sessions &amp; Ownership</button>
     </div>
 
     <!-- TAB 1: EXPLAINABILITY INSPECTOR -->
@@ -792,6 +1072,31 @@ export class DesignerDashboardServer {
         </div>
     </div>
 
+    <!-- TAB 11: SESSION OWNERSHIP -->
+    <div id="ownership-tab" class="tab-pane">
+        <div class="card">
+            <h2>🔑 Session Ownership (Server Session State)</h2>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px;">
+                Which host session owns which agents, whether a returning host can <em>prove</em> continuity or only
+                claim a name, and — in the drill-down below — <em>why</em> each refused claim, teardown or reset was
+                refused, who blocked it, and how long the block is expected to last. Read-only and token-free:
+                ownership gates registration and teardown, never ticks, and the host keeps authority over its agents.
+            </p>
+            <button class="action-btn" onclick="runOwnership()">Inspect Ownership</button>
+            <button class="action-btn" onclick="runRefusals()">Explain Refusals</button>
+            <button class="action-btn" onclick="runTimeline()">Audit Timeline</button>
+            <div style="margin-top: 16px;">
+                <div id="ownership-output">Click "Inspect Ownership" for the live ownership summary...</div>
+            </div>
+            <div style="margin-top: 16px;">
+                <div id="refusal-output">Click "Explain Refusals" to see every recent refusal with its cause...</div>
+            </div>
+            <div style="margin-top: 16px;">
+                <div id="timeline-output">Click "Audit Timeline" for the ordered record of who spoke as which session...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -949,6 +1254,110 @@ export class DesignerDashboardServer {
                     + Object.entries(data.roads).map(([id, r]) => id + ': danger=' + (r.perceivedDanger ?? '?').toFixed?.(3) + ' source=' + r.source).join('\\n');
             } catch (e) {
                 out.innerText = 'Trade map failed: ' + e.message;
+            }
+        }
+
+        async function runOwnership() {
+            const out = document.getElementById('ownership-output');
+            out.innerHTML = 'Reading ownership...';
+            try {
+                const res = await fetch('/api/ownership');
+                const data = await res.json();
+                if (!data.attached) {
+                    // An empty table would read as "nobody owns anything". The
+                    // endpoint distinguishes "not attached" from "nothing owned".
+                    out.innerHTML = '<strong>' + data.status + '</strong><br>' + data.message;
+                    return;
+                }
+                const s = data.summary;
+                const rows = s.sessions.map(x => '<tr>'
+                    + '<td>' + x.session_id + '</td>'
+                    + '<td>' + x.agent_count + '</td>'
+                    + '<td>' + (x.live ? 'live' : 'not live') + '</td>'
+                    + '<td>' + (x.observed_this_process ? 'seen this process' : 'restored, unproven') + '</td>'
+                    + '<td>' + (x.has_token ? 'can prove continuity' : 'name only') + '</td>'
+                    + '<td>' + x.claims + ' (' + x.adoptions + ' adopted, ' + x.takeovers + ' taken over, ' + x.refusals + ' refused)</td>'
+                    + '</tr>');
+                out.innerHTML = 'Owned agents: ' + s.owned_agents + ' across ' + s.session_count + ' sessions'
+                    + ' | issues: ' + s.issues + ' | refusals: ' + s.refusals + ' | token mismatches: ' + s.token_mismatches
+                    + ' | teardown refusals: ' + (s.teardown_refusals ?? 0)
+                    + ' | rotations: ' + (s.rotations ?? 0) + ' | revoked: ' + (s.revocations ?? 0)
+                    + '<br><span style="color: var(--text-muted); font-size: 0.8rem;">' + data.note + '</span><br><br>'
+                    + '<table class="ownership-table"><tr><th>session</th><th>agents</th><th>liveness</th><th>provenance</th><th>credential</th><th>claims</th></tr>'
+                    + rows.join('') + '</table>';
+            } catch (e) {
+                out.innerHTML = 'Ownership read failed: ' + e.message;
+            }
+        }
+
+        async function runRefusals() {
+            const out = document.getElementById('refusal-output');
+            out.innerHTML = 'Reading refusals...';
+            try {
+                const res = await fetch('/api/ownership');
+                const data = await res.json();
+                if (!data.attached) {
+                    out.innerHTML = '<strong>' + data.status + '</strong><br>' + data.message;
+                    return;
+                }
+                const refusals = data.refusals || [];
+                if (refusals.length === 0) {
+                    out.innerHTML = 'No refusals recorded on this server: every claim, teardown and reset it has seen was permitted.';
+                    return;
+                }
+                const byReason = data.summary.refusals_by_reason || {};
+                const tally = Object.entries(byReason)
+                    .map(([reason, n]) => reason + ': ' + n).join(' | ') || 'none';
+                const items = refusals.map(r => '<li style="margin-bottom: 10px;">'
+                    + '<strong>' + r.headline + '</strong><br>'
+                    + '<span style="color: var(--text-muted); font-size: 0.8rem;">'
+                    + 'verb: ' + (r.verb ?? '?') + ' | reason: ' + r.reason
+                    + (r.attempted_session_id ? ' | asked as: ' + r.attempted_session_id : '')
+                    + ' | blocked by: ' + ((r.blocked_by && r.blocked_by.length) ? r.blocked_by.join(', ') : 'nobody')
+                    + '<br>' + r.resolution + '</span></li>');
+                out.innerHTML = '<strong>Refusals by reason:</strong> ' + tally
+                    + ' <span style="color: var(--text-muted);">(bounded to the most recent 25)</span>'
+                    + '<ul style="margin-top: 12px; padding-left: 18px;">' + items.join('') + '</ul>';
+            } catch (e) {
+                out.innerHTML = 'Refusal read failed: ' + e.message;
+            }
+        }
+
+        async function runTimeline() {
+            const out = document.getElementById('timeline-output');
+            out.innerHTML = 'Reading the audit timeline...';
+            try {
+                const res = await fetch('/api/ownership');
+                const data = await res.json();
+                if (!data.attached) {
+                    out.innerHTML = '<strong>' + data.status + '</strong><br>' + data.message;
+                    return;
+                }
+                const events = data.timeline || [];
+                if (events.length === 0) {
+                    // The scope matters here: a restored server that has answered
+                    // nothing yet shows an empty ring, and "no events" must not be
+                    // read as "nothing ever happened to my session".
+                    out.innerHTML = 'No identity decisions recorded in THIS process'
+                        + ' (timeline scope: ' + (data.summary.timeline_scope || 'unknown') + ').'
+                        + ' A server restarted from a snapshot keeps its sessions but starts with an empty timeline.';
+                    return;
+                }
+                const shown = events.slice(0, 50);
+                const items = shown.map(e => {
+                    const colour = e.meaning === 'refused' ? 'var(--danger-color, #d9534f)'
+                        : (e.meaning === 'info' || e.meaning === 'granted' ? 'var(--text-muted)' : 'var(--accent-color, #4a9eff)');
+                    const when = new Date(e.at).toLocaleTimeString();
+                    return '<li style="margin-bottom: 8px;">'
+                        + '<span style="color: ' + colour + '; font-size: 0.75rem;">' + when + ' · ' + e.meaning + '</span><br>'
+                        + e.headline + '</li>';
+                });
+                out.innerHTML = '<strong>' + data.summary.events_recorded + ' decision(s) recorded this process</strong>'
+                    + ' <span style="color: var(--text-muted);">(showing the most recent ' + shown.length
+                    + ' of a ring bounded to ' + data.summary.timeline_limit + ')</span>'
+                    + '<ul style="margin-top: 12px; padding-left: 18px;">' + items.join('') + '</ul>';
+            } catch (e) {
+                out.innerHTML = 'Timeline read failed: ' + e.message;
             }
         }
 

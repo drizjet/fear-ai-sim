@@ -24,11 +24,34 @@ export const SUPPORTED_SOCIAL_EVENT_FIELDS = Object.freeze({
 
 export const SUPPORTED_PACING_METRICS = Object.freeze(['averageFear', 'panickingCount', 'cohesion']);
 
+// Upper bound on one control-plane batch (register, unregister, trauma zones).
+// Chosen to cover a large host population in a single request while keeping
+// the request, the response, and the per-entry work bounded. Over-limit
+// batches are REJECTED rather than truncated: silently dropping entries would
+// leave a host believing state exists that does not (or does not, that still
+// does). The bound is per REQUEST, not per verb, so the same population can be
+// drained in a bounded number of requests regardless of which verb it is.
+export const MAX_BATCH_CONTROL_ITEMS = 512;
+
+// The registration route's name for the same bound. Kept exported because the
+// registration batch shipped under this name and the Godot client and its
+// schema both reference it; it is an alias, not a second limit.
+export const MAX_BATCH_REGISTRATION_AGENTS = MAX_BATCH_CONTROL_ITEMS;
+
+// Ownership mode for a registration claim. `adopt` takes an agent whose owning
+// session is detached (the reconnect / host-migration path); `takeover`
+// additionally takes one whose owner is still live, which is deliberately
+// explicit because it is how a duplicate host fights the real one for a crowd.
+export const CLAIM_MODES = Object.freeze(['join', 'adopt', 'takeover']);
+
 export const MESSAGE_TYPES = Object.freeze({
     // Client to Server
     HANDSHAKE_REQUEST: 'HANDSHAKE_REQUEST',
     REGISTER_AGENT: 'REGISTER_AGENT',
+    REGISTER_AGENT_BATCH: 'REGISTER_AGENT_BATCH',
     UNREGISTER_AGENT: 'UNREGISTER_AGENT',
+    UNREGISTER_AGENT_BATCH: 'UNREGISTER_AGENT_BATCH',
+    TRAUMA_ZONE_BATCH: 'TRAUMA_ZONE_BATCH',
     OBSERVATION_DISPATCH: 'OBSERVATION_DISPATCH',
     BATCH_TICK_REQUEST: 'BATCH_TICK_REQUEST',
     STEP_REQUEST: 'STEP_REQUEST',
@@ -42,8 +65,17 @@ export const MESSAGE_TYPES = Object.freeze({
     SOCIAL_EVENT: 'SOCIAL_EVENT',
     // R36: host execution-outcome reports for the advisory feedback loop.
     INTENT_OUTCOME_REPORT: 'INTENT_OUTCOME_REPORT',
+    // Request signing: answer the per-connection challenge with a signature
+    // over it. One signature per CONNECTION, not per message, so the observation
+    // hot path never pays for RSA. Additive: a host that ignores the challenge
+    // behaves exactly as it did before signing existed.
+    AUTH_RESPONSE: 'AUTH_RESPONSE',
     // Server to Client
     HANDSHAKE_RESPONSE: 'HANDSHAKE_RESPONSE',
+    AUTH_CHALLENGE: 'AUTH_CHALLENGE',
+    REGISTER_AGENT_BATCH_RESPONSE: 'REGISTER_AGENT_BATCH_RESPONSE',
+    UNREGISTER_AGENT_BATCH_RESPONSE: 'UNREGISTER_AGENT_BATCH_RESPONSE',
+    TRAUMA_ZONE_BATCH_RESPONSE: 'TRAUMA_ZONE_BATCH_RESPONSE',
     MODULE_HANDSHAKE_RESPONSE: 'MODULE_HANDSHAKE_RESPONSE',
     WORLD_QUERY_RESPONSE: 'WORLD_QUERY_RESPONSE',
     FACTION_STANCE_QUERY_RESPONSE: 'FACTION_STANCE_QUERY_RESPONSE',

@@ -1,4 +1,11 @@
 # Fear AI Godot 4 Character Agent Component
+#
+# TRANSPORT-ONLY variant: no offline fallback. Band, intent, urgency, vector
+# and heartbeat all come from the server, so this component is only useful
+# against a registered live session. That makes the registration step below
+# load-bearing rather than optional: RuntimeSimulation drops observations for
+# unknown agents, so an unregistered component looks exactly like a server that
+# returns nothing.
 class_name FearAgent
 extends Node
 
@@ -52,15 +59,37 @@ func _ready() -> void:
 	if _client:
 		_client.agent_state_received.connect(_on_state_received)
 
-func _physics_process(_delta: float) -> void:
-	if not _client:
-		return
-		
-	var pos = Vector3.ZERO
+## Resolved lazily so a component built before the FearAIClient autoload is in
+## the tree does not cache a null client for the rest of its life.
+func _resolve_client() -> Node:
+	if _client == null or not is_instance_valid(_client):
+		_client = get_node_or_null("/root/FearAIClient")
+	if _client != null and not _client.agent_state_received.is_connected(_on_state_received):
+		_client.agent_state_received.connect(_on_state_received)
+	return _client
+
+func _host_position() -> Vector3:
 	if _parent_body is Node3D:
-		pos = _parent_body.global_position
-	elif _parent_body is Node2D:
-		pos = Vector3(_parent_body.global_position.x, _parent_body.global_position.y, 0)
+		return _parent_body.global_position
+	if _parent_body is Node2D:
+		return Vector3(_parent_body.global_position.x, _parent_body.global_position.y, 0)
+	return Vector3.ZERO
+
+func _trait_payload() -> Dictionary:
+	return {
+		"neuroticism": neuroticism,
+		"resilience": resilience,
+		"fear": fear_baseline,
+		"leadership": leadership
+	}
+
+func _physics_process(_delta: float) -> void:
+	var client := _resolve_client()
+	if not client:
+		return
+
+	var pos := _host_position()
+	client.ensure_registered(agent_id, _trait_payload(), { "x": pos.x, "y": pos.y, "z": pos.z })
 		
 	var obs = {
 		"agent_id": agent_id,
