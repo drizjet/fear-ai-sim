@@ -82,11 +82,11 @@ Actions disabled on the repository, a workflow GitHub refuses to parse, a branch
 protection rule that replaced the checks, a required check that no longer exists —
 all of them are remote state, and all of them read from outside like "checks are
 slow". No gate can close that by reading files, so it is a **manual-audit** step
-instead of a false claim of coverage:
+instead of a false claim of coverage. (It was written here as `audit_pr_ci_coverage.mjs` and widened to the rest of the remote state — Actions policy and branch protection — in ledger §44; the command is `npm run audit:remote-state`.)
 
 ```
-npm run audit:pr-ci-coverage          # human-readable
-npm run audit:pr-ci-coverage --json
+npm run audit:remote-state            # human-readable
+npm run audit:remote-state --json
 ```
 
 It asks whether each open pull request has at least one check run, and exits **2**

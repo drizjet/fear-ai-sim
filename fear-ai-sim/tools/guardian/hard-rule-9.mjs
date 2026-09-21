@@ -619,7 +619,8 @@ function gate() {
         'verify:hard-rule-9', 'guardian:check', 'verify:probes', 'verify:probe-stability',
         'verify:unity-editor', 'inert until', 'verify:stability-regression', 'advisory', 'non-zero exit code',
         'ci/stability-ledger', 'exist in the commit, not only in the working tree', 'cryptography==',
-        'every base branch', 'no run at all', 'audit:pr-ci-coverage', 'at least one check run'
+        'every base branch', 'no run at all', 'audit:remote-state', 'at least one check run',
+        'required status context that no job produces'
     ];
     const mapMissing = mapStates.filter(needle => !systemMap.includes(needle));
     record(
