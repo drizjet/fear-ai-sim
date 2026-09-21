@@ -20,8 +20,27 @@
 // WINDOWED with no live successor, INCOMPLETE, or divergently
 // labeled, or if any domain has an active contradiction that is
 // not recorded in the evidence.
+// RETIRED AS A GATE (2026-09-20). The ledger was last maintained 2026-09-06;
+// two weeks of work since then happened outside it, so thousands of rows no
+// longer re-prove against the sources they name. That is a CLOSED RECORD, not a
+// regression, and no honest amount of re-running this linter turns it green: the
+// only way to force 0 would be to bulk-invalidate the unproved rows, which is
+// laundering a red gate into a green one. So the gate role is over and the
+// report role continues, in three modes:
+//
+//   --retired   (`npm run lint:evidence`) refuse loudly, exit 9, and say what
+//               replaced it. A retired gate must not answer with an exit code
+//               that reads like a verdict.
+//   --report    (`npm run evidence:report`) print the derivation of the CLOSED
+//               record and exit 0. It answers "how much of the closed record
+//               still re-proves?", a real question; it is NOT current
+//               verification.
+//   (default)   original gate semantics, exit 1 on drift. Kept for anyone
+//               auditing the record directly; deliberately not wired into CI
+//               (`docs/SYSTEM_MAP.md`, "CI Gate Split NOW-9").
+//
 // Usage:
-//   node scripts/audit-evidence.mjs [--root <repo-root>]
+//   node evidence/lint.mjs [--report | --retired] [--root <repo-root>]
 
 import { readFileSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
@@ -44,6 +63,18 @@ function parseArgs(argv) {
     }
     return args;
 }
+
+const REPORT_MODE = process.argv.includes('--report');
+const RETIRED_MODE = process.argv.includes('--retired');
+
+// The ledger's closure is a property of the artifact, not of the invocation, so
+// it is stated in the JSON in every mode. A report that omitted it would let a
+// reader treat a 2026-09-06 derivation as a current one.
+const REGIME = 'CLOSED_HISTORICAL_RECORD';
+const REGIME_NOTE = 'The evidence ledger was last maintained 2026-09-06 and is a closed historical record. '
+    + 'Rows that no longer re-prove are expected, not a regression, and this report is NOT current verification '
+    + 'of the domains it names. Current status lives in docs/CURRENT_TRUTH_LEDGER.md; behavior evidence lives in the '
+    + 'standalone probes (npm run verify:probes) and evidence/*.md.';
 
 function loadDomains(rootDir) {
     const maturityPath = join(rootDir, 'docs', 'DOMAIN_MATURITY.md');
@@ -278,6 +309,8 @@ function main() {
         }
     }
     report.labelDivergences = labelDivergences;
+    report.regime = REGIME;
+    report.regimeNote = REGIME_NOTE;
 
     process.stdout.write(JSON.stringify(report, null, 2) + '\n');
 
@@ -297,10 +330,43 @@ function main() {
     const hasUntrackedContradiction = activeC.some(c => {
         return !ledger.some(r => r.domain === c.domain && Array.isArray(r.knownContradictions) && r.knownContradictions.includes(c.rowId));
     });
+    if (REPORT_MODE) return 0;
     if (hasInadmissible || hasUntrackedContradiction || labelDivergences.length > 0) {
         return 1;
     }
     return 0;
 }
 
+function retiredRefusal() {
+    const line = '!'.repeat(74);
+    console.error('');
+    console.error(line);
+    console.error('  THE EVIDENCE-LEDGER GATE IS RETIRED (CLOSED RECORD 2026-09-06)');
+    console.error(line);
+    console.error('');
+    console.error('  This linter compared every evidence row against the sources it names.');
+    console.error('  The ledger stopped being maintained on 2026-09-06; the work since then');
+    console.error('  happened outside it, so thousands of rows no longer re-prove. That is a');
+    console.error('  closed record, not a regression — and it cannot be made green honestly:');
+    console.error('  the only way to force exit 0 would be to bulk-invalidate the unproved');
+    console.error('  rows, which is laundering a red gate into a green one.');
+    console.error('');
+    console.error('  So the gate role ended on 2026-09-20 and it refuses instead of');
+    console.error('  answering with an exit code that reads like a verdict.');
+    console.error('');
+    console.error('  Do this instead:');
+    console.error('    - what the ledger still re-proves:  npm run evidence:report');
+    console.error('    - what replaced it as authority:    docs/CURRENT_TRUTH_LEDGER.md');
+    console.error('    - the labeled historical map:       docs/DOMAIN_MATURITY.md (status: historical-superseded)');
+    console.error('    - behavior evidence today:          npm run verify:probes');
+    console.error('');
+    console.error('  Exit code 9 means exactly one thing: a retired gate refused.');
+    console.error('');
+    process.exit(9);
+}
+
+if (RETIRED_MODE) retiredRefusal();
+if (REPORT_MODE) {
+    console.error('NOTE: REPORTS THE CLOSED LEDGER (last maintained 2026-09-06). NOT CURRENT VERIFICATION.');
+}
 process.exit(main());

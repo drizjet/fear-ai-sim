@@ -588,7 +588,7 @@ function handleVerify() {
     console.log(`  ✓ Check 2: Severe threat triggers Affective escalation: ${check2 ? 'PASS' : 'FAIL'}`);
     console.log(`  ✓ Check 3: Diagnostic Explainability Inspector loaded: ${check3 ? 'PASS' : 'FAIL'}`);
     console.log(`  ✓ Check 4: Reference Game integration harness loaded: ${check4 ? 'PASS' : 'FAIL'}`);
-    console.log(`\nAll pre-flight verification checks PASS. Use 'npm test' for full 240+ suite execution.\n`);
+    console.log(`\nAll pre-flight verification checks PASS (this CLI pre-flight only).\nThe automated suites were retired under Hard Rule 9 (2026-09-15); the test\nentry point is a tombstone that refuses with a non-zero exit, so nothing here\nruns a suite. Use the standalone probes in tools/verification/ for evidence.\n`);
 }
 
 function handleAdversarial(options) {
@@ -636,6 +636,30 @@ async function handleDashboard(options) {
     console.log(`[FearAI-CLI] Starting Designer Diagnostic & Replay Dashboard on http://${host}:${port} ...`);
 
     const server = new DesignerDashboardServer({ port, host });
+
+    // `--middleware` runs the middleware in-process alongside the dashboard so
+    // the live read-only views (attached simulation, session ownership) have
+    // something real to attach to. Without it the dashboard still starts, and
+    // those endpoints report themselves as unattached rather than rendering an
+    // empty view that would read as "nothing is happening".
+    let middleware = null;
+    if (options.middleware) {
+        const middlewarePort = Number(options['middleware-port'] ?? 8765);
+        middleware = new FearServer({
+            host,
+            port: middlewarePort,
+            seed: parseInt(options.seed || '1337', 10)
+        });
+        await middleware.start();
+        server.attachSimulation(middleware.simulation);
+        server.attachOwnership(middleware.claims);
+        console.log(`[FearAI-CLI] Middleware attached in-process at http://${host}:${middleware.port}`);
+        console.log(`[FearAI-CLI] Ownership view reads GET /api/v1/sessions (read-only; it can observe claims, never arbitrate them)`);
+    } else {
+        console.log(`[FearAI-CLI] No middleware attached. Live views will report NO_SIMULATION_ATTACHED / NO_OWNERSHIP_SOURCE_ATTACHED.`);
+        console.log(`[FearAI-CLI] Pass --middleware to attach the server in-process.`);
+    }
+
     const { url } = await server.start();
     console.log(`[FearAI-CLI] Designer Dashboard active at: ${url}`);
     console.log(`[FearAI-CLI] Press Ctrl+C to terminate dashboard server.`);
@@ -643,6 +667,7 @@ async function handleDashboard(options) {
     process.on('SIGINT', async () => {
         console.log('\n[FearAI-CLI] Gracefully stopping Designer Dashboard...');
         await server.stop();
+        if (middleware) await middleware.stop();
         process.exit(0);
     });
 }

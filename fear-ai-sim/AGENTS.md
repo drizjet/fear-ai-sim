@@ -27,16 +27,27 @@ Sibling trees (do not pretend they live here):
 6. **Parity.** The canonical band/hysteresis/panic-lock model is Rust `fear.rs`. JS `packages/core` is the plug-in port. Changing one without recording the other is a defect.
 7. **Stale docs.** Ignore `PROJECT_STATUS.md`, `CONTINUE_PROMPT.md`, and the closed-world novel in `AUTONOMOUS_HANDOFF.md` as product status. See `docs/SYSTEM_MAP.md`.
 8. **Attribution.** Do not claim Google DeepMind, bit-for-bit cross-runtime equality, or “universal integration” without the matching measurement.
-9. **Mandatory Manual Audits Only (NEVER RUN TESTS).** Do NOT run test runners (`npm test`, Jest, etc.) or rely on green test suites to verify system correctness. All verification and quality audits across `packages/core/src/`, `packages/runtime/`, `packages/protocol/`, and `packages/adapters/` MUST be conducted 100% manually through direct, line-by-line inspection of mathematical formulas, boundary logic, memory life-cycles, and architectural invariants against first principles.
+9. **Mandatory Manual Audits Only (NEVER RUN TESTS).** Do NOT run test runners (`npm test`, Jest, etc.) or rely on green test suites to verify system correctness. `npm test` is a **tombstone**: it prints why the suites were retired and exits 9. A non-zero exit there is the expected result — it is not a suite, and there is nothing to fix. Use `npm run verify:hard-rule-9` to check the retirement itself. All verification and quality audits across `packages/core/src/`, `packages/runtime/`, `packages/protocol/`, and `packages/adapters/` MUST be conducted 100% manually through direct, line-by-line inspection of mathematical formulas, boundary logic, memory life-cycles, and architectural invariants against first principles.
 
 ## Commands (this repo)
 
+There is no test command. `npm test` refuses by design (exit 9, Hard Rule 9).
+
 ```
-npm test
 npm run server
-npm run lint:evidence
 npm run guardian:check
+npm run verify:hard-rule-9     # asserts the test retirement is intact
+npm run verify:probes          # all deterministic probes, one summary
+npm run verify:probe-stability # every probe repeated 3x; FLAKY counts as a failure
+npm run verify:stability-regression # tonight's repeats vs the committed recording + the ledger
+npm run fold:stability-ledger -- --from <artifact> [--write]  # fold a nightly artifact in, dry-run first
+pwsh -File tools/ci/open_ledger_night_pr.ps1 # what the nightly job runs: propose tonight as a pull request (dry run without -Execute)
+npm run verify:release-claims  # doc/claim boundary tripwire
+npm run evidence:report        # what the CLOSED evidence ledger still re-proves
 ```
+
+`npm run lint:evidence` is **retired** and refuses with exit 9: the ledger closed on
+2026-09-06 and a green gate could only be faked. Use `npm run evidence:report` instead.
 
 Middleware server: `node packages/runtime/bin/fear-ai-server.js --port 8765`
 
