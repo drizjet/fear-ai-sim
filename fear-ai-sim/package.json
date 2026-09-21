@@ -15,6 +15,7 @@
     "fold:stability-ledger": "node tools/verification/fold_stability_ledger.mjs",
     "lint:evidence": "node evidence/lint.mjs --retired",
     "evidence:report": "node evidence/lint.mjs --report",
+    "audit:pr-ci-coverage": "node tools/ci/audit_pr_ci_coverage.mjs",
     "verify:release-claims": "node tools/verification/verify_release_claim_boundaries.mjs",
     "verify:godot-stations": "node tools/verification/verify_godot_stations.mjs",
     "verify:godot-fallback-parity": "node tools/verification/verify_godot_fallback_parity.mjs",

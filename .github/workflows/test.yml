@@ -97,12 +97,30 @@ name: Fear-AI CI
 # The `run:` commands below are asserted against an allowlist in
 # tools/guardian/hard-rule-9.mjs, so adding a step that cannot pass fails the
 # integrity job instead of quietly turning CI red again.
+#
+# The triggers are asserted too, because a filter here removes checks SILENTLY.
+# `pull_request.branches` is matched against a pull request's BASE branch, not its
+# head, so `pull_request: branches: [main, master]` — what this file declared until
+# 2026-09-21 — gave every pull request opened against another branch NO RUN AT ALL:
+# no failure, no skipped job, no check run, and a pull request page indistinguishable
+# from one whose checks are still queueing. It was found by opening a stacked pull
+# request and noticing the absence, which is not a detection mechanism. The pull
+# request trigger is therefore deliberately unfiltered — every base branch, every
+# default activity type — and `push` keeps its default-branch filter, so a feature
+# branch is reviewed once instead of built twice. Both halves are asserted by
+# `every-pull-request-gets-a-run` in tools/guardian/hard-rule-9.mjs, so re-adding a
+# filter fails the integrity job instead of quietly hollowing it out.
+#
+# Retargeting a pull request's base does not re-fire this workflow either, because
+# `edited` is not one of the default `pull_request` activity types. That is why the
+# absence above was easy to miss, and why the trigger is unfiltered rather than
+# relying on a re-run: the commit is verified when the pull request opens or
+# synchronizes, on whatever base it was opened against.
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
   schedule:
     # 04:00 UTC daily. See the probe-stability job below for why determinism is
     # checked on a clock rather than on every push.

@@ -226,6 +226,37 @@ function runCommandsIn(text) {
     return commands;
 }
 
+// The trigger block for one event, from the comment-stripped workflow. This is what
+// decides whether a pull request is checked at all — and unlike every other part of
+// CI, a filter here removes checks rather than failing them, so it has to be read
+// rather than trusted. `bare` records whether the event key carries no inline value:
+// `pull_request:` is the unfiltered form, anything after the colon is a narrowing.
+function eventTriggerKeys(text, event) {
+    const lines = text.split('\n');
+    const onIndex = lines.findIndex(line => /^on:\s*$/.test(line));
+    if (onIndex === -1) return null;
+    let onEnd = lines.length;
+    for (let i = onIndex + 1; i < lines.length; i += 1) {
+        if (/^\S/.test(lines[i])) { onEnd = i; break; }
+    }
+    const block = lines.slice(onIndex + 1, onEnd);
+    const start = block.findIndex(line => line.startsWith(`  ${event}:`));
+    if (start === -1) return null;
+    if (block[start].trim() !== `${event}:`) return { bare: false, keys: [] };
+    let stop = block.length;
+    for (let i = start + 1; i < block.length; i += 1) {
+        if (/^ {2}\S/.test(block[i])) { stop = i; break; }
+    }
+    return {
+        bare: true,
+        keys: block.slice(start + 1, stop)
+            // A list item such as `- cron: '0 4 * * *'` is a value, not a key of this
+            // event, so it is dropped before the keys are read.
+            .filter(line => line.trim() !== '' && !/^\s*-\s/.test(line))
+            .map(line => line.trim().split(':')[0])
+    };
+}
+
 // Every path a CI step names, plus every path inside the npm script that step runs.
 function ciInputPaths(commands, scripts) {
     const paths = new Set();
@@ -587,7 +618,8 @@ function gate() {
     const mapStates = [
         'verify:hard-rule-9', 'guardian:check', 'verify:probes', 'verify:probe-stability',
         'verify:unity-editor', 'inert until', 'verify:stability-regression', 'advisory', 'non-zero exit code',
-        'ci/stability-ledger', 'exist in the commit, not only in the working tree', 'cryptography=='
+        'ci/stability-ledger', 'exist in the commit, not only in the working tree', 'cryptography==',
+        'every base branch', 'no run at all', 'audit:pr-ci-coverage', 'at least one check run'
     ];
     const mapMissing = mapStates.filter(needle => !systemMap.includes(needle));
     record(
@@ -595,6 +627,49 @@ function gate() {
         mapMissing.length === 0,
         `docs/SYSTEM_MAP.md no longer states: ${mapMissing.join(', ')}`
     );
+
+    // 9. Every pull request must get a run. This is the one CI defect that cannot
+    //    announce itself: `pull_request.branches` is matched against a pull request's
+    //    BASE branch, so a filter here means a pull request based on another branch
+    //    receives no jobs at all — no failure, no skip, no check run, and a page that
+    //    reads exactly like one whose checks are slow. This workflow declared
+    //    `branches: [main, master]` until 2026-09-21, and it was found by opening a
+    //    pull request on a feature branch and noticing the absence, which is not a
+    //    detection mechanism — the whole reason the check exists rather than the fix
+    //    alone. `paths`, `paths-ignore` and `types` narrow the same way and are
+    //    rejected with it; the push half is asserted too, because the pull request
+    //    half of the fix is only free while a feature-branch push is not also built.
+    //    Every workflow file is inspected, not the first `on:` block that can be found:
+    //    a second file is exactly how this defect would arrive unnoticed, since the run
+    //    for a pull request is the union of what every workflow decides — and the
+    //    mutation matrix caught the first version of this check reading only one.
+    const narrowingKeys = ['branches', 'branches-ignore', 'paths', 'paths-ignore', 'types'];
+    const triggerProblems = [];
+    let declaresPullRequest = false;
+    for (const path of workflows) {
+        const name = relative(gitRoot, path).replace(/\\/g, '/');
+        const text = stripYamlComments(readText(path));
+        const pr = eventTriggerKeys(text, 'pull_request');
+        const push = eventTriggerKeys(text, 'push');
+        if (pr !== null) declaresPullRequest = true;
+        if (pr !== null && !pr.bare) {
+            triggerProblems.push(`${name}: the \`pull_request:\` key carries an inline value; it must be a bare, unfiltered trigger`);
+        } else if (pr !== null) {
+            const narrowing = narrowingKeys.filter(key => pr.keys.includes(key));
+            if (narrowing.length > 0) {
+                triggerProblems.push(`${name}: \`pull_request\` is narrowed by ${narrowing.join(', ')}, so a pull request `
+                    + 'outside it receives NO RUN — not a failure, not a skip, an empty checks list');
+            }
+        }
+        if (push !== null && (!push.bare || !push.keys.includes('branches'))) {
+            triggerProblems.push(`${name}: \`push\` no longer restricts to the default branches, so the unfiltered `
+                + 'pull request trigger would also build every feature-branch push');
+        }
+    }
+    if (!declaresPullRequest) {
+        triggerProblems.push('no workflow declares a `pull_request` trigger, so no pull request is checked at all');
+    }
+    record('every-pull-request-gets-a-run', triggerProblems.length === 0, triggerProblems.join('; ') || 'unreachable');
 
     // Every check above asks whether a SENTENCE still exists, so not one of them can
     // see a NUMBER that has drifted — and the numbers do drift: the gate's own total
@@ -623,12 +698,23 @@ function gate() {
     const headerBoundary = 'The earlier anchors below are retained';
     const headerStart = ledgerText.indexOf('**Current audit state**');
     const headerEnd = ledgerText.indexOf(headerBoundary);
-    const liveHeader = headerStart === -1 || headerEnd < headerStart ? '' : ledgerText.slice(headerStart, headerEnd);
+    // Emphasis is stripped before the numbers are read, because it was hiding one: the
+    // header said `reports **27** integrity checks` while the run was 28/28, and both
+    // patterns below missed it — the `N/N` form because the number was written bare, and
+    // a bare form because `**` sat between the digits and `integrity checks`. A count this
+    // check cannot see is the exact drift it exists to catch, so the two shapes the
+    // documents actually use are matched on the de-emphasised text.
+    const liveHeaderRaw = headerStart === -1 || headerEnd < headerStart ? '' : ledgerText.slice(headerStart, headerEnd);
+    const liveHeader = liveHeaderRaw.replace(/[*`]/g, '');
     const liveProbeClaims = [...liveHeader.matchAll(/(\d+)\s+probes\b/g)].map(match => Number(match[1]));
-    const liveGateClaims = [...liveHeader.matchAll(/(\d+)\/(\d+)\b/g)]
-        .map(match => [match[0], Number(match[1]), Number(match[2])]);
+    const liveGateClaims = [
+        ...[...liveHeader.matchAll(/(\d+)\/(\d+)\b/g)]
+            .map(match => ({ display: match[0], left: Number(match[1]), right: Number(match[2]) })),
+        ...[...liveHeader.matchAll(/(\d+)\s+integrity checks\b/g)]
+            .map(match => ({ display: `${match[1]} integrity checks`, left: Number(match[1]), right: Number(match[1]) }))
+    ];
     const strayProbeClaims = liveProbeClaims.filter(value => value !== rosterSize);
-    const strayGateClaims = liveGateClaims.filter(([, left, right]) => left !== gateTotal || right !== gateTotal);
+    const strayGateClaims = liveGateClaims.filter(claim => claim.left !== gateTotal || claim.right !== gateTotal);
 
     // The two enumerations must also ADD UP, which is a different failure from quoting
     // the wrong total: a list that sums to 24 beside a claim of 25 is self-contradictory
@@ -675,7 +761,7 @@ function gate() {
             recordsAfterThisOne === -1 ? 'this check cannot find its own id in its own source, so it cannot tell whether it is last' : null,
             recordsAfterThisOne > 1 ? `${recordsAfterThisOne} record() calls follow this one; move it back to last so its derived total is the final total` : null,
             strayProbeClaims.length > 0 ? `the ledger header claims ${strayProbeClaims.join(', ')} probes and the roster is ${rosterSize}` : null,
-            strayGateClaims.length > 0 ? `the ledger header claims ${strayGateClaims.map(claim => claim[0]).join(', ')} integrity checks and this run has ${gateTotal}` : null,
+            strayGateClaims.length > 0 ? `the ledger header claims ${strayGateClaims.map(claim => claim.display).join(', ')} and this run has ${gateTotal}` : null,
             ...enumerationProblems
         ].filter(Boolean).join('; ')
     );
