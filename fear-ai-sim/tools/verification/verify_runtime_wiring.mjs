@@ -81,11 +81,16 @@ console.log('  * Core RuntimeSimulation services and live tick path: PASS');
 // source checks are deliberate tripwires: if a future change constructs one
 // here, the ledger and release scope must be revisited rather than silently
 // inheriting a broader "core" claim.
+// InformationPropagationEngine is deliberately ABSENT from this list. It left the
+// optional surface by the §3 change policy and joined the runtime as an opt-in
+// service, which is why the tripwire that guards it now points the other way: see
+// the opt-in assertion below. Removing a name from this list without adding the
+// corresponding positive check would be how an optional research module quietly
+// becomes part of every session.
 const optionalRuntimeConstructors = [
     'PackCoordinationEngine',
     'EconomicFeedbackSystem',
     'EpistemicBeliefEngine',
-    'InformationPropagationEngine',
     'MoralDissonanceEngine',
     'FunctionalPersonaSignatures',
     'WorldCounterfactualEngine',
@@ -96,13 +101,33 @@ for (const name of optionalRuntimeConstructors) {
 }
 console.log(`  * Optional world/research modules absent from RuntimeSimulation constructor (${optionalRuntimeConstructors.length}): PASS`);
 
+// RELEASE-SURFACE §3 condition 4. The information-propagation module is now
+// IN scope, so what must be proven inverts: constructing it is expected, and
+// constructing it UNGATED is the defect. An unconditional `new` here would make a
+// research system part of every session that never asked for it, while every
+// existing test still passed.
+assert(hasConstructor(runtimeSource, 'InformationPropagationEngine'),
+    'InformationPropagationEngine is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableInformationPropagation\s*=\s*options\.enableInformationPropagation\s*\?\?\s*false/.test(runtimeSource),
+    'InformationPropagationEngine no longer defaults to false, so it is not opt-in');
+assert(/this\.informationPropagation\s*=\s*this\.enableInformationPropagation\s*\?\s*new InformationPropagationEngine/.test(runtimeSource),
+    'InformationPropagationEngine is constructed outside its opt-in guard');
+const optOut = new RuntimeSimulation({ seed: 91339 });
+assert(optOut.informationPropagation === null,
+    'A default RuntimeSimulation constructed the optional information-propagation service');
+assert(optOut.enableInformationPropagation === false,
+    'The information-propagation opt-in does not default to false');
+const optIn = new RuntimeSimulation({ seed: 91339, enableInformationPropagation: true });
+assert(optIn.informationPropagation !== null && optOut.informationPropagation !== optIn.informationPropagation,
+    'The opt-in flag did not construct a distinct information-propagation service');
+console.log('  * InformationPropagationEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
 // Verify that the optional systems have explicit direct entry points rather
 // than being mistaken for implicit runtime services.
 const cliEntryPoints = [
     ['PackCoordinationEngine', /new PackCoordinationEngine\b/],
     ['EconomicFeedbackSystem', /new EconomicFeedbackSystem\b/],
     ['EpistemicBeliefEngine via MultiObserverEpistemicHarness', /new MultiObserverEpistemicHarness\b/],
-    ['InformationPropagationEngine', /new InformationPropagationEngine\b/],
     ['MoralDissonanceEngine', /new MoralDissonanceEngine\b/],
     ['FunctionalPersonaSignatures', /new FunctionalPersonaSignatures\b/],
     ['FrontierValleySimulation', /new FrontierValleySimulation\b/],

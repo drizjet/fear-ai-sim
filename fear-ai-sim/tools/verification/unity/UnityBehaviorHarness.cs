@@ -17,8 +17,13 @@
 //     GRANTED its crowd instead of being refused or forced to adopt
 //
 // WHAT THIS DOES NOT PROVE (and the ledger says so)
-//   * MonoBehaviour lifecycle: `Awake` is invoked here by reflection, so "does
-//     Unity call it when I expect" remains an Editor question
+//   * WHEN Unity calls the lifecycle. The six bodies are now DRIVEN rather than
+//     declared untestable - `UnityLifecycle` runs Awake then OnEnable, Start once
+//     then Update, and OnDisable then OnDestroy on destruction - but construction
+//     and waking are separate phases here, `FixedUpdate` (the async control-plane
+//     tick) is deliberately not invoked from the frame pump, and an `async void`
+//     body is invoked without being awaited. Whether Unity calls these at that
+//     point remains an Editor question.
 //   * frame scheduling: this shim runs coroutines to completion synchronously
 //   * that the shim's UnityWebRequest/JsonUtility behave exactly like Unity's -
 //     see the divergences listed in UnityEngineShim.cs
@@ -31,6 +36,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using FearAI;
+using UnityEngine;
 
 internal static class Harness
 {
@@ -88,7 +94,14 @@ internal static class Harness
     private static FearAIClient BuildClient(string sessionId, bool persist, ISessionStore store, int port)
     {
         ClearSingleton();
-        var client = new FearAIClient();
+        // Constructed through the shim's GameObject rather than `new FearAIClient()`, so
+        // the component is attached to a real GameObject before it is woken - which is
+        // the shape `Awake` is written against (DontDestroyOnLoad, the singleton guard).
+        var client = new GameObject($"fear_ai_harness_{sessionId}").AddComponent<FearAIClient>();
+        // Serialized values FIRST, then wake. That is the scene/prefab case, which is the
+        // one the adapter is written for, and it is the order `UnityLifecycle.Wake` says
+        // it models; `Awake` reads `persistSession` and nothing happens between here and
+        // the wake that the adapter can observe as a frame.
         SetField(client, "serverHost", "127.0.0.1");
         SetField(client, "serverPort", port);
         // The data plane is not under test: the control plane is HTTP either way,
@@ -98,8 +111,66 @@ internal static class Harness
         SetField(client, "claimMode", "join");
         SetField(client, "persistSession", persist);
         client.SessionStore = store;
-        Invoke(client, "Awake");
+        UnityLifecycle.Wake(client);
         return client;
+    }
+
+    /// <summary>
+    /// Records the lifecycle order it is driven in.
+    ///
+    /// This exists so the assertions about "the engine's order" are about something the
+    /// shim is OBSERVED to do rather than about a comment, and so the once-only rule for
+    /// `Start` is checked on a component that can actually be asked. It records the six
+    /// bodies in the order Unity documents them, and nothing else.
+    /// </summary>
+    private sealed class LifecycleOrderProbe : MonoBehaviour
+    {
+        internal static readonly List<string> Observed = new List<string>();
+        private void Awake() => Observed.Add("Awake");
+        private void OnEnable() => Observed.Add("OnEnable");
+        private void Start() => Observed.Add("Start");
+        private void Update() => Observed.Add("Update");
+        private void OnDisable() => Observed.Add("OnDisable");
+        private void OnDestroy() => Observed.Add("OnDestroy");
+    }
+
+    /// <summary>
+    /// The shim's lifecycle model, asserted rather than assumed. Every claim below is
+    /// about a component this harness can interrogate, so the model cannot be quietly
+    /// changed into something that would make the adapter's lifecycle assertions vacuous.
+    /// </summary>
+    private static void CheckLifecycleModel()
+    {
+        Console.WriteLine("\n[phase 1] the shim runs the lifecycle in Unity's order");
+        LifecycleOrderProbe.Observed.Clear();
+        var host = new GameObject("lifecycle_probe");
+        var probe = host.AddComponent<LifecycleOrderProbe>();
+        Check("AddComponent attaches without waking, so a component can arrive with its values",
+            string.Join(",", LifecycleOrderProbe.Observed) == "",
+            string.Join(",", LifecycleOrderProbe.Observed));
+
+        UnityLifecycle.Wake(probe);
+        Check("waking runs Awake then OnEnable, in that order",
+            string.Join(",", LifecycleOrderProbe.Observed) == "Awake,OnEnable",
+            string.Join(",", LifecycleOrderProbe.Observed));
+
+        UnityLifecycle.Frame(probe);
+        Check("the first frame runs Start then Update",
+            string.Join(",", LifecycleOrderProbe.Observed) == "Awake,OnEnable,Start,Update",
+            string.Join(",", LifecycleOrderProbe.Observed));
+
+        UnityLifecycle.Frame(probe);
+        Check("Start runs ONCE while Update runs every frame",
+            string.Join(",", LifecycleOrderProbe.Observed) == "Awake,OnEnable,Start,Update,Update",
+            string.Join(",", LifecycleOrderProbe.Observed));
+
+        UnityEngine.Object.DestroyImmediate(host);
+        Check("destroying the GameObject runs OnDisable then OnDestroy on its components",
+            string.Join(",", LifecycleOrderProbe.Observed)
+                == "Awake,OnEnable,Start,Update,Update,OnDisable,OnDestroy",
+            string.Join(",", LifecycleOrderProbe.Observed));
+        Check("and the GameObject no longer holds it", host.Attached.Count == 0,
+            $"{host.Attached.Count} component(s) still attached");
     }
 
     /// <summary>Drain the adapter's control queue by pumping it, exactly as its
@@ -190,8 +261,18 @@ internal static class Harness
     private static void PhaseOne(int port)
     {
         Console.WriteLine("\n[phase 1] a fresh Unity host establishes a crowd");
+        // Before anything uses the lifecycle, establish that the model does what it says.
+        // If this ever drifts, the adapter assertions below would still pass while proving
+        // nothing about the order they claim to.
+        CheckLifecycleModel();
         var store = new FileSessionStore(_storePath);
         var owner = BuildClient(OwnerSessionId, true, store, port);
+        // Asserted HERE rather than at the end of the phase, because a rival client is
+        // built later in this phase and it takes the singleton for itself. `Awake` is the
+        // only thing that sets it, so `Instance` being this client is the observable
+        // proof that the body ran - and the shim's wake is the only thing that ran it.
+        Check("the shim's wake ran the adapter's Awake (it set the singleton)",
+            ReferenceEquals(FearAIClient.Instance, owner));
         Check("a fresh store loads nothing", owner.SessionLoaded == false);
 
         owner.RegisterAgents(Registrations(Crowd));
@@ -242,6 +323,30 @@ internal static class Harness
             owner.TraumaZonesRejected == 0, $"rejected={owner.TraumaZonesRejected}");
         Check("nothing was counted as a registration failure on the way",
             owner.RegistrationFailures == 0, $"failures={owner.RegistrationFailures}");
+
+        // ------------------------------------------------------------------
+        // The adapter's OWN lifecycle bodies, driven by the shim rather than invoked
+        // by hand. Before `UnityLifecycle` existed, `Awake` was called by reflection
+        // here and `Start` and `OnDestroy` were called by nothing at all: two of the
+        // four bodies this adapter has had never been executed anywhere. Placed last
+        // so that none of it can perturb the control-plane assertions above, and
+        // destroying the client is the point of the last two.
+        // ------------------------------------------------------------------
+        Console.WriteLine("\n[phase 1] the adapter's own lifecycle bodies");
+
+        var frameError = "";
+        try { UnityLifecycle.Frame(owner); }
+        catch (Exception ex) { frameError = $"{ex.GetType().Name}: {ex.Message}"; }
+        Check("a frame runs the adapter's async Start without throwing", frameError == "", frameError);
+
+        var destroyError = "";
+        try { UnityEngine.Object.DestroyImmediate(owner); }
+        catch (Exception ex) { destroyError = $"{ex.GetType().Name}: {ex.Message}"; }
+        Check("destroying the host runs the adapter's OnDestroy without throwing",
+            destroyError == "", destroyError);
+        Check("teardown did NOT take the persisted credential with it",
+            File.Exists(_storePath),
+            "clearing memory is not a revocation, and the file is what the next process proves itself with");
     }
 
     // -------------------------------------------------------------------------

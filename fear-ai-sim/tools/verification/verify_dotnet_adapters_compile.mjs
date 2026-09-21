@@ -37,6 +37,19 @@
  * lifecycle is invoked as declared, or that the adapter behaves correctly in a
  * running engine. A stub-signature mismatch would compile here and fail in the
  * editor, so this narrows the Unity gap rather than closing it.
+ *
+ * SECTION C IS THE ONE THAT IS NOT ONLY A COMPILE
+ * The Unity EditMode fixtures are compiled here AND EXECUTED, against the same
+ * two shims, by `tools/verification/unity/NUnitTestRunner.cs`. The run's own JSON
+ * result is then checked against the fixture roster and the `[Test]` count DERIVED
+ * from the test sources, so a test that stopped being discovered cannot hide
+ * behind a passing number. That is the point of the section: a fixture body that
+ * can never pass on any machine - a wrong constant, an inverted assertion, a field
+ * whose semantics moved under it, a `[Test]` that is not public - would otherwise
+ * be found the day someone finally provisions an Editor, or never. It does NOT
+ * promote the Unity row: `NUnitShim.cs` is not Unity's nunit.framework and
+ * `UnityEngineShim.cs` is not Unity's API, so `verify_unity_editor_tests.mjs`
+ * remains the only authority on an in-Editor result.
  */
 
 import fs from 'node:fs';
@@ -44,6 +57,13 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import {
+  declaredFixtureAttributeCount,
+  declaredFixtures,
+  declaredTestCount,
+  editModeTestDir,
+  editModeTestSources
+} from './helpers/editmode_fixtures.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,19 +87,25 @@ const CSHARP_PROJECT = path.join(REPO, 'packages/adapters/csharp/FearAI.Client.c
 const UNITY_SHIM = path.join(__dirname, 'unity', 'UnityEngineShim.cs');
 
 /**
- * The slice of NUnit the Unity EditMode tests use.
+ * The slice of NUnit the Unity EditMode tests use, and the runner that executes
+ * them against it.
  *
  * The tests themselves live in the package (`packages/adapters/unity/Tests/
  * EditMode`) so the Editor can run them. `verify_unity_editor_tests.mjs` runs them
  * for real when an Editor exists; on a machine without one it SKIPS, and without
- * this shim those tests would then be neither run NOR compiled - i.e. shipped
- * unread by a compiler, which is the exact weakness this whole file exists to
- * remove. So they are compiled here against the same UnityEngine shim plus a
- * minimal NUnit surface, and only their EXECUTION is left to the Editor.
+ * these two files the fixtures would then be neither run NOR compiled - i.e.
+ * shipped unread by a compiler, which is the exact weakness this whole file exists
+ * to remove. So they are compiled here against the same UnityEngine shim plus a
+ * minimal NUnit surface, and now also EXECUTED against them. An in-Editor result
+ * stays the Editor's to produce.
  */
 const NUNIT_SHIM = path.join(__dirname, 'unity', 'NUnitShim.cs');
-const UNITY_TEST_DIR = path.join(REPO, 'packages/adapters/unity/Tests/EditMode');
-const UNITY_TEST_SOURCES = fs.readdirSync(UNITY_TEST_DIR).filter((f) => f.endsWith('.cs'));
+const NUNIT_RUNNER = path.join(__dirname, 'unity', 'NUnitTestRunner.cs');
+// The roster and the test count come from the test SOURCES through a helper shared
+// with `verify_unity_editor_tests.mjs`, so the outside-Editor run and the in-Editor
+// run cannot hold different ideas of which fixtures exist.
+const UNITY_TEST_DIR = editModeTestDir(REPO);
+const UNITY_TEST_SOURCES = editModeTestSources(REPO);
 
 /** The control-plane files this check compiles. Named explicitly so the scope
  * cannot widen silently into files the stubs do not cover. */
@@ -111,17 +137,22 @@ const CSPROJ = `<Project Sdk="Microsoft.NET.Sdk">
 </Project>
 `;
 
+// An EXECUTABLE, not a library: the point of Section C is that the fixtures run.
 const TESTS_CSPROJ = `<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-    <AssemblyName>UnityEditModeTestsCompileCheck</AssemblyName>
+    <AssemblyName>UnityEditModeFixtureRun</AssemblyName>
+    <StartupObject>FearAI.EditModeFixtureRunner.Program</StartupObject>
+    <NoWarn>CS0649;CS0414;CS0169</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="UnityEngineShim.cs" />
     <Compile Include="NUnitShim.cs" />
+    <Compile Include="NUnitTestRunner.cs" />
     <Compile Include="Adapter/**/*.cs" />
     <Compile Include="Tests/**/*.cs" />
   </ItemGroup>
@@ -129,6 +160,10 @@ const TESTS_CSPROJ = `<Project Sdk="Microsoft.NET.Sdk">
 `;
 
 let checks = 0;
+// Filled in by Section C so the closing summary can quote what actually ran rather
+// than a number written by hand — the previous form printed a count that stayed
+// correct only as long as nobody changed the fixtures.
+let editModeRun = { fixtures: 0, declared: 0, ran: 0 };
 function check(label, cond, detail = '') {
   if (!cond) throw new Error(`FAIL: ${label}${detail ? ` — ${detail}` : ''}`);
   checks += 1;
@@ -136,22 +171,23 @@ function check(label, cond, detail = '') {
 }
 
 /**
- * Compile the Unity EditMode tests. NOTHING IS EXECUTED HERE.
+ * Compile the Unity EditMode fixtures AND run them against the shims.
  *
- * The tests are compiled against a shim, so a pass proves the test code is valid
- * C# against the surfaces it names - not that the assertions are correct, not
- * that the fixtures would pass, and not that Unity's NUnit behaves like the shim.
- * The report says so on the way out, because a compile gate that reads like a test
- * run is worse than no gate at all.
+ * A pass proves the fixtures' own bodies execute and assert successfully against
+ * this repository's implementations of UnityEngine and NUnit. It does not prove
+ * Unity's NUnit or Unity's API behave the same way, and the report says so on the
+ * way out, because a shim run that reads like an Editor run would be worse than no
+ * run at all.
  */
-function compileUnityEditModeTests() {
-  console.log('--- Section C: Unity EditMode tests (compiled, not executed) ---');
+function runUnityEditModeFixtures() {
+  console.log('--- Section C: Unity EditMode fixtures (compiled AND executed against the shims) ---');
 
   check('EditMode test sources exist', UNITY_TEST_SOURCES.length >= 3,
     `found ${UNITY_TEST_SOURCES.length} in ${path.relative(REPO, UNITY_TEST_DIR)}`);
   check('the test assembly definition is present',
     fs.existsSync(path.join(UNITY_TEST_DIR, 'FearAI.EditModeTests.asmdef')));
   check('an NUnit shim is available to compile against', fs.existsSync(NUNIT_SHIM));
+  check('the fixture runner is available to execute them', fs.existsSync(NUNIT_RUNNER));
 
   const asmdef = JSON.parse(fs.readFileSync(path.join(UNITY_TEST_DIR, 'FearAI.EditModeTests.asmdef'), 'utf8'));
   // These two are what make the tests exist for the Editor at all: without the
@@ -169,10 +205,25 @@ function compileUnityEditModeTests() {
     Array.isArray(asmdef.includePlatforms) && asmdef.includePlatforms.includes('Editor') && asmdef.includePlatforms.length === 1,
     JSON.stringify(asmdef.includePlatforms));
 
+  const fixtureRoster = declaredFixtures(REPO);
+  const declaredTests = declaredTestCount(REPO);
+  const attributeCount = declaredFixtureAttributeCount(REPO);
+  check('every [TestFixture] attribute pairs with a class declaration',
+    fixtureRoster.length === attributeCount,
+    `${attributeCount} attribute(s) but ${fixtureRoster.length} class declaration(s) parsed`);
+  // Floors, not targets. They ratchet against a fixture or a test disappearing
+  // quietly; the equalities below are what make the run's count mean something.
+  // Raise them when coverage grows — lowering one is a decision, not maintenance.
+  check('the fixtures still cover what the ledger claims',
+    fixtureRoster.length >= 5 && declaredTests >= 40,
+    `${fixtureRoster.length} fixture(s) and ${declaredTests} [Test] method(s) declared`);
+  console.log(`  Declared by the sources: ${fixtureRoster.length} fixture(s), ${declaredTests} [Test] method(s)`);
+
   const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'fearai-unity-tests-'));
   try {
     fs.copyFileSync(UNITY_SHIM, path.join(scratch, 'UnityEngineShim.cs'));
     fs.copyFileSync(NUNIT_SHIM, path.join(scratch, 'NUnitShim.cs'));
+    fs.copyFileSync(NUNIT_RUNNER, path.join(scratch, 'NUnitTestRunner.cs'));
     fs.writeFileSync(path.join(scratch, 'Scratch.csproj'), TESTS_CSPROJ);
     fs.mkdirSync(path.join(scratch, 'Adapter'));
     fs.mkdirSync(path.join(scratch, 'Tests'));
@@ -183,7 +234,7 @@ function compileUnityEditModeTests() {
       fs.copyFileSync(path.join(UNITY_TEST_DIR, file), path.join(scratch, 'Tests', file));
     }
 
-    const build = spawnSync('dotnet', ['build', '-v', 'q', '--nologo'], {
+    const build = spawnSync('dotnet', ['build', '-c', 'Release', '-v', 'q', '--nologo'], {
       cwd: scratch,
       encoding: 'utf8',
       timeout: 240000
@@ -193,17 +244,70 @@ function compileUnityEditModeTests() {
     check('the EditMode tests compile with zero errors', build.status === 0 && errors.length === 0,
       errors.slice(0, 8).join(' | ') || `dotnet exited ${build.status}`);
 
-    // A compile that silently picked up no test files would "succeed" while
-    // checking nothing, so the built assembly's type names are read back out of
-    // the intermediate output rather than trusted.
-    const compiled = fs.existsSync(path.join(scratch, 'bin'));
-    check('the test project really produced output (not a no-op build)', compiled);
+    const runnerDll = path.join(scratch, 'bin', 'Release', 'net8.0', 'UnityEditModeFixtureRun.dll');
+    check('the build produced a runnable fixture runner, not just an assembly on disk',
+      fs.existsSync(runnerDll), runnerDll);
+
+    // BEFORE the fixtures run, the runner must show it can report a failure. A
+    // runner that swallows exceptions prints the same green summary as a perfectly
+    // correct suite, so its ability to go red is the precondition for reading
+    // "0 failed" as a result rather than an absence of one.
+    const selfTest = spawnSync('dotnet', [runnerDll, '--selftest'], {
+      encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout: 120000
+    });
+    check('the runner distinguishes a pass, an assertion failure, an exception and an [Ignore]',
+      selfTest.status === 0,
+      `${selfTest.stdout || ''}${selfTest.stderr || ''}`.trim().split(/\r?\n/).slice(-4).join(' | '));
+
+    const resultsPath = path.join(scratch, 'editmode-fixtures.json');
+    const run = spawnSync('dotnet', [runnerDll, '--json', resultsPath], {
+      encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, timeout: 300000
+    });
+    const runOutput = `${run.stdout || ''}${run.stderr || ''}`;
+    check('the runner wrote its own machine-readable result', fs.existsSync(resultsPath));
+
+    const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+
+    // Printed BEFORE the checks, and individually. A count mismatch is the symptom
+    // and the refusal is the cause, so a reader must see the cause even when an
+    // earlier check is the one that fails; a one-line "32 vs 41" would send them to
+    // build the project by hand to find out which fixture went missing.
+    const failingCases = results.tests.filter((test) => test.outcome === 'failed');
+    for (const test of failingCases) console.log(`      FAILED  ${test.fixture}.${test.name}\n              ${test.message}`);
+    for (const refusal of results.structuralRefusals) console.log(`      REFUSED ${refusal}`);
+
+    // The two checks that make a green count trustworthy: the run has to account for
+    // exactly the tests the SOURCES declare, and for exactly the fixtures they
+    // declare. A runner that discovered 39 of 41 tests and printed "39 passed" would
+    // otherwise be indistinguishable from the real thing.
+    check('the run accounts for every [Test] method the sources declare, and no more',
+      results.total === declaredTests, `${results.total} case(s) ran vs ${declaredTests} declared`);
+    const ranFixtures = results.fixtures.map((name) => name.split('.').pop()).sort();
+    const wantedFixtures = fixtureRoster.map((fixture) => fixture.name).sort();
+    check('the fixture roster the runner found is the roster the sources declare',
+      JSON.stringify(ranFixtures) === JSON.stringify(wantedFixtures),
+      `ran [${ranFixtures.join(', ')}] vs declared [${wantedFixtures.join(', ')}]`);
+    check('every fixture case that ran passed',
+      results.failed === 0 && results.structuralRefusals.length === 0,
+      [...results.structuralRefusals,
+        ...failingCases.map((test) => `${test.fixture}.${test.name}: ${test.message}`)]
+        .slice(0, 5).join(' | '));
+    check('no fixture case was skipped, so the count is not padded by ignores',
+      results.ignored === 0, `${results.ignored} ignored`);
+    // Last, because it is a statement about the runner's own signalling rather than
+    // about the fixtures, and it must agree with what the JSON already said.
+    check('the fixture run exits 0, agreeing with the result it wrote',
+      run.status === 0, runOutput.trim().split(/\r?\n/).slice(-6).join(' | ') || `dotnet exited ${run.status}`);
+
+    editModeRun = { fixtures: fixtureRoster.length, declared: declaredTests, ran: results.total };
   } finally {
     fs.rmSync(scratch, { recursive: true, force: true });
   }
 
-  console.log(`  Scope: compiling [${UNITY_TEST_SOURCES.join(', ')}] against the shims`);
-  console.log('  These tests are COMPILED here and not executed; execution needs an Editor.');
+  console.log(`  Scope: compiling and RUNNING [${UNITY_TEST_SOURCES.join(', ')}] against the shims`);
+  console.log('  NOT an Editor result: the shims are this repository\'s implementations of UnityEngine');
+  console.log('  and NUnit, so `npm run verify:unity-editor` remains the only authority on what');
+  console.log('  Unity itself does with these fixtures, and the ledger keeps the Editor qualifier.');
 }
 
 function compileCsharpClient() {
@@ -234,8 +338,19 @@ function main() {
 
   const dotnet = spawnSync('dotnet', ['--version'], { encoding: 'utf8' });
   if (dotnet.error || dotnet.status !== 0) {
-    console.log('SKIPPED: dotnet is not on PATH, so neither .NET adapter could be compiled.');
-    console.log('Both remain verified statically only on this machine - not a pass.\n');
+    // Named as SKIPPED so the probe runner treats it as NOT PROVEN rather than as a
+    // pass, and so CI's FEAR_AI_EXPECT_PROVEN can promote it to a failure. That
+    // declaration is what stops a runner that lost its .NET SDK from reporting the
+    // same green suite as one that has it, with 41 Unity fixture cases unexecuted.
+    console.log('SKIPPED: dotnet is not on PATH, so neither .NET adapter could be compiled,');
+    console.log('the Unity EditMode fixtures could not be COMPILED OR RUN, and no Unity');
+    console.log('behaviour outside the Editor was proven on this machine.');
+    console.log('');
+    console.log('  CI declares this runtime proven (`FEAR_AI_EXPECT_PROVEN` names');
+    console.log('  `verify_dotnet_adapters_compile`, and the runner image ships the .NET SDK), so a');
+    console.log('  SKIPPED line there is an environment defect and fails the job instead of');
+    console.log('  reporting green.');
+    console.log('');
     return;
   }
   console.log(`dotnet ${String(dotnet.stdout).trim()} detected.\n`);
@@ -283,16 +398,18 @@ function main() {
   }
 
   console.log('');
-  compileUnityEditModeTests();
+  runUnityEditModeFixtures();
   console.log('');
   compileCsharpClient();
 
   console.log('============================================================');
-  console.log(`SUCCESS: both .NET adapters and the Unity EditMode tests compile (${checks} checks).`);
+  console.log(`SUCCESS: both .NET adapters compile and the Unity EditMode fixtures RUN (${checks} checks).`);
   console.log(`Unity files: ${CONTROL_PLANE_SOURCES.join(', ')} against the shared UnityEngine shim.`);
-  console.log('Scope: compilation only. Unity editor behaviour and FearAgent/HUD remain unverified.');
-  console.log('The EditMode tests are COMPILED here; whether they PASS is an Editor question,');
-  console.log('answered by `npm run verify:unity-editor` (which SKIPS without an Editor).');
+  console.log('The EditMode fixtures are executed here against the shims, so a body that can never');
+  console.log(`pass is caught without an Editor (${editModeRun.ran} case(s) over ${editModeRun.fixtures} fixture(s)).`);
+  console.log('Scope: Unity Editor behaviour, the player scripting profile and FearAgent/HUD remain');
+  console.log('unverified, and `npm run verify:unity-editor` (which SKIPS without an Editor) stays');
+  console.log('the only authority on what Unity itself does with these fixtures.');
   console.log('============================================================\n');
 }
 

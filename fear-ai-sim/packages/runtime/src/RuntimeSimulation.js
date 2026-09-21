@@ -14,7 +14,8 @@ import {
     RelationshipTensorSystem,
     SocialEventEngine,
     SOCIAL_EVENTS,
-    HostTimeDiscipline
+    HostTimeDiscipline,
+    InformationPropagationEngine
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -84,6 +85,25 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         });
         // NEXT-176: last contagion evaluation per agent for off-tick reuse.
         this.lastContagion = new Map();
+        // Registration-order component of each agent's fallback RNG seed. Scoped
+        // to this instance, so a run is reproducible from `seed` alone.
+        this._agentRngCounter = 0;
+        // RELEASE-SURFACE §3: the information-propagation module is the first
+        // optional system to JOIN the runtime surface, on the four-condition
+        // policy. It is opt-in (absent means `null`, so the default path is the
+        // same object graph it was before this existed), it is advanced once per
+        // tick so it is a live service rather than an object a caller happens to
+        // hold, and it is ADVISORY: it never reads or writes an agent's affect,
+        // never contributes to fear, and never mutates host state. Its own RNG is
+        // seeded from the simulation seed, so it consumes nothing from
+        // `this.rng` and cannot perturb determinism of the affect path.
+        this.enableInformationPropagation = options.enableInformationPropagation ?? false;
+        this.informationPropagation = this.enableInformationPropagation
+            ? new InformationPropagationEngine(
+                options.informationPropagationConfig || {},
+                (this.seed ^ 0x9e3779b9) >>> 0
+            )
+            : null;
         this.tickCount = 0;
     }
 
@@ -105,8 +125,17 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             return existing;
         }
 
+        // Determinism: the agent's fallback RNG seed is derived from THIS
+        // simulation's seed and this agent's registration order, not from the
+        // process-wide counter in AffectiveAgent. Two RuntimeSimulations with the
+        // same seed must produce bit-identical agents even when they are built in
+        // the same process and in either order; relying on the module counter made
+        // that false (`a#0` here, `a#1` there). A host that supplies its own seed
+        // still wins.
+        const agentSeed = options.seed ?? `${id}#${this.seed}#${this._agentRngCounter++}`;
         const agent = new AffectiveAgent(id, traits, {
             ...options,
+            seed: agentSeed,
             rng: () => this.rng.random()
         });
 
@@ -122,6 +151,10 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         if (this.enableCoreTrauma && !this.coreTrauma.agentRecords.has(id)) {
             this.coreTrauma.registerAgent(id, traits);
         }
+        // Opt-in information propagation tracks the roster the same way: a
+        // registered agent joins the listening network, so the service cannot
+        // drift out of sync with the agent set it describes.
+        if (this.informationPropagation) this.informationPropagation.registerAgent(id);
         return agent;
     }
 
@@ -143,7 +176,56 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         this.coreTrauma.phobicRegistry.agentPhobias.delete(id);
         this.lastContagion.delete(id);
         if (this.enableSocial) this.social.purgeAgent(id);
+        // Same reason the contagion cache is dropped: a departed agent must not
+        // keep receiving information, and must not accumulate in a long world.
+        if (this.informationPropagation) this.informationPropagation.removeAgent(id);
         return this.agents.delete(id);
+    }
+
+    /**
+     * Host-facing entry point for the opt-in information-propagation service.
+     *
+     * Refuses rather than silently no-oping when the service is not enabled: a
+     * host that believes it is injecting rumours into a channel that does not
+     * exist would otherwise read the empty result as "nobody believed it".
+     *
+     * @param {string} topic one of PROPAGATED_RUMOR_TOPICS
+     * @param {string} claim
+     * @param {string} originId
+     * @param {object} [options]
+     * @returns {string} the new rumor id
+     */
+    injectRumor(topic, claim, originId, options = {}) {
+        if (!this.informationPropagation) {
+            throw new Error('INFORMATION_PROPAGATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableInformationPropagation: true to inject rumors.');
+        }
+        // The roster is the runtime's, not the service's. The engine's own
+        // `injectRumor` registers an unknown origin as a convenience for its
+        // standalone scenarios, which here would resurrect an agent that was
+        // deliberately retired — so the runtime refuses instead.
+        if (!this.agents.has(String(originId))) {
+            throw new Error(`UNKNOWN_AGENT: ${originId} is not registered, so it cannot originate a rumor.`);
+        }
+        return this.informationPropagation.injectRumor(topic, claim, originId, options);
+    }
+
+    /** Host-validated truth about a rumor, which penalizes a wrong origin. */
+    correctRumor(rumorId, truthful) {
+        if (!this.informationPropagation) {
+            throw new Error('INFORMATION_PROPAGATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableInformationPropagation: true to correct rumors.');
+        }
+        return this.informationPropagation.correctRumor(rumorId, truthful);
+    }
+
+    /**
+     * Advisory read: what an agent currently believes, richest first. Empty when
+     * the service is off, which is a statement about the service rather than
+     * about the agent — hence the explicit null check upstream.
+     */
+    propagatedInformation(agentId) {
+        return this.informationPropagation ? this.informationPropagation.heldBy(agentId) : [];
     }
 
     /**
@@ -243,7 +325,12 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
 
         if (this.enableContagion || this.enablePacing) {
             for (const agent of this.agents.values()) {
-                const isPanicking = agent.fearCore.state === 'PANIC' || agent.currentFear > 0.8;
+                // One definition, in FearCore: band PANIC, or normalized fear at
+                // or above the band's own DERIVED onset. This used to be the
+                // literal `> 0.8` while the band flipped at 0.9048, so a source
+                // labelled ANXIOUS transmitted at panic strength for a tenth of
+                // the fear range. See `isPanicClass`.
+                const isPanicking = agent.panicClass;
                 const isScreaming = agent.lastResult?.audio_hints?.vocalization_hint === 'SCREAM';
                 peers.push({
                     id: agent.id,
@@ -347,7 +434,7 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             // NOW-13: trauma recording. A fresh panic episode incurs one
             // acute trauma; the engine lifecycle runs below. Panic read from
             // post-tick agent state, same as the peer survey above.
-            const agentPanicking = agent.fearCore.state === 'PANIC' || agent.currentFear > 0.8;
+            const agentPanicking = agent.panicClass;
             if (this.enableCoreTrauma && agentPanicking) {
                 // coreRec is the pre-tick record (incur auto-registers, so a
                 // missing record here means the engine is disabled mid-run).
@@ -361,6 +448,11 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 }
             }
         }
+        // Opt-in information propagation advances once per tick, after the agents
+        // have been ticked for this frame. It runs on the wall-clock tick rather
+        // than on a cadence because it is off by default and its cost is paid only
+        // by a host that asked for it; a cadence can be added if a host needs one.
+        if (this.informationPropagation) this.informationPropagation.advanceTick();
         // NEXT-20: trauma-to-behavior feedback. The engine lifecycle runs
         // first; then crystallized trait drift syncs back onto live agents
         // (their own fear machinery responds: higher N, lower R), the

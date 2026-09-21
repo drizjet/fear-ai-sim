@@ -31,7 +31,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { DEFAULT_FEARCORE_CONFIG } from '../../packages/core/src/FearCore.js';
+import { DEFAULT_FEARCORE_CONFIG, FEAR_SCALE, panicOnsetRawFear } from '../../packages/core/src/FearCore.js';
 import { DEFAULT_HABITUATION_CONFIG } from '../../packages/core/src/HabituationSystem.js';
 import { ACTION_INTENTS } from '../../packages/core/src/IntentResolver.js';
 
@@ -95,7 +95,16 @@ export function generate() {
     const intentSrc = readRepo(SOURCE_INTENT_RESOLVER);
 
     // --- Derived numbers (source of truth: the canonical JS core) -----------
-    const fearScale = mustMatch(agentSrc, /normalizedFear \* ([0-9.]+)/, 'AffectiveAgent._fearScale');
+    // The scale is read as the EXPORTED CONSTANT rather than scraped out of the
+    // `_fearScale` expression. Scraping a literal worked only while that
+    // expression contained one; the moment it named the constant instead, the
+    // anchor was lost — which is the failure this generator is supposed to make
+    // loud, and did. Importing is also the point of exporting it: the generated
+    // artifact and the runtime now read one number.
+    const fearScale = FEAR_SCALE;
+    // Emitted so the fallback's own banding cannot disagree with the runtime about
+    // where panic begins. Derived from `enter.PANIC`, never restated.
+    const panicOnset = panicOnsetRawFear();
     const fearStepUp = mustMatch(agentSrc, /this\.currentFear \+ ([0-9.]+)/, 'AffectiveAgent fear integration step');
     const enter = DEFAULT_FEARCORE_CONFIG.enter;
     const exit = DEFAULT_FEARCORE_CONFIG.exit;
@@ -156,6 +165,10 @@ extends RefCounted
 
 # --- Scale and integration (AffectiveAgent) --------------------------------
 const FEAR_SCALE := ${num(fearScale)}
+# Normalized fear at which the PANIC band is entered, DERIVED in the JS core as
+# enter.PANIC / FEAR_SCALE. Emitted rather than recomputed so a GDScript
+# fallback cannot pick its own onset.
+const PANIC_ONSET_RAW_FEAR := ${num(panicOnset)}
 const FEAR_STEP_UP := ${num(fearStepUp)}
 
 # --- Core band thresholds (FearCore.config) --------------------------------

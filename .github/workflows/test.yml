@@ -23,10 +23,15 @@ name: Fear-AI CI
 #        would all report SKIPPED, so the job would look the same while proving
 #        less. The runner reports each probe's own SKIPPED lines as NOT PROVEN
 #        rather than counting them as passes, and FEAR_AI_EXPECT_PROVEN turns a
-#        skip in one of the three in-engine probes into a failure — because this
-#        job fetches the pinned Godot 4.6 binary (tools/ci/fetch_godot.ps1), so an
-#        in-engine skip here means the environment lost something, not that the
-#        claim was never checkable.
+#        skip in a declared-runtime probe into a **failure** — for the three
+#        in-engine probes, because this job fetches the pinned Godot 4.6 binary
+#        (tools/ci/fetch_godot.ps1); for the cross-language signing probe, because
+#        the step below installs its Python backend; and for the .NET probe,
+#        because the runner image ships the .NET SDK. That last declaration is what
+#        makes the Unity EditMode fixtures EXECUTE here rather than only compile:
+#        without it, a runner that quietly lost its SDK would report the same suite
+#        summary as one that had it. A SKIPPED line in any of them means the
+#        environment lost something, not that the claim was never checkable.
 #
 #   probe-stability (windows, with install) — nightly and on demand only
 #     4. the same probe suite run repeatedly (`npm run verify:probe-stability`),
@@ -92,12 +97,30 @@ name: Fear-AI CI
 # The `run:` commands below are asserted against an allowlist in
 # tools/guardian/hard-rule-9.mjs, so adding a step that cannot pass fails the
 # integrity job instead of quietly turning CI red again.
+#
+# The triggers are asserted too, because a filter here removes checks SILENTLY.
+# `pull_request.branches` is matched against a pull request's BASE branch, not its
+# head, so `pull_request: branches: [main, master]` — what this file declared until
+# 2026-09-21 — gave every pull request opened against another branch NO RUN AT ALL:
+# no failure, no skipped job, no check run, and a pull request page indistinguishable
+# from one whose checks are still queueing. It was found by opening a stacked pull
+# request and noticing the absence, which is not a detection mechanism. The pull
+# request trigger is therefore deliberately unfiltered — every base branch, every
+# default activity type — and `push` keeps its default-branch filter, so a feature
+# branch is reviewed once instead of built twice. Both halves are asserted by
+# `every-pull-request-gets-a-run` in tools/guardian/hard-rule-9.mjs, so re-adding a
+# filter fails the integrity job instead of quietly hollowing it out.
+#
+# Retargeting a pull request's base does not re-fire this workflow either, because
+# `edited` is not one of the default `pull_request` activity types. That is why the
+# absence above was easy to miss, and why the trigger is unfiltered rather than
+# relying on a re-run: the commit is verified when the pull request opens or
+# synchronizes, on whatever base it was opened against.
 
 on:
   push:
     branches: [ main, master ]
   pull_request:
-    branches: [ main, master ]
   schedule:
     # 04:00 UTC daily. See the probe-stability job below for why determinism is
     # checked on a clock rather than on every push.
@@ -162,9 +185,16 @@ jobs:
     # probes need, so a SKIPPED line there is an environment defect rather than an
     # honest limitation, and the runner fails instead of reporting green.
     # (`transport_signing` also needs `python`, which the runner image provides.)
+    #
+    # `verify_dotnet_adapters_compile` is declared for the same reason and it is the
+    # one that matters for Unity: that probe COMPILES AND RUNS the package's EditMode
+    # fixtures against the shims, so without this declaration a runner with no .NET
+    # SDK would report a green suite while the 41 fixture cases had not executed at
+    # all. `verify:hard-rule-9` asserts that every name in this list still matches a
+    # probe that exists, because a declaration that matches nothing is inert.
     - name: Run the deterministic probe suite
       env:
-        FEAR_AI_EXPECT_PROVEN: store_encryption,host_token_persistence,transport_signing
+        FEAR_AI_EXPECT_PROVEN: store_encryption,host_token_persistence,transport_signing,verify_dotnet_adapters_compile
       run: npm run verify:probes -- --json probe_suite_report.json
       working-directory: fear-ai-sim
 
@@ -216,9 +246,14 @@ jobs:
       run: pwsh -File tools/ci/fetch_godot.ps1
       working-directory: fear-ai-sim
 
+    # The same declarations as the per-push job, and the same reason: this is where a
+    # runtime that went missing between pushes would otherwise go unnoticed for as long
+    # as nobody pushed. It also re-executes the Unity EditMode fixtures three times on a
+    # clock, which is the only thing that would show a fixture body that is
+    # intermittently wrong rather than wrong every time.
     - name: Run the probe suite repeatedly
       env:
-        FEAR_AI_EXPECT_PROVEN: store_encryption,host_token_persistence,transport_signing
+        FEAR_AI_EXPECT_PROVEN: store_encryption,host_token_persistence,transport_signing,verify_dotnet_adapters_compile
       run: npm run verify:probe-stability -- --json probe_stability_report.json
       working-directory: fear-ai-sim
 

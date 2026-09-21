@@ -72,6 +72,60 @@ export const DEFAULT_FEARCORE_CONFIG = Object.freeze({
     })
 });
 
+/**
+ * The normalized-to-core fear scale.
+ *
+ * `AffectiveAgent` feeds `currentFear * FEAR_SCALE` (plus trauma bias) into this
+ * state machine, so the band thresholds above are expressed on that scale while
+ * everything a host sees — and every contagion source tier — is in normalized
+ * [0, 1] terms. Exported so the two representations cannot drift: the normalized
+ * onset of PANIC is DERIVED from `enter.PANIC` below rather than restated as a
+ * literal somewhere else.
+ */
+export const FEAR_SCALE = 4.2;
+
+/**
+ * Normalized raw fear at which the PANIC band is entered, for a given config.
+ * With the defaults this is `3.8 / 4.2 = 0.9048`.
+ */
+export function panicOnsetRawFear(enterConfig = DEFAULT_FEARCORE_CONFIG.enter) {
+    const threshold = Number(enterConfig?.PANIC);
+    return Number.isFinite(threshold) && threshold > 0 ? threshold / FEAR_SCALE : 1;
+}
+
+/**
+ * The ONE definition of "this agent is in the panic class" — the states that
+ * transmit fear at panic strength and that count as a panicking episode for
+ * trauma recording.
+ *
+ * It used to be three literals that disagreed with each other and with the band
+ * they were describing:
+ *   - `fearCore.state === 'PANIC' || currentFear > 0.8` in `RuntimeSimulation`,
+ *     twice (the peer snapshot and the trauma recorder);
+ *   - `fearBand === 'PANIC' || fear >= 0.70` in `GroupContagionSystem`.
+ *
+ * The band's own PANIC onset is `3.8 / 4.2 = 0.9048` normalized, so the 0.8
+ * override declared an agent panicking across a tenth of the fear range BEFORE
+ * its band agreed: a source still labelled ANXIOUS transmitted at panic strength,
+ * and 0.70 disagreed with both. Two independent classifications of one concept
+ * is the defect; the fix is not to pick one of the three numbers but to have one.
+ *
+ * Band-first with a DERIVED threshold:
+ *   - the core band `PANIC`, or
+ *   - normalized fear at or above `panicOnsetRawFear`, which is what catches the
+ *     EXTENDED bands reached from PANIC (FREEZE, HIDE, PRESENCE_BREAK, ...) whose
+ *     own names do not contain the word `panic`.
+ *
+ * Because the threshold is derived from the same config the band uses, a custom
+ * `enter.PANIC` moves both together and they cannot disagree by a hand-written
+ * margin.
+ */
+export function isPanicClass({ fearBand, rawFear } = {}, enterConfig = DEFAULT_FEARCORE_CONFIG.enter) {
+    if (fearBand === 'PANIC') return true;
+    const fear = Number(rawFear);
+    return Number.isFinite(fear) && fear >= panicOnsetRawFear(enterConfig);
+}
+
 const finite = (val, fallback) => (Number.isFinite(val) ? val : fallback);
 
 export class FearCore {

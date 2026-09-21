@@ -74,8 +74,21 @@ const currentSurfaces = [
     // would overstate, and an Editor gap without the behaviour claim would
     // understate what is now actually executed.
     ['docs/CURRENT_TRUTH_LEDGER.md', '`BEHAVIOR_VERIFIED_OUTSIDE_EDITOR`, `IMPLEMENTED_NOT_EDITOR_VERIFIED`'],
-    ['docs/CURRENT_TRUTH_LEDGER.md', 'MonoBehaviour lifecycle is invoked by the harness rather than by the engine'],
+    // The lifecycle qualifier CHANGED SHAPE rather than disappeared. It used to be
+    // "nothing calls these bodies"; now the bodies run in Unity's order and the limit is
+    // the timing. Both halves are pinned, because either one alone would be a false
+    // claim: the first without the second overstates what a shim run proves, and the
+    // second without the first understates what is now executed.
+    ['docs/CURRENT_TRUTH_LEDGER.md', "the shim drives the lifecycle bodies in Unity's order"],
+    ['docs/CURRENT_TRUTH_LEDGER.md', 'WHEN Unity calls them is still an Editor question'],
+    ['tools/verification/unity/UnityEngineShim.cs', 'WHAT IS NOT MODELLED, and is therefore still an Editor question'],
+    ['tools/verification/unity/UnityBehaviorHarness.cs', '`UnityLifecycle` runs Awake then OnEnable, Start once'],
     ['docs/CURRENT_TRUTH_LEDGER.md', 'reports `SKIPPED`, not `PASS`, when `dotnet` is absent'],
+    // A declared runtime is the difference between "the fixtures ran in CI" and "CI did
+    // not say they did not run". The declaration and the check that keeps it live are
+    // both pinned, because a declaration that matches no probe is inert.
+    ['docs/CURRENT_TRUTH_LEDGER.md', 'Both Windows jobs now declare `verify_dotnet_adapters_compile` in `FEAR_AI_EXPECT_PROVEN`'],
+    ['docs/SYSTEM_MAP.md', 'asserts that every declared name still matches a probe that **exists**'],
     ['docs/CURRENT_TRUTH_LEDGER.md', 'the shim is an implementation rather than Unity\'s own API'],
     ['docs/RELEASE_SURFACE.md', 'It does not close the Unity Editor gap'],
     // Credential lifetime, gated destruction, and what ownership is NOT. These
@@ -378,6 +391,8 @@ const signingProbe = 'tools/verification/verify_transport_signing.mjs';
 const timelineProbe = 'tools/verification/verify_dashboard_endpoints.mjs';
 const fuzzProbe = 'tools/verification/verify_fuzz_arbitration.mjs';
 const unityEditorProbe = 'tools/verification/verify_unity_editor_tests.mjs';
+const unityFixtureRunner = 'tools/verification/unity/NUnitTestRunner.cs';
+const editModeFixtureHelper = 'tools/verification/helpers/editmode_fixtures.mjs';
 
 includes('docs/CURRENT_TRUTH_LEDGER.md', signingRecord);
 includes('docs/RELEASE_SURFACE.md', signingRecord);
@@ -427,7 +442,7 @@ includes(fuzzProbe, 'a different seed produces a different sequence');
 // NOT a pass. The gate must exist, must skip with a reason, must fail on zero
 // tests executed, and must be declared as not promoting the adapter anywhere it
 // is mentioned - otherwise the next reader promotes Unity on the strength of a
-// test project that has never been run.
+// test project that has only ever been run against a shim.
 // ---------------------------------------------------------------------------
 includes('package.json', 'verify:unity-editor');
 includes(unityEditorProbe, 'SKIPPED: no Unity Editor found');
@@ -436,10 +451,25 @@ includes(unityEditorProbe, 'FEAR_AI_UNITY_REQUIRED');
 includes('docs/CURRENT_TRUTH_LEDGER.md', 'no Editor has run these tests here');
 includes('docs/RELEASE_SURFACE.md', 'the Unity row keeps `IMPLEMENTED_NOT_EDITOR_VERIFIED`');
 includes('docs/RELEASE_CANDIDATE_CERTIFICATION.md', 'This row does not promote the Unity adapter');
-includes('docs/RELEASE_CANDIDATE_CERTIFICATION.md', 'compiled and *not executed*');
-// The compile gate must keep saying that it compiles these tests rather than
-// running them; a compile gate that reads like a test run is worse than none.
-includes('tools/verification/verify_dotnet_adapters_compile.mjs', 'COMPILED here and not executed');
+// The EditMode fixtures now RUN outside the Editor, against the shims, and the risk
+// has changed shape rather than gone away: it used to be that a compile gate could
+// be read as a test run, and now it is that a shim run could be read as an in-Editor
+// run. So three things are asserted rather than one — that the fixtures run, that
+// what ran is checked against what the sources declare, and that none of it is
+// reported as an Editor result.
+includes('docs/RELEASE_CANDIDATE_CERTIFICATION.md', 'compiled and run against the shims');
+includes('docs/CURRENT_TRUTH_LEDGER.md', 'a green EditMode run remains a **future** result');
+includes('tools/verification/verify_dotnet_adapters_compile.mjs', 'and the Unity EditMode fixtures RUN');
+includes('tools/verification/verify_dotnet_adapters_compile.mjs', 'NOT an Editor result');
+// The runner has to say the same thing from its own side, because it is the file a
+// reader reaches for when they want to know what the run actually did.
+includes(unityFixtureRunner, 'does NOT close the Editor gap and must never be reported as if it did');
+// And the roster has to stay DERIVED. A hand-written list beside the tests is what
+// let the Editor gate omit `FearEncryptedStoreEditModeTests` and still pass, so the
+// shared helper is asserted to exist and both probes to read it.
+includes(editModeFixtureHelper, 'export function declaredFixtures');
+includes(unityEditorProbe, "from './helpers/editmode_fixtures.mjs'");
+includes('tools/verification/verify_dotnet_adapters_compile.mjs', "from './helpers/editmode_fixtures.mjs'");
 // And the EditMode assembly must stay out of a player build.
 includes('packages/adapters/unity/Tests/EditMode/FearAI.EditModeTests.asmdef', 'UNITY_INCLUDE_TESTS');
 console.log('  * Transport signing, identity timeline, arbitration fuzz and the Unity Editor gate are bounded and their limits stated: PASS');

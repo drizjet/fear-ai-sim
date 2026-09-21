@@ -29,6 +29,10 @@
  *   * the server runs with `--signature-policy=required`, which constrains only
  *     sessions that have registered a key: phases 1-2 are the control that this
  *     policy does not lock anyone else out, and phase 3 is the point of it.
+ *   * the adapter's lifecycle bodies are executed by the shim's `UnityLifecycle`, so
+ *     `OnEnable`, `Start`, `Update`, `OnDisable` and `OnDestroy` are no longer shipped
+ *     unexecuted: before it, only `Awake` was ever invoked and only by this harness
+ *     calling it by hand.
  *
  * Two phases in two processes, because "the host restarted" has to be true rather
  * than simulated in a variable. Phase 2 asserting GRANTED (with zero refusals)
@@ -37,8 +41,14 @@
  * from disk is what proved the identity.
  *
  * WHAT IT STILL DOES NOT PROVE - reported as limits, not buried
- *   * MonoBehaviour lifecycle: the harness invokes `Awake` by reflection, so
- *     whether the engine calls it at the expected time is an Editor question.
+ *   * WHEN Unity calls the lifecycle. The six bodies are now DRIVEN, not declared
+ *     untestable: `UnityLifecycle` runs Awake then OnEnable, Start once then Update,
+ *     and OnDisable then OnDestroy on destruction, and phase 1 asserts that order on
+ *     an instrumented component before it asserts anything about the adapter. What is
+ *     not modelled is the timing - construction and waking are separate phases here,
+ *     `FixedUpdate` (the async control-plane tick) is deliberately not invoked from
+ *     the frame pump, and an `async void` body is invoked without being awaited - so
+ *     whether Unity calls these at that point remains an Editor question.
  *   * Frame scheduling: the shim runs coroutines to completion synchronously.
  *   * API fidelity: the shim's UnityWebRequest/JsonUtility are implementations,
  *     not Unity's. A stub-vs-real mismatch would compile and pass here.
@@ -404,9 +414,12 @@ async function main() {
         console.log(`SUCCESS: ${PASS} Unity behavioural assertions passed across 4 separate processes.`);
         console.log(`Server policy for this run: ${SIGNATURE_POLICY} (phases 1-2 never register a key, so they are the control).`);
         console.log('Phase 4 needs no server, and its store file is read back by BOTH the adapter and');
-console.log('the Node reference, so the container is not checked only by its own author.');
-console.log('Limits NOT covered here: MonoBehaviour lifecycle and frame scheduling (Editor only),');
-        console.log('shim-vs-real API fidelity, and the non-control-plane files (FearAgent/_HUD).');
+console.log('the Node reference, so the container is not checked only by its own author.');        console.log('The lifecycle bodies are DRIVEN here (Awake/OnEnable/Start/Update/OnDisable/OnDestroy, in');
+        console.log('Unity\'s order, asserted on an instrumented component first), so a body that can never');
+        console.log('work is caught without an Editor. Limits NOT covered here: WHEN Unity calls them');
+        console.log('(construction and waking are separate phases here, FixedUpdate is not pumped, async');
+        console.log('void bodies are not awaited), frame scheduling, shim-vs-real API fidelity, and the');
+        console.log('non-control-plane files (FearAgent/_HUD).');
         console.log('============================================================');
     } finally {
         if (server.exitCode === null) server.kill('SIGKILL');
