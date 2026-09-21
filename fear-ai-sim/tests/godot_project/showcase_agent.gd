@@ -4,6 +4,12 @@
 # STRICT ARCHITECTURAL INVARIANT:
 # Godot owns physics, collisions, transforms, and move_and_slide().
 # Fear AI provides affective state, fear band, intent advice, and heartbeat BPM.
+#
+# APPRAISAL SOURCE:
+# The agent never evaluates the affect model itself - it asks its FearAgent
+# component, which routes to either the offline canonical fallback or a live
+# FearServer session. In live mode the advisory arrives asynchronously from the
+# server, so the band/intent read here is always server-authored.
 class_name ShowcaseAgent
 extends CharacterBody2D
 
@@ -35,6 +41,16 @@ const FearAgent = preload("res://addons/fear_ai/fear_agent.gd")
 @export var is_leader: bool = false
 
 var fear_component: FearAgent
+## Mirrors `FearAgent.appraisal_source`. Set through `set_appraisal_source()`.
+var appraisal_source: int = 0
+## Host-authored perception for ONE frame. A station that knows what this agent
+## perceives - an escort screening a threat down, a courier's report reaching
+## the capital - publishes the stimulus list here instead of an area scan. The
+## override is consumed on the next submission, so a station that stops
+## publishing immediately returns to the area scan rather than leaving a stale
+## stimulus in place.
+var perceived_stimuli: Array = []
+var _has_perceived_stimuli_override: bool = false
 var patrol_target: Vector2 = Vector2.ZERO
 var has_patrol_target: bool = false
 var social_panic_influence: float = 0.0
@@ -51,24 +67,59 @@ func _init() -> void:
 func _ready() -> void:
 	_init_fear_component()
 
+## Route this agent's appraisals. Keeps the component and the host mirror in
+## sync whichever order they were created in.
+func set_appraisal_source(mode: int) -> void:
+	appraisal_source = mode
+	if fear_component:
+		fear_component.set_appraisal_source(mode)
+
+func is_live() -> bool:
+	return appraisal_source == FearAgent.AppraisalSource.LIVE_SERVER
+
+## Publish this frame's perception. Replaces the agent's own area scan for the
+## next appraisal, in both local and live mode, so a station never has to care
+## which appraisal source is active.
+func set_perceived_stimuli(stimuli: Array) -> void:
+	perceived_stimuli = stimuli
+	_has_perceived_stimuli_override = true
+
+func clear_perceived_stimuli() -> void:
+	perceived_stimuli = []
+	_has_perceived_stimuli_override = false
+
 func _init_fear_component() -> void:
 	if fear_component == null:
 		fear_component = FearAgent.new()
 		fear_component.name = "FearAgent"
-		fear_component.agent_id = agent_name.to_lower().replace(" ", "_")
-		fear_component.neuroticism = neuroticism
-		fear_component.resilience = resilience
-		fear_component.fear_baseline = fear_baseline
-		fear_component.leadership = leadership
-		fear_component._parent_body = self
 		add_child(fear_component)
+	# Identity and configuration are synced on EVERY call, outside the null
+	# check, because `_init()` already builds the component before a station can
+	# assign `agent_name`, traits, or the appraisal source. Syncing only at
+	# creation left every showcase agent sharing the placeholder id "agent",
+	# which made them all register as one server-side agent and receive each
+	# other's advisories.
+	if not agent_name.is_empty():
+		fear_component.agent_id = agent_name.to_lower().replace(" ", "_")
+	fear_component.neuroticism = neuroticism
+	fear_component.resilience = resilience
+	fear_component.fear_baseline = fear_baseline
+	fear_component.leadership = leadership
+	fear_component._parent_body = self
+	fear_component.set_appraisal_source(appraisal_source)
 
 func _physics_process(delta: float) -> void:
 	_pulse_phase += delta * (float(fear_component.current_heartbeat_bpm) / 30.0)
 	
-	# Perform local evaluation if not receiving remote network ticks
-	var threats = fear_component._scan_threats()
-	fear_component.evaluate_local(threats, social_panic_influence, trauma_zone_influence)
+	# Appraise through the configured source. In live mode this submits an
+	# observation and the advisory arrives on a later frame; in local mode it is
+	# the canonical fallback. Either way Godot still owns the motor below, and
+	# this is the ONLY appraisal submission for this agent in a frame.
+	var threats: Array = fear_component._scan_threats()
+	if _has_perceived_stimuli_override:
+		threats = perceived_stimuli
+		_has_perceived_stimuli_override = false
+	fear_component.appraise(threats, social_panic_influence, trauma_zone_influence)
 	
 	var hint = fear_component.get_movement_hint()
 	var advisory_vec = Vector2(hint.vector.x, hint.vector.y)
@@ -78,8 +129,9 @@ func _physics_process(delta: float) -> void:
 		velocity = velocity.move_toward(Vector2.ZERO, 300.0 * delta)
 	elif hint.intent == "FLEE_FROM" and advisory_vec.length() > 0.1:
 		velocity = advisory_vec.normalized() * (hint.base_speed * hint.speed_mult)
-	elif hint.intent == "INVESTIGATE" and advisory_vec.length() > 0.1:
-		velocity = -advisory_vec.normalized() * (hint.base_speed * 0.5)
+	elif hint.intent == "INVESTIGATE_SOUND" and advisory_vec.length() > 0.1:
+		# Canonical INVESTIGATE_SOUND points toward the sound source.
+		velocity = advisory_vec.normalized() * (hint.base_speed * 0.5)
 	elif has_patrol_target:
 		var diff = patrol_target - global_position
 		if diff.length() > 8.0:
@@ -93,7 +145,7 @@ func _physics_process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	var hint = fear_component.get_movement_hint() if fear_component else { "raw_fear": 0.0, "fear_band": "CALM", "intent": "IDLE" }
+	var hint = fear_component.get_movement_hint() if fear_component else { "raw_fear": 0.0, "fear_band": "CALM", "intent": "IDLE_VIGILANT" }
 	var raw_fear: float = hint.get("raw_fear", 0.0)
 	var band: String = hint.get("fear_band", "CALM")
 	var intent_str: String = hint.get("intent", "IDLE")
@@ -129,7 +181,7 @@ func _draw() -> void:
 	var badge_border = Color(0.4, 0.7, 1.0)
 	if band == "PANIC":
 		badge_border = Color(1.0, 0.2, 0.2)
-	elif band == "FEAR":
+	elif band == "ANXIOUS":
 		badge_border = Color(1.0, 0.6, 0.1)
 	elif band == "ALERT":
 		badge_border = Color(1.0, 0.9, 0.2)

@@ -1,15 +1,38 @@
 extends SceneTree
 
 const GODOT_CONFORMANCE_VERSION = "1.0.0"
+const DEFAULT_FEAR_SERVER_PORT = 8765
+
+# Port resolution order: FEAR_AI_PORT env var, then a `--port=<n>` user arg, then
+# the FearServer default. The override exists because 8765 is a conventional
+# loopback port and is frequently already held by an unrelated local service;
+# hardcoding it turns port contention into an unexplained handshake failure.
+func resolve_port() -> int:
+	var env_port = OS.get_environment("FEAR_AI_PORT")
+	if env_port.is_valid_int():
+		var parsed = int(env_port)
+		if parsed > 0 and parsed < 65536:
+			return parsed
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--port="):
+			var tail = arg.substr("--port=".length())
+			if tail.is_valid_int():
+				var parsed_arg = int(tail)
+				if parsed_arg > 0 and parsed_arg < 65536:
+					return parsed_arg
+	return DEFAULT_FEAR_SERVER_PORT
 
 func _init() -> void:
 	print("================================================================================")
 	print("       REAL GODOT 4.6 ENGINE: CANONICAL SCENARIO CONFORMANCE RUNNER             ")
 	print("================================================================================")
 	print("Godot Engine Version: ", Engine.get_version_info()["string"])
+
+	var port = resolve_port()
+	print("Target FearServer: 127.0.0.1:%d" % port)
 	
 	var http = HTTPClient.new()
-	var err = http.connect_to_host("127.0.0.1", 8765)
+	var err = http.connect_to_host("127.0.0.1", port)
 	if err != OK:
 		print("[FAIL] Could not initiate connection to FearServer: ", err)
 		quit(1)
@@ -21,7 +44,7 @@ func _init() -> void:
 		OS.delay_msec(10)
 		timeout += 1
 		if timeout > 300:
-			print("[FAIL] Connection timed out waiting for FearServer on 127.0.0.1:8765")
+			print("[FAIL] Connection timed out waiting for FearServer on 127.0.0.1:%d" % port)
 			quit(1)
 			return
 			
@@ -30,7 +53,7 @@ func _init() -> void:
 		quit(1)
 		return
 		
-	print("[PASS] Godot 4 connected to FearServer on 127.0.0.1:8765")
+	print("[PASS] Godot 4 connected to FearServer on 127.0.0.1:%d" % port)
 	
 	# Handshake
 	var handshake_res = post_json(http, "/api/v1/handshake", {
@@ -40,6 +63,8 @@ func _init() -> void:
 	})
 	if handshake_res.get("status") != "ACCEPTED":
 		print("[FAIL] Handshake rejected: ", handshake_res)
+		if handshake_res.has("error"):
+			print("[HINT] A non-FearServer process may be holding 127.0.0.1:%d. Set FEAR_AI_PORT (or pass `-- --port=<n>`) to a free port and start a FearServer there." % port)
 		quit(1)
 		return
 	print("[PASS] Handshake accepted by FearServer.")

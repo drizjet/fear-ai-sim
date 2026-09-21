@@ -173,6 +173,7 @@ func reset_current_station() -> void:
 		3: station_controller.reset_station_3()
 		4: station_controller.reset_station_4()
 		5: station_controller.reset_station_5()
+		6: station_controller.reset_station_6()
 		7: station_controller.reset_station_7()
 		8: station_controller.reset_station_8()
 		9: station_controller.reset_station_9()

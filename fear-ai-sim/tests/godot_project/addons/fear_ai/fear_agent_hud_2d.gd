@@ -20,10 +20,10 @@ var _current_intent: String = "IDLE_VIGILANT"
 var _bpm: int = 60
 var _pulse_phase: float = 0.0
 
+# Canonical band palette (FearCore core bands: CALM/ALERT/ANXIOUS/PANIC).
 const COLOR_CALM = Color(0.06, 0.72, 0.51, 0.95)     # #10b981
-const COLOR_UNEASY = Color(0.52, 0.80, 0.09, 0.95)   # #84cc16
+const COLOR_ALERT = Color(0.52, 0.80, 0.09, 0.95)    # #84cc16
 const COLOR_ANXIOUS = Color(0.96, 0.62, 0.04, 0.95)  # #f59e0b
-const COLOR_FEAR = Color(0.98, 0.45, 0.09, 0.95)     # #f97316
 const COLOR_PANIC = Color(0.94, 0.27, 0.27, 0.95)    # #ef4444
 const COLOR_BG = Color(0.08, 0.11, 0.18, 0.85)       # #141c2e
 const COLOR_BORDER = Color(0.20, 0.26, 0.36, 0.90)   # #33415c
@@ -97,15 +97,14 @@ func _process(delta: float) -> void:
 func _get_band_color(band: String) -> Color:
 	match band:
 		"CALM": return COLOR_CALM
-		"UNEASY": return COLOR_UNEASY
+		"ALERT": return COLOR_ALERT
 		"ANXIOUS": return COLOR_ANXIOUS
-		"FEAR": return COLOR_FEAR
 		"PANIC": return COLOR_PANIC
 		_:
-			if _display_fear < 0.2: return COLOR_CALM
-			elif _display_fear < 0.4: return COLOR_UNEASY
-			elif _display_fear < 0.6: return COLOR_ANXIOUS
-			elif _display_fear < 0.8: return COLOR_FEAR
+			# Canonical raw-fear band boundaries (FearCore enter thresholds / 4.2).
+			if _display_fear < 0.19: return COLOR_CALM
+			elif _display_fear < 0.333: return COLOR_ALERT
+			elif _display_fear < 0.905: return COLOR_ANXIOUS
 			else: return COLOR_PANIC
 
 func _draw() -> void:
