@@ -53,6 +53,9 @@ const CI_RUN_ALLOWLIST = [
     'npm run verify:hard-rule-9',
     'npm run guardian:check',
     'pwsh -File tools/ci/fetch_godot.ps1',
+    // The Python signing backend the cross-language probe needs. Pinned, because
+    // the probe's evidence is a signature this wheel produced.
+    'python -m pip install --no-input cryptography==50.0.1',
     'npm run verify:probes -- --json probe_suite_report.json',
     // The nightly determinism job. It repeats every probe, so a probe that agrees
     // with itself is the only thing that counts as a pass there.
@@ -503,6 +506,22 @@ function gate() {
         }
     }
 
+    // A job can DECLARE a runtime it does not install. The first real CI run failed
+    // exactly there: the probe job declared `transport_signing` proven, the runner
+    // ships python but not the `cryptography` wheel the Python adapter needs, and the
+    // probe failed with `SIGNED 0 REFUSALS 0 REASON` — a claim failure whose cause the
+    // log never named. The requirement is derived from the declarations themselves
+    // rather than written down twice, so a job that starts declaring this runtime
+    // without installing the backend fails here instead of on the runner.
+    const declaringJobs = (executableCiText.match(/FEAR_AI_EXPECT_PROVEN:[^\n]*transport_signing/g) || []).length;
+    const pinnedBackends = (executableCiText.match(/python -m pip install[^\n]*cryptography==\d+\.\d+\.\d+/g) || []).length;
+    record(
+        'python-signing-backend-is-pinned-where-it-is-declared',
+        declaringJobs > 0 && pinnedBackends >= declaringJobs,
+        `${declaringJobs} job(s) declare transport_signing proven but ${pinnedBackends} install a pinned cryptography wheel; `
+            + 'a declared runtime that is not installed fails on the runner for a reason no local run shows'
+    );
+
     // A command in the allowlist can still name a script that does not exist — the
     // allowlist compares command text, so it cannot tell `verify:probes` from a typo
     // of it. That step would then fail at runtime, on the runner, for a reason no
@@ -545,7 +564,7 @@ function gate() {
     const mapStates = [
         'verify:hard-rule-9', 'guardian:check', 'verify:probes', 'verify:probe-stability',
         'verify:unity-editor', 'inert until', 'verify:stability-regression', 'advisory', 'non-zero exit code',
-        'ci/stability-ledger', 'exist in the commit, not only in the working tree'
+        'ci/stability-ledger', 'exist in the commit, not only in the working tree', 'cryptography=='
     ];
     const mapMissing = mapStates.filter(needle => !systemMap.includes(needle));
     record(

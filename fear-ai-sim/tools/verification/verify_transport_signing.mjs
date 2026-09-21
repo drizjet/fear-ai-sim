@@ -689,7 +689,7 @@ async function sectionCrossLanguage() {
     try {
         // Python: the adapter's own client, with signing on and a real key file.
         const pyScript = path.join(REPO, 'tests', 'transport_signing_python_probe.py');
-        const pySource = `import json, sys\nsys.path.insert(0, ${JSON.stringify(path.join(REPO, 'packages/adapters/python'))})\nfrom fear_ai_client import FearAIClient\nc = FearAIClient(base_url=${JSON.stringify(api)}, session_id='py-signing-host')\nprint('ENABLE_OK', c.enable_signing())\nprint('KEY_ID', c.signing_key_id)\nprint('REGISTER', c.register_agents([{'agent_id': 'py1'}, {'agent_id': 'py2'}]).get('status'))\nprint('REGISTERED_FLAG', c.signing_key_registered)\nprint('UNREGISTER', json.dumps(c.unregister_agent('py1')))\nprint('SIGNED', c.signing_requests_signed, 'REFUSALS', c.signing_refusals, 'REASON', c.signing_refusal_reason)\n`;
+        const pySource = `import json, sys\nsys.path.insert(0, ${JSON.stringify(path.join(REPO, 'packages/adapters/python'))})\nfrom fear_ai_client import FearAIClient\nc = FearAIClient(base_url=${JSON.stringify(api)}, session_id='py-signing-host')\nprint('ENABLE_OK', c.enable_signing())\nprint('KEY_ID', c.signing_key_id)\nprint('REGISTER', c.register_agents([{'agent_id': 'py1'}, {'agent_id': 'py2'}]).get('status'))\nprint('REGISTERED_FLAG', c.signing_key_registered)\nprint('UNREGISTER', json.dumps(c.unregister_agent('py1')))\nprint('SIGNED', c.signing_requests_signed, 'REFUSALS', c.signing_refusals, 'REASON', c.signing_refusal_reason)\nprint('SIGNING_ERROR', c.signing_error)\n`;
         fs.writeFileSync(pyScript, pySource);
         // ASYNC, for the same reason as the Godot child below: this probe and the
         // server share one event loop, so a blocking wait means the server cannot
@@ -699,22 +699,41 @@ async function sectionCrossLanguage() {
         const python = await spawnAsync(pythonBin, [pyScript], { timeoutMs: 120000 });
         const pyOut = `${python.stdout}${python.stderr}`;
         const pyKeyId = (pyOut.match(/KEY_ID (\w+)/) || [])[1];
-        check('the Python client enabled signing with a generated key', /ENABLE_OK True/.test(pyOut) && Boolean(pyKeyId), pyOut.split('\n').slice(-3).join(' | '));
-        check('the Python client registered its crowd', /REGISTER REGISTERED/.test(pyOut), pyOut.split('\n').slice(-4).join(' | '));
-        check('the server confirmed the Python key', /REGISTERED_FLAG True/.test(pyOut));
-        check('the Python client signed its teardown and was not refused',
-            /SIGNED [1-9]\d* REFUSALS 0/.test(pyOut), (pyOut.match(/SIGNED .*/) || [''])[0]);
-        const pyView = await rawHttp(port, 'GET', '/api/v1/sessions');
-        const pyRow = pyView.body.sessions.find((s) => s.session_id === 'py-signing-host');
-        check('the server holds the Python fingerprint', pyRow && pyRow.signing_key_id === pyKeyId,
-            `server=${pyRow && pyRow.signing_key_id} python=${pyKeyId}`);
-        fs.rmSync(pyScript, { force: true });
+        // A MISSING PYTHON PACKAGE IS AN ENVIRONMENT LIMITATION, NOT A CLAIM FAILURE.
+        // `cryptography` is an external runtime exactly like the interpreter and the
+        // engine below, and this section already reports an absent interpreter as
+        // SKIPPED. Found by the first real CI run, which is why it is stated in this
+        // much detail: the runner ships python but not that wheel, and the five checks
+        // below failed there while the client's own diagnosis - "request signing needs
+        // the 'cryptography' package" - was in a variable nobody printed. The log said
+        // `SIGNED 0 REFUSALS 0 REASON` and nothing named the cause, which reads as "the
+        // Python adapter is broken". The client's own words are now printed, and the
+        // subsection skips; CI's FEAR_AI_EXPECT_PROVEN turns that skip back into a
+        // failure on the runner that declares it has this runtime, so the run that is
+        // *supposed* to prove the cross-language half still cannot pass by skipping.
+        const pyBackendMissing = !/ENABLE_OK True/.test(pyOut) && /cryptography/.test(pyOut);
+        if (pyBackendMissing) {
+            console.log('  * Python signing: SKIPPED (this interpreter has no `cryptography` package)');
+            console.log(`    the adapter said: ${(pyOut.match(/SIGNING_ERROR .*/) || ['SIGNING_ERROR (nothing reported)'])[0]}`);
+            console.log('    The Python half was NOT exercised; the Node half above stands alone.');
+        } else {
+            check('the Python client enabled signing with a generated key', /ENABLE_OK True/.test(pyOut) && Boolean(pyKeyId), pyOut.split('\n').slice(-4).join(' | '));
+            check('the Python client registered its crowd', /REGISTER REGISTERED/.test(pyOut), pyOut.split('\n').slice(-5).join(' | '));
+            check('the server confirmed the Python key', /REGISTERED_FLAG True/.test(pyOut));
+            check('the Python client signed its teardown and was not refused',
+                /SIGNED [1-9]\d* REFUSALS 0/.test(pyOut), (pyOut.match(/SIGNED .*/) || [''])[0]);
+            const pyView = await rawHttp(port, 'GET', '/api/v1/sessions');
+            const pyRow = pyView.body.sessions.find((s) => s.session_id === 'py-signing-host');
+            check('the server holds the Python fingerprint', pyRow && pyRow.signing_key_id === pyKeyId,
+                `server=${pyRow && pyRow.signing_key_id} python=${pyKeyId}`);
 
-        // The Python client's token alone must now be insufficient too - the same
-        // claim the Unity probe makes, checked here for a second, independent client.
-        const pyTokenRow = await rawHttp(port, 'GET', '/api/v1/sessions');
-        check('the Python session is keyed, so its token is no longer sufficient by design',
-            pyTokenRow.body.sessions.find((s) => s.session_id === 'py-signing-host').has_signing_key === true);
+            // The Python client's token alone must now be insufficient too - the same
+            // claim the Unity probe makes, checked here for a second, independent client.
+            const pyTokenRow = await rawHttp(port, 'GET', '/api/v1/sessions');
+            check('the Python session is keyed, so its token is no longer sufficient by design',
+                pyTokenRow.body.sessions.find((s) => s.session_id === 'py-signing-host').has_signing_key === true);
+        }
+        fs.rmSync(pyScript, { force: true });
 
         // Godot: in-engine, only when the binary is present. A missing engine is
         // reported as SKIPPED, never as a pass.

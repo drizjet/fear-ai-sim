@@ -141,6 +141,16 @@ jobs:
       run: npm ci
       working-directory: fear-ai-sim
 
+    # The cross-language signing probe runs the real Python adapter, and building
+    # an RSA key needs `cryptography`. The runner image ships python but NOT that
+    # wheel, which the first real CI run found the hard way: five checks failed
+    # reading as "the Python adapter is broken" while the cause was a missing
+    # package, and the adapter's own diagnosis was in a variable nobody printed.
+    # Pinned for the same reason the engine below is — an unpinned install would
+    # make the recorded evidence depend on whatever PyPI served that day.
+    - name: Install the Python signing backend (pinned)
+      run: python -m pip install --no-input cryptography==50.0.1
+
     # The three probes with in-engine halves need a real engine or they report
     # SKIPPED. Fetching the same pinned version the recorded evidence used is what
     # makes this job prove something in-engine rather than only in Node.
@@ -193,6 +203,11 @@ jobs:
     - name: Install dependencies
       run: npm ci
       working-directory: fear-ai-sim
+
+    # Same pinned Python backend as the probe job above, for the same reason: the
+    # stability run declares the same runtimes, so it must have them too.
+    - name: Install the Python signing backend (pinned)
+      run: python -m pip install --no-input cryptography==50.0.1
 
     # Same engine, same reason: three of the probes have in-engine halves that
     # would otherwise report SKIPPED here, and a claim that is skipped on the
