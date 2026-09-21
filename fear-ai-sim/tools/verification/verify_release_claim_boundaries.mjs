@@ -74,8 +74,21 @@ const currentSurfaces = [
     // would overstate, and an Editor gap without the behaviour claim would
     // understate what is now actually executed.
     ['docs/CURRENT_TRUTH_LEDGER.md', '`BEHAVIOR_VERIFIED_OUTSIDE_EDITOR`, `IMPLEMENTED_NOT_EDITOR_VERIFIED`'],
-    ['docs/CURRENT_TRUTH_LEDGER.md', 'MonoBehaviour lifecycle is invoked by the harness rather than by the engine'],
+    // The lifecycle qualifier CHANGED SHAPE rather than disappeared. It used to be
+    // "nothing calls these bodies"; now the bodies run in Unity's order and the limit is
+    // the timing. Both halves are pinned, because either one alone would be a false
+    // claim: the first without the second overstates what a shim run proves, and the
+    // second without the first understates what is now executed.
+    ['docs/CURRENT_TRUTH_LEDGER.md', "the shim drives the lifecycle bodies in Unity's order"],
+    ['docs/CURRENT_TRUTH_LEDGER.md', 'WHEN Unity calls them is still an Editor question'],
+    ['tools/verification/unity/UnityEngineShim.cs', 'WHAT IS NOT MODELLED, and is therefore still an Editor question'],
+    ['tools/verification/unity/UnityBehaviorHarness.cs', '`UnityLifecycle` runs Awake then OnEnable, Start once'],
     ['docs/CURRENT_TRUTH_LEDGER.md', 'reports `SKIPPED`, not `PASS`, when `dotnet` is absent'],
+    // A declared runtime is the difference between "the fixtures ran in CI" and "CI did
+    // not say they did not run". The declaration and the check that keeps it live are
+    // both pinned, because a declaration that matches no probe is inert.
+    ['docs/CURRENT_TRUTH_LEDGER.md', 'Both Windows jobs now declare `verify_dotnet_adapters_compile` in `FEAR_AI_EXPECT_PROVEN`'],
+    ['docs/SYSTEM_MAP.md', 'asserts that every declared name still matches a probe that **exists**'],
     ['docs/CURRENT_TRUTH_LEDGER.md', 'the shim is an implementation rather than Unity\'s own API'],
     ['docs/RELEASE_SURFACE.md', 'It does not close the Unity Editor gap'],
     // Credential lifetime, gated destruction, and what ownership is NOT. These
