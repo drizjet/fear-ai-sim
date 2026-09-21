@@ -338,8 +338,19 @@ function main() {
 
   const dotnet = spawnSync('dotnet', ['--version'], { encoding: 'utf8' });
   if (dotnet.error || dotnet.status !== 0) {
-    console.log('SKIPPED: dotnet is not on PATH, so neither .NET adapter could be compiled.');
-    console.log('Both remain verified statically only on this machine - not a pass.\n');
+    // Named as SKIPPED so the probe runner treats it as NOT PROVEN rather than as a
+    // pass, and so CI's FEAR_AI_EXPECT_PROVEN can promote it to a failure. That
+    // declaration is what stops a runner that lost its .NET SDK from reporting the
+    // same green suite as one that has it, with 41 Unity fixture cases unexecuted.
+    console.log('SKIPPED: dotnet is not on PATH, so neither .NET adapter could be compiled,');
+    console.log('the Unity EditMode fixtures could not be COMPILED OR RUN, and no Unity');
+    console.log('behaviour outside the Editor was proven on this machine.');
+    console.log('');
+    console.log('  CI declares this runtime proven (`FEAR_AI_EXPECT_PROVEN` names');
+    console.log('  `verify_dotnet_adapters_compile`, and the runner image ships the .NET SDK), so a');
+    console.log('  SKIPPED line there is an environment defect and fails the job instead of');
+    console.log('  reporting green.');
+    console.log('');
     return;
   }
   console.log(`dotnet ${String(dotnet.stdout).trim()} detected.\n`);

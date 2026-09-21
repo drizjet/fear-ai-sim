@@ -522,6 +522,29 @@ function gate() {
             + 'a declared runtime that is not installed fails on the runner for a reason no local run shows'
     );
 
+    // A declaration that a runtime is PROVEN is only as good as its match. The probe
+    // runner promotes a SKIPPED line to a failure when the probe's FILENAME contains a
+    // name from FEAR_AI_EXPECT_PROVEN, so a renamed probe, a typo or a stale entry
+    // silently turns the declaration back into decoration — the gate keeps passing,
+    // and the thing it was declared to prove is no longer checked anywhere. Naming
+    // only probes that exist is the one check that can tell a live expectation from a
+    // dead one, and it is derived rather than written down, so adding a declaration
+    // for a fifth runtime needs no edit here.
+    const declaredRuntimeNames = [...new Set(
+        [...executableCiText.matchAll(/FEAR_AI_EXPECT_PROVEN:([^\n]*)/g)]
+            .flatMap(match => match[1].split(',').map(name => name.trim()).filter(Boolean))
+    )];
+    const probeFilenames = readdirSync(join(repoRoot, 'tools', 'verification')).filter(name => /^verify_.*\.mjs$/.test(name));
+    const deadExpectations = declaredRuntimeNames.filter(name => !probeFilenames.some(probe => probe.includes(name)));
+    record(
+        'expect-proven-names-match-a-real-probe',
+        declaredRuntimeNames.length > 0 && deadExpectations.length === 0,
+        declaredRuntimeNames.length === 0
+            ? 'the workflow declares no FEAR_AI_EXPECT_PROVEN runtimes, so no SKIPPED probe is ever promoted to a failure'
+            : `FEAR_AI_EXPECT_PROVEN names ${deadExpectations.join(', ')}, which match no probe under `
+                + 'tools/verification; a declaration that matches nothing is silently inert'
+    );
+
     // A command in the allowlist can still name a script that does not exist — the
     // allowlist compares command text, so it cannot tell `verify:probes` from a typo
     // of it. That step would then fail at runtime, on the runner, for a reason no
