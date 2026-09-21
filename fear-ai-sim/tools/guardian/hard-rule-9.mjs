@@ -522,6 +522,29 @@ function gate() {
             + 'a declared runtime that is not installed fails on the runner for a reason no local run shows'
     );
 
+    // A declaration that a runtime is PROVEN is only as good as its match. The probe
+    // runner promotes a SKIPPED line to a failure when the probe's FILENAME contains a
+    // name from FEAR_AI_EXPECT_PROVEN, so a renamed probe, a typo or a stale entry
+    // silently turns the declaration back into decoration — the gate keeps passing,
+    // and the thing it was declared to prove is no longer checked anywhere. Naming
+    // only probes that exist is the one check that can tell a live expectation from a
+    // dead one, and it is derived rather than written down, so adding a declaration
+    // for a fifth runtime needs no edit here.
+    const declaredRuntimeNames = [...new Set(
+        [...executableCiText.matchAll(/FEAR_AI_EXPECT_PROVEN:([^\n]*)/g)]
+            .flatMap(match => match[1].split(',').map(name => name.trim()).filter(Boolean))
+    )];
+    const probeFilenames = readdirSync(join(repoRoot, 'tools', 'verification')).filter(name => /^verify_.*\.mjs$/.test(name));
+    const deadExpectations = declaredRuntimeNames.filter(name => !probeFilenames.some(probe => probe.includes(name)));
+    record(
+        'expect-proven-names-match-a-real-probe',
+        declaredRuntimeNames.length > 0 && deadExpectations.length === 0,
+        declaredRuntimeNames.length === 0
+            ? 'the workflow declares no FEAR_AI_EXPECT_PROVEN runtimes, so no SKIPPED probe is ever promoted to a failure'
+            : `FEAR_AI_EXPECT_PROVEN names ${deadExpectations.join(', ')}, which match no probe under `
+                + 'tools/verification; a declaration that matches nothing is silently inert'
+    );
+
     // A command in the allowlist can still name a script that does not exist — the
     // allowlist compares command text, so it cannot tell `verify:probes` from a typo
     // of it. That step would then fail at runtime, on the runner, for a reason no
@@ -571,6 +594,90 @@ function gate() {
         'system-map-states-the-same-ci-contract',
         mapMissing.length === 0,
         `docs/SYSTEM_MAP.md no longer states: ${mapMissing.join(', ')}`
+    );
+
+    // Every check above asks whether a SENTENCE still exists, so not one of them can
+    // see a NUMBER that has drifted — and the numbers do drift: the gate's own total
+    // was written down as 19, then 22, then 24; the probe roster was stated as 24 while
+    // it was 25; and the release surface enumerated five categories that summed to 27
+    // and called the total 24. Each was found by reading, never by a failing check.
+    // So derive the two counts that move — the roster from the files, the gate total
+    // from this run — and require the places that speak about NOW to agree.
+    //
+    // The claim sites are bounded rather than "every number under docs/": the ledger
+    // header is the one place that speaks about the current state and it ends at an
+    // explicit boundary sentence, so history below that line may keep stating the
+    // count that was true of the state it describes. The other two sites are the two
+    // release documents' current-claim lines. A count outside those sites is not
+    // checked — that is the trade, and it is why this check says which sites it reads
+    // instead of implying it polices every number in the repository.
+    const rosterSize = probeFilenames.length;
+    const gateTotal = checks + 1; // this check is recorded last (asserted below)
+    const selfSource = readText(join(__dirname, 'hard-rule-9.mjs'));
+    const ownId = 'documented-counts-match-the-derived-counts';
+    const ownIndex = selfSource.indexOf(ownId);
+    const recordsAfterThisOne = ownIndex === -1
+        ? -1
+        : (selfSource.slice(ownIndex).match(/^\s*record\(/gm) || []).length;
+    const ledgerText = readText(join(repoRoot, 'docs', 'CURRENT_TRUTH_LEDGER.md'));
+    const headerBoundary = 'The earlier anchors below are retained';
+    const headerStart = ledgerText.indexOf('**Current audit state**');
+    const headerEnd = ledgerText.indexOf(headerBoundary);
+    const liveHeader = headerStart === -1 || headerEnd < headerStart ? '' : ledgerText.slice(headerStart, headerEnd);
+    const liveProbeClaims = [...liveHeader.matchAll(/(\d+)\s+probes\b/g)].map(match => Number(match[1]));
+    const liveGateClaims = [...liveHeader.matchAll(/(\d+)\/(\d+)\b/g)]
+        .map(match => [match[0], Number(match[1]), Number(match[2])]);
+    const strayProbeClaims = liveProbeClaims.filter(value => value !== rosterSize);
+    const strayGateClaims = liveGateClaims.filter(([, left, right]) => left !== gateTotal || right !== gateTotal);
+
+    // The two enumerations must also ADD UP, which is a different failure from quoting
+    // the wrong total: a list that sums to 24 beside a claim of 25 is self-contradictory
+    // rather than merely stale, and that is the version that actually shipped.
+    const enumerationProblems = [];
+    for (const [file, pattern] of [
+        ['docs/RELEASE_SURFACE.md', /^\| Verification \|.*$/m],
+        ['docs/RELEASE_CANDIDATE_CERTIFICATION.md', /^Current JS evidence:.*$/m]
+    ]) {
+        const line = (readText(join(repoRoot, file)).match(pattern) || [''])[0];
+        const claim = line.match(/(\d+)\s+(?:`verify_\*\.mjs`|standalone verification)?\s*probes\b/);
+        if (!claim) {
+            enumerationProblems.push(`${file}: no roster claim found, so its enumeration is unchecked`);
+            continue;
+        }
+        if (Number(claim[1]) !== rosterSize) {
+            enumerationProblems.push(`${file}: claims ${claim[1]} probes, the roster is ${rosterSize}`);
+        }
+        const rest = line.slice(claim.index + claim[0].length);
+        const firstDash = rest.indexOf(' — ');
+        const secondDash = rest.indexOf(' — ', firstDash + 3);
+        const parts = (rest.slice(firstDash + 3, secondDash).match(/\b\d+\b/g)) || [];
+        if (firstDash === -1 || secondDash === -1 || parts.length < 2) {
+            enumerationProblems.push(`${file}: its roster claim is not followed by a bounded list of counts, so it cannot be summed`);
+            continue;
+        }
+        const sum = parts.reduce((total, value) => total + Number(value), 0);
+        if (sum !== rosterSize) {
+            enumerationProblems.push(`${file}: its categories sum to ${sum}, the roster is ${rosterSize}`);
+        }
+    }
+
+    record(
+        ownId,
+        headerStart !== -1
+            && headerEnd !== -1
+            && recordsAfterThisOne === 1
+            && strayProbeClaims.length === 0
+            && strayGateClaims.length === 0
+            && enumerationProblems.length === 0,
+        [
+            headerStart === -1 ? 'docs/CURRENT_TRUTH_LEDGER.md no longer carries the **Current audit state** marker' : null,
+            headerEnd === -1 ? `docs/CURRENT_TRUTH_LEDGER.md no longer carries the boundary sentence "${headerBoundary}"` : null,
+            recordsAfterThisOne === -1 ? 'this check cannot find its own id in its own source, so it cannot tell whether it is last' : null,
+            recordsAfterThisOne > 1 ? `${recordsAfterThisOne} record() calls follow this one; move it back to last so its derived total is the final total` : null,
+            strayProbeClaims.length > 0 ? `the ledger header claims ${strayProbeClaims.join(', ')} probes and the roster is ${rosterSize}` : null,
+            strayGateClaims.length > 0 ? `the ledger header claims ${strayGateClaims.map(claim => claim[0]).join(', ')} integrity checks and this run has ${gateTotal}` : null,
+            ...enumerationProblems
+        ].filter(Boolean).join('; ')
     );
 
     console.log('');

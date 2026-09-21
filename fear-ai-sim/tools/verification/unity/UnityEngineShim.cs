@@ -24,9 +24,15 @@
 //      properties ignored). A field only Unity would serialize differently - a
 //      [SerializeField] private field - would be missed here.
 //   4. `PlayerPrefs` is an in-process dictionary; Unity's is a registry/plist.
-//   5. Nothing about MonoBehaviour LIFECYCLE is proven: the harness invokes
-//      `Awake` itself rather than letting the engine call it, so "does Unity call
-//      this when I think it does" is still an Editor question.
+//   5. MonoBehaviour LIFECYCLE is modelled, not proven. `UnityLifecycle` runs the
+//      methods in Unity's ORDER (Awake, OnEnable, Start once, Update; OnDisable,
+//      OnDestroy on destruction) and finds them BY NAME including private ones,
+//      which is how Unity finds them. What is NOT modelled is WHEN Unity calls any
+//      of them relative to `AddComponent`, a scene load or a frame boundary; script
+//      execution order; `Reset`/`OnValidate`/`OnApplicationPause`/`LateUpdate`;
+//      domain reload; and any player-loop timing. So a lifecycle body that could
+//      never work is now caught here, and "does Unity call this when I think it
+//      does" is still an Editor question.
 //
 // So this narrows the Unity gap to editor behaviour and API fidelity, and it
 // closes the part of the gap that was about the adapter's own correctness. The
@@ -37,6 +43,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -95,30 +102,158 @@ namespace UnityEngine
         public string name { get; set; } = "";
         public static void Destroy(Object o) { }
         public static void DontDestroyOnLoad(Object o) { }
+
         /// <summary>
-        /// Unity's synchronous destroy. Added because the EditMode-style tests
-        /// that now compile against this shim tear a component down between
-        /// cases, and `Destroy` would be deferred where `DestroyImmediate` is not.
+        /// Unity's synchronous destroy, and now the DESTRUCTION half of the lifecycle:
+        /// `OnDisable` then `OnDestroy`, in that order, on the object itself and - for a
+        /// `GameObject` - on every component attached to it.
+        ///
+        /// It used to be an empty body, which meant `OnDestroy` and `OnDisable` on every
+        /// adapter component had never been executed by anything in this repository: a
+        /// teardown body that cannot work and one that works perfectly looked exactly
+        /// alike. That is the defect class this shim exists to stop producing.
         /// </summary>
-        public static void DestroyImmediate(Object o) { }
+        public static void DestroyImmediate(Object o)
+        {
+            if (o == null) return;
+            if (o is GameObject gameObject)
+            {
+                // A copy, because End() detaches and the list would be mutated while
+                // walked. Copied by hand rather than with Linq: this file is compiled
+                // into the adapter's own scratch projects, which pull in no packages.
+                foreach (var attached in new List<Component>(gameObject.Attached))
+                {
+                    gameObject.Detach(attached);
+                    UnityLifecycle.End(attached);
+                }
+                return;
+            }
+            if (o is Component component) component.gameObject?.Detach(component);
+            UnityLifecycle.End(o);
+        }
     }
 
     public class GameObject : Object
     {
+        private readonly List<Component> _components = new List<Component>();
+
+        /// <summary>
+        /// Which components are attached. Tracked so `DestroyImmediate` on a GameObject
+        /// can run the destruction half of each component's lifecycle, the way Unity
+        /// does; nothing else reads it.
+        /// </summary>
+        internal IReadOnlyList<Component> Attached => _components;
+        internal void Detach(Component component) => _components.Remove(component);
+
         public GameObject() { }
         public GameObject(string name) { this.name = name; }
         public GameObject(string name, params Type[] components) { this.name = name; }
 
         /// <summary>
-        /// Faithful to Unity's constraint (`where T : Component`, no `new()`), so a
-        /// component type without a public parameterless constructor is not
-        /// accepted here and rejected there.
+        /// Constructs and attaches a component, exactly as Unity's constraint reads
+        /// (`where T : Component`, no `new()`, so a component type without a public
+        /// parameterless constructor is rejected here as it would be there).
+        ///
+        /// It deliberately does NOT run `Awake`. Unity does, for a component added to an
+        /// active GameObject from code - and for that case there are no serialized values
+        /// to apply first. The harness needs the OTHER case, which is the one every host
+        /// actually ships: a component that arrives WITH its values, as a scene or prefab
+        /// component does. So construction and waking are separate phases here, the
+        /// harness says which order it means, and `UnityLifecycle` below states the
+        /// difference rather than hiding it.
         /// </summary>
         public T AddComponent<T>() where T : Component
         {
             var component = Activator.CreateInstance<T>();
             component.gameObject = this;
+            _components.Add(component);
             return component;
+        }
+    }
+
+    /// <summary>
+    /// The MonoBehaviour lifecycle, executed in Unity's order.
+    ///
+    /// This exists because "Unity calls Awake and Start" was the one sentence keeping
+    /// every lifecycle body out of every probe: before it, the harness invoked `Awake`
+    /// by reflection for itself and nothing ever invoked `Start`, `OnEnable`, `Update`,
+    /// `OnDisable` or `OnDestroy` at all - so five of the six lifecycle bodies on
+    /// `FearAIClient` were shipped unexecuted.
+    ///
+    /// THE ORDER IS THE POINT, and it is what the harness asserts on an instrumented
+    /// component: `Awake` then `OnEnable`; `Start` ONCE per component on the first frame,
+    /// then `Update` on every frame; `OnDisable` then `OnDestroy` on destruction. Methods
+    /// are found BY NAME through reflection, including private ones, because that is how
+    /// Unity finds them - `MonoBehaviour` declares none of the six.
+    ///
+    /// WHAT IS NOT MODELLED, and is therefore still an Editor question: WHEN Unity calls
+    /// any of these relative to `AddComponent`, a scene load or a frame boundary; script
+    /// execution order between components; `Reset`, `OnValidate`, `OnApplicationPause`,
+    /// `OnApplicationFocus`, `LateUpdate`; domain reload; and any player-loop timing.
+    ///
+    /// `FixedUpdate` is deliberately NOT invoked. Unity runs it between zero and several
+    /// times per frame before `Update`, and on this adapter it is the async control-plane
+    /// tick that then awaits HTTP. Invoking it from a synchronous frame pump would start
+    /// real requests beside the ones the harness deliberately pumps by hand, which makes
+    /// the run racy rather than more faithful; so the tick path stays pumped explicitly
+    /// by the harness and this class says so.
+    ///
+    /// An `async void` lifecycle body is invoked and NOT awaited. Unity does not await it
+    /// either, but Unity also keeps ticking frames afterwards, and there is no frame loop
+    /// here - so what a call proves is that the body's synchronous prologue ran without
+    /// throwing, not that the continuations it started ever completed.
+    /// </summary>
+    public static class UnityLifecycle
+    {
+        private static readonly HashSet<Component> Started = new HashSet<Component>();
+
+        /// <summary>`Awake`, then `OnEnable` - Unity's order for a component being woken.</summary>
+        public static void Wake(Component component)
+        {
+            Invoke(component, "Awake");
+            Invoke(component, "OnEnable");
+        }
+
+        /// <summary>
+        /// One frame: `Start` on every component that has not started yet, then `Update`.
+        /// `Start` running exactly once is the property a second call is asserted not to
+        /// repeat, and it is tracked by component identity rather than by a flag the
+        /// component would have to know about.
+        /// </summary>
+        public static void Frame(params Component[] components)
+        {
+            foreach (var component in components)
+            {
+                if (Started.Add(component)) Invoke(component, "Start");
+            }
+            foreach (var component in components) Invoke(component, "Update");
+        }
+
+        /// <summary>`OnDisable`, then `OnDestroy` - the destruction half, in Unity's order.</summary>
+        internal static void End(Object target)
+        {
+            if (target == null) return;
+            Invoke(target, "OnDisable");
+            Invoke(target, "OnDestroy");
+            if (target is Component component) Started.Remove(component);
+        }
+
+        /// <summary>
+        /// Invokes every `methodName` found on the target's type - including private ones,
+        /// and including ones inherited from a base component, which is Unity's rule - and
+        /// does nothing when there is none, because most components implement only one or
+        /// two of the six. An overload that takes parameters is ignored rather than
+        /// guessed at: Unity's six lifecycle entry points take none.
+        /// </summary>
+        private static void Invoke(object target, string methodName)
+        {
+            foreach (var method in target.GetType().GetMethods(
+                BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+            {
+                if (method.Name != methodName || method.GetParameters().Length != 0) continue;
+                if (method.IsAbstract) continue;
+                method.Invoke(target, null);
+            }
         }
     }
 
