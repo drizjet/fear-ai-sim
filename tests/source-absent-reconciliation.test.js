@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from '@jest/globals';
 
-// RESP-SOURCE-ABSENT-RECONCILIATION-001 — the two remaining SOURCE_ABSENT ledger rows are
+// RESP-SOURCE-ABSENT-RECONCILIATION-001 — the remaining SOURCE_ABSENT ledger row is
 // dispositioned against the legacy monorepo tree (origin/master:fear-ai-sim/): every cited file
 // is blob+sha256 pinned in docs/SOURCE_ABSENT_RECONCILIATION.md, every ledger row cites that
 // manifest, and no legacy source has been extracted into this checkout. The guard re-resolves
@@ -58,12 +58,11 @@ describe('SOURCE_ABSENT reconciliation manifest', () => {
     it('covers exactly the SOURCE_ABSENT ledger rows, with valid presence and digests', () => {
         const ledgerRows = parseSourceAbsentRows();
         expect(ledgerRows.map(row => row.name).sort()).toEqual([
-            'Simulation/agents/combat',
             'VR/biofeedback',
-        ]); // two remaining SOURCE_ABSENT rows — Habituation, Hysteresis, Neural fear, FearCore and Brain scale cleanup left via the re-open procedure 2026-09-23 (mutant: a row added/dropped → fails here)
+        ]); // one remaining SOURCE_ABSENT row — Habituation, Hysteresis, Neural fear, FearCore/Brain scale cleanup and Simulation/agents/combat left via the re-open procedure 2026-09-23 (mutant: a row added/dropped → fails here)
 
         const entries = parseManifest();
-        expect(entries.length).toBe(5); // habituation.js, hysteresis.js, neuralfear.js, neuralnet.js, fearcore.js, brain.js and the absent fearcore test all left the manifest
+        expect(entries.length).toBe(2); // habituation.js, hysteresis.js, neuralfear.js, neuralnet.js, fearcore.js, brain.js, simulation.js, agent.js, learningagent.js and the absent fearcore test all left the manifest
         for (const entry of entries) {
             expect(['PRESENT', 'ABSENT_BOTH']).toContain(entry.presence); // mutant: presence mislabeled
             expect(entry.rows.length).toBeGreaterThan(0);

@@ -10,8 +10,10 @@ located (blob + sha256 pinned below) or confirmed absent in both trees. Rows sta
 locating a legacy file does not put it into the V8 design, and extracting one is a separate,
 explicit decision (procedure at the bottom). **Re-opens executed 2026-09-23:** `Habituation`,
 then `Hysteresis`, then `Neural fear`, then `FearCore live transitions` + `Brain scale cleanup`
-(both cite `brain.js`) left `SOURCE_ABSENT` through that procedure (byte-exact extraction + V8
-integration); the manifest below covers the remaining two rows' sources.
+(both cite `brain.js`), then `Simulation/agents/combat` — all left `SOURCE_ABSENT` through that
+procedure (byte-exact extraction + V8 integration); the manifest below covers the one remaining
+row's sources (`VR/biofeedback`), whose disposition is a product-scope decision rather than a
+missing artefact.
 
 Method (head of `origin/master` at time of verification: `1e72d61`):
 
@@ -25,9 +27,6 @@ git ls-tree -r origin/master --name-only | grep -i fearband   # 0 matches
 
 | file | upstream blob | sha256 | presence | rows |
 | --- | --- | --- | --- | --- |
-| simulation.js | 2cc0c2dc991362fece0afea05150bcd988fe4cb2 | 3b91c4dc778efea806ed47e704e02c2ecc65ab016819d4cb08d608108bd90ef5 | PRESENT | Simulation/agents/combat |
-| agent.js | f3815a84736b04afc592ee3fd8652464e898b148 | 5e208a01a8840af4976c7c3db2f48106a861115c049bc472b143a13e779d847c | PRESENT | Simulation/agents/combat |
-| learningagent.js | 562faea5106f6cff3ccdc9cecb7b3dd7a0d2a7c6 | f06f44f3090879c41789300d98579515abd936f9933fd61d7b70bfa0e4915eb7 | PRESENT | Simulation/agents/combat |
 | vrsystem.js | ac84c092aa94b5a32ed1bd2511974c7856e5f375 | d2a9c628874785178fe16b776dbd94fc2344ec29871151773de94bf7a8b4f4cd | PRESENT | VR/biofeedback |
 | biofeedback.js | 050b8c4c8f72fe0c2d21919f73ab92e45c3fc4f4 | f39f795564d83a0039fb4b7b7fe1429daf5fa167ef5ce4ea066a9dafb63ab23a | PRESENT | VR/biofeedback |
 
@@ -38,14 +37,16 @@ git ls-tree -r origin/master --name-only | grep -i fearband   # 0 matches
 - **FearBand (Rust)**: `git ls-tree -r origin/master --name-only` has 0 paths matching
   `fearband|fear_band|fear-band` — absent workspace-wide *and* upstream.
 - **No remaining manifest entry has been extracted into this checkout** — the guard asserts every
-  manifest file still does not exist locally. An extracted row leaves the manifest entirely (the
-  three same-day re-opens did exactly that, adding a `legacy/` extraction + provenance row).
+  manifest file still does not exist locally (`vrsystem.js`, `biofeedback.js`). An extracted row
+  leaves the manifest entirely and gains a `legacy/` extraction + provenance row: that is what all
+  five same-day re-opens did, most recently `simulation.js`, `agent.js` and `learningagent.js`
+  (manifest 5 → 2 entries, both guards' row sets 2 → 1 in the same change).
 
 ## Dispositions (per ledger row)
 
 | row | disposition |
 | --- | --- |
-| Simulation/agents/combat | **SUPERSEDED_BY_V8_DESIGN** — all three files located upstream; the V8 society world's actors (societycore + DecisionCore) are the agent runtime. Re-open = implement-and-test pass, never a file landing. |
+| Simulation/agents/combat | **EXTRACTED_AND_REOPENED 2026-09-23** — fifth re-open: all three sources extracted byte-exact (`legacy/simulation.js` sha256 `3b91c4dc…`, `legacy/agent.js` sha256 `5e208a01…`, `legacy/learningagent.js` sha256 `f06f44f3…`, all in `legacy/PROVENANCE.md`), verified every gate by `tests/simulation-agents-combat-reopen.test.js`; the row gets the implement-and-test pass it always needed — `CombatActor`/`CombatCore` in `socialcore.js` (legacy lineage, engagement window, trauma model, survival book: escapes/deaths, strategy effectiveness, learned danger grid, family knowledge, escape-rate adaptation) consumed in production by `COMBAT_DEPLOY` + `COMBAT_ENGAGEMENT`, whose whole fight is one TURN-rooted chain with exactly one uncommitted tail. Ported verbatim: the family derivation, the `generation` rule, `min(1, fear * 0.8)` trauma with `0.9995` decay and the `> 0.3` floor, the `danger > 2` gate on 50-unit cells, the six strategies with their `.5` prior and four context bonuses, the choice-counts-as-a-use rule, the `.05` survival-time EMA, the escape-rate adaptation windows and the 50/100 caps. **Honest limits, recorded rather than papered over:** `simulation.js` is a PIXI/renderer orchestrator whose per-actor movement the V8 design deletes, the three sources carry **no combat subsystem and no damage formula** (their harm came from per-agent proximity in that deleted spatial layer), so the strike model and `COMBAT_FEAR_PER_CASUALTY` are **V8-DESIGN** primitives on top of the legacy mechanisms; the row's cited integration tests were never committed in either tree (absence recorded, not recoverable). Row is `IMPLEMENTED_AND_VERIFIED`. |
 | FearCore live transitions | **EXTRACTED_AND_REOPENED 2026-09-23** — fourth re-open: both sources extracted byte-exact (`legacy/fearcore.js` sha256 `d5a94c96…`, `legacy/brain.js` sha256 `b35aa395…`), verified every gate by `tests/fearcore-reopen.test.js`; the 11-band contract (core 4 + extended 7) is ported with thresholds verbatim, panic lock, PRESENCE_BREAK bypass, extended rules, force-fallback, snap guard and bounded decision trace, plus brain.js's §332 scale adapter; production emits canonical `FEARCORE_BAND_TRANSITION` events. Three legacy quirks are **preserved and documented rather than silently fixed** (an unreachable CRAWLING-exit disjunct, HIDE-from-PANIC escaping before CRAWLING can trigger, and the §260 stay rule making RECOVER a holding band whose progress branch is unreachable). The row's cited test was never committed in either tree — that absence is recorded, not recoverable. FearBand Rust still has no source anywhere. Row is `IMPLEMENTED_AND_VERIFIED`. |
 | Brain scale cleanup | **EXTRACTED_AND_REOPENED + cleanup retracted 2026-09-23** — `brain.js` extracted byte-exact (sha256 `b35aa395…`, blob `163dfa7a…`), so the row no longer rests on an absent source; reading it shows the only V8-relevant mechanism was its normalized→raw fear-band scaling, now ported verbatim as `fearScale` (§332) and pinned in production. The "scale cleanup" itself stays retracted — V8 has no brain module to scale by design. Row is `IMPLEMENTED_AND_VERIFIED` with that retraction recorded. |
 | Habituation | **EXTRACTED_AND_REOPENED 2026-09-23** — first re-open: source extracted byte-exact to `legacy/habituation.js` (sha256 `df02134b…` verified every gate by `tests/habituation-reopen.test.js`), V8 integration `HabituationBook` + canonical `FEAR_HABITUATED` events; row is `IMPLEMENTED_AND_VERIFIED`. |
@@ -84,6 +85,18 @@ row `IMPLEMENTED_AND_VERIFIED`, manifest and both guards updated in the same cha
 `FearCore` + `fearScale` in `socialcore.js` driven from the fear seam, pinned by
 `tests/fearcore-reopen.test.js`; step 3 → both rows `IMPLEMENTED_AND_VERIFIED`, manifest
 8 → 5 entries and both guards' row sets 4 → 2 in the same change.
+
+**Fifth:** `Simulation/agents/combat`, same day — step 1 → `legacy/simulation.js` (sha256
+`3b91c4dc778efea806ed47e704e02c2ecc65ab016819d4cb08d608108bd90ef5`, blob
+`2cc0c2dc991362fece0afea05150bcd988fe4cb2`), `legacy/agent.js` (sha256
+`5e208a01a8840af4976c7c3db2f48106a861115c049bc472b143a13e779d847c`, blob
+`f3815a84736b04afc592ee3fd8652464e898b148`) and `legacy/learningagent.js` (sha256
+`f06f44f3090879c41789300d98579515abd936f9933fd61d7b70bfa0e4915eb7`, blob
+`562faea5106f6cff3ccdc9cecb7b3dd7a0d2a7c6`), all recorded in `legacy/PROVENANCE.md`; step 2 →
+`CombatActor` + `CombatCore` in `socialcore.js` driven by the production `COMBAT_DEPLOY` /
+`COMBAT_ENGAGEMENT` actions, pinned by `tests/simulation-agents-combat-reopen.test.js`; step 3 →
+row `IMPLEMENTED_AND_VERIFIED`, manifest 5 → 2 entries and both guards' row sets 2 → 1 in the
+same change.
 
 **Third:** `Neural fear`, same day — step 1 → `legacy/neuralfear.js` (sha256
 `9b397180b7aad56f29c0a2c7197d832229b5b9f16f23e1644be6086ed2e4504c`, blob

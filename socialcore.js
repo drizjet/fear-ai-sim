@@ -607,4 +607,363 @@ export class NeuralFearModel {
         this.initialized = true;
         return this;
     }
+}// Re-opened `Simulation/agents/combat` row (RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001): the legacy
+// agent runtime lived in `agent.js` (the actor: lineage, engagement window, trauma memory) and
+// `learningagent.js` (the world's survival book: escapes/deaths, strategy effectiveness, learned
+// danger zones, family knowledge, predator adaptation). Both are extracted byte-exact into
+// `legacy/` as evidence; the mechanisms that survive the V8 design live here.
+//
+// Documented deviations from the legacy modules:
+//  * no wall clock — engagement windows, trauma decay and strike rounds run on the world ticks the
+//    caller supplies (repository rule: production never reads the wall clock);
+//  * every random draw comes from an injected RNG (legacy drew from the global random source, and
+//    the repository's no-global-random rule is enforced by a source scan over the production
+//    modules — so this file must not spell that call, not even in a comment);
+//  * per-actor SPATIAL state (position, velocity, social/obstacle forces, cohesion, `simulation.js`'s
+//    renderer) is deleted by design: the society world's geography is the abstract route/settlement
+//    graph, so there is no per-actor movement to port, and the legacy steering maths that ride on it
+//    (`getEscapeDirection`, the wall-clock zigzag timer, `applySocialForces`, `getThermalSignature`)
+//    left with it;
+//  * the legacy book was a module-level singleton (`AgentLearning`, no serialization); V8 keeps one
+//    book per world inside `SocietyCore`, so it round-trips save/load;
+//  * the legacy book pushed an unbounded timestamped context per escape; V8 keeps counts, the
+//    survival-time EMA and the strategy records instead of an unbounded log;
+//  * legacy ids were dense integers while V8 actor ids are caller-owned strings — a non-numeric id
+//    is folded to an index by a deterministic character-code fold before the legacy modulo
+//    arithmetic (numeric ids run the derivation verbatim).
+// Legacy semantics ported verbatim (thresholds and constants included): the family-name derivation
+// (`prefixes[id % 10]` + `suffixes[(id * 7) % 10]`), the `generation` rule (`parentId ? 0 : 1`), the
+// trauma model (`min(1, fear * 0.8)` accumulation, `0.9995` decay, `< 0.001` floor, `> 0.3` trauma
+// floor at `* 0.3`, `panicEventsSurvived`), the `danger > 2` gate on 50-unit cells, the six named
+// strategies with their `.5` success-rate prior, their four context bonuses (+.3 at three allies,
+// +.2 with a known hiding spot, +.15 at two allies, +.25 unpredictability against a predator with
+// > 5 kills) and the `.1` exploration jitter, the "a choice counts as a use" rule, the `.05`
+// survival-time EMA, the escape-rate adaptation windows (>.7 → ×1.5, <.3 → ×0.8, otherwise
+// unchanged) and the 50/100 caps on hiding spots and family knowledge.
+export const ACTOR_FAMILY_PREFIXES = Object.freeze(['Fear', 'Brave', 'Swift', 'Wise', 'Bold', 'Keen', 'Iron', 'Silent', 'Shadow', 'Bright']);
+export const ACTOR_FAMILY_SUFFIXES = Object.freeze(['heart', 'mind', 'walker', 'seeker', 'guard', 'born', 'dweller', 'weaver', 'hunter', 'spirit']);
+export const COMBAT_STRATEGIES = Object.freeze(['fleeStraight', 'fleeZigzag', 'hide', 'groupDefense', 'splitRun', 'freezeThenFlee']);
+export const TRAUMA_DECAY_RATE = 0.9995;
+export const TRAUMA_FLOOR_THRESHOLD = 0.3;
+export const TRAUMA_FLOOR_SHARE = 0.3;
+export const DANGER_ZONE_SIZE = 50;
+export const DANGER_ZONE_THRESHOLD = 2;
+export const STRATEGY_PRIOR = 0.5;
+export const STRATEGY_JITTER = 0.1;
+export const SURVIVAL_EMA_ALPHA = 0.05;
+export const ESCAPE_RATE_HIGH = 0.7;
+export const ESCAPE_RATE_LOW = 0.3;
+export const ADAPTATION_FAST = 1.5;
+export const ADAPTATION_SLOW = 0.8;
+export const MAX_HIDING_SPOTS = 50;
+export const MAX_FAMILY_KNOWLEDGE = 100;
+// The felt-fear level at which the ported band contract enters PANIC (its 3.8 raw threshold on the
+// §332 0..1 scale). agent.js gates trauma on `this.brain.state === 'PANIC'`; that state machine is
+// the re-opened FearCore contract, so the gate is its PANIC entry, not a new threshold.
+export const ACTOR_PANIC_FEAR = 1;
+// agent.js `generateFamilyName()`: a deterministic function of the actor id — no draw, no state.
+// Legacy ids were dense integers (`Agent.nextId++`); V8 actor ids are caller-owned strings, so a
+// non-numeric id is folded to an index by a deterministic character-code fold before the SAME
+// modulo arithmetic runs — numeric ids keep the legacy derivation verbatim, and distinct ids keep
+// distinct families instead of every string collapsing to index 0.
+export const actorFamilyIndex = id => {
+    const numeric = Number(id);
+    if (Number.isFinite(numeric)) return Math.abs(Math.trunc(numeric));
+    let fold = 0;
+    for (const character of String(id)) fold = (fold * 31 + character.codePointAt(0)) % 1000003;
+    return fold;
+};
+export const actorFamilyName = id => {
+    const key = actorFamilyIndex(id);
+    return `${ACTOR_FAMILY_PREFIXES[key % ACTOR_FAMILY_PREFIXES.length]}${ACTOR_FAMILY_SUFFIXES[(key * 7) % ACTOR_FAMILY_SUFFIXES.length]}`;
+};
+// learningagent.js `recordDeath()`: the learned danger grid (`Math.floor(x / 50)_Math.floor(y / 50)`).
+export const dangerZoneKey = (x, y) => `${Math.floor(finite(x, 0) / DANGER_ZONE_SIZE)}_${Math.floor(finite(y, 0) / DANGER_ZONE_SIZE)}`;
+// One society-world actor (legacy `Agent`, minus everything spatial). Ids are owned by the caller.
+export class CombatActor {
+    constructor({ id, factionId = null, maxHp = 100, parentId = null, location = null } = {}) {
+        this.id = id;
+        this.factionId = factionId;
+        this.parentId = parentId;
+        this.generation = parentId ? 0 : 1; // agent.js verbatim ("Set during evolution")
+        this.familyName = actorFamilyName(id);
+        this.children = [];
+        this.maxHp = Math.max(0, finite(maxHp, 100));
+        this.hp = this.maxHp;
+        this.alive = true;
+        this.isEngaged = false;
+        this.engagementStartTick = null;
+        this.stressSurvivalTicks = 0;
+        this.panicSourceId = null;
+        this.traumaLevel = 0;
+        this.panicEventsSurvived = 0;
+        // The actor's own felt fear (legacy `brain.currentFear` / `emotions.fear`): the world owns
+        // faction fear, the actor owns the fear it fights under, and the trauma floor below binds on
+        // THIS value — which is why it is state, not a parameter.
+        this.fear = 0;
+        this.kills = 0;
+        this.location = location ? { x: finite(location.x, 0), y: finite(location.y, 0) } : null;
+        this.deployedTick = null;
+    }
+    // agent.js `getLineageInfo()` — the same fields, with the children list copied out.
+    getLineageInfo() { return { id: this.id, familyName: this.familyName, generation: this.generation, parentId: this.parentId, childrenCount: this.children.length, children: [...this.children] }; }
+    // agent.js `setEngaged()`: idempotent, and the stress ticker restarts only on a real engagement.
+    engage({ sourceId = null, tick = 0 } = {}) {
+        if (this.isEngaged || !this.alive) return false;
+        this.isEngaged = true;
+        this.engagementStartTick = finite(tick, 0);
+        this.stressSurvivalTicks = 0;
+        this.panicSourceId = sourceId;
+        return true;
+    }
+    endEngagement() { this.isEngaged = false; return this; }
+    // agent.js `update()`: `if (this.isEngaged && !this.dead) this.stressSurvivalTime++`.
+    surviveEngagedTick() { if (this.isEngaged && this.alive) this.stressSurvivalTicks += 1; return this.stressSurvivalTicks; }
+    feelFear(level) { this.fear = clamp(finite(level, 0)); return this.fear; }
+    // agent.js `update()`: trauma accumulates only while PANICKING and only while it exceeds what is
+    // already held — `traumaLevel = Math.min(1, currentFear * 0.8)`; the panic counter increments per
+    // panicking update, exactly as the legacy ticker does. A non-panicking update leaves trauma to
+    // the decay branch (the caller runs one or the other, as the legacy update does).
+    absorbPanic(fear) {
+        this.feelFear(fear);
+        if (!this.alive || this.fear < ACTOR_PANIC_FEAR) return this.traumaLevel;
+        this.panicEventsSurvived += 1;
+        if (this.traumaLevel < this.fear) this.traumaLevel = Math.min(1, this.fear * 0.8);
+        return this.traumaLevel;
+    }
+    // agent.js `update()`: `this.traumaLevel *= this.traumaDecayRate` (0.9995), floored to 0 below 0.001.
+    decayTrauma(ticks = 1) {
+        for (let i = 0; i < Math.max(0, Math.floor(finite(ticks, 1))); i += 1) {
+            if (this.traumaLevel <= 0) break;
+            this.traumaLevel *= TRAUMA_DECAY_RATE;
+            if (this.traumaLevel < 0.001) this.traumaLevel = 0;
+        }
+        return this.traumaLevel;
+    }
+    // agent.js `update()`: traumatised actors startle more easily — `setFear(max(fear, traumaLevel * 0.3))`
+    // above 0.3 trauma. Returns the fear floor the actor applies, or null when it applies none.
+    traumaFloor() { return this.traumaLevel > TRAUMA_FLOOR_THRESHOLD ? Math.max(0, this.traumaLevel * TRAUMA_FLOOR_SHARE) : null; }
+    // The floor BINDS exactly when felt fear has fallen below it — the legacy reason it exists (a
+    // traumatised actor stays jumpy after the moment has passed). Returns the lifted felt fear.
+    applyTraumaFloor() {
+        const floor = this.traumaFloor();
+        if (floor != null && floor > this.fear) this.fear = floor;
+        return this.fear;
+    }
+    // V8-designed wound model (the legacy sources carry no damage formula): damage is the margin an
+    // attack wins by, never negative, and death is a one-way transition that ends the engagement.
+    applyDamage(amount) {
+        const hpBefore = this.hp;
+        if (!this.alive) return { hpBefore, hpAfter: this.hp, damage: 0, killed: false };
+        this.hp = Math.max(0, hpBefore - Math.max(0, finite(amount, 0)));
+        const killed = this.hp === 0;
+        if (killed) { this.alive = false; this.isEngaged = false; }
+        return { hpBefore, hpAfter: this.hp, damage: hpBefore - this.hp, killed };
+    }
+    serialize() {
+        return { id: this.id, factionId: this.factionId, parentId: this.parentId, generation: this.generation, children: [...this.children], hp: this.hp, maxHp: this.maxHp, alive: this.alive, isEngaged: this.isEngaged, engagementStartTick: this.engagementStartTick, stressSurvivalTicks: this.stressSurvivalTicks, panicSourceId: this.panicSourceId, traumaLevel: this.traumaLevel, panicEventsSurvived: this.panicEventsSurvived, fear: this.fear, kills: this.kills, location: this.location ? { ...this.location } : null, deployedTick: this.deployedTick };
+    }
+    static load(state = {}) {
+        const actor = new CombatActor({ id: state.id, factionId: state.factionId ?? null, maxHp: state.maxHp, parentId: state.parentId ?? null, location: state.location ?? null });
+        actor.generation = Math.floor(finite(state.generation, actor.generation));
+        actor.children = [...(state.children ?? [])];
+        actor.hp = Math.max(0, finite(state.hp, actor.maxHp));
+        actor.alive = state.alive ?? actor.hp > 0;
+        actor.isEngaged = Boolean(state.isEngaged);
+        actor.engagementStartTick = state.engagementStartTick ?? null;
+        actor.stressSurvivalTicks = Math.max(0, Math.floor(finite(state.stressSurvivalTicks, 0)));
+        actor.panicSourceId = state.panicSourceId ?? null;
+        actor.traumaLevel = clamp(finite(state.traumaLevel, 0));
+        actor.panicEventsSurvived = Math.max(0, Math.floor(finite(state.panicEventsSurvived, 0)));
+        actor.fear = clamp(finite(state.fear, 0));
+        actor.kills = Math.max(0, Math.floor(finite(state.kills, 0)));
+        actor.deployedTick = state.deployedTick ?? null;
+        return actor;
+    }
+}
+// The society world's actor population and survival book (legacy `Agent` registry + `AgentLearning`).
+export class CombatCore {
+    constructor({ rng = null } = {}) {
+        // `rng` is a DRAW function (`() => world.random()`), never the RNG source object.
+        this.rng = rng;
+        this.actors = new Map();
+        this.strategyStats = Object.fromEntries(COMBAT_STRATEGIES.map(id => [id, { uses: 0, successes: 0 }]));
+        this.totalEscapes = 0;
+        this.totalDeaths = 0;
+        this.averageSurvivalTime = 0;
+        this.successfulStrategies = new Map();
+        this.predatorPatterns = new Map();
+        this.hidingSpots = [];
+        this.dangerZones = new Map();
+        this.tribalKnowledge = new Map();
+    }
+    draw() { return this.rng ? finite(this.rng(), 0.5) : 0.5; }
+    // agent.js `Agent` construction: a deployed actor joins the population; a spawned actor (one
+    // naming a parent) is appended to that parent's `children` — lineage is world state, not a name.
+    deploy({ id, factionId = null, maxHp = 100, parentId = null, location = null, tick = 0 } = {}) {
+        if (!id) throw new Error('CombatCore.deploy requires an actor id');
+        if (this.actors.has(id)) throw new Error(`Duplicate combat actor "${id}"`);
+        let parent = null;
+        if (parentId != null) {
+            parent = this.actors.get(parentId);
+            if (!parent) throw new Error(`Unknown parent actor "${parentId}"`);
+        }
+        const actor = new CombatActor({ id, factionId, maxHp, parentId, location });
+        actor.deployedTick = finite(tick, 0);
+        this.actors.set(id, actor);
+        if (parent) parent.children.push(id);
+        return actor;
+    }
+    actor(id) { return this.actors.get(id) ?? null; }
+    unitsOf(factionId) { return [...this.actors.values()].filter(actor => actor.factionId === factionId); }
+    livingUnits() { return [...this.actors.values()].filter(actor => actor.alive); }
+    // learningagent.js `recordEscape()`: the `.05` survival-time EMA, the strategy's success count
+    // and (for a successful hide) the learned hiding spot, capped at 50.
+    recordEscape({ strategy = 'fleeStraight', survivalTime = 0, location = null } = {}) {
+        this.totalEscapes += 1;
+        const time = Math.max(0, finite(survivalTime, 0));
+        this.averageSurvivalTime = (1 - SURVIVAL_EMA_ALPHA) * this.averageSurvivalTime + SURVIVAL_EMA_ALPHA * time;
+        if (!this.successfulStrategies.has(strategy)) this.successfulStrategies.set(strategy, { count: 0, totalSurvivalTime: 0 });
+        const record = this.successfulStrategies.get(strategy);
+        record.count += 1;
+        record.totalSurvivalTime += time;
+        if (this.strategyStats[strategy]) this.strategyStats[strategy].successes += 1;
+        let hidingSpotsRecorded = false;
+        if (strategy === 'hide' && location) {
+            this.hidingSpots.push({ x: finite(location.x, 0), y: finite(location.y, 0), successCount: 1 });
+            if (this.hidingSpots.length > MAX_HIDING_SPOTS) this.hidingSpots.shift();
+            hidingSpotsRecorded = true;
+        }
+        return { strategy, count: record.count, averageSurvivalTime: this.averageSurvivalTime, hidingSpotsRecorded };
+    }
+    // learningagent.js `recordDeath()`: the death marks its cell dangerous and counts as a USE of
+    // the strategy that failed (escapes count successes — the legacy symmetry).
+    recordDeath({ strategy = 'fleeStraight', location = null, predatorId = null } = {}) {
+        this.totalDeaths += 1;
+        const dangerCount = location ? this.recordDanger(location) : null;
+        if (this.strategyStats[strategy]) this.strategyStats[strategy].uses += 1;
+        if (predatorId != null) {
+            if (!this.predatorPatterns.has(predatorId)) this.predatorPatterns.set(predatorId, { killCount: 0, escapes: 0 });
+            this.predatorPatterns.get(predatorId).killCount += 1;
+        }
+        return { strategy, dangerCount, dangerous: dangerCount != null && dangerCount > DANGER_ZONE_THRESHOLD };
+    }
+    recordDanger(location) {
+        const key = dangerZoneKey(location.x, location.y);
+        const count = (this.dangerZones.get(key) ?? 0) + 1;
+        this.dangerZones.set(key, count);
+        return count;
+    }
+    dangerCount(x, y) { return this.dangerZones.get(dangerZoneKey(x, y)) ?? 0; }
+    // learningagent.js `isDangerousZone()` verbatim: `danger > 2`.
+    isDangerousZone(x, y) { return this.dangerCount(x, y) > DANGER_ZONE_THRESHOLD; }
+    // The same gate as a danger term for callers that consume danger numerically (migration): the
+    // legacy gate is boolean, so a learned danger zone contributes the maximum learned danger.
+    learnedDanger(location) { return location && this.isDangerousZone(location.x, location.y) ? 1 : 0; }
+    predatorKills(predatorId) { return this.predatorPatterns.get(predatorId)?.killCount ?? 0; }
+    // learningagent.js `getHidingSpot()`: `successCount / (dist + 1)` under a max distance.
+    getHidingSpot({ x = 0, y = 0, maxDistance = 200 } = {}) {
+        let bestSpot = null;
+        let bestScore = -Infinity;
+        for (const spot of this.hidingSpots) {
+            const dx = spot.x - finite(x, 0);
+            const dy = spot.y - finite(y, 0);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > maxDistance) continue;
+            const score = spot.successCount / (dist + 1);
+            if (score > bestScore) { bestScore = score; bestSpot = spot; }
+        }
+        return bestSpot ? { ...bestSpot } : null;
+    }
+    // learningagent.js `getBestStrategy()`: success rate behind a `.5` prior for unused strategies,
+    // the four context bonuses, a `.1` exploration jitter, and the legacy side effect that a CHOICE
+    // counts as a use of the chosen strategy.
+    bestStrategy({ allies = 0, predatorKills = 0, hidingSpotKnown = null } = {}) {
+        const known = hidingSpotKnown ?? this.hidingSpots.length > 0;
+        let best = 'fleeStraight';
+        let bestScore = -Infinity;
+        for (const strategy of COMBAT_STRATEGIES) {
+            const stats = this.strategyStats[strategy];
+            const successRate = stats.uses > 0 ? stats.successes / stats.uses : STRATEGY_PRIOR;
+            let contextBonus = 0;
+            if (strategy === 'groupDefense' && allies >= 3) contextBonus += 0.3;
+            if (strategy === 'hide' && known) contextBonus += 0.2;
+            if (strategy === 'splitRun' && allies >= 2) contextBonus += 0.15;
+            if (predatorKills > 5 && (strategy === 'fleeZigzag' || strategy === 'freezeThenFlee')) contextBonus += 0.25;
+            const score = successRate + contextBonus + this.draw() * STRATEGY_JITTER;
+            if (score > bestScore) { bestScore = score; best = strategy; }
+        }
+        this.strategyStats[best].uses += 1; // legacy: "Record that we're trying this strategy"
+        return best;
+    }
+    // learningagent.js `shareTribalKnowledge()`: knowledge lands in the FAMILY bucket, once per ally
+    // (the legacy duplication is preserved), capped at 100 entries per family.
+    shareKnowledge({ fromActorId = null, familyName = null, allies = [], knowledge = {} } = {}) {
+        const family = familyName ?? (fromActorId == null ? null : this.actors.get(fromActorId)?.familyName) ?? null;
+        if (!family) return 0;
+        let shared = 0;
+        for (const ally of allies) {
+            if (ally == null || ally === fromActorId) continue;
+            // The legacy bucket is created lazily, once per RECIPIENT: a share with nobody nearby
+            // leaves no empty bucket behind.
+            if (!this.tribalKnowledge.has(family)) this.tribalKnowledge.set(family, []);
+            const bucket = this.tribalKnowledge.get(family);
+            bucket.push({ ...knowledge, fromAgent: fromActorId });
+            shared += 1;
+            if (bucket.length > MAX_FAMILY_KNOWLEDGE) bucket.shift();
+        }
+        return shared;
+    }
+    knowledgeOf(familyName) { return (this.tribalKnowledge.get(familyName) ?? []).map(entry => ({ ...entry })); }
+    // learningagent.js `adaptPredatorAI()`: `totalEscapes / max(1, totalEscapes + totalDeaths)` — an
+    // untouched book reads 0, the legacy quirk that reports predators as winning before any outcome.
+    escapeRate() { return this.totalEscapes / Math.max(1, this.totalEscapes + this.totalDeaths); }
+    // > .7 → ×1.5, < .3 → ×0.8; inside the window the multiplier is unchanged (1).
+    adaptationMultiplier() {
+        const rate = this.escapeRate();
+        if (rate > ESCAPE_RATE_HIGH) return ADAPTATION_FAST;
+        if (rate < ESCAPE_RATE_LOW) return ADAPTATION_SLOW;
+        return 1;
+    }
+    reset() {
+        this.actors.clear();
+        this.totalEscapes = 0;
+        this.totalDeaths = 0;
+        this.averageSurvivalTime = 0;
+        this.successfulStrategies.clear();
+        this.predatorPatterns.clear();
+        this.hidingSpots = [];
+        this.dangerZones.clear();
+        this.tribalKnowledge.clear();
+        for (const strategy of COMBAT_STRATEGIES) this.strategyStats[strategy] = { uses: 0, successes: 0 };
+        return this;
+    }
+    serialize() {
+        return {
+            actors: [...this.actors.entries()].map(([id, actor]) => [id, actor.serialize()]),
+            strategyStats: Object.fromEntries(COMBAT_STRATEGIES.map(id => [id, { ...this.strategyStats[id] }])),
+            totalEscapes: this.totalEscapes, totalDeaths: this.totalDeaths, averageSurvivalTime: this.averageSurvivalTime,
+            successfulStrategies: [...this.successfulStrategies.entries()].map(([id, record]) => [id, { ...record }]),
+            predatorPatterns: [...this.predatorPatterns.entries()].map(([id, record]) => [id, { ...record }]),
+            hidingSpots: this.hidingSpots.map(spot => ({ ...spot })),
+            dangerZones: [...this.dangerZones.entries()].map(([key, count]) => [key, count]),
+            tribalKnowledge: [...this.tribalKnowledge.entries()].map(([family, entries]) => [family, entries.map(entry => ({ ...entry }))]),
+        };
+    }
+    loadState(state = {}) {
+        this.actors = new Map((state.actors ?? []).map(([id, actor]) => [id, CombatActor.load(actor)]));
+        for (const strategy of COMBAT_STRATEGIES) {
+            const stats = state.strategyStats?.[strategy];
+            this.strategyStats[strategy] = { uses: Math.max(0, Math.floor(finite(stats?.uses, 0))), successes: Math.max(0, Math.floor(finite(stats?.successes, 0))) };
+        }
+        this.totalEscapes = Math.max(0, Math.floor(finite(state.totalEscapes, 0)));
+        this.totalDeaths = Math.max(0, Math.floor(finite(state.totalDeaths, 0)));
+        this.averageSurvivalTime = Math.max(0, finite(state.averageSurvivalTime, 0));
+        this.successfulStrategies = new Map((state.successfulStrategies ?? []).map(([id, record]) => [id, { count: Math.max(0, Math.floor(finite(record?.count, 0))), totalSurvivalTime: Math.max(0, finite(record?.totalSurvivalTime, 0)) }]));
+        this.predatorPatterns = new Map((state.predatorPatterns ?? []).map(([id, record]) => [id, { killCount: Math.max(0, Math.floor(finite(record?.killCount, 0))), escapes: Math.max(0, Math.floor(finite(record?.escapes, 0))) }]));
+        this.hidingSpots = (state.hidingSpots ?? []).map(spot => ({ x: finite(spot.x, 0), y: finite(spot.y, 0), successCount: Math.max(0, finite(spot.successCount, 0)) }));
+        this.dangerZones = new Map((state.dangerZones ?? []).map(([key, count]) => [key, Math.max(0, Math.floor(finite(count, 0)))]));
+        this.tribalKnowledge = new Map((state.tribalKnowledge ?? []).map(([family, entries]) => [family, entries.map(entry => ({ ...entry }))]));
+        return this;
+    }
 }

@@ -15,6 +15,9 @@ imported by production code.
 | `legacy/neuralnet.js` | `origin/master:fear-ai-sim/` + `neuralnet.js` | `3d320bb2f8fd6d23dd16c78bf785804cd418dc41` | `9218cbde832e30093cce32ac29246eab8acb8f15b48fb04249d25b511d924a63` | 2026-09-23 |
 | `legacy/fearcore.js` | `origin/master:fear-ai-sim/` + `fearcore.js` | `185494c831a6688a70aa4d143e18757a7cceb7eb` | `d5a94c963de945f054918004ecf0493789b1bccdac35879a040b6b65c10496ab` | 2026-09-23 |
 | `legacy/brain.js` | `origin/master:fear-ai-sim/` + `brain.js` | `163dfa7a184fda3e831b19ab7fa8cb65f02b3b1e` | `b35aa3952b2650492a2b9f4d025a7132c23c09a62a42835a3ed0b6fe1006d3d6` | 2026-09-23 |
+| `legacy/simulation.js` | `origin/master:fear-ai-sim/` + `simulation.js` | `2cc0c2dc991362fece0afea05150bcd988fe4cb2` | `3b91c4dc778efea806ed47e704e02c2ecc65ab016819d4cb08d608108bd90ef5` | 2026-09-23 |
+| `legacy/agent.js` | `origin/master:fear-ai-sim/` + `agent.js` | `f3815a84736b04afc592ee3fd8652464e898b148` | `5e208a01a8840af4976c7c3db2f48106a861115c049bc472b143a13e779d847c` | 2026-09-23 |
+| `legacy/learningagent.js` | `origin/master:fear-ai-sim/` + `learningagent.js` | `562faea5106f6cff3ccdc9cecb7b3dd7a0d2a7c6` | `f06f44f3090879c41789300d98579515abd936f9933fd61d7b70bfa0e4915eb7` | 2026-09-23 |
 
 Extraction command (reproduce and diff against the sha256 above):
 
@@ -25,11 +28,15 @@ git show origin/master:fear-ai-sim/neuralfear.js | sha256sum
 git show origin/master:fear-ai-sim/neuralnet.js | sha256sum
 git show origin/master:fear-ai-sim/fearcore.js | sha256sum
 git show origin/master:fear-ai-sim/brain.js | sha256sum
+git show origin/master:fear-ai-sim/simulation.js | sha256sum
+git show origin/master:fear-ai-sim/agent.js | sha256sum
+git show origin/master:fear-ai-sim/learningagent.js | sha256sum
 ```
 
 Byte-exactness of every file in this directory is asserted on each gate run by
 `tests/habituation-reopen.test.js`, `tests/hysteresis-reopen.test.js`,
-`tests/neural-fear-reopen.test.js` and `tests/fearcore-reopen.test.js`
+`tests/neural-fear-reopen.test.js`, `tests/fearcore-reopen.test.js` and
+`tests/simulation-agents-combat-reopen.test.js`
 (and `.gitattributes` marks `legacy/**` as `-text` so no
 line-ending conversion can ever touch the bytes).
 

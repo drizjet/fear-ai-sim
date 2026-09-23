@@ -1,4 +1,4 @@
-import { AgentBelief, BeliefEvidence, FearCore, HabituationBook, HysteresisBook, Morale, NeuralFearModel, Personality, ReputationBook, fearScale } from './socialcore.js';
+import { AgentBelief, BeliefEvidence, CombatCore, FearCore, HabituationBook, HysteresisBook, Morale, NeuralFearModel, Personality, ReputationBook, fearScale } from './socialcore.js';
 import { DecisionCore } from './decisioncore.js';
 import { InteractionCore } from './interactioncore.js';
 import { AdvisoryGate } from './advisorygate.js';
@@ -12,6 +12,12 @@ const num = (value, fallback = 0) => Number.isFinite(value) ? value : fallback;
 // point of grievance per point of fear keeps the ladder honest — a single .15 wound adds .075,
 // so resentment builds over repeated hurt rather than from one scratch.
 const GRIEVANCE_PER_FEAR = .5;
+// RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001: the fear a death inflicts on a faction that sees it.
+// The extracted sources carry no such constant (their per-agent fear came from predator proximity
+// in the spatial layer V8 deletes), so this is a V8-DESIGN value, deliberately small — a kill is
+// worth a third of the .15 fear a player wound applies — and it flows through the one fear seam,
+// so habituation attenuates it and both fear machines see it.
+const COMBAT_FEAR_PER_CASUALTY = .05;
 
 export class RumorNetwork {
     constructor({ now, maxRumors = 2048, maxQueue = 4096, confidenceHalfLife = 10 } = {}) { this.rumors = []; this.seq = 0; this.queue = []; this.now = now || (() => 0); this.maxRumors = Math.max(1, Math.floor(maxRumors)); this.maxQueue = Math.max(1, Math.floor(maxQueue)); this.confidenceHalfLife = Math.max(1, num(confidenceHalfLife, 10)); }
@@ -308,6 +314,11 @@ export class SocietyCore {
         // extended 7) with its panic lock, force-fallback and bounded decision trace. Constructing
         // it draws nothing and every context input arrives per call, so seeded streams are untouched.
         this.fearCore = new FearCore();
+        // Re-opened `Simulation/agents/combat` row: the society world's ACTORS (legacy agent.js) and
+        // their survival book (legacy learningagent.js). Constructing it draws nothing — the legacy
+        // module-level book is per-world here, and the RNG is a draw function like every other
+        // injectable consumer (`() => this.random()`, never the RNG source object).
+        this.combat = new CombatCore({ rng: () => this.random() });
         // RESP-PLAYER-INVASION-CHAIN-001: player vitals, war-pressure state, resolved invasions.
         this.player = { hp: 100, maxHp: 100, alive: true, deaths: 0 };
         this.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70 };
@@ -639,6 +650,66 @@ export class SocietyCore {
         ];
         const result = this.tick({ actions: [...this.progressPendingTrips({ routes: routes ?? this.routes.edges }), ...planned, ...rumorActions] });
         return result;
+    }
+    // RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001 factored the fear seam out of PLAYER_DAMAGE so that
+    // every production fear gain takes ONE path: habituation attenuation → the faction's fear,
+    // threat and grievance writes → FEAR_EVENT_RAISED → FEAR_HABITUATED → FEAR_STATE_TRANSITION /
+    // FEARCORE_BAND_TRANSITION. Exactly one uncommitted tail comes back for the turn driver, and a
+    // faction-less exposure (the player hurt before any faction is involved) is that same single
+    // FEAR_EVENT_RAISED with nothing written and nothing attenuated.
+    applyFearExposure({ parent = null, faction = null, baseGain = 0, source = 'unknown', extra = {} } = {}) {
+        const gain = Math.max(0, num(baseGain, 0));
+        const habituation = faction ? this.habituation.attenuate(gain, { stimulusType: source, actorId: faction.id, now: this.now() }) : null;
+        if (faction) {
+            faction.state.fear = clamp(num(faction.state.fear, 0) + habituation.adjusted);
+            faction.state.threatPerception = clamp(num(faction.state.threatPerception, 0) + gain / 2);
+            // RESP-FACTION-GRIEVANCE-ECONOMY-001: being hurt breeds resentment as well as fear, and
+            // every gain stamps the renewal tick so cooling only touches unrenewed resentments.
+            faction.state.grievance = clamp(num(faction.state.grievance, 0) + clamp(habituation.adjusted * GRIEVANCE_PER_FEAR));
+            faction.state.grievanceTick = this.time;
+        }
+        const fearEvent = this.allocateEvent({ type: 'FEAR_EVENT_RAISED', parent, baseFearGain: gain, fearGainApplied: habituation ? habituation.adjusted : 0, habituationLevel: habituation ? habituation.habituationLevel : 0, factionId: faction?.id ?? null, factionFearAfter: faction ? faction.state.fear : null, factionGrievanceAfter: faction ? faction.state.grievance : null, source, ...extra });
+        if (!faction) return fearEvent; // driver commits the returned event
+        // The exposure record chains off the fear event it shaped (commit → allocate → return keeps
+        // seq monotonic — same two-event pattern as the escort resolution).
+        this.commitEvent(fearEvent);
+        const habituated = this.allocateEvent({ type: 'FEAR_HABITUATED', parent: fearEvent, factionId: faction.id, source: fearEvent.source, stimulusKey: habituation.key, baseGain: habituation.base, appliedGain: habituation.adjusted, fearReduced: habituation.fearReduced, habituationLevel: habituation.habituationLevel, exposureCount: habituation.exposureCount });
+        // Re-opened `Hysteresis` row: the fear state machine consumes the POST-attenuation fear —
+        // asymmetric enter/exit thresholds behind the minimum-duration gate — and a real transition
+        // records as a canonical event chained off the exposure that produced the level it read.
+        // Blocked/gate updates emit nothing (no event spam). Legacy FREEZE is reachable in
+        // production: a world that assigns a faction a Morale passes it here, so low morale behind
+        // high fear can roll FREEZE; worlds that assign none keep the unfrozen path.
+        const transition = this.hysteresis.update(faction.id, faction.state.fear, { morale: this.morales.get(faction.id)?.value }, this.now());
+        // Re-opened `FearCore live transitions` row: the extracted band contract reads the SAME
+        // post-attenuation fear through brain.js's §332 adapter (normalized 0..1 → the contract's
+        // 0..3.8 raw scale). Its threat input counts the OTHER factions holding a retaliation-grade
+        // grievance, so ordinary worlds never leave the core ladder and the contract's own PANIC
+        // rules are the only place a draw can be taken.
+        const hostile = [...this.factions.values()].filter(other => other !== faction && num(other.state.grievance, 0) >= .5).length;
+        const band = this.fearCore.update(fearScale(faction.state.fear), {
+            currentAnger: num(faction.state.anger, 0),
+            morale: this.morales.get(faction.id)?.value,
+            threats: hostile,
+            skill: num(faction.state.militaryConfidence, .5),
+            obstacleAhead: false,
+            obstaclePresent: false,
+            rng: () => this.random(),
+        });
+        if (!transition.transitioned && !band.changed) return habituated;
+        this.commitEvent(habituated);
+        if (!band.changed) return this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() });
+        // Both machines can speak on one reading: stage the core-ladder transition first so the band
+        // event chains off it, and keep exactly one uncommitted tail for the driver.
+        let bandParent = habituated;
+        if (transition.transitioned) bandParent = this.commitEvent(this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() }));
+        // RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001 defect fix: the band contract's OWN tick counter
+        // was published as `tick`, which `allocateEvent` spreads AFTER the world tick — so a band
+        // transition allocated inside a later turn carried a stale/foreign tick, and
+        // `auditEventGraph()` reported PARENT_TICK_ORDER as soon as the core counter ran ahead of the
+        // world clock (reachable whenever a fear exposure lands mid-turn, as combat does). The core's
+        // counter is now published as `coreTick` and the event's `tick` stays the world's.
+        return this.allocateEvent({ type: 'FEARCORE_BAND_TRANSITION', parent: bandParent, factionId: faction.id, from: band.from, to: band.to, reason: band.reason, threshold: band.threshold, rawFear: band.fear, coreTick: band.tick, panicLocked: band.panicLocked, panicLockedUntil: band.panicLockedUntil, recoveryProgress: band.recoveryProgress, worldTime: this.now() });
     }
     executeAction(action = {}, parent = null) {
         const kind = action.kind ?? action.type;
@@ -1139,6 +1210,164 @@ export class SocietyCore {
                     retaliationThreshold: threshold,
                 }, resolution);
             }
+            // RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001 (re-opened `Simulation/agents/combat` row):
+            // the world's ACTORS. A deploy registers one society-world actor carrying the lineage the
+            // legacy `Agent` had (family name derived from the id, the legacy generation rule,
+            // parent/children) plus the vitals the society world needs to fight over.
+            case 'COMBAT_DEPLOY': {
+                const unitId = action.unit ?? action.unitId;
+                if (!unitId) throw new Error('COMBAT_DEPLOY requires a unit id');
+                const faction = action.faction ? this.factions.get(action.faction) : null;
+                if (action.faction && !faction) throw new Error(`Unknown faction "${action.faction}"`);
+                const actor = this.combat.deploy({ id: unitId, factionId: faction?.id ?? null, maxHp: action.maxHp, parentId: action.parentId ?? null, location: action.location ?? null, tick: this.now() });
+                // RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001 defect fix: the actor's LINEAGE parent is
+                // published as `lineageParentId` — `allocateEvent` spreads payload fields after its
+                // own `parentId`, so publishing the lineage under `parentId` silently erased the edge
+                // that makes the deploy a child of the turn that ran it (the event graph then showed
+                // a root where the chain's real parentage lives).
+                return this.allocateEvent({ type: 'COMBAT_ACTOR_DEPLOYED', parent, actorId: actor.id, factionId: actor.factionId, familyName: actor.familyName, generation: actor.generation, lineageParentId: actor.parentId, hp: actor.hp, maxHp: actor.maxHp, location: actor.location ? { ...actor.location } : null, worldTime: this.now() });
+            }
+            // RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001: one action runs a whole engagement. The
+            // extracted sources carry no combat subsystem — their harm came from per-agent proximity
+            // in the spatial layer V8 deletes — so this is the implement-and-test pass the row always
+            // needed, built on what those sources DO carry: lineage, the engagement window, the trauma
+            // model and the world's survival book. ORDER: start (committed) → one strike per side per
+            // round (committed; one world-RNG draw for the blow, and the strategy choice draws as the
+            // legacy `getBestStrategy` did) → each casualty (committed, with its learned-danger cell
+            // and its family-knowledge record) → the trauma bookkeeping → fear exposures through the
+            // ONE fear seam → and exactly ONE uncommitted tail (the resolution) for the turn driver,
+            // the same contract as the raid loop.
+            case 'COMBAT_ENGAGEMENT': {
+                if (!action.engagementId) throw new Error('COMBAT_ENGAGEMENT requires an engagementId');
+                const attacker = this.combat.actor(action.attacker ?? action.attackerId);
+                if (!attacker) throw new Error(`Unknown combat actor "${action.attacker ?? action.attackerId}"`);
+                const defender = this.combat.actor(action.defender ?? action.defenderId);
+                if (!defender) throw new Error(`Unknown combat actor "${action.defender ?? action.defenderId}"`);
+                if (attacker === defender) throw new Error('COMBAT_ENGAGEMENT requires two distinct actors');
+                if (!attacker.alive || !defender.alive) throw new Error('COMBAT_ENGAGEMENT requires two living actors');
+                const attackerFaction = this.factions.get(attacker.factionId);
+                const defenderFaction = this.factions.get(defender.factionId);
+                if (!attackerFaction) throw new Error(`Unknown faction "${attacker.factionId}"`);
+                if (!defenderFaction) throw new Error(`Unknown faction "${defender.factionId}"`);
+                if (attackerFaction === defenderFaction) throw new Error('COMBAT_ENGAGEMENT requires two distinct factions');
+                const rounds = Math.max(1, Math.floor(num(action.rounds, 1)));
+                const location = action.location ? { x: num(action.location.x, 0), y: num(action.location.y, 0) } : (defender.location ?? attacker.location ?? null);
+                // V8-DESIGN strength model: a strike force rides its faction's confidence and anger,
+                // armor its confidence and supply, on the raid loop's own `militaryConfidence * 10`
+                // scale extended by the macro layer's anger. Callers override per engagement.
+                const forceOf = faction => Math.max(.1, num(faction.state.militaryConfidence, .5) * 10 + num(faction.state.anger, 0) * 5);
+                const armorOf = faction => Math.max(0, num(faction.state.militaryConfidence, .5) * 5 + num(faction.state.supplySecurity, .5) * 5);
+                const attackerForce = Number.isFinite(action.force) ? Math.max(.1, num(action.force)) : forceOf(attackerFaction);
+                const attackerArmor = Number.isFinite(action.attackerArmor) ? Math.max(0, num(action.attackerArmor)) : armorOf(attackerFaction);
+                const defenderForce = Number.isFinite(action.defenderForce) ? Math.max(.1, num(action.defenderForce)) : forceOf(defenderFaction);
+                const defenderArmor = Number.isFinite(action.defense) ? Math.max(0, num(action.defense)) : armorOf(defenderFaction);
+                const bagSize = Math.max(0, num(action.bagSize, Math.floor(num(defenderFaction.loot, 0) / 2)));
+                // agent.js `setEngaged()` opens both engagement windows; the start event is the chain's
+                // root from here on (everything below parents through it).
+                let chain = this.commitEvent(this.allocateEvent({ type: 'COMBAT_ENGAGEMENT_STARTED', parent, engagementId: action.engagementId, attackerId: attacker.id, defenderId: defender.id, attackerFactionId: attackerFaction.id, defenderFactionId: defenderFaction.id, attackerForce, attackerArmor, defenderForce, defenderArmor, rounds, location: location ? { ...location } : null, dangerCount: location ? this.combat.dangerCount(location.x, location.y) : null, escalationLevel: attackerFaction.state.escalationLevel(), worldTime: this.now() }));
+                attacker.engage({ sourceId: defender.id, tick: this.now() });
+                defender.engage({ sourceId: attacker.id, tick: this.now() });
+                const strategies = {};
+                const casualties = [];
+                let attackerDamage = 0;
+                let defenderDamage = 0;
+                for (let round = 1; round <= rounds; round += 1) {
+                    for (const [striker, target, strikeForce, targetArmor] of [[attacker, defender, attackerForce, defenderArmor], [defender, attacker, defenderForce, attackerArmor]]) {
+                        if (!striker.alive || !target.alive) continue;
+                        const targetFaction = target === defender ? defenderFaction : attackerFaction;
+                        // learningagent.js `getBestStrategy()`: the acting side chooses with the book's
+                        // success rates, context bonuses and exploration jitter (which draws).
+                        const strategy = this.combat.bestStrategy({ allies: this.combat.unitsOf(striker.factionId).filter(unit => unit.alive && unit !== striker).length, predatorKills: this.combat.predatorKills(target.id) });
+                        strategies[striker.id] = strategy;
+                        const roll = this.random(); // one world-RNG draw for the blow
+                        const attack = strikeForce + roll;
+                        const hit = attack > targetArmor;
+                        // V8 strike model: damage is the margin the attack wins by, zero when the
+                        // armor holds (the legacy sources carry no damage formula — see the ledger).
+                        const damage = hit ? attack - targetArmor : 0;
+                        const wound = target.applyDamage(damage);
+                        if (target === defender) defenderDamage += wound.damage;
+                        else attackerDamage += wound.damage;
+                        chain = this.commitEvent(this.allocateEvent({ type: 'COMBAT_STRIKE', parent: chain, engagementId: action.engagementId, round, strikerId: striker.id, targetId: target.id, strategy, force: strikeForce, armor: targetArmor, roll, attack, hit, damage: wound.damage, targetHpBefore: wound.hpBefore, targetHpAfter: wound.hpAfter, targetAlive: target.alive, location: location ? { ...location } : null, worldTime: this.now() }));
+                        striker.surviveEngagedTick(); // legacy stress ticker, one tick per round
+                        if (!wound.killed) continue;
+                        striker.kills += 1;
+                        // learningagent.js `recordDeath()` + `shareTribalKnowledge()`: the cell is
+                        // marked dangerous, the failed strategy counts as a use, the killer joins the
+                        // predator patterns, and the dead actor's faction-mates learn of it (V8's
+                        // proximity is faction membership — the legacy proximity filter is spatial).
+                        const death = this.combat.recordDeath({ strategy, location, predatorId: striker.id });
+                        const nearby = this.combat.unitsOf(target.factionId).filter(unit => unit !== target && unit.alive);
+                        const knowledgeShared = this.combat.shareKnowledge({ fromActorId: target.id, allies: nearby.map(unit => unit.id), knowledge: { type: 'death', strategy, predatorId: striker.id } });
+                        casualties.push(target.id);
+                        chain = this.commitEvent(this.allocateEvent({ type: 'COMBAT_CASUALTY', parent: chain, engagementId: action.engagementId, round, actorId: target.id, factionId: target.factionId, lineage: target.getLineageInfo(), killerId: striker.id, strategy, location: location ? { ...location } : null, dangerCount: death.dangerCount, dangerousZone: death.dangerous, traumaLevel: target.traumaLevel, panicEventsSurvived: target.panicEventsSurvived, stressSurvivalTicks: target.stressSurvivalTicks, knowledgeShared, worldTime: this.now() }));
+                    }
+                }
+                // Trauma bookkeeping (agent.js): a survivor whose faction is in the ported PANIC band
+                // accumulates trauma (`min(1, fear * 0.8)`); everyone else decays by the legacy
+                // 0.9995; every survivor ends its engagement window and counts as an escape from it,
+                // with the strategy it fought under and its sustained engagement time as survival
+                // time — exactly what `recordEscape` tracks.
+                const panicking = faction => fearScale(num(faction.state.fear, 0)) >= this.fearCore.config.enter.PANIC;
+                const survivors = [];
+                for (const [actor, faction] of [[attacker, attackerFaction], [defender, defenderFaction]]) {
+                    if (!actor.alive) { actor.endEngagement(); continue; }
+                    const felt = num(faction.state.fear, 0);
+                    const inPanic = panicking(faction);
+                    // The actor feels what its faction feels, then the legacy branch runs: panic
+                    // accumulates trauma, anything else decays it, and the trauma floor lifts a felt
+                    // fear that has fallen back below it (agent.js's `max(fear, traumaLevel * 0.3)`).
+                    if (inPanic) actor.absorbPanic(felt);
+                    else { actor.feelFear(felt); actor.decayTrauma(1); }
+                    const traumaFloor = actor.traumaFloor();
+                    actor.applyTraumaFloor();
+                    const stressSurvivalTicks = actor.stressSurvivalTicks;
+                    actor.endEngagement();
+                    const strategy = strategies[actor.id] ?? 'fleeStraight';
+                    const escape = this.combat.recordEscape({ strategy, survivalTime: stressSurvivalTicks, location: strategy === 'hide' ? location : null });
+                    survivors.push({ actorId: actor.id, factionId: actor.factionId, hp: actor.hp, fear: actor.fear, traumaLevel: actor.traumaLevel, traumaFloor, traumaFloored: traumaFloor != null && traumaFloor >= actor.fear, panicEventsSurvived: actor.panicEventsSurvived, stressSurvivalTicks, strategy, panicking: inPanic, averageSurvivalTime: escape.averageSurvivalTime });
+                }
+                // Material and political consequence, on the raid loop's own steps (.1 confidence,
+                // .1/.02 anger, .05 threat) scaled by the book's adaptation multiplier — the legacy
+                // `adaptPredatorAI` windows: a winner being out-escaped adapts faster (×1.5), one
+                // rolling over its enemy slows down (×0.8).
+                const attackerStanding = attacker.alive;
+                const defenderStanding = defender.alive;
+                const outcome = attackerStanding && !defenderStanding ? 'ATTACKER_VICTORY' : defenderStanding && !attackerStanding ? 'DEFENDER_HELD' : (attackerStanding && defenderStanding ? 'DRAW' : 'MUTUAL_DESTRUCTION');
+                const adaptation = this.combat.adaptationMultiplier();
+                const winnerFaction = outcome === 'ATTACKER_VICTORY' ? attackerFaction : outcome === 'DEFENDER_HELD' ? defenderFaction : null;
+                const loserFaction = outcome === 'ATTACKER_VICTORY' ? defenderFaction : outcome === 'DEFENDER_HELD' ? attackerFaction : null;
+                let stolen = 0;
+                if (winnerFaction && loserFaction) {
+                    const stash = Math.max(0, num(loserFaction.loot, 0));
+                    stolen = Math.min(stash, bagSize);
+                    winnerFaction.loot = num(winnerFaction.loot, 0) + stolen;
+                    loserFaction.loot = stash - stolen;
+                    winnerFaction.state.militaryConfidence = clamp(num(winnerFaction.state.militaryConfidence, .5) + .1 * adaptation);
+                    winnerFaction.state.anger = clamp(num(winnerFaction.state.anger, 0) + .1 * adaptation);
+                    loserFaction.state.militaryConfidence = clamp(num(loserFaction.state.militaryConfidence, .5) - .1);
+                    loserFaction.state.anger = clamp(num(loserFaction.state.anger, 0) + .02);
+                    loserFaction.state.threatPerception = clamp(num(loserFaction.state.threatPerception, 0) + .05);
+                    // Being beaten and looted is resented like being raided (same .1 as a looted raid),
+                    // and the tick is stamped so the cooling pass sees a renewed resentment.
+                    loserFaction.state.grievance = clamp(num(loserFaction.state.grievance, 0) + .1);
+                    loserFaction.state.grievanceTick = this.time;
+                    loserFaction.history.push({ tick: this.now(), event: 'COMBAT_DEFEAT', engagementId: action.engagementId, opponent: winnerFaction.id, casualties: casualties.length });
+                }
+                // Bloodshed reaches the fear seam: every casualty is a fear exposure for BOTH sides
+                // (the defender first — it is the side that was struck), through the ONE seam, so
+                // habituation attenuation, the state machine and the band contract all see the fight.
+                // Each exposure commits behind the chain and the next parents to it.
+                const fearGain = COMBAT_FEAR_PER_CASUALTY * casualties.length;
+                const fearExposures = [];
+                const expose = (faction, baseGain, source) => {
+                    if (baseGain <= 0) return;
+                    chain = this.commitEvent(this.applyFearExposure({ parent: chain, faction, baseGain, source, extra: { engagementId: action.engagementId, casualties: casualties.length, outcome } }));
+                    fearExposures.push({ factionId: faction.id, source, baseGain, eventId: chain.id });
+                };
+                for (const faction of [defenderFaction, attackerFaction]) expose(faction, fearGain, 'combat');
+                return this.allocateEvent({ type: 'COMBAT_ENGAGEMENT_RESOLVED', parent: chain, engagementId: action.engagementId, attackerId: attacker.id, defenderId: defender.id, attackerFactionId: attackerFaction.id, defenderFactionId: defenderFaction.id, outcome, rounds, attackerAlive: attacker.alive, defenderAlive: defender.alive, attackerHp: attacker.hp, defenderHp: defender.hp, attackerDamage, defenderDamage, casualties: [...casualties], casualtyCount: casualties.length, strategies: { ...strategies }, stolen, winnerFactionId: winnerFaction?.id ?? null, loserFactionId: loserFaction?.id ?? null, adaptationMultiplier: adaptation, escapeRate: this.combat.escapeRate(), survivors, fearGainPerFaction: fearGain, fearExposures, dangerCount: location ? this.combat.dangerCount(location.x, location.y) : null, learnedDangerZone: location ? this.combat.isDangerousZone(location.x, location.y) : false, escalationLevel: attackerFaction.state.escalationLevel(), worldTime: this.now() });
+            }
             case 'JUSTICE_RESOLUTION': {
                 const faction = this.factions.get(action.faction);
                 if (!faction) throw new Error(`Unknown faction "${action.faction}"`);
@@ -1155,10 +1384,15 @@ export class SocietyCore {
             case 'MIGRATION_EVALUATION': {
                 const faction = this.factions.get(action.faction);
                 if (!faction) throw new Error(`Unknown faction "${action.faction}"`);
-                const context = { fear: action.fear ?? faction.state.fear, routeDanger: action.routeDanger ?? 0, foodSecurity: action.foodSecurity ?? 1, legitimacy: action.legitimacy ?? faction.state.legitimacy };
+                // RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001: a place the world has LEARNED is deadly
+                // (legacy `isDangerousZone`: more than two deaths inside one 50-unit cell) is route
+                // danger for the migration decision — the legacy gate is boolean, so it saturates
+                // the danger term rather than scaling it.
+                const learnedDanger = this.combat.learnedDanger(action.location);
+                const context = { fear: action.fear ?? faction.state.fear, routeDanger: Math.max(num(action.routeDanger, 0), learnedDanger), foodSecurity: action.foodSecurity ?? 1, legitimacy: action.legitimacy ?? faction.state.legitimacy };
                 const migrates = this.shouldMigrate(context);
                 const pressure = clamp(context.fear * .4 + context.routeDanger * .3 + (1 - context.foodSecurity) * .2 + (1 - context.legitimacy) * .1);
-                return this.allocateEvent({ type: 'MIGRATION_EVALUATION', parent, factionId: faction.id, destination: action.destination ?? null, pressure, migrates, legitimacy: context.legitimacy, parents: action.parentEvents ?? [] });
+                return this.allocateEvent({ type: 'MIGRATION_EVALUATION', parent, factionId: faction.id, destination: action.destination ?? null, pressure, migrates, learnedDanger, routeDanger: context.routeDanger, legitimacy: context.legitimacy, parents: action.parentEvents ?? [] });
             }
             // RESP-CRIME-JUSTICE-LEGITIMACY-LOOP-001: the crime → report → justice → legitimacy →
             // migration production loop. Each stage resolves its upstream event (explicit id or
@@ -1200,10 +1434,14 @@ export class SocietyCore {
                 if (!justice) throw new Error(`No justice resolution to evaluate "${action.justiceId ?? ''}"`);
                 const settlement = this.settlements.get(action.settlementId ?? justice.settlementId);
                 if (!settlement) throw new Error(`Unknown settlement "${action.settlementId ?? justice.settlementId}"`);
-                const context = { fear: action.fear ?? 0, routeDanger: action.routeDanger ?? 0, foodSecurity: action.foodSecurity ?? 1, legitimacy: action.legitimacy ?? settlement.legitimacy };
+                // RESP-SIMULATION-AGENTS-COMBAT-REOPEN-001: the same learned-danger term reaches the
+                // settlement's migration decision — where a faction has learned its people die is
+                // where its pressure to leave is highest.
+                const learnedDanger = this.combat.learnedDanger(action.location);
+                const context = { fear: action.fear ?? 0, routeDanger: Math.max(num(action.routeDanger, 0), learnedDanger), foodSecurity: action.foodSecurity ?? 1, legitimacy: action.legitimacy ?? settlement.legitimacy };
                 const migrates = this.shouldMigrate(context);
                 const pressure = clamp(context.fear * .4 + context.routeDanger * .3 + (1 - context.foodSecurity) * .2 + (1 - context.legitimacy) * .1);
-                return this.allocateEvent({ type: 'MIGRATION_EVALUATION', parent: justice, authority: 'SETTLEMENT', settlementId: settlement.id, crimeId: justice.crimeId ?? null, justiceId: justice.id, destination: action.destination ?? null, pressure, migrates, legitimacy: context.legitimacy });
+                return this.allocateEvent({ type: 'MIGRATION_EVALUATION', parent: justice, authority: 'SETTLEMENT', settlementId: settlement.id, crimeId: justice.crimeId ?? null, justiceId: justice.id, destination: action.destination ?? null, pressure, migrates, learnedDanger, routeDanger: context.routeDanger, legitimacy: context.legitimacy });
             }
             case 'CONVOY_DISPATCH': {
                 // RESP-CONVOY-ESCORT-BANDIT-LOOP-001 stage 1: a merchant's committed cargo (an
@@ -1291,58 +1529,7 @@ export class SocietyCore {
                 this.warState.pressure = pressureBefore + pressureGain;
                 const wound = this.allocateEvent({ type: 'PLAYER_WOUNDED', parent, amount: applied, requested: amount, hpBefore, hpAfter: this.player.hp, alive: this.player.alive, deaths: this.player.deaths, source: action.source ?? 'unknown' });
                 this.commitEvent(wound);
-                const baseFearGain = pressureGain / 100;
-                let habituation = null;
-                if (faction) {
-                    // Re-opened `Habituation` row: the exposure book attenuates the fear gain —
-                    // novelty protects the first exposures, recovery runs on world time.
-                    habituation = this.habituation.attenuate(baseFearGain, { stimulusType: action.source ?? 'unknown', actorId: faction.id, now: this.now() });
-                    faction.state.fear = clamp(num(faction.state.fear, 0) + habituation.adjusted);
-                    faction.state.threatPerception = clamp(num(faction.state.threatPerception, 0) + pressureGain / 200);
-                    // RESP-FACTION-GRIEVANCE-ECONOMY-001: being hurt breeds resentment as well as
-                    // fear, so a world where a faction is hurt repeatedly reaches a
-                    // retaliation-grade grievance without anyone scripting a raid. The renewal
-                    // tick is stamped here (and on every other grievance gain) so the cooling
-                    // pass only touches resentments nothing has renewed.
-                    faction.state.grievance = clamp(num(faction.state.grievance, 0) + clamp(habituation.adjusted * GRIEVANCE_PER_FEAR));                    faction.state.grievanceTick = this.time;
-                    }
-                const fearEvent = this.allocateEvent({ type: 'FEAR_EVENT_RAISED', parent: wound, pressureBefore, pressureAfter: this.warState.pressure, pressureGain, baseFearGain, fearGainApplied: habituation ? habituation.adjusted : 0, habituationLevel: habituation ? habituation.habituationLevel : 0, factionId: faction?.id ?? null, factionFearAfter: faction ? faction.state.fear : null, factionGrievanceAfter: faction ? faction.state.grievance : null, source: action.source ?? 'unknown' });
-                if (!faction) return fearEvent; // driver commits the returned event
-                // The exposure record chains off the fear event it shaped (commit → allocate →
-                // return keeps seq monotonic — same two-event pattern as the escort resolution).
-                this.commitEvent(fearEvent);
-                const habituated = this.allocateEvent({ type: 'FEAR_HABITUATED', parent: fearEvent, factionId: faction.id, source: fearEvent.source, stimulusKey: habituation.key, baseGain: habituation.base, appliedGain: habituation.adjusted, fearReduced: habituation.fearReduced, habituationLevel: habituation.habituationLevel, exposureCount: habituation.exposureCount });
-                // Re-opened `Hysteresis` row: the fear state machine consumes the POST-attenuation
-                // fear — asymmetric enter/exit thresholds behind the minimum-duration gate — and a
-                // real transition records as a canonical event chained off the exposure that
-                // produced the level it read. Blocked/gate updates emit nothing (no event spam).
-                // Legacy FREEZE is reachable in production: a world that assigns a faction a
-                // Morale passes it here, so low morale behind high fear can roll FREEZE. Worlds
-                // that assign none keep the unfrozen path (undefined morale → no roll at all).
-                const transition = this.hysteresis.update(faction.id, faction.state.fear, { morale: this.morales.get(faction.id)?.value }, this.now());
-                // Re-opened `FearCore live transitions` row: the extracted band contract reads the
-                // SAME post-attenuation fear through brain.js's §332 adapter (normalized 0..1 → the
-                // contract's 0..3.8 raw scale). Its threat input counts the OTHER factions holding a
-                // retaliation-grade grievance, so ordinary worlds never leave the core ladder and
-                // the contract's own PANIC rules are the only place a draw can be taken.
-                const hostile = [...this.factions.values()].filter(other => other !== faction && num(other.state.grievance, 0) >= .5).length;
-                const band = this.fearCore.update(fearScale(faction.state.fear), {
-                    currentAnger: num(faction.state.anger, 0),
-                    morale: this.morales.get(faction.id)?.value,
-                    threats: hostile,
-                    skill: num(faction.state.militaryConfidence, .5),
-                    obstacleAhead: false,
-                    obstaclePresent: false,
-                    rng: () => this.random(),
-                });
-                if (!transition.transitioned && !band.changed) return habituated;
-                this.commitEvent(habituated);
-                if (!band.changed) return this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() });
-                // Both machines can speak on one reading: stage the core-ladder transition first so
-                // the band event chains off it, and keep exactly one uncommitted tail for the driver.
-                let bandParent = habituated;
-                if (transition.transitioned) bandParent = this.commitEvent(this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() }));
-                return this.allocateEvent({ type: 'FEARCORE_BAND_TRANSITION', parent: bandParent, factionId: faction.id, from: band.from, to: band.to, reason: band.reason, threshold: band.threshold, rawFear: band.fear, tick: band.tick, panicLocked: band.panicLocked, panicLockedUntil: band.panicLockedUntil, recoveryProgress: band.recoveryProgress, worldTime: this.now() });
+                return this.applyFearExposure({ parent: wound, faction, baseGain: pressureGain / 100, source: action.source ?? 'unknown', extra: { pressureBefore, pressureAfter: this.warState.pressure, pressureGain } });
             }
             // Re-opened `Neural fear` row: production wiring for the extracted legacy MLP. The
             // feature vector is the faction's canonical numeric state; NEURAL_FEAR_PREDICT is
@@ -1733,6 +1920,7 @@ export class SocietyCore {
             roamingGroups: Object.fromEntries([...this.roamingGroups.entries()].map(([id, group]) => [id, { ...group }])),
             convoys: Object.fromEntries([...this.convoys.entries()].map(([id, convoy]) => [id, { ...convoy }])),
             raids: Object.fromEntries([...this.raids.entries()].map(([id, raid]) => [id, { ...raid }])),
+            combat: this.combat.serialize(),
             habituation: Object.fromEntries([...this.habituation.exposures.entries()].map(([key, exposure]) => [key, { ...exposure }])),
             hysteresis: Object.fromEntries([...this.hysteresis.actors.entries()].map(([id, controller]) => [id, { state: controller.state, stateTimer: controller.stateTimer, transitionHistory: controller.transitionHistory.map(entry => ({ ...entry })) }])),
             neuralFear: this.neuralFear.serialize(),
@@ -1781,6 +1969,7 @@ export class SocietyCore {
         society.roamingGroups = new Map(Object.entries(json.roamingGroups ?? {}).map(([id, group]) => [id, { ...group }]));
         society.convoys = new Map(Object.entries(json.convoys ?? {}).map(([id, convoy]) => [id, { ...convoy }]));
         society.raids = new Map(Object.entries(json.raids ?? {}).map(([id, raid]) => [id, { ...raid }]));
+        if (json.combat) society.combat.loadState(json.combat);
         for (const [key, exposure] of Object.entries(json.habituation ?? {})) society.habituation.exposures.set(key, { ...exposure });
         for (const [id, controller] of Object.entries(json.hysteresis ?? {})) society.hysteresis.actors.set(id, { state: controller.state, stateTimer: controller.stateTimer, transitionHistory: (controller.transitionHistory ?? []).map(entry => ({ ...entry })) });
         if (json.neuralFear) society.neuralFear.loadState(json.neuralFear);

@@ -50,17 +50,19 @@ describe('RESP-LEDGER-STALE-CLAIMS-AUDIT-001: completion ledger integrity', () =
         expect(violations).toEqual([]);
     });
 
-    it('the two remaining stale rows are explicitly retracted or blocked with absence evidence', () => {
+    it('the one remaining stale row is explicitly retracted or blocked with absence evidence', () => {
         const retracted = rows.filter(row => row.status === 'SOURCE_ABSENT').map(row => row.area).sort();
-        // Habituation, Hysteresis, Neural fear, FearCore and Brain scale cleanup all left
-        // SOURCE_ABSENT on 2026-09-23 through the re-open procedure (extract byte-exact + V8
-        // integration) — the row list is strict so a third can only appear here.
-        expect(retracted).toEqual(['Simulation/agents/combat', 'VR/biofeedback']);
+        // Habituation, Hysteresis, Neural fear, FearCore, Brain scale cleanup and
+        // Simulation/agents/combat all left SOURCE_ABSENT on 2026-09-23 through the re-open
+        // procedure (extract byte-exact + V8 integration) — the row list is strict so a second can
+        // only appear here.
+        expect(retracted).toEqual(['VR/biofeedback']);
         expect(rows.find(row => row.area === 'Habituation').status).toBe('IMPLEMENTED_AND_VERIFIED'); // re-opened row
         expect(rows.find(row => row.area === 'Hysteresis').status).toBe('IMPLEMENTED_AND_VERIFIED'); // second re-opened row
         expect(rows.find(row => row.area === 'Neural fear').status).toBe('IMPLEMENTED_AND_VERIFIED'); // third re-opened row
         expect(rows.find(row => row.area === 'FearCore live transitions').status).toBe('IMPLEMENTED_AND_VERIFIED'); // fourth re-opened row
         expect(rows.find(row => row.area === 'Brain scale cleanup').status).toBe('IMPLEMENTED_AND_VERIFIED'); // shares the fourth row's source
+        expect(rows.find(row => row.area === 'Simulation/agents/combat').status).toBe('IMPLEMENTED_AND_VERIFIED'); // fifth re-opened row (2026-09-23)
         for (const row of rows.filter(item => item.status === 'SOURCE_ABSENT')) {
             expect(row.evidence).toMatch(/absent|retracted|no workflow/i);
             expect(row.remaining).toMatch(/Re-open only when the cited sources exist|workflow file/i);
@@ -68,7 +70,7 @@ describe('RESP-LEDGER-STALE-CLAIMS-AUDIT-001: completion ledger integrity', () =
         expect(rows.find(row => row.area === 'Knowledge DB writeback').status).toBe('BLOCKED_EXTERNAL');
         // the CI row left SOURCE_ABSENT once .github/workflows/ci.yml landed (2026-09-22 audit wave)
         expect(rows.find(row => row.area === 'CI').status).not.toBe('SOURCE_ABSENT');
-        // previously-verified claims must not linger on absent sources
-        expect(rows.find(row => row.area === 'Simulation/agents/combat').status).not.toBe('IMPLEMENTED_AND_VERIFIED');
+        // the VR row stays dispositioned by product scope until a scope decision reopens it
+        expect(rows.find(row => row.area === 'VR/biofeedback').status).toBe('SOURCE_ABSENT');
     });
 });
