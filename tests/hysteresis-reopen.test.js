@@ -6,8 +6,8 @@ import { describe, expect, it } from '@jest/globals';
 import { HysteresisBook } from '../socialcore.js';
 import { SocietyCore } from '../societycore.js';
 
-// Re-opened `Hysteresis` ledger row (RESP-SOURCE-ABSENT-RECONCILIATION-001 re-open
-// procedure): the legacy source is extracted byte-exact (blob + sha256 pinned) and the V8
+// RESP-HYSTERESIS-REOPEN-001 (re-open executed under RESP-SOURCE-ABSENT-RECONCILIATION-001's
+// procedure) — re-opened `Hysteresis` ledger row: the legacy source is extracted byte-exact (blob + sha256 pinned) and the V8
 // integration runs in production — FEAR_EVENT_RAISED fear levels drive the per-faction
 // state machine (asymmetric enter/exit thresholds behind a minimum-duration gate) and every
 // real transition is a canonical FEAR_STATE_TRANSITION event chained off the exposure that

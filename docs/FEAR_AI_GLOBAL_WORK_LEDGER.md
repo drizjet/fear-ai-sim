@@ -4,8 +4,8 @@ Repository evidence outranks historical claims. `DEVELOPMENT_VERIFIED` is not su
 
 ## Current counters
 
-- `TOTAL_CURRENT_UNITS`: 149 tracked responsibilities
-- `VERIFIED_CLOSED`: 157 historical/bounded closures
+- `TOTAL_CURRENT_UNITS`: 29 completion-ledger areas tracked (20 `IMPLEMENTED_AND_VERIFIED`, 2 `PARTIALLY_IMPLEMENTED`, 5 `SOURCE_ABSENT`, 1 `ACTIVE`, 1 `BLOCKED_EXTERNAL` — derived from `completion-ledger.md`, recounted 2026-09-23)
+- `VERIFIED_CLOSED`: 20 ledger areas verified + 109 distinct `RESP-*` contract ids recorded across suites and docs (both figures recounted from the repo; earlier 149/157 totals were unverifiable estimates and are withdrawn)
 - `ACTIONABLE_OPEN`: 0
 - `P0_OPEN`: 0 reproduced
 - `P1_OPEN`: 0 architectural integration items (RESP-EVENT-CAUSALITY-001 closed)
@@ -54,7 +54,7 @@ Personality and Morale row closures: the `socialcore.js` classes are the sole ow
 
 `RESP-LEDGER-STALE-CLAIMS-AUDIT-001` — development-verified.
 
-Every completion-ledger row citing files this checkout does not contain was reconciled under the evidence rule: eight rows — `Simulation/agents/combat` (had claimed IMPLEMENTED_AND_VERIFIED), `FearCore live transitions`, `Brain scale cleanup`, `Habituation`, `Hysteresis`, `VR/biofeedback`, `Neural fear`, `CI` — retracted to the new `SOURCE_ABSENT` status with repo-wide glob evidence (0 matches for every cited source, no workflow file at either root, no FearBand rust in the workspace); `Reputation/trust`'s stale socialdynamics citation corrected to the real `socialcore.js` `ReputationBook` (row stays PARTIALLY_IMPLEMENTED — public/private flows remain); `Knowledge DB writeback` recorded `BLOCKED_EXTERNAL`. (CI left `SOURCE_ABSENT` on 2026-09-22 when `.github/workflows/ci.yml` landed — seven SOURCE_ABSENT rows remained; six after the Habituation re-open; **five remain since the same-day Hysteresis re-open** (both byte-exact extractions + V8 integrations, both rows `IMPLEMENTED_AND_VERIFIED`)). Durable guard: `tests/completion-ledger-integrity.test.js` (3/3); phantom-citation mutant killed (1 failure).
+Every completion-ledger row citing files this checkout does not contain was reconciled under the evidence rule: eight rows — `Simulation/agents/combat` (had claimed IMPLEMENTED_AND_VERIFIED), `FearCore live transitions`, `Brain scale cleanup`, `Habituation`, `Hysteresis`, `VR/biofeedback`, `Neural fear`, `CI` — retracted to the new `SOURCE_ABSENT` status with repo-wide glob evidence (0 matches for every cited source, no workflow file at either root, no FearBand rust in the workspace); `Reputation/trust`'s stale socialdynamics citation corrected to the real `socialcore.js` `ReputationBook` (row stayed PARTIALLY_IMPLEMENTED until `RESP-REPUTATION-PUBLIC-PRIVATE-001` closed it 2026-09-23 — now `IMPLEMENTED_AND_VERIFIED`); `Knowledge DB writeback` recorded `BLOCKED_EXTERNAL`. (CI left `SOURCE_ABSENT` on 2026-09-22 when `.github/workflows/ci.yml` landed — seven SOURCE_ABSENT rows remained; six after the Habituation re-open; **five remain since the same-day Hysteresis re-open** (both byte-exact extractions + V8 integrations, both rows `IMPLEMENTED_AND_VERIFIED`)). Durable guard: `tests/completion-ledger-integrity.test.js` (3/3); phantom-citation mutant killed (1 failure).
 
 `RESP-CRIME-JUSTICE-LEGITIMACY-LOOP-001` — development-verified.
 
@@ -68,6 +68,14 @@ README/CAMPAIGN_STATE/work-ledger/IMPLEMENTATION_STATUS gate counts must agree a
 
 The convoy/escort/bandit loop runs as parent-chained canonical events (`CONVOY_DISPATCH` → `CONVOY_BANDIT_THREAT` → `CONVOY_ESCORT_RESOLUTION` → `MARKET_TRIP_SETTLE`): invariant guards precede business rejections (unavailable route → REJECTED event, no convoy state), one world-RNG draw decides victory vs robbery, the underlying trip settles only through the escort loop (generic trip progresser defers to active convoys), and both outcomes conserve market balance. Pinned by `tests/convoy-escort-bandit.test.js` (full cycle, save/load bit-for-bit continuation, stage gates, mid-loop deferral). Closes the ledger's `Convoys/escorts/bandits` row and the convoy/escort portion of IMPLEMENTATION_STATUS item 8.
 
+`RESP-REPUTATION-PUBLIC-PRIVATE-001`, `RESP-PLAYER-INVASION-CHAIN-001`, and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001` — development-verified (2026-09-23).
+
+Public/private reputation channels as parent-chained `REPUTATION_UPDATE` events with production DECISION consumption (`tests/reputation-public-private.test.js` 6/6, 4/4 negative controls); player damage → fear → war → invasion as one TURN-rooted lineage (`tests/player-invasion-chain.test.js` 5/5); merchant route plan → trip create → settle → two-sided price response with exact two-market conservation (`tests/routing-trade-economy.test.js` 5/5). These closed the last PROPOSED rows.
+
+`RESP-SOURCE-ABSENT-RECONCILIATION-001`, `RESP-FACTION-RAID-LOOP-001`, `RESP-FACTION-EVALUATION-RAID-CHAIN-001`, the Habituation re-open, `RESP-HYSTERESIS-REOPEN-001`, and `RESP-FACTION-AUTONOMOUS-TICK-001` — development-verified (2026-09-23).
+
+Blob-pinned SOURCE_ABSENT manifest with an extraction tripwire (`tests/source-absent-reconciliation.test.js` 4/4); the raid loop production-wired (`tests/faction-raid-loop.test.js` 7/7) and chained from production decisions (`tests/faction-evaluation-raid-chain.test.js` 8/8); both legacy fear systems re-opened byte-exact with production V8 integrations (`tests/habituation-reopen.test.js` 7/7, `tests/hysteresis-reopen.test.js` 8/8); autonomous faction turns with turn-time target resolution (`tests/faction-macro-tick.test.js` 7/7); negative controls 7/7 + 4/4 + 7/7 killed by isolated mutant runs.
+
 ## Current selected responsibility
 
 `RESP-FACTION-RETALIATION-LOOP-001` — open.
@@ -77,7 +85,7 @@ The struck faction strikes back: a raid RESOLUTION's outcome drives a grievance/
 ## Verification record
 
 - Convoy/escort/bandit loop suite: `tests/convoy-escort-bandit.test.js` — 7/7 passing (full cycle, conservation, save/load continuation, stage gates, mid-loop deferral, determinism).
-- CI workflow suite: `tests/ci-workflow.test.js` — 1/1 passing (workflow + gate command pinned).
+- CI workflow suite: `tests/ci-workflow.test.js` — 2/2 passing (workflow + gate command + `fetch-depth: 0` pinned).
 - Negative controls for RESP-CONVOY-ESCORT-BANDIT-LOOP-001: status-gate removed (killed), victory inverted (killed ×2), deferral removed (killed) — production restored and re-verified green.
 - Autopilot controller: 2026-09-23 — `@codebuff/sdk` 0.10.7 installed; `.agents/fear-ai-autopilot.mjs` loads and validates clean (`loadLocalAgents` + `validateAgents` success, 0 errors) and `tests/autopilot-agent.test.js` drives the controller loop headlessly (sync `function*` co-style per the SDK's `isValidGeneratorFunction`). Platform self-execution still needs `CODEBUFF_APP_ID` (absent here); the directive was executed manually this wave.
 - Player→invasion chain suite: `tests/player-invasion-chain.test.js` — 5/5 passing (lineage, pressure thresholds, war gate, faction propagation, input guards, save/load continuation).
@@ -86,7 +94,7 @@ The struck faction strikes back: a raid RESOLUTION's outcome drives a grievance/
 - Reputation contract suite: `tests/reputation-public-private.test.js` — 6/6 passing (public blend + chaining, per-observer isolation, guards, DECISION consumption, save/load, determinism); negative controls: private-folded (killed), chain-dropped (killed), serialize-drop (killed, isolated 1/1), context-rewiring (killed) — restored and re-verified green.
 - Monorepo recon: `main` vs `master` subtree share exactly 4 files (measured); the legacy tree holds the `SOURCE_ABSENT` sources (`brain.js`, `biofeedback.js`, …) — proposal in `docs/MONOREPO_RECONCILIATION.md` (no destructive git action taken).
 - Autopilot live attempt 2026-09-23: `tools/run-autopilot-step.mjs` traversed the full protocol path (auth, run id, certificate `run_terminal_command` probe executed on the platform, `STEP_TEXT` dispatched, codebuff.com chat call) and halted at **HTTP 402 Payment Required** for `mimo-v2-flash` — blocker is account credits (`AUTOPILOT_MODEL` override available for retry). Retry with `claude-3-5-haiku-20241022` (2026-09-23): same 402, explicit message `Out of credits. Please add credits at https://www.codebuff.com/usage.` — account-level, model-independent.
-- SOURCE_ABSENT reconciliation 2026-09-23: `tests/source-absent-reconciliation.test.js` 4/4 — manifest covers exactly the seven rows (six since the same-day Habituation re-open), 11 upstream blobs re-resolved with matching sha256, `tests/fearcore.test.js` ABSENT_BOTH, FearBand 0 upstream paths, zero extraction, every row carries blob provenance + manifest citation; CI `fetch-depth: 0` pinned in `tests/ci-workflow.test.js`.
+- SOURCE_ABSENT reconciliation 2026-09-23: `tests/source-absent-reconciliation.test.js` 4/4 — manifest covers exactly the five rows remaining after the two same-day re-opens (10 entries: 9 upstream blobs re-resolved with matching sha256 + `tests/fearcore.test.js` ABSENT_BOTH), FearBand 0 upstream paths, zero extraction outside the re-open procedure, every row carries blob provenance + manifest citation; CI `fetch-depth: 0` pinned in `tests/ci-workflow.test.js`.
 - Monorepo option 1 executed 2026-09-23: default branch → `main` (`gh repo edit --default-branch master` reverses it); `master` untouched — status recorded in `docs/MONOREPO_RECONCILIATION.md`.
 - Raid contract suite: `tests/faction-raid-loop.test.js` — 7/7 (lineage, `raidUtility` scoring + `escalationLevel` surfaced, DEESCALATE rejection, stage gates, defeat path, conservation, save/load, determinism).
 - Habituation re-open 2026-09-23: `legacy/habituation.js` byte-exact (sha256 pinned, provenance recorded), `HabituationBook` + canonical `FEAR_HABITUATED` events wired into `FEAR_EVENT_RAISED`; row `SOURCE_ABSENT → IMPLEMENTED_AND_VERIFIED`; `tests/habituation-reopen.test.js` 7/7; manifest + both integrity guards updated through the tripwire.

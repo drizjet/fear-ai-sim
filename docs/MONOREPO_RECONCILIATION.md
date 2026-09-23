@@ -13,13 +13,13 @@ disjoint projects under one name.
   commits). Its layout is a monorepo whose `fear-ai-sim/` subdirectory is a **legacy JS tree**
   ("Fear AI (JS tree)", README: "one of three live trees", entry point `docs/SYSTEM_MAP.md`,
   plus root `.github/workflows/test.yml`).
-- `main` head: `3476613` (2026-09-23) — **this checkout** (the V8 society sim) pushed as an
+- `main` head at measurement time: `3476613` (2026-09-23, reputation wave; the branch advances with every push — head at the end-of-day audit was `72e3a4d`) — **this checkout** (the V8 society sim) pushed as an
   orphan root, because our checkout *is* the content of that subtree, restructured: git found
   no relation to `master`'s history (our repo was initialized fresh on 2026-09-22 after the
   workspace root `.git` purge — see `ROOT-RESIDUE-NOTES.md` outside this directory).
 - Tree comparison, `HEAD` vs `origin/master:fear-ai-sim`:
   - shared paths: **4** — `.gitignore`, `README.md`, `package.json`, `package-lock.json`
-  - only in ours: **164** files (8 production modules, 150 test suites, docs, ledger, CI)
+  - only in ours: **164** files at that head (8 production modules, 150 test suites at measurement — 156 suites by the end of 2026-09-23, docs, ledger, CI)
   - only in theirs: **653** files (legacy runtime: `agent.js`, `brain.js`, `behaviortree.js`,
     `biofeedback.js`, `beliefs.js`, MASAC/Tauri/desktop assets, benchmarks, bin…)
   - `societycore.js` (the entire V8 core) **never existed on the remote** — `git show

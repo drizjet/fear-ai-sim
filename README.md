@@ -38,20 +38,20 @@ ground truth → perception → belief/confidence → appraisal → affordances 
 
 (from `docs/IMPLEMENTATION_STATUS_2026-08-26.md`; decisions and executions now additionally emit canonical events — see `RESP-EVENT-CAUSALITY-001` below.)
 
-## Module map (8 production modules, ~1,550 lines)
+## Module map (8 production modules, ~1,910 lines)
 
 | Module | Lines | Role |
 |---|---|---|
-| `societycore.js` | 1212 | The world: clock, event allocator/graph, action kinds, markets, routes, rumors, factions, settlements, roaming groups, queues, advisory wiring, serialize/deserialize, `causalChain`, `auditEventGraph` |
+| `societycore.js` | 1592 | The world: clock, event allocator/graph, action kinds, markets, routes, rumors, factions, settlements, roaming groups, queues, advisory wiring, serialize/deserialize, `causalChain`, `auditEventGraph` |
 | `utilitycore.js` | 44 | Shared utility/affordance runtime: `AffordanceRegistry` (id-keyed, duplicate-rejecting, actor/target type gating, runtime register/unregister) + `UtilityRuntime` (prerequisites hard-block → response-curve/weight considerations → clamped-mean `finalScore` → narrow-band selection via shared RNG) — **canonical owner of scoring and affordances** |
 | `decisioncore.js` | 18 | Thin facade over `UtilityRuntime` (unchanged public API and RNG consumption order) |
 | `interactioncore.js` | 14 | Character affordance catalog (`INTERACTION_ACTIONS`) on the shared registry; `decide`/`validate` |
 | `advisorygate.js` | 6 | Pure validation gate (`source: 'ADVISORY_VALIDATOR'`), never mutates state; the only approval path for `INTERACTION_EXECUTION` |
-| `socialcore.js` | 30 | `Personality`, `Morale`, `AgentBelief`/`BeliefEvidence`, `ReputationBook` — the canonical owners (no `brain.js` in this checkout) |
+| `socialcore.js` | 211 | `Personality`, `Morale`, `AgentBelief`/`BeliefEvidence`, `ReputationBook`, `HabituationBook`, `HysteresisBook` — the canonical owners (no `brain.js` in this checkout) |
 | `macrocore.js` | 4 | `routeCost` (perceived risk), `raidUtility`, `FactionState` |
 | `randomcore.js` | 24 | `mulberry32`/`randomSource` — every random draw flows through the injectable serializable RNG |
 
-Orphan scan: **0 orphans** (verified by import scan, `RESP-LEDGER-STALE-CLAIMS-AUDIT-001`). Stray files: `persistence-probe.txt` (archive-decided), `.agents/fear-ai-autopilot.mjs` (keep — campaign controller).
+Orphan scan: **0 orphans** (verified by import scan, `RESP-LEDGER-STALE-CLAIMS-AUDIT-001`). Stray files: `persistence-probe.txt` (archive-decided, 17 bytes), `.agents/fear-ai-autopilot.mjs` (keep — campaign controller), `tools/run-autopilot-step.mjs` (bounded live-step runner), `legacy/` (byte-exact extracted evidence sources — never imported by production).
 
 ## Canonical contracts (verified)
 
@@ -108,4 +108,4 @@ Counters: `ACTIONABLE_OPEN 0`, `P0_OPEN 0`, `P1_OPEN 0`, `FAILED_TESTS 0`, `BLOC
 - Closed 2026-09-23: `RESP-FACTION-EVALUATION-RAID-CHAIN-001` (`tests/faction-evaluation-raid-chain.test.js`, 8/8 with 4/4 negative controls) — a production DecisionCore RAID choice now drives `FACTION_RAID_EVALUATION` → `FACTION_RAID_DISPATCH` → `FACTION_RAID_RESOLUTION` as one TURN-rooted lineage (reference-guard skip markers for unregistered/self targets, context force/bagSize/defense honored, save/load-verified). Also `RESP-REPUTATION-PUBLIC-PRIVATE-001` (`tests/reputation-public-private.test.js`, 6/6 with 4/4 negative controls) — public/private reputation channels as canonical `REPUTATION_UPDATE` events plus production DECISION consumption via `evaluationContext`. The autopilot now runs LIVE: `tools/run-autopilot-step.mjs` drives it over the real runner protocol (certificate tool call executed on the platform, chat call issued to codebuff.com) and halts at **HTTP 402 Payment Required** for model `mimo-v2-flash` — account credits, not code; retry with `AUTOPILOT_MODEL=<model>` once topped up. Earlier closures: player-to-invasion, routing/trade/economy (both 2026-09-23), convoy loop (2026-09-22).
 - **Next responsibility: `RESP-FACTION-RETALIATION-LOOP-001`** — the struck faction strikes back: a raid RESOLUTION's outcome drives a grievance/escalation state on the victim that evaluates a counter-raid (the victim acts as its own canonical evaluation→dispatch→resolution chain against the attacker), closing the Factions row's retaliation leg. Selection closed 2026-09-23: `RESP-HYSTERESIS-REOPEN-001` (second re-open — `legacy/hysteresis.js` byte-exact + `HysteresisBook`/canonical `FEAR_STATE_TRANSITION`, `tests/hysteresis-reopen.test.js` 8/8) and `RESP-FACTION-AUTONOMOUS-TICK-001` (`FACTION_MACRO_TICK` autonomous faction turns — `tests/faction-macro-tick.test.js` 7/7), after `RESP-FACTION-EVALUATION-RAID-CHAIN-001` (evaluation→raid chain, above), `RESP-FACTION-RAID-LOOP-001` (the orphaned `evaluateRaid`/`raidUtility`/`escalationLevel` macro layer is production-wired — `tests/faction-raid-loop.test.js` 7/7, 7/7 negative controls) and the Habituation re-open (`legacy/habituation.js` byte-exact + `HabituationBook`/`FEAR_HABITUATED` — five `SOURCE_ABSENT` rows remain). Earlier: `RESP-SOURCE-ABSENT-RECONCILIATION-001` (blob+sha256 manifest `docs/SOURCE_ABSENT_RECONCILIATION.md`, guard suite, monorepo option 1 executed — default branch `main`, master untouched) — divergence facts: `docs/MONOREPO_RECONCILIATION.md`.
 - Five `SOURCE_ABSENT` rows await their sources actually landing in this checkout (simulation/agents/combat, FearCore, brain, VR/biofeedback, neural fear) — re-open only through the proven procedure (byte-exact extraction + provenance + guard tripwire). CI is `IMPLEMENTED_AND_VERIFIED` (green runs on `main`, cited in the ledger).
-- Global completion exists only via `docs/FEAR_AI_GLOBAL_STOP_CERTIFICATE.json` independently verifying all closure audits — never declared by an executor.
+- **Global completion is NOT claimed and no stop certificate exists**: `docs/FEAR_AI_GLOBAL_STOP_CERTIFICATE.json` has never been created — a valid certificate can only come from an independent supervisor (never from an executor running the campaign), so every closure above is development-verified only..
