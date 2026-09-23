@@ -2,7 +2,7 @@
 
 Orientation for this repository. **Evidence rule: repository evidence outranks historical claims.** Development verification is not supervisor acceptance.
 
-**Current gate: 146 suites / 430 tests passing** (`npm test`) — as of 2026-09-22.
+**Current gate: 149 suites / 443 tests passing** (`npm test`) — as of 2026-09-23.
 
 ## What this is
 
@@ -13,7 +13,7 @@ Scope: deterministic world clock, event ids, market stock/resource flows, inject
 ## Quick start
 
 ```bash
-npm test          # full gate: 146 suites / 430 tests (ESM + Jest via --experimental-vm-modules)
+npm test          # full gate: 149 suites / 443 tests (ESM + Jest via --experimental-vm-modules)
 ```
 
 Key APIs (see `tests/world-tick.test.js` for canonical world setup):
@@ -38,7 +38,7 @@ ground truth → perception → belief/confidence → appraisal → affordances 
 
 (from `docs/IMPLEMENTATION_STATUS_2026-08-26.md`; decisions and executions now additionally emit canonical events — see `RESP-EVENT-CAUSALITY-001` below.)
 
-## Module map (8 production modules, ~1,350 lines)
+## Module map (8 production modules, ~1,550 lines)
 
 | Module | Lines | Role |
 |---|---|---|
@@ -101,11 +101,11 @@ Completion policy: standalone passing tests are insufficient — a row closes on
 
 Mutation-gate/defect policy: when adversarial tests or new tests expose a real defect, production is fixed first, then the defect class becomes a regression/mutation gate — failures are evidence, not reasons to delete the gate.
 
-## Open work (2026-09-22)
+## Open work (2026-09-23)
 
 Counters: `ACTIONABLE_OPEN 0`, `P0_OPEN 0`, `P1_OPEN 0`, `FAILED_TESTS 0`, `BLOCKED_EXTERNAL 1` (Knowledge DB; git/source fingerprinting unblocked 2026-09-22 — repo initialized inside fear-ai-sim), `P2_OPEN` many (world-expansion).
 
-- **Next responsibility: `RESP-PLAYER-INVASION-CHAIN-001`** — player damage/death → FearEvent pressure → war-state escalation → invasion mobilization as canonical parented events, save/load-verified (closes the `Player-to-invasion chain` PROPOSED row and the remaining half of IMPLEMENTATION_STATUS item 9). The convoy/escort/bandit loop closed 2026-09-22 (`tests/convoy-escort-bandit.test.js`).
-- Remaining PROPOSED production loop: routing/trade/economy. Player-to-invasion is the declared next responsibility (`RESP-PLAYER-INVASION-CHAIN-001`).
+- Closed 2026-09-23: `RESP-PLAYER-INVASION-CHAIN-001` (`tests/player-invasion-chain.test.js`) and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001` (`tests/routing-trade-economy.test.js`) — both development-verified with negative controls (4/4 mutants killed), conservation checks, and save/load continuation. The autopilot controller is runnable again: `.agents/fear-ai-autopilot.mjs` loads through the installed `@codebuff/sdk` 0.10.7 (`loadLocalAgents` clean, `validateAgents` success with 0 errors) and its loop is driven headlessly by `tests/autopilot-agent.test.js`.
+- **Next responsibility: `RESP-REPUTATION-PUBLIC-PRIVATE-001`** — finish the public/private reputation flows behind the `Reputation/trust` PARTIALLY_IMPLEMENTED row through canonical parented events, save/load-verified. No PROPOSED production loop remains: routing/trade/economy and player-to-invasion both closed 2026-09-23.
 - Seven `SOURCE_ABSENT` rows await their sources actually landing in this checkout (simulation/agents/combat, FearCore, brain, habituation, hysteresis, VR/biofeedback, neural fear) — re-open only with the files present. CI left `SOURCE_ABSENT` when `.github/workflows/ci.yml` landed (now `PARTIALLY_IMPLEMENTED` — remote execution pending a push).
 - Global completion exists only via `docs/FEAR_AI_GLOBAL_STOP_CERTIFICATE.json` independently verifying all closure audits — never declared by an executor.

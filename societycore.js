@@ -284,6 +284,11 @@ export class SocietyCore {
         this.infrastructure = new Map();
         // RESP-CONVOY-ESCORT-BANDIT-LOOP-001: escort-managed convoys over market trips.
         this.convoys = new Map();
+        // RESP-PLAYER-INVASION-CHAIN-001: player vitals, war-pressure state, resolved invasions.
+        this.player = { hp: 100, maxHp: 100, alive: true, deaths: 0 };
+        this.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70 };
+        this.warLoot = 0;
+        this.invasions = new Map();
         // Decisions run inside the canonical event graph and share the world RNG (deterministic turns).
         this.decisions = new DecisionCore({ rng: this.rng });
         this.interactions = new InteractionCore({ rng: this.rng });
@@ -1044,6 +1049,115 @@ export class SocietyCore {
                 this.commitEvent(this.allocateEvent({ type: 'MARKET_TRIP_SETTLE', parent: resolutionEvent, market: convoy.market, tripId: convoy.tripId, good: trip.good, cargoKind: trip.cargoKind, quantity: trip.quantity, destination: convoy.destination, outcome: victory ? 'DELIVERED' : 'STOLEN', routeId: convoy.routeId, perceivedDanger: convoy.banditStrength, owner: victory ? convoy.owner : 'thief' }));
                 return [];
             }
+            case 'PLAYER_DAMAGE': {
+                // RESP-PLAYER-INVASION-CHAIN-001 stage 1: player damage is the attack signal —
+                // it wounds the player, raises war pressure (double pressure on a lethal blow),
+                // and feeds the FearEvent that war escalation consumes.
+                if (!this.player.alive) throw new Error('PLAYER_DAMAGE requires a living player');
+                const amount = num(action.amount, NaN);
+                if (!Number.isFinite(amount) || amount < 0) throw new Error('PLAYER_DAMAGE requires a non-negative finite amount');
+                const faction = action.factionId ? this.factions.get(action.factionId) : null;
+                if (action.factionId && !faction) throw new Error(`Unknown faction "${action.factionId}"`);
+                const hpBefore = this.player.hp;
+                const applied = Math.min(hpBefore, amount);
+                this.player.hp = hpBefore - applied;
+                const lethal = applied > 0 && this.player.hp === 0;
+                if (lethal) { this.player.alive = false; this.player.deaths += 1; }
+                const pressureGain = applied * (lethal ? 2 : 1);
+                const pressureBefore = this.warState.pressure;
+                this.warState.pressure = pressureBefore + pressureGain;
+                const wound = this.allocateEvent({ type: 'PLAYER_WOUNDED', parent, amount: applied, requested: amount, hpBefore, hpAfter: this.player.hp, alive: this.player.alive, deaths: this.player.deaths, source: action.source ?? 'unknown' });
+                this.commitEvent(wound);
+                if (faction) {
+                    faction.state.fear = clamp(num(faction.state.fear, 0) + pressureGain / 100);
+                    faction.state.threatPerception = clamp(num(faction.state.threatPerception, 0) + pressureGain / 200);
+                }
+                return this.allocateEvent({ type: 'FEAR_EVENT_RAISED', parent: wound, pressureBefore, pressureAfter: this.warState.pressure, pressureGain, factionId: faction?.id ?? null, factionFearAfter: faction ? faction.state.fear : null, source: action.source ?? 'unknown' });
+            }
+            case 'WAR_STATUS_EVALUATE': {
+                // RESP-PLAYER-INVASION-CHAIN-001 stage 2: war status is computed from the
+                // accumulated pressure against the world thresholds and parent-chained to the
+                // FearEvent that produced the pressure.
+                const pressure = this.warState.pressure;
+                const tensionThreshold = Math.max(0, num(action.tensionThreshold, this.warState.tensionThreshold));
+                const warThreshold = Math.max(tensionThreshold, num(action.warThreshold, this.warState.warThreshold));
+                this.warState.tensionThreshold = tensionThreshold;
+                this.warState.warThreshold = warThreshold;
+                const target = pressure >= warThreshold ? 'WAR' : pressure >= tensionThreshold ? 'TENSION' : 'PEACE';
+                const statusBefore = this.warState.status;
+                this.warState.status = target;
+                const fearEvent = [...this.events].reverse().find(event => event.type === 'FEAR_EVENT_RAISED') ?? parent;
+                const escalation = target === 'PEACE' ? 0 : Math.min(8, Math.floor((pressure / Math.max(1, warThreshold)) * 8));
+                return this.allocateEvent({ type: 'WAR_STATUS_UPDATE', parent: action.parent ?? fearEvent, statusBefore, statusAfter: target, pressure, tensionThreshold, warThreshold, escalation });
+            }
+            case 'INVASION_MOBILIZE': {
+                // RESP-PLAYER-INVASION-CHAIN-001 stage 3: invasions only mobilize during an
+                // active war; one world-RNG draw decides the assault, loot transfers exactly
+                // from settlement resources into war loot (conservation on every resolution).
+                if (this.warState.status !== 'WAR') throw new Error(`Invasion requires war state "WAR" (current "${this.warState.status}")`);
+                if (!action.invasionId) throw new Error('INVASION_MOBILIZE requires an invasionId');
+                if (this.invasions.has(action.invasionId)) throw new Error(`Duplicate invasion id "${action.invasionId}"`);
+                const settlement = this.settlements.get(action.settlementId);
+                if (!settlement) throw new Error(`Unknown settlement "${action.settlementId}"`);
+                const force = num(action.force, 0);
+                if (!(force > 0)) throw new Error('INVASION_MOBILIZE requires a positive force');
+                const defense = Math.max(0, num(action.defense, 0));
+                const roll = this.random();
+                const attackerPower = force;
+                const defenderPower = defense + roll;
+                const victory = attackerPower > defenderPower;
+                const resourcesBefore = settlement.resources;
+                const plunder = Math.max(0, Math.floor(num(action.plunder, force)));
+                const loot = victory ? Math.min(resourcesBefore, plunder) : 0;
+                settlement.resources = resourcesBefore - loot;
+                this.warLoot += loot;
+                const invasion = { id: action.invasionId, settlementId: action.settlementId, force, defense, roll, victory, loot, tick: this.now(), status: victory ? 'SUCCEEDED' : 'REPULSED' };
+                this.invasions.set(invasion.id, invasion);
+                const warStatus = [...this.events].reverse().find(event => event.type === 'WAR_STATUS_UPDATE') ?? parent;
+                return this.allocateEvent({ type: 'INVASION_RESOLVED', parent: action.parent ?? warStatus, invasionId: invasion.id, settlementId: invasion.settlementId, force, defense, roll, attackerPower, defenderPower, victory, loot, warLoot: this.warLoot, resourcesBefore, resourcesAfter: settlement.resources, status: invasion.status, warStatus: this.warState.status });
+            }
+            case 'MERCHANT_ECONOMY_CYCLE': {
+                // RESP-ROUTING-TRADE-ECONOMY-LOOP-001: one action runs the merchant economy
+                // cycle — route + profitability plan, shipment, delivery, and the two-sided
+                // price response — as a single parent-chained event chain. Every path returns
+                // exactly one uncommitted tail event (the runner commits it); earlier events
+                // are committed here.
+                const origin = this.markets.get(action.market);
+                if (!origin) throw new Error(`Unknown market "${action.market}"`);
+                const destination = this.markets.get(action.destination);
+                if (!destination) throw new Error(`Unknown destination market "${action.destination}"`);
+                if (action.market === action.destination) throw new Error('MERCHANT_ECONOMY_CYCLE requires distinct origin and destination markets');
+                const quantity = num(action.quantity, 0);
+                if (!(quantity > 0)) throw new Error('MERCHANT_ECONOMY_CYCLE requires a positive quantity');
+                if (!action.good) throw new Error('MERCHANT_ECONOMY_CYCLE requires a good');
+                if (!action.tripId) throw new Error('MERCHANT_ECONOMY_CYCLE requires a tripId');
+                if (origin.inTransit.has(action.tripId)) throw new Error(`Duplicate trip id "${action.tripId}"`);
+                const routes = action.routes ?? this.routes.edges;
+                const destinationPrice = num(destination.prices?.[action.good], 0);
+                const minimumPrice = num(action.minimumPrice, 0);
+                const profitable = destinationPrice >= minimumPrice;
+                const actor = action.actorId ? this.actors.get(action.actorId) : null;
+                const selected = profitable ? this.routes.chooseRoute(routes, { ...action.context, beliefs: action.beliefs ?? actor?.beliefs, marketPrice: destinationPrice }) : null;
+                const plan = this.allocateEvent({ type: 'MERCHANT_ROUTE_PLAN', parent, market: action.market, destination: action.destination, good: action.good, quantity, routeId: selected?.id ?? null, destinationPrice, minimumPrice, profitable, decision: selected ? 'TRAVEL' : 'WAIT' });
+                if (!selected) return plan;
+                this.commitEvent(plan);
+                const trip = origin.createTrip({ id: action.tripId, good: action.good, cargoKind: action.cargoKind, owner: action.owner ?? action.actorId ?? null, quantity, destination: action.destination });
+                if (!trip) return this.allocateEvent({ type: 'MARKET_TRIP_CREATE', parent: plan, market: action.market, tripId: action.tripId, good: action.good, cargoKind: action.cargoKind ?? action.good, quantity, destination: action.destination, owner: action.owner ?? action.actorId ?? null, status: 'REJECTED', reason: 'INSUFFICIENT_STOCK' });
+                const create = this.allocateEvent({ type: 'MARKET_TRIP_CREATE', parent: plan, market: action.market, tripId: trip.id, good: trip.good, cargoKind: trip.cargoKind, quantity: trip.quantity, destination: trip.destination, owner: trip.owner ?? null, status: 'IN_TRANSIT' });
+                this.commitEvent(create);
+                origin.settleTrip(action.tripId, 'DELIVERED', destination);
+                const settle = this.allocateEvent({ type: 'MARKET_TRIP_SETTLE', parent: create, market: action.market, tripId: action.tripId, good: action.good, quantity, destination: action.destination, outcome: 'DELIVERED', routeId: selected.id, perceivedDanger: num(selected.perceivedDanger, 0), owner: trip.owner ?? null });
+                this.commitEvent(settle);
+                // Price response at both ends: the purchase raises demand at the origin, the
+                // delivery raises supply at the destination — one canonical event per market.
+                const originPriceBefore = num(origin.prices?.[action.good], 0);
+                origin.update({ demand: { [action.good]: quantity }, supply: {} });
+                const originUpdate = this.allocateEvent({ type: 'MARKET_UPDATE', parent: settle, market: action.market, jitter: false, good: action.good, priceBefore: originPriceBefore, priceAfter: num(origin.prices?.[action.good], originPriceBefore), shock: 'DEMAND' });
+                this.commitEvent(originUpdate);
+                const destinationPriceBefore = num(destination.prices?.[action.good], 0);
+                destination.update({ demand: {}, supply: { [action.good]: quantity } });
+                return this.allocateEvent({ type: 'MARKET_UPDATE', parent: originUpdate, market: action.destination, jitter: false, good: action.good, priceBefore: destinationPriceBefore, priceAfter: num(destination.prices?.[action.good], destinationPriceBefore), shock: 'SUPPLY' });
+            }
             case 'ROUTE_OBSERVATION': {
                 const actor = action.actorId ? this.actors.get(action.actorId) || { id: action.actorId } : action.actor;
                 const route = action.route || this.routes.edges.find(edge => edge.id === action.routeId);
@@ -1235,6 +1349,10 @@ export class SocietyCore {
             migrationJourneys: Object.fromEntries([...this.migrationJourneys.entries()].map(([id, journey]) => [id, { ...journey }])),
             roamingGroups: Object.fromEntries([...this.roamingGroups.entries()].map(([id, group]) => [id, { ...group }])),
             convoys: Object.fromEntries([...this.convoys.entries()].map(([id, convoy]) => [id, { ...convoy }])),
+            player: { ...this.player },
+            warState: { ...this.warState },
+            warLoot: this.warLoot,
+            invasions: Object.fromEntries([...this.invasions.entries()].map(([id, invasion]) => [id, { ...invasion }])),
             personalities: Object.fromEntries([...this.personalities.entries()].map(([id, p]) => [id, { openness: p.openness, conscientiousness: p.conscientiousness, extraversion: p.extraversion, agreeableness: p.agreeableness, neuroticism: p.neuroticism, riskTolerance: p.riskTolerance, uncertaintyAversion: p.uncertaintyAversion, impulsiveness: p.impulsiveness }])),
             morales: Object.fromEntries([...this.morales.entries()].map(([id, m]) => [id, { value: m.value }])),
             rng: this.rng.getState ? { seed: this.rngSeed, state: this.rng.getState() } : null,
@@ -1273,6 +1391,10 @@ export class SocietyCore {
         society.migrationJourneys = new Map(Object.entries(json.migrationJourneys ?? {}).map(([id, journey]) => [id, { ...journey }]));
         society.roamingGroups = new Map(Object.entries(json.roamingGroups ?? {}).map(([id, group]) => [id, { ...group }]));
         society.convoys = new Map(Object.entries(json.convoys ?? {}).map(([id, convoy]) => [id, { ...convoy }]));
+        society.player = { hp: 100, maxHp: 100, alive: true, deaths: 0, ...(json.player ?? {}) };
+        society.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70, ...(json.warState ?? {}) };
+        society.warLoot = num(json.warLoot, 0);
+        society.invasions = new Map(Object.entries(json.invasions ?? {}).map(([id, invasion]) => [id, { ...invasion }]));
         if (json.rng) { if (json.rng.seed != null) society.rngSeed = json.rng.seed; if (society.rng.getState) society.rng.setState(json.rng.state); }
         for (const [id, values] of Object.entries(json.personalities ?? {})) society.personalities.set(id, new Personality(values, { rng: society.rng }));
         for (const [id, state] of Object.entries(json.morales ?? {})) society.morales.set(id, new Morale(state.value));

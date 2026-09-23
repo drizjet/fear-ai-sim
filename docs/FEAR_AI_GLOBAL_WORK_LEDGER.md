@@ -12,7 +12,7 @@ Repository evidence outranks historical claims. `DEVELOPMENT_VERIFIED` is not su
 - `P2_OPEN`: many open-ended world-expansion items
 - `BLOCKED_EXTERNAL`: 1 (Knowledge DB outside checkout; git/source fingerprinting unblocked 2026-09-22 — repo initialized inside fear-ai-sim, fingerprintable at HEAD)
 - `FAILED_TESTS`: 0
-- `CURRENT_TEST_GATE`: 146 suites / 430 tests green
+- `CURRENT_TEST_GATE`: 149 suites / 443 tests green
 
 ## Recently verified
 
@@ -70,17 +70,20 @@ The convoy/escort/bandit loop runs as parent-chained canonical events (`CONVOY_D
 
 ## Current selected responsibility
 
-`RESP-PLAYER-INVASION-CHAIN-001` — open.
+`RESP-REPUTATION-PUBLIC-PRIVATE-001` — open.
 
-Connect player damage/death signals to the global threat loop: attack-driven FearEvent pressure, war-state escalation, and an invasion mobilization resolution through canonical event emission, save/load-verified with conservation checks — closing the ledger's `Player-to-invasion chain` row (PROPOSED) and the remaining half of IMPLEMENTATION_STATUS item 9.
+Finish the public/private reputation flows behind the ledger's `Reputation/trust` PARTIALLY_IMPLEMENTED row (`socialcore.js` `ReputationBook`) through canonical parented events, save/load-verified. The previous selection closed 2026-09-23: `RESP-PLAYER-INVASION-CHAIN-001` and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001` are both development-verified — the last two PROPOSED production-loop rows.
 
 ## Verification record
 
 - Convoy/escort/bandit loop suite: `tests/convoy-escort-bandit.test.js` — 7/7 passing (full cycle, conservation, save/load continuation, stage gates, mid-loop deferral, determinism).
 - CI workflow suite: `tests/ci-workflow.test.js` — 1/1 passing (workflow + gate command pinned).
 - Negative controls for RESP-CONVOY-ESCORT-BANDIT-LOOP-001: status-gate removed (killed), victory inverted (killed ×2), deferral removed (killed) — production restored and re-verified green.
-- Autopilot controller: standalone run attempted 2026-09-22 — needs `@codebuff/sdk` + `CODEBUFF_APP_ID` (absent here); directive executed manually this wave, file stays `keep`.
-- Git unblocked 2026-09-22: repo initialized inside fear-ai-sim (`main`, node_modules ignored), initial commit stages 165 files — fingerprintable at HEAD.
+- Autopilot controller: 2026-09-23 — `@codebuff/sdk` 0.10.7 installed; `.agents/fear-ai-autopilot.mjs` loads and validates clean (`loadLocalAgents` + `validateAgents` success, 0 errors) and `tests/autopilot-agent.test.js` drives the controller loop headlessly (sync `function*` co-style per the SDK's `isValidGeneratorFunction`). Platform self-execution still needs `CODEBUFF_APP_ID` (absent here); the directive was executed manually this wave.
+- Player→invasion chain suite: `tests/player-invasion-chain.test.js` — 5/5 passing (lineage, pressure thresholds, war gate, faction propagation, input guards, save/load continuation).
+- Merchant economy loop suite: `tests/routing-trade-economy.test.js` — 5/5 passing (plan→ship→deliver→price response, exact conservation, WAIT/REJECTED paths, guards, save/load continuation).
+- Negative controls for the 2026-09-23 wave: lethal double-pressure removed (killed), war-state gate removed (killed), war-loot credit removed (killed ×2), profitability gate removed (killed) — production restored and re-verified green.
+- Full Jest gate: 149/149 suites and 443/443 tests passing.
 - Latency/decay/distortion/recipient-local suite: 11/11 passing.
 - Negative controls: latency-decay mutant (3 failures), recipient-trust mutant (2 failures), raw-relay mutant (1 failure) — all killed, production restored.
 - Hidden-truth audit: 2/2 passing.

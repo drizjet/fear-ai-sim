@@ -5,7 +5,7 @@
 ## Current tree
 
 - Repository: `fear-ai-sim/`; ESM JavaScript with Jest; orientation in `../README.md`.
-- Current automated suite: **146 suites / 430 tests passing**.
+- Current automated suite: **149 suites / 443 tests passing** (2026-09-23).
 - Current acceptance: development-verified only; no supervisor admission claimed.
 - Git repository initialized inside this checkout on 2026-09-22 (the quarantined empty root `.git` had been purged — see `ROOT-RESIDUE-NOTES.md`); source fingerprinting is unblocked — only Knowledge DB writeback remains `BLOCKED_EXTERNAL`.
 
@@ -93,13 +93,23 @@ Gate after fixes: **144 suites / 421 tests passing** (5 new cases, 0 failures).
 - Crime/justice/legitimacy/migration suite: `tests/crime-justice-legitimacy-migration.test.js` — 7/7 passing (full cycle in one turn, causal lineage + whole-history audit, primitive math parity, justice-flips-migration, report-gate stop, cross-tick save/load + continuation, determinism).
 - Negative controls for RESP-CRIME-JUSTICE-LEGITIMACY-LOOP-001: legitimacy write skipped (killed), `retaliationFear` dropped from the report math (killed), migration fed pre-justice legitimacy (killed), chain parentage dropped (killed) — production restored and re-verified after each.
 - Orientation doc consistency suite: `tests/doc-integrity.test.js` — 4/4 passing (gate agreement across the four docs incl. the IMPLEMENTATION_STATUS `Current gate` pointer + suite count vs disk, doc-map targets, README suite refs, next-responsibility agreement); first run caught three phantom README suite citations, corrected to real citations. Negative controls: README gate number drifted (killed), doc-map target renamed (killed), next-responsibility ids disagreed (killed). The 2026-09-22 audit found the IMPLEMENTATION_STATUS pointer had drifted to 142/405 unguarded, so that doc now joins the gate-agreement check.
-- Full gate: **146/146 suites, 430/430 tests passing**.
+- Player→invasion chain suite: `tests/player-invasion-chain.test.js` — 5/5 passing (full TURN-rooted lineage, pressure thresholds, war-state gate, faction fear propagation, input guards, save/load continuation).
+- Merchant economy loop suite: `tests/routing-trade-economy.test.js` — 5/5 passing (plan→ship→deliver→price-response lineage, exact two-market conservation, WAIT/REJECTED paths, input guards, save/load continuation).
+- Autopilot runnable suite: `tests/autopilot-agent.test.js` — 3/3 passing; `.agents/fear-ai-autopilot.mjs` loads through the installed `@codebuff/sdk` 0.10.7 (`loadLocalAgents` clean, `validateAgents` success with 0 errors), its controller loop driven headlessly (sync `function*` co-style per the SDK's `isValidGeneratorFunction`).
+- Negative controls for the 2026-09-23 wave: lethal double-pressure removed (killed), war-state gate removed (killed), war-loot credit removed (killed ×2), profitability gate removed (killed) — all four attributed to distinct pins, production restored and re-verified green.
+- Full gate: **149/149 suites, 443/443 tests passing**.
 - Existing route, economy, material, persistence, and mutation gates remain green.
 
 `RESP-CONVOY-ESCORT-BANDIT-LOOP-001` is development-verified.
 
 The convoy/escort/bandit production loop runs through canonical event emission: `CONVOY_DISPATCH` (merchant's in-transit trip leaves under escort — invariant guards, then business rejection for unavailable routes) → `CONVOY_BANDIT_THREAT` (parent-chained to the dispatch) → `CONVOY_ESCORT_RESOLUTION` (one world-RNG draw: escortStrength + roll vs banditStrength; victory delivers, defeat robs) → `MARKET_TRIP_SETTLE` (the market consequence, chained off the draw). Convoy-owned trips are deferral-gated: the generic `progressPendingTrips` skips trips with an active ESCORTED/THREATENED convoy, so settlement happens only through the escort loop. Full cycle verified across save/load (bit-for-bit identical continuation), market balance conserved in both outcomes, and the whole history passes `auditEventGraph` + `causalChain`. Closes the ledger's `Convoys/escorts/bandits` row and covers the convoy/escort portion of IMPLEMENTATION_STATUS item 8.
 
+`RESP-PLAYER-INVASION-CHAIN-001` and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001` are development-verified — both closed 2026-09-23, the last two PROPOSED production-loop rows.
+
+The player→invasion chain runs `PLAYER_DAMAGE` (invariant guards precede any mutation; a lethal blow presses double war pressure) → `FEAR_EVENT_RAISED` (parent-chained to the wound; faction fear/threat perception updated) → `WAR_STATUS_UPDATE` (status computed from accumulated pressure against world thresholds, chained to the fear event) → `INVASION_RESOLVED` (gated behind WAR, one world-RNG draw, loot transfers exactly from settlement resources into war loot). One TURN-rooted lineage, seeded-identical save/load continuation — closes `Player-to-invasion chain` and the remaining half of IMPLEMENTATION_STATUS item 9.
+
+The merchant economy loop runs `MERCHANT_ECONOMY_CYCLE` as `MERCHANT_ROUTE_PLAN` (route + profitability; WAIT stops the chain untouched) → `MARKET_TRIP_CREATE` (insufficient stock → REJECTED, no movement) → `MARKET_TRIP_SETTLE` → paired `MARKET_UPDATE` price responses (origin scarcity up, destination arrivals down), two-market stock total conserved exactly, seeded-identical save/load continuation — closes `Routing/trade/economy`.
+
 ## Next responsibility
 
-`RESP-PLAYER-INVASION-CHAIN-001` — connect player damage/death signals to the global threat loop: attack-driven FearEvent pressure, war-state escalation, and an invasion mobilization resolution through canonical event emission, save/load-verified with conservation checks. Closes the ledger's `Player-to-invasion chain` row (PROPOSED) and the remaining half of IMPLEMENTATION_STATUS item 9. After this, the remaining PROPOSED loop is routing/trade/economy.
+`RESP-REPUTATION-PUBLIC-PRIVATE-001` — finish the public/private reputation flows behind the ledger's `Reputation/trust` PARTIALLY_IMPLEMENTED row (`socialcore.js` `ReputationBook`) through canonical parented events, save/load-verified. No PROPOSED production loop remains: player-to-invasion and routing/trade/economy both closed 2026-09-23 (`tests/player-invasion-chain.test.js`, `tests/routing-trade-economy.test.js`), leaving only SOURCE_ABSENT rows (awaiting their sources), the external Knowledge DB row, P2 world-expansion items, and the independently verified stop certificate — which no executor may issue.
