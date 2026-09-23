@@ -228,6 +228,180 @@ export class HabituationBook {
     }
 }
 const sigmoid = value => 1 / (1 + Math.exp(-value));
+// Re-opened `FearCore live transitions` / `Brain scale cleanup` rows (fourth re-open through the
+// procedure in docs/SOURCE_ABSENT_RECONCILIATION.md): the legacy `fearcore.js` band contract is
+// ported verbatim — 11 bands (4 core raw-fear driven + 7 context-driven extended), the documented
+// enter/exit thresholds (ALERT .8, ANXIOUS 1.4, PANIC 3.8; exits .55/.8/1.2), panicLockTicks 10
+// behind a PRESENCE_BREAK bypass, the extended rules (AGGRESSIVE anger override, HIDE under
+// threat, FREEZE behind low morale, VAULTING/CRAWLING obstacle states, RECOVER with accumulated
+// progress), the force-fallback for leaving an extended band, the snap-to-CALM guard, and the
+// bounded decisionTrace. `fearScale` is brain.js's §332 adapter verbatim (normalized 0..1 →
+// FearCore's 0..3.8 raw scale, so the enter thresholds land at 0.21/0.37/1.0).
+// V8 additions, both documented: `serialize`/`loadState` (world save/load) and a context `rng`
+// that production always injects (legacy defaulted to the wall clock's Math.random).
+const finite = (value, fallback) => (Number.isFinite(value) ? value : fallback); // legacy fearcore.js helper
+export const FEAR_BANDS = Object.freeze(['CALM', 'ALERT', 'ANXIOUS', 'PANIC', 'PRESENCE_BREAK', 'RECOVER', 'AGGRESSIVE', 'HIDE', 'FREEZE', 'VAULTING', 'CRAWLING']);
+export const CORE_BANDS = Object.freeze(['CALM', 'ALERT', 'ANXIOUS', 'PANIC']);
+export const EXTENDED_BANDS = Object.freeze(['PRESENCE_BREAK', 'RECOVER', 'AGGRESSIVE', 'HIDE', 'FREEZE', 'VAULTING', 'CRAWLING']);
+export const DEFAULT_FEARCORE_CONFIG = Object.freeze({
+    enter: Object.freeze({ ALERT: 0.8, ANXIOUS: 1.4, PANIC: 3.8 }),
+    exit: Object.freeze({ CALM: 0.55, ALERT: 0.8, ANXIOUS: 1.2 }),
+    panicLockTicks: 10,
+    extended: Object.freeze({
+        PRESENCE_BREAK: { enterFear: 0.95, enterStateTimer: 200, exitFear: 0.5 },
+        RECOVER: { exitFear: 0.2, exitRecovery: 0.8 },
+        AGGRESSIVE: { enterAnger: 0.6, exitAnger: 0.4 },
+        HIDE: { enterSkill: 0.6, enterMinThreats: 1, exitThreats: 0, exitPanicFear: 0.85 },
+        FREEZE: { enterMorale: 0.4, exitProbability: 0.02 },
+        VAULTING: { enterSkill: 0.5, exitObstacleCleared: true },
+        CRAWLING: { enterObstaclePresent: true, exitObstacleCleared: true },
+    }),
+});
+// brain.js §332: the brain's fear is normalized 0..1, FearCore's raw scale is 0..3.8 (PANIC at
+// 3.8). The mapping is linear — 0.21/0.37/1.0 of normalized fear reach ALERT/ANXIOUS/PANIC.
+export const FEARCORE_RAW_SCALE = 3.8;
+export const fearScale = brainFear => (Number.isFinite(brainFear) ? Math.max(0, Math.min(1, brainFear)) * FEARCORE_RAW_SCALE : 0);
+export class FearCore {
+    constructor(config = {}) {
+        const userExtended = config.extended || {};
+        this.config = {
+            enter: { ...DEFAULT_FEARCORE_CONFIG.enter, ...(config.enter || {}) },
+            exit: { ...DEFAULT_FEARCORE_CONFIG.exit, ...(config.exit || {}) },
+            panicLockTicks: Math.max(0, Math.floor(finite(config.panicLockTicks, DEFAULT_FEARCORE_CONFIG.panicLockTicks))),
+            extended: {},
+        };
+        for (const band of EXTENDED_BANDS) this.config.extended[band] = { ...DEFAULT_FEARCORE_CONFIG.extended[band], ...(userExtended[band] || {}) };
+        this.state = 'CALM';
+        this.tick = 0;
+        this.panicLockedUntil = null;
+        this.recoveryProgress = 0;
+        this.stateTimer = 0;
+        this.decisionTrace = [];
+        this.maxTraceLength = Math.max(1, Math.floor(finite(config.maxTraceLength, 100)));
+    }
+    reset(state = 'CALM') {
+        if (!FEAR_BANDS.includes(state)) throw new RangeError(`Unknown fear band: ${state}`);
+        this.state = state;
+        this.tick = 0;
+        this.panicLockedUntil = state === 'PANIC' ? this.config.panicLockTicks : null;
+        this.recoveryProgress = 0;
+        this.stateTimer = 0;
+        this.decisionTrace = [];
+        return this.state;
+    }
+    // The sole state-mutation entry point (legacy contract §260).
+    update(rawFear, context = {}) {
+        const fear = Math.max(0, finite(rawFear, 0));
+        const previous = this.state;
+        this.tick += 1;
+        this.stateTimer += 1;
+        // Phase 0: PRESENCE_BREAK bypasses the panic lock (it is the highest-priority band).
+        if (this.state === 'PANIC' && fear >= this.config.extended.PRESENCE_BREAK.enterFear && this.stateTimer >= this.config.extended.PRESENCE_BREAK.enterStateTimer) {
+            this.state = 'PRESENCE_BREAK';
+            return this._result(previous, fear, { from: previous, to: 'PRESENCE_BREAK', reason: 'EXTREME_FEAR_LOCK', threshold: this.config.extended.PRESENCE_BREAK.enterFear });
+        }
+        // Phase 1: an active panic lock suppresses every other transition.
+        if (this.state === 'PANIC' && this.tick < this.panicLockedUntil) {
+            return this._result(previous, fear, { from: previous, to: previous, reason: 'PANIC_LOCK', threshold: this.config.exit.ANXIOUS });
+        }
+        // Phase 2: context-driven extended bands take precedence over the core ladder.
+        const extended = this._evaluateExtendedBands(fear, context);
+        if (extended) {
+            this.state = extended.to;
+            if (extended.to === 'PANIC') this.panicLockedUntil = this.tick + this.config.panicLockTicks;
+            return this._result(previous, fear, extended);
+        }
+        // Phase 2.5: an extended band with no transition keeps holding (§260 stay rule).
+        if (EXTENDED_BANDS.includes(this.state)) return this._result(previous, fear, { from: previous, to: previous, reason: 'EXTENDED_BAND_STAY', threshold: null });
+        // Phase 3: the core ladder — asymmetric enter/exit thresholds (the hysteresis of §23).
+        let reason = 'NO_TRANSITION';
+        let threshold = null;
+        if (this.state === 'CALM' && fear >= this.config.enter.ALERT) {
+            threshold = this.config.enter.ALERT; reason = 'ENTER_ALERT'; this.state = 'ALERT';
+        } else if (this.state === 'ALERT') {
+            if (fear >= this.config.enter.ANXIOUS) { threshold = this.config.enter.ANXIOUS; reason = 'ENTER_ANXIOUS'; this.state = 'ANXIOUS'; }
+            else if (fear < this.config.exit.CALM) { threshold = this.config.exit.CALM; reason = 'EXIT_TO_CALM'; this.state = 'CALM'; }
+        } else if (this.state === 'ANXIOUS') {
+            if (fear >= this.config.enter.PANIC) { threshold = this.config.enter.PANIC; reason = 'ENTER_PANIC'; this.state = 'PANIC'; this.panicLockedUntil = this.tick + this.config.panicLockTicks; }
+            else if (fear < this.config.exit.ALERT) { threshold = this.config.exit.ALERT; reason = 'EXIT_TO_ALERT'; this.state = 'ALERT'; }
+        } else if (this.state === 'PANIC' && fear < this.config.exit.ANXIOUS) {
+            threshold = this.config.exit.ANXIOUS; reason = 'EXIT_TO_ANXIOUS'; this.state = 'ANXIOUS'; this.panicLockedUntil = null;
+        } else if (this.state === 'RECOVER') {
+            this.recoveryProgress = Math.min(1, this.recoveryProgress + 0.1);
+            if (fear < this.config.extended.RECOVER.exitFear && this.recoveryProgress >= this.config.extended.RECOVER.exitRecovery) {
+                reason = 'RECOVER_COMPLETE'; threshold = this.config.extended.RECOVER.exitFear; this.state = 'CALM'; this.recoveryProgress = 0;
+            } else {
+                return this._result(previous, fear, { from: previous, to: previous, reason: 'RECOVER_PROGRESS', threshold: this.config.extended.RECOVER.exitFear, recoveryProgress: this.recoveryProgress });
+            }
+        }
+        // Sanity guard: a state outside the vocabulary snaps back to CALM.
+        if (!FEAR_BANDS.includes(this.state)) { this.state = 'CALM'; reason = 'SNAP_TO_CALM'; }
+        return this._result(previous, fear, { from: previous, to: this.state, reason, threshold });
+    }
+    _evaluateExtendedBands(fear, context) {
+        // `rng` stays a context input (legacy contract); production always injects the world RNG.
+        const { currentAnger = 0, morale = 1, threats = 0, skill = 0, obstacleAhead = false, obstaclePresent = false, rng = Math.random } = context;
+        const ext = this.config.extended;
+        if (this.state !== 'AGGRESSIVE' && currentAnger > ext.AGGRESSIVE.enterAnger) return { from: this.state, to: 'AGGRESSIVE', reason: 'ANGER_OVERRIDE', threshold: ext.AGGRESSIVE.enterAnger };
+        if (this.state === 'AGGRESSIVE' && currentAnger < ext.AGGRESSIVE.exitAnger) {
+            if (fear >= this.config.enter.PANIC) return { from: 'AGGRESSIVE', to: 'PANIC', reason: 'EXIT_AGGRESSIVE_TO_PANIC', threshold: this.config.enter.PANIC };
+            if (fear >= this.config.enter.ANXIOUS) return { from: 'AGGRESSIVE', to: 'ANXIOUS', reason: 'EXIT_AGGRESSIVE_TO_ANXIOUS', threshold: this.config.enter.ANXIOUS };
+            if (fear >= this.config.enter.ALERT) return { from: 'AGGRESSIVE', to: 'ALERT', reason: 'EXIT_AGGRESSIVE_TO_ALERT', threshold: this.config.enter.ALERT };
+            return { from: 'AGGRESSIVE', to: 'CALM', reason: 'EXIT_AGGRESSIVE_TO_CALM', threshold: this.config.exit.CALM };
+        }
+        if (this.state === 'PANIC' && fear >= ext.PRESENCE_BREAK.enterFear && this.stateTimer >= ext.PRESENCE_BREAK.enterStateTimer) return { from: 'PANIC', to: 'PRESENCE_BREAK', reason: 'EXTREME_FEAR_LOCK', threshold: ext.PRESENCE_BREAK.enterFear };
+        if (this.state === 'PRESENCE_BREAK' && fear < ext.PRESENCE_BREAK.exitFear) return { from: 'PRESENCE_BREAK', to: 'RECOVER', reason: 'EXIT_PRESENCE_BREAK', threshold: ext.PRESENCE_BREAK.exitFear };
+        if (this.state === 'PANIC' && skill > ext.HIDE.enterSkill && threats >= ext.HIDE.enterMinThreats && rng() < 0.3) return { from: 'PANIC', to: 'HIDE', reason: 'HIDE_UNDER_THREAT', threshold: ext.HIDE.enterSkill };
+        if (this.state === 'HIDE') {
+            if (threats === 0) return { from: 'HIDE', to: 'RECOVER', reason: 'EXIT_HIDE_NO_THREATS', threshold: 0 };
+            if (fear > ext.HIDE.exitPanicFear) return { from: 'HIDE', to: 'PANIC', reason: 'EXIT_HIDE_PANIC_ESCAPE', threshold: ext.HIDE.exitPanicFear };
+        }
+        if (this.state === 'PANIC' && morale < ext.FREEZE.enterMorale && rng() < ext.FREEZE.exitProbability * 10) return { from: 'PANIC', to: 'FREEZE', reason: 'FREEZE_UNDER_PANIC', threshold: ext.FREEZE.enterMorale };
+        if (this.state === 'FREEZE' && rng() < ext.FREEZE.exitProbability) return { from: 'FREEZE', to: 'RECOVER', reason: 'EXIT_FREEZE', threshold: 0 };
+        if (obstacleAhead && skill > ext.VAULTING.enterSkill && this.state !== 'VAULTING') return { from: this.state, to: 'VAULTING', reason: 'OBSTACLE_VAULT', threshold: ext.VAULTING.enterSkill };
+        if (this.state === 'VAULTING' && !obstacleAhead) {
+            if (fear >= this.config.enter.PANIC) return { from: 'VAULTING', to: 'PANIC', reason: 'EXIT_VAULTING_PANIC', threshold: this.config.enter.PANIC };
+            return { from: 'VAULTING', to: 'ALERT', reason: 'EXIT_VAULTING', threshold: 0 };
+        }
+        if (this.state === 'HIDE' && obstaclePresent && this.state !== 'CRAWLING') return { from: 'HIDE', to: 'CRAWLING', reason: 'CRAWL_UNDER_OBSTACLE', threshold: 0 };
+        // Legacy verbatim: the `state === 'HIDE'` disjunct here is unreachable (the branch already
+        // requires CRAWLING) — preserved so the port stays faithful to the extracted source.
+        if (this.state === 'CRAWLING' && (!obstaclePresent || this.state === 'HIDE')) return { from: 'CRAWLING', to: 'HIDE', reason: 'EXIT_CRAWLING', threshold: 0 };
+        return null;
+    }
+    _result(previous, fear, metadata = {}) {
+        const result = {
+            state: this.state,
+            previousState: previous,
+            changed: previous !== this.state,
+            fear,
+            tick: this.tick,
+            panicLocked: this.state === 'PANIC' && this.tick < this.panicLockedUntil,
+            panicLockedUntil: this.panicLockedUntil,
+            from: metadata.from !== undefined ? metadata.from : previous,
+            to: metadata.to !== undefined ? metadata.to : this.state,
+            reason: metadata.reason || 'NO_TRANSITION',
+            threshold: metadata.threshold ?? null,
+            recoveryProgress: metadata.recoveryProgress ?? null,
+        };
+        this.decisionTrace.push({ ...result });
+        if (this.decisionTrace.length > this.maxTraceLength) this.decisionTrace.shift();
+        return result;
+    }
+    getDecisionTrace() { return this.decisionTrace.map(entry => ({ ...entry })); }
+    serialize() {
+        return { state: this.state, tick: this.tick, panicLockedUntil: this.panicLockedUntil, recoveryProgress: this.recoveryProgress, stateTimer: this.stateTimer, trace: this.decisionTrace.map(entry => ({ ...entry })) };
+    }
+    loadState(state = {}) {
+        if (state.state && FEAR_BANDS.includes(state.state)) this.state = state.state;
+        this.tick = Math.max(0, Math.floor(finite(state.tick, 0)));
+        this.panicLockedUntil = Number.isFinite(state.panicLockedUntil) ? state.panicLockedUntil : null;
+        this.recoveryProgress = clamp(finite(state.recoveryProgress, 0));
+        this.stateTimer = Math.max(0, Math.floor(finite(state.stateTimer, 0)));
+        this.decisionTrace = (state.trace ?? []).map(entry => ({ ...entry })).slice(-this.maxTraceLength);
+        return this;
+    }
+}
 // Re-opened `Neural fear` row (re-open procedure from docs/SOURCE_ABSENT_RECONCILIATION.md):
 // the legacy sources are extracted byte-exact (legacy/neuralfear.js, legacy/neuralnet.js —
 // blob + sha256 pinned in legacy/PROVENANCE.md) and the V8 integration keeps their semantics:
@@ -242,7 +416,7 @@ const sigmoid = value => 1 / (1 + Math.exp(-value));
 //   - the default architecture is compact (14 faction-state features → [8, 4] → 1) so a
 //     serialized model stays small; legacy's [64, 32] remains configurable.
 export class NeuralFearModel {
-    constructor({ rng = null, inputSize = 14, hiddenLayers = [8, 4], outputSize = 1, learningRate = .05, dropoutRate = .2, patience = 10, maxHistory = 50 } = {}) {
+    constructor({ rng = null, inputSize = 14, hiddenLayers = [8, 4], outputSize = 1, learningRate = .05, dropoutRate = .2, patience = 10, maxHistory = 50, calibrationAlpha = .3 } = {}) {
         const source = randomSource();
         this.rng = typeof rng === 'function' ? rng : () => source.next();
         this.inputSize = Math.max(1, Math.floor(Number.isFinite(inputSize) ? inputSize : 14));
@@ -252,6 +426,7 @@ export class NeuralFearModel {
         this.dropoutRate = Math.max(0, Math.min(.9, Number.isFinite(dropoutRate) ? dropoutRate : .2));
         this.patience = Math.max(1, Math.floor(Number.isFinite(patience) ? patience : 10));
         this.maxHistory = Math.max(1, Math.floor(Number.isFinite(maxHistory) ? maxHistory : 50));
+        this.calibrationAlpha = Math.min(1, Math.max(1e-6, Number.isFinite(calibrationAlpha) && calibrationAlpha > 0 ? calibrationAlpha : .3));
         this.initialized = false;
         this.weights = [];
         this.biases = [];
@@ -261,6 +436,27 @@ export class NeuralFearModel {
         this.bestLoss = Infinity;
         this.patienceCounter = 0;
         this.history = [];
+        // RESP-NEURAL-FEAR-LOOP-001: how well inference predicts the world it was trained on —
+        // an EWMA of the post-update no-dropout absolute error at each learn step. Additive to
+        // the legacy model (no legacy value changes); consumers gate on it so only a model that
+        // has actually earned trust may influence a world.
+        this.calibrationError = null;
+        this.calibrationSamples = 0;
+    }
+    recordCalibration(error) {
+        if (!Number.isFinite(error)) return this.calibrationError;
+        const value = Math.max(0, error);
+        this.calibrationError = this.calibrationError == null ? value : this.calibrationError * (1 - this.calibrationAlpha) + value * this.calibrationAlpha;
+        this.calibrationSamples += 1;
+        return this.calibrationError;
+    }
+    // Whether this model's inference has earned the right to act on a world. `calibrated` needs
+    // both enough observed samples and an error inside tolerance; an untrained model is never
+    // calibrated (a null error fails closed).
+    calibration({ minSamples = 5, tolerance = .15 } = {}) {
+        const samples = this.calibrationSamples;
+        const error = this.calibrationError;
+        return { samples, error, minSamples, tolerance, calibrated: samples >= minSamples && error != null && error <= tolerance };
     }
     draw() { return Number(this.rng()); }
     // Lazy Xavier/Glorot initialization — the only place weight draws happen.
@@ -372,11 +568,14 @@ export class NeuralFearModel {
         }
         this.sampleCount = n;
         const lossAfter = (this.forward(this.normalize(features), { dropout: false }).prediction - goal) ** 2;
+        // RESP-NEURAL-FEAR-LOOP-001: the calibration reading is the SETTLED model's error on this
+        // sample (no dropout, post-update) — what inference would actually have predicted.
+        this.recordCalibration(Math.abs(this.forward(this.normalize(features), { dropout: false }).prediction - goal));
         this.history.push({ at: now, loss: lossBefore, sampleCount: n });
         if (this.history.length > this.maxHistory) this.history.shift();
         if (lossBefore < this.bestLoss - 1e-9) { this.bestLoss = lossBefore; this.patienceCounter = 0; }
         else this.patienceCounter += 1;
-        return { prediction, lossBefore, lossAfter, sampleCount: n, earlyStopped: this.patienceCounter >= this.patience, worldTime: now };
+        return { prediction, lossBefore, lossAfter, sampleCount: n, calibrationError: this.calibrationError, calibrationSamples: this.calibrationSamples, earlyStopped: this.patienceCounter >= this.patience, worldTime: now };
     }
     serialize() {
         return {
@@ -385,6 +584,7 @@ export class NeuralFearModel {
             weights: this.weights.map(layer => layer.map(row => [...row])), biases: this.biases.map(row => [...row]),
             featureMeans: this.featureMeans ? [...this.featureMeans] : null, featureM2: this.featureM2 ? [...this.featureM2] : null,
             bestLoss: Number.isFinite(this.bestLoss) ? this.bestLoss : null, patienceCounter: this.patienceCounter, history: this.history.map(entry => ({ ...entry })),
+            calibrationError: this.calibrationError, calibrationSamples: this.calibrationSamples,
         };
     }
     loadState(state = {}) {
@@ -402,6 +602,8 @@ export class NeuralFearModel {
         this.bestLoss = Number.isFinite(state.bestLoss) ? state.bestLoss : Infinity;
         this.patienceCounter = Math.max(0, Math.floor(Number(state.patienceCounter) || 0));
         this.history = (state.history ?? []).map(entry => ({ ...entry }));
+        this.calibrationError = Number.isFinite(state.calibrationError) ? state.calibrationError : null;
+        this.calibrationSamples = Math.max(0, Math.floor(Number(state.calibrationSamples) || 0));
         this.initialized = true;
         return this;
     }

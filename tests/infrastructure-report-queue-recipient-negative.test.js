@@ -20,12 +20,19 @@ function runScenario(protectedEviction) {
 }
 
 describe('RESP-INFRASTRUCTURE-REPORT-QUEUE-RECIPIENT-FAIRNESS-NEGATIVE-001', () => {
-    it('proves removing bounded protections changes quiet-recipient service', () => {
+    it('proves the bound changes admission while the imminent quiet delivery is still served', () => {
         const protectedRun = runScenario(true);
         const unboundedRun = runScenario(false);
-        expect(protectedRun.quiet.beliefs?.get('quiet')).toBeDefined();
-        expect(unboundedRun.quiet.beliefs?.get('quiet')).toBeDefined();
-        expect(protectedRun.society.rumors.queue.length).toBeLessThanOrEqual(4);
+
+        // the differential: bounded admission sheds the flood, unbounded keeps every item
+        expect(protectedRun.society.rumors.queue.length).toBe(3);
+        expect(unboundedRun.society.rumors.queue.length).toBe(20);
+        expect(unboundedRun.society.rumors.queue.length).toBeGreaterThan(protectedRun.society.rumors.queue.length);
+
+        // …and both still serve the quiet recipient's imminent rumor, with its value intact
+        expect(protectedRun.quiet.beliefs).toBeInstanceOf(Map);
+        expect(protectedRun.quiet.beliefs.get('quiet').estimate).toBe(1);
+        expect(unboundedRun.quiet.beliefs.get('quiet').estimate).toBe(1);
     });
 
     it('detects recipient starvation rather than trusting total throughput', () => {

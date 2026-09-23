@@ -1,4 +1,4 @@
-import { AgentBelief, BeliefEvidence, HabituationBook, HysteresisBook, Morale, NeuralFearModel, Personality, ReputationBook } from './socialcore.js';
+import { AgentBelief, BeliefEvidence, FearCore, HabituationBook, HysteresisBook, Morale, NeuralFearModel, Personality, ReputationBook, fearScale } from './socialcore.js';
 import { DecisionCore } from './decisioncore.js';
 import { InteractionCore } from './interactioncore.js';
 import { AdvisoryGate } from './advisorygate.js';
@@ -8,6 +8,10 @@ import { DEFAULT_SEED, randomSource } from './randomcore.js';
 export { DEFAULT_SEED, mulberry32 } from './randomcore.js';
 const clamp = value => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
 const num = (value, fallback = 0) => Number.isFinite(value) ? value : fallback;
+// RESP-FACTION-GRIEVANCE-ECONOMY-001: how much of an applied fear gain is also resented. Half a
+// point of grievance per point of fear keeps the ladder honest — a single .15 wound adds .075,
+// so resentment builds over repeated hurt rather than from one scratch.
+const GRIEVANCE_PER_FEAR = .5;
 
 export class RumorNetwork {
     constructor({ now, maxRumors = 2048, maxQueue = 4096, confidenceHalfLife = 10 } = {}) { this.rumors = []; this.seq = 0; this.queue = []; this.now = now || (() => 0); this.maxRumors = Math.max(1, Math.floor(maxRumors)); this.maxQueue = Math.max(1, Math.floor(maxQueue)); this.confidenceHalfLife = Math.max(1, num(confidenceHalfLife, 10)); }
@@ -300,6 +304,10 @@ export class SocietyCore {
         // constructor draws nothing, so every existing seeded world's RNG stream is untouched
         // until the model is first used. Its input vector is the faction's canonical state.
         this.neuralFear = new NeuralFearModel({ rng: () => this.random() });
+        // Re-opened `FearCore live transitions` row: the extracted 11-band contract (core 4 +
+        // extended 7) with its panic lock, force-fallback and bounded decision trace. Constructing
+        // it draws nothing and every context input arrives per call, so seeded streams are untouched.
+        this.fearCore = new FearCore();
         // RESP-PLAYER-INVASION-CHAIN-001: player vitals, war-pressure state, resolved invasions.
         this.player = { hp: 100, maxHp: 100, alive: true, deaths: 0 };
         this.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70 };
@@ -567,9 +575,10 @@ export class SocietyCore {
         this.time += 1;
         const routeDecay = this.decayRouteBeliefs();
         const rumorDecay = this.decayRumorBeliefs();
+        const grievanceCooling = this.coolGrievances();
         // RESP-EVENT-CAUSALITY-001: belief aging is part of the turn's history — recorded on
         // the TURN before any action consumes the decayed beliefs below.
-        const turn = this.commitEvent(this.allocateEvent({ type: 'TURN', beliefDecay: { routeFactor: routeDecay.factor, rumorFactor: rumorDecay.factor, routeClaims: routeDecay.decayed, rumorClaims: rumorDecay.decayed } }));
+        const turn = this.commitEvent(this.allocateEvent({ type: 'TURN', beliefDecay: { routeFactor: routeDecay.factor, rumorFactor: rumorDecay.factor, routeClaims: routeDecay.decayed, rumorClaims: rumorDecay.decayed }, grievanceCooling }));
         for (const action of actions) {
             const result = this.executeAction(action, turn);
             if (Array.isArray(result)) result.forEach(event => this.commitEvent(event));
@@ -578,6 +587,22 @@ export class SocietyCore {
         return this.time;
     }
     step(options = {}) { return this.tick(options); }
+    // RESP-FACTION-GRIEVANCE-ECONOMY-001: resentments cool on world time — a faction whose
+    // grievance nothing has renewed for `idleTicks` sheds `rate` per tick, down to zero. Attacks
+    // (player wounds and raid resolutions) renew it, so a world under sustained pressure keeps
+    // its grievance and can retaliate, while a world that stops cools back below the gate.
+    coolGrievances({ idleTicks = 5, rate = .01 } = {}) {
+        let cooled = 0;
+        for (const faction of this.factions.values()) {
+            const grievance = num(faction.state.grievance, 0);
+            if (grievance <= 0) continue;
+            const idle = this.time - num(faction.state.grievanceTick, 0);
+            if (idle < idleTicks) continue;
+            faction.state.grievance = clamp(grievance - rate);
+            cooled += 1;
+        }
+        return cooled;
+    }
     progressPendingTrips({ routes = this.routes.edges, riskThreshold = 1 } = {}) {
         const actions = [];
         for (const [marketId, market] of this.markets) for (const trip of market.inTransit.values()) {
@@ -700,7 +725,10 @@ export class SocietyCore {
                 const pressure = shortage / Math.max(1, num(action.foodNeed, group.foodNeed));
                 const migrates = pressure >= Math.max(0, num(action.migrationThreshold, .5));
                 const faction = action.faction ? this.factions.get(action.faction) : null;
-                if (faction && shortage > 0) faction.state.grievance = clamp(faction.state.grievance + Math.min(1, shortage * .05));
+                if (faction && shortage > 0) {
+                    faction.state.grievance = clamp(faction.state.grievance + Math.min(1, shortage * .05));
+                    faction.state.grievanceTick = this.time;
+                }
                 return this.allocateEvent({ type: 'ROAMING_GROUP_CONSEQUENCE', parent, groupId: group.id, factionId: faction?.id ?? null, shortage, pressure, consequence: migrates ? 'MIGRATION_PRESSURE' : 'HOLD', grievance: faction?.state.grievance ?? null });
             }
             case 'ROAMING_GROUP_LOOT_CONSUMER': {
@@ -1074,6 +1102,7 @@ export class SocietyCore {
                 attacker.state.militaryConfidence = clamp(attacker.state.militaryConfidence + (victory ? .1 : -.1));
                 target.state.militaryConfidence = clamp(target.state.militaryConfidence - (victory ? .05 : 0));
                 target.state.grievance = clamp(target.state.grievance + (victory ? .15 : .05));
+                target.state.grievanceTick = this.time;
                 target.state.anger = clamp(target.state.anger + (victory ? .1 : .02));
                 target.state.threatPerception = clamp(target.state.threatPerception + (victory ? .1 : .05));
                 const dispatch = [...this.events].reverse().find(event => event.type === 'FACTION_RAID_DISPATCH' && event.raidId === raid.id);
@@ -1117,7 +1146,10 @@ export class SocietyCore {
                 const solved = clamp(action.solved ? 1 : 0);
                 const injustice = clamp(action.injustice ?? (solved ? 0 : 1));
                 faction.state.legitimacy = this.updateLegitimacy(before, { solved, injustice, cooperation: action.cooperation ?? 0 });
-                faction.state.grievance = clamp(faction.state.grievance + injustice * 0.1 - solved * 0.05);
+                const grievanceDelta = injustice * 0.1 - solved * 0.05;
+                faction.state.grievance = clamp(faction.state.grievance + grievanceDelta);
+                // Only an injustice renews the clock; a solved case lets the resentment cool.
+                if (grievanceDelta > 0) faction.state.grievanceTick = this.time;
                 return this.allocateEvent({ type: 'JUSTICE_RESOLUTION', parent, factionId: faction.id, solved: Boolean(action.solved), injustice, legitimacyBefore: before, legitimacyAfter: faction.state.legitimacy, grievanceAfter: faction.state.grievance });
             }
             case 'MIGRATION_EVALUATION': {
@@ -1267,8 +1299,14 @@ export class SocietyCore {
                     habituation = this.habituation.attenuate(baseFearGain, { stimulusType: action.source ?? 'unknown', actorId: faction.id, now: this.now() });
                     faction.state.fear = clamp(num(faction.state.fear, 0) + habituation.adjusted);
                     faction.state.threatPerception = clamp(num(faction.state.threatPerception, 0) + pressureGain / 200);
-                }
-                const fearEvent = this.allocateEvent({ type: 'FEAR_EVENT_RAISED', parent: wound, pressureBefore, pressureAfter: this.warState.pressure, pressureGain, baseFearGain, fearGainApplied: habituation ? habituation.adjusted : 0, habituationLevel: habituation ? habituation.habituationLevel : 0, factionId: faction?.id ?? null, factionFearAfter: faction ? faction.state.fear : null, source: action.source ?? 'unknown' });
+                    // RESP-FACTION-GRIEVANCE-ECONOMY-001: being hurt breeds resentment as well as
+                    // fear, so a world where a faction is hurt repeatedly reaches a
+                    // retaliation-grade grievance without anyone scripting a raid. The renewal
+                    // tick is stamped here (and on every other grievance gain) so the cooling
+                    // pass only touches resentments nothing has renewed.
+                    faction.state.grievance = clamp(num(faction.state.grievance, 0) + clamp(habituation.adjusted * GRIEVANCE_PER_FEAR));                    faction.state.grievanceTick = this.time;
+                    }
+                const fearEvent = this.allocateEvent({ type: 'FEAR_EVENT_RAISED', parent: wound, pressureBefore, pressureAfter: this.warState.pressure, pressureGain, baseFearGain, fearGainApplied: habituation ? habituation.adjusted : 0, habituationLevel: habituation ? habituation.habituationLevel : 0, factionId: faction?.id ?? null, factionFearAfter: faction ? faction.state.fear : null, factionGrievanceAfter: faction ? faction.state.grievance : null, source: action.source ?? 'unknown' });
                 if (!faction) return fearEvent; // driver commits the returned event
                 // The exposure record chains off the fear event it shaped (commit → allocate →
                 // return keeps seq monotonic — same two-event pattern as the escort resolution).
@@ -1282,9 +1320,29 @@ export class SocietyCore {
                 // Morale passes it here, so low morale behind high fear can roll FREEZE. Worlds
                 // that assign none keep the unfrozen path (undefined morale → no roll at all).
                 const transition = this.hysteresis.update(faction.id, faction.state.fear, { morale: this.morales.get(faction.id)?.value }, this.now());
-                if (!transition.transitioned) return habituated;
+                // Re-opened `FearCore live transitions` row: the extracted band contract reads the
+                // SAME post-attenuation fear through brain.js's §332 adapter (normalized 0..1 → the
+                // contract's 0..3.8 raw scale). Its threat input counts the OTHER factions holding a
+                // retaliation-grade grievance, so ordinary worlds never leave the core ladder and
+                // the contract's own PANIC rules are the only place a draw can be taken.
+                const hostile = [...this.factions.values()].filter(other => other !== faction && num(other.state.grievance, 0) >= .5).length;
+                const band = this.fearCore.update(fearScale(faction.state.fear), {
+                    currentAnger: num(faction.state.anger, 0),
+                    morale: this.morales.get(faction.id)?.value,
+                    threats: hostile,
+                    skill: num(faction.state.militaryConfidence, .5),
+                    obstacleAhead: false,
+                    obstaclePresent: false,
+                    rng: () => this.random(),
+                });
+                if (!transition.transitioned && !band.changed) return habituated;
                 this.commitEvent(habituated);
-                return this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() });
+                if (!band.changed) return this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() });
+                // Both machines can speak on one reading: stage the core-ladder transition first so
+                // the band event chains off it, and keep exactly one uncommitted tail for the driver.
+                let bandParent = habituated;
+                if (transition.transitioned) bandParent = this.commitEvent(this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() }));
+                return this.allocateEvent({ type: 'FEARCORE_BAND_TRANSITION', parent: bandParent, factionId: faction.id, from: band.from, to: band.to, reason: band.reason, threshold: band.threshold, rawFear: band.fear, tick: band.tick, panicLocked: band.panicLocked, panicLockedUntil: band.panicLockedUntil, recoveryProgress: band.recoveryProgress, worldTime: this.now() });
             }
             // Re-opened `Neural fear` row: production wiring for the extracted legacy MLP. The
             // feature vector is the faction's canonical numeric state; NEURAL_FEAR_PREDICT is
@@ -1309,7 +1367,45 @@ export class SocietyCore {
                 if (features.some(value => !Number.isFinite(value))) throw new Error('NEURAL_FEAR_LEARN requires finite feature values');
                 const target = Number.isFinite(action.target) ? clamp(action.target) : (faction ? clamp(num(faction.state.fear, 0)) : 0);
                 const step = this.neuralFear.learn(features, target, { now: this.now(), dropout: action.dropout !== false });
-                return this.allocateEvent({ type: 'NEURAL_FEAR_LEARNED', parent, factionId: faction?.id ?? null, target, features: [...features], prediction: step.prediction, lossBefore: step.lossBefore, lossAfter: step.lossAfter, sampleCount: step.sampleCount, earlyStopped: step.earlyStopped, worldTime: step.worldTime });
+                return this.allocateEvent({ type: 'NEURAL_FEAR_LEARNED', parent, factionId: faction?.id ?? null, target, features: [...features], prediction: step.prediction, lossBefore: step.lossBefore, lossAfter: step.lossAfter, sampleCount: step.sampleCount, calibrationError: step.calibrationError, calibrationSamples: step.calibrationSamples, earlyStopped: step.earlyStopped, worldTime: step.worldTime });
+            }
+            // RESP-NEURAL-FEAR-LOOP-001: closes the neural loop — the extracted MLP stops being a
+            // read-only observer and its CALIBRATED anticipation acts on the world. The faction
+            // predicts the fear its situation should produce; only a model that has earned trust
+            // (enough observed samples AND an error inside tolerance) may act, and its signed
+            // discrepancy `dread` moves the faction in bounded steps: dread raises fear (and
+            // narrows the `opportunity` the production RAID candidate scores on, so the forecast
+            // reaches real decisions), a reassuring forecast calms fear and restores the opening.
+            // Uncalibrated models record the forecast and change nothing; the ladder keeps its
+            // own gates, so a world without trained models behaves exactly as before.
+            case 'NEURAL_FEAR_FORECAST': {
+                const faction = action.factionId ? this.factions.get(action.factionId) : null;
+                if (!faction) throw new Error(`NEURAL_FEAR_FORECAST requires a registered faction "${action.factionId}"`);
+                const features = Array.isArray(action.features) ? action.features : this.fearFeatures(faction);
+                if (features.length !== this.neuralFear.inputSize) throw new Error(`NEURAL_FEAR_FORECAST requires ${this.neuralFear.inputSize} features`);
+                if (features.some(value => !Number.isFinite(value))) throw new Error('NEURAL_FEAR_FORECAST requires finite feature values');
+                const blend = clamp(num(action.blend, .5));
+                const maxStep = clamp(num(action.maxStep, .1));
+                // A deadband of its own: a discrepancy the size of noise must not move a world.
+                const deadband = clamp(num(action.deadband, .02));
+                const { prediction } = this.neuralFear.predict(features);
+                const gate = this.neuralFear.calibration({ minSamples: Math.max(0, Math.floor(num(action.minSamples, 5))), tolerance: clamp(num(action.tolerance, .15)) });
+                const fearBefore = clamp(num(faction.state.fear, 0));
+                const opportunityBefore = clamp(num(faction.state.opportunity, 0));
+                const dread = prediction - fearBefore;
+                const applied = gate.calibrated && Math.abs(dread) > deadband;
+                let step = 0;
+                if (applied) {
+                    // The movement is bounded twice: by the blend against the discrepancy and by
+                    // maxStep. `step` is the movement that happened. The fear clamp is
+                    // defensive only — the model's sigmoid prediction lies strictly inside
+                    // (0,1) and blend ≤ 1, so a step can never overshoot the fear bounds — but
+                    // the OPENING can reach its own bounds and is genuinely clamped there.
+                    step = Math.sign(dread) * Math.min(maxStep, Math.abs(dread) * blend);
+                    faction.state.fear = clamp(fearBefore + step);
+                    faction.state.opportunity = clamp(opportunityBefore - step);
+                }
+                return this.allocateEvent({ type: 'NEURAL_FEAR_FORECAST', parent, factionId: faction.id, prediction, features: [...features], dread, blend, maxStep, deadband, applied, reason: applied ? 'APPLIED' : (gate.calibrated ? 'WITHIN_DEADBAND' : 'UNCALIBRATED'), calibrated: gate.calibrated, calibrationError: gate.error, calibrationSamples: gate.samples, minSamples: gate.minSamples, tolerance: gate.tolerance, step, fearBefore, fearAfter: clamp(num(faction.state.fear, 0)), opportunityBefore, opportunityAfter: clamp(num(faction.state.opportunity, 0)), escalationLevel: faction.state.escalationLevel(), worldTime: this.now() });
             }
             case 'WAR_STATUS_EVALUATE': {
                 // RESP-PLAYER-INVASION-CHAIN-001 stage 2: war status is computed from the
@@ -1640,6 +1736,7 @@ export class SocietyCore {
             habituation: Object.fromEntries([...this.habituation.exposures.entries()].map(([key, exposure]) => [key, { ...exposure }])),
             hysteresis: Object.fromEntries([...this.hysteresis.actors.entries()].map(([id, controller]) => [id, { state: controller.state, stateTimer: controller.stateTimer, transitionHistory: controller.transitionHistory.map(entry => ({ ...entry })) }])),
             neuralFear: this.neuralFear.serialize(),
+            fearCore: this.fearCore.serialize(),
             player: { ...this.player },
             warState: { ...this.warState },
             warLoot: this.warLoot,
@@ -1687,6 +1784,7 @@ export class SocietyCore {
         for (const [key, exposure] of Object.entries(json.habituation ?? {})) society.habituation.exposures.set(key, { ...exposure });
         for (const [id, controller] of Object.entries(json.hysteresis ?? {})) society.hysteresis.actors.set(id, { state: controller.state, stateTimer: controller.stateTimer, transitionHistory: (controller.transitionHistory ?? []).map(entry => ({ ...entry })) });
         if (json.neuralFear) society.neuralFear.loadState(json.neuralFear);
+        if (json.fearCore) society.fearCore.loadState(json.fearCore);
         society.player = { hp: 100, maxHp: 100, alive: true, deaths: 0, ...(json.player ?? {}) };
         society.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70, ...(json.warState ?? {}) };
         society.warLoot = num(json.warLoot, 0);

@@ -41,8 +41,14 @@ describe('RESP-INFRASTRUCTURE-REPORT-QUEUE-FAIRNESS-001', () => {
             const rumor = society.rumors.publish({ claim: `new-${i}` });
             society.queueRumor(rumor, recipient, { delay: 1, ttl: 20 });
         }
+        // The queue was over capacity, so the deferred `old` delivery was evicted — but that is
+        // only provable by letting its OWN delay elapse: at t=1 it would be undelivered anyway.
         society.time = 1;
-        society.rumors.deliverDue([recipient], { now: () => society.now() });
-        expect(recipient.beliefs?.has('old')).not.toBe(true);
+        expect(society.rumors.deliverDue([recipient], { now: () => society.now() })).toHaveLength(1); // an imminent delivery is served
+        society.time = 60;
+        expect(society.rumors.deliverDue([recipient], { now: () => society.now() })).toHaveLength(0); // past `old`'s delay, still nothing
+        expect(recipient.beliefs).toBeInstanceOf(Map);
+        expect(recipient.beliefs.has('old')).toBe(false);
+        expect([...recipient.beliefs.keys()]).toEqual(['new-0']); // what arrived, and only that
     });
 });
