@@ -1,0 +1,105 @@
+# Fear AI — Campaign Manager State
+
+**Rule:** repository evidence outranks historical claims. Development verification is not supervisor acceptance.
+
+## Current tree
+
+- Repository: `fear-ai-sim/`; ESM JavaScript with Jest; orientation in `../README.md`.
+- Current automated suite: **146 suites / 430 tests passing**.
+- Current acceptance: development-verified only; no supervisor admission claimed.
+- Git repository initialized inside this checkout on 2026-09-22 (the quarantined empty root `.git` had been purged — see `ROOT-RESIDUE-NOTES.md`); source fingerprinting is unblocked — only Knowledge DB writeback remains `BLOCKED_EXTERNAL`.
+
+## Completed responsibility
+
+`RESP-OBSERVATION-RUMOR-LATENCY-DECAY-001` is development-verified.
+
+Delayed rumor delivery now decays delivered confidence by in-transit latency beyond the nominal one-tick handoff (half-life 10 by default, per-item override), distortion compounds with latency, recipients resolve source trust locally (`trustFor` > reputation book > flat `sourceTrust`) with skepticism gating evidence weight, propagation runs through the relayer's local belief via `relayRumor`, and delivered rumor beliefs age with the world clock without rewriting estimates. Deterministic across identical worlds and save/load.
+
+`RESP-TIME-OWNERSHIP-001` (rumor→belief world-clock wiring) is also development-verified: rumor publish, evidence, and arrival timestamps all come from the world clock, never `Date.now`.
+
+`RESP-EVENT-CAUSALITY-001` is development-verified.
+
+Belief paths now run through canonical event emission. `worldStep` queues and delivers rumors inside the turn as `RUMOR_QUEUE` → `RUMOR_DELIVER` → `RUMOR_DELIVERED` → `BELIEF_UPDATED` action events with ordered parentage to the TURN (timing unchanged: the clock advances before actions, so `deliveryTick` computes exactly as the former post-tick call). Belief decay is recorded on the TURN event (`beliefDecay`: route/rumor claim counts + factors) instead of mutating confidence silently. Decisions that consume beliefs — `TRADE_ROUTE_DECISION`, `ROAMING_GROUP_ROUTE_ENCOUNTER`, `QUEUE_AWARE_SETTLEMENT_ECONOMY` — cite `beliefProvenance` (producing event id/tick/type, always an earlier seq). `RUMOR_RELAY` relays through the relayer's local belief as a parented event. ROUTE_OBSERVATION's child `BELIEF_UPDATED` now carries the real `route:<id>:danger` claim (it had been `claim: undefined` because `observeRoute` never returns one). Deterministic across identical worlds and save/load.
+
+`RESP-UTILITY-AFFORDANCE-RUNTIME-001` is development-verified.
+
+`utilitycore.js` is the shared utility/affordance runtime: `AffordanceRegistry` (id-keyed, duplicate-rejecting, actor/target type gating, runtime register/unregister) owns affordance registration, and `UtilityRuntime` owns utility scoring — prerequisites hard-block, response-curve/weight considerations, clamped-mean finalScore, narrow-band selection through the injectable serializable RNG. `DecisionCore` and `InteractionCore` are thin facades with unchanged public API and RNG consumption order, so every production path (society DECISION/FACTION_EVALUATION/INTERACTION_EVALUATION, `InteractionCore.decide/validate`, `AdvisoryGate`) runs through one implementation, and registered affordances extend character interactions at runtime. Deterministic across identical seeds.
+
+`RESP-CAUSAL-CHAIN-INSPECTOR-001` is development-verified.
+
+`SocietyCore.causalChain(eventId)` walks any event's parent chain root-first while validating ordered parentage (parent.seq < child.seq, no cycles, no dangling parents), surfaces cited `beliefProvenance` producers with their own lineages, and never mutates history. It immediately surfaced real structure: `TRADE_ROUTE_DECISION` parents cross-tick to the actor's latest `ROUTE_OBSERVATION`, so a decision's lineage root is the tick where its belief was observed.
+
+The two previously-UNKNOWN ledger rows are closed: the advisory gate is production-wired (`SocietyCore.advisory` → canonical `ADVISORY_VALIDATION` events, pure validation, no state mutation) and the module import scan found zero orphans with keep/wire/archive decisions recorded.
+
+`RESP-CHARACTER-INTERACTION-AFFORDANCES-001` is development-verified.
+
+`INTERACTION_EXECUTION` runs registered affordances end-to-end: `AdvisoryGate` is the only approval path, approved interactions apply the declared `INTERACTION_EFFECTS` table (transform/recruit convert the target's type), and rejections land as canonical TURN children with their blockers while mutating nothing. Actor/target resolution prefers world-registered actors so effects hit world state, and actor `type` now persists through save/load — the loop consequence (a converted target rejects repeat transforms at the type gate) survives the round-trip. The `Character interactions` ledger row and IMPLEMENTATION_STATUS item 6 are closed.
+
+`RESP-EVENT-GRAPH-AUDIT-001` is development-verified.
+
+`SocietyCore.auditEventGraph()` validates the entire history in one read-only pass: unique ids, contiguous seq, seq mirroring `eventSeq`, resolvable parents, and ordered parentage in both seq and tick (`parent.tick <= child.tick`) — seq ordering makes cycles structurally impossible, so verifying it rules them out. Healthy, empty, and deserialized worlds pass; every tamper class (dangling parent, order violation, tick regression, duplicate id, mirror drift) is detected and the world restores to clean.
+
+Personality and Morale now have one canonical runtime owner: the `socialcore.js` classes, registered on the world (`setPersonality`/`setMorale`, world-RNG trait draws) and flowing into DECISION through `evaluationContext()` — `Personality.decisionBandWidth` owns the band formula when a class instance is present (plain-object fallback unchanged) — with `MORALE_UPDATE` emitting canonical `MORALE_SHIFT` TURN children and both revived as class instances across save/load. The `Personality` and `Morale` ledger rows are closed (brain.js is absent from this checkout; these classes are the sole owners).
+
+`RESP-LEDGER-STALE-CLAIMS-AUDIT-001` is development-verified.
+
+Every completion-ledger row citing files this checkout does not contain has been reconciled under the evidence rule. Eight rows — `Simulation/agents/combat` (which had claimed IMPLEMENTED_AND_VERIFIED), `FearCore live transitions`, `Brain scale cleanup`, `Habituation`, `Hysteresis`, `VR/biofeedback`, `Neural fear`, and `CI` — are retracted to the new `SOURCE_ABSENT` status with repo-wide glob evidence (0 matches for every cited source, no workflow file at either root, no FearBand rust anywhere in the workspace). `Reputation/trust`'s stale `socialdynamics.js` citation was corrected to the real `socialcore.js` `ReputationBook` (status stays PARTIALLY_IMPLEMENTED — public/private flows remain), and `Knowledge DB writeback` is recorded `BLOCKED_EXTERNAL` (no DB artifact in checkout). (Update: CI left `SOURCE_ABSENT` on 2026-09-22 when `.github/workflows/ci.yml` landed — seven SOURCE_ABSENT rows remain.) A durable guard pins this: `tests/completion-ledger-integrity.test.js` fails any healthy row citing a missing file, any SOURCE_ABSENT row citing an existing one, any status outside the closed vocabulary, or any missing retraction.
+
+`RESP-CRIME-JUSTICE-LEGITIMACY-LOOP-001` is development-verified.
+
+The crime → report → justice → legitimacy → migration production loop runs through canonical event emission: `CRIME_COMMIT` resolves `resolveCrime` into a `CRIME_COMMITTED` event (commits iff the payoff is positive), `CRIME_REPORT` computes `reportCrime` and draws the outcome through the shared RNG into a `CRIME_REPORTED` event parented to the crime, `CRIME_JUSTICE` gates on a reported outcome, derives the remedy from `accessToJustice`, applies `updateLegitimacy` to the settlement authority, and emits `JUSTICE_RESOLUTION` (`authority: SETTLEMENT`, `remedy`/`solved`/`injustice`/`legitimacyBefore`/`legitimacyAfter`) parented to the report, and `CRIME_MIGRATION` runs `shouldMigrate` on the post-justice settlement legitimacy and emits `MIGRATION_EVALUATION` (`authority: SETTLEMENT`, `crimeId`/`justiceId`) parented to the justice event — every stage references and parents to its upstream event, so the whole cycle is one lineage from the TURN. A probability-0 report halts the cycle: justice throws `No reported crime` and nothing downstream is allocated. Accessible justice solves the case and stops the migration; inaccessible justice drops legitimacy below the migration threshold. Identical seeds replay the loop bit-for-bit, and the chain plus settlement legitimacy survive save/load with a post-restore stage parenting to the pre-restore justice event.
+
+`RESP-INFO-DOC-CONSISTENCY-001` is development-verified.
+
+The three orientation docs are machine-checked against each other and the repository: gate counts must agree across `README.md`, `CAMPAIGN_STATE.md`, and `FEAR_AI_GLOBAL_WORK_LEDGER.md` and the suite count must equal the test files on disk; every doc-map target must exist; every suite cited in the README must exist; and this file's next responsibility must equal the work ledger's selected responsibility. On first run it caught three phantom suite references in the new README (`scheduler-ownership.test.js`, `scheduler-dispatch.test.js`, `persistence-equivalence.test.js` — none exist in this checkout), which were corrected to real citations.
+
+## Audit pass of 2026-09-22 (evidence-rule sweep)
+
+A full source + docs + tests audit (all 8 modules, all 4 orientation docs, all 144 suites read against their claims) found and fixed five defects, each now pinned:
+
+1. **Stale unguarded gate pointer** — `docs/IMPLEMENTATION_STATUS_2026-08-26.md` still declared "Current gate: 142 suites / 405 tests" while the real gate was 144/416; the doc-integrity check only covered three docs, so this drifted silently. Corrected to the live gate and that doc now joins the gate-agreement check (`tests/doc-integrity.test.js`).
+2. **Wall-clock leakage in `socialcore.js`** — `BeliefEvidence`/`AgentBelief` fell back to `Date.now()` whenever `now` was not injected (contradicting RESP-TIME-OWNERSHIP-001 "never `Date.now`"), and `AgentBelief.decay()` was dead code (`decay(...)` had zero references — aging is owned by `SocietyCore.decayRouteBeliefs`/`decayRumorBeliefs`) whose default argument *was* `Date.now()`. Fallbacks now use `0` (world epoch), `decay()` is removed, and `tests/time-ownership.test.js` gained a source scan that fails if any production module references `Date.now(`, `Math.random(`, or `performance.now(`.
+3. **Rumor auto-id namespace poisoning** — `RumorNetwork.publish` computed the auto id before checking the counter, so an explicit `{ id: 'rumor-1' }` published first made the *next* auto publish throw `Duplicate rumor id` (own counter emitting collisions). Auto ids now skip explicitly reserved ids; pinned in `tests/rumor-identity.test.js`.
+4. **`createTrip` duplicate-id guard masked by the stock check** — the duplicate check ran *after* `stock < amount → null`, so a duplicate trip id against insufficient stock returned a business `null` instead of surfacing the invariant violation. Guard reordered first; pinned in `tests/market-conservation.test.js`.
+5. **`confidenceHalfLife` lost across save/load** — `serialize()` saved `maxRumors`/`maxQueue` but not `confidenceHalfLife`, so a restored world silently reverted to the default half-life of 10 (delivery-decay semantics changed post-restore). Now serialized/deserialized; pinned in `tests/observation-rumor-latency-decay.test.js` (round-trip + delivery at the restored rate).
+
+Plus one coverage gap closed: the `recruit` entry in `INTERACTION_EFFECTS` had **no execution test** (docs claimed "transform/recruit convert the target type" but only transform was ever executed). A new case in `tests/character-interaction-execution.test.js` registers `recruit` at runtime and drives it end-to-end through the advisory gate to conversion.
+
+Ruled out during the audit (checked, not defects): every suite cited in README/CAMPAIGN/ledger exists on disk; `completion-ledger.md` citations all resolve (machine-guarded); `persistence-probe.txt` is exactly the 17 bytes the ledger claims; the `recruit`-not-in-default-catalog asymmetry is intentional (registered-at-runtime design, per `utility-affordance-runtime.test.js`); no `TODO/FIXME/HACK/debugger/console.log` anywhere in production; no orphan modules; `Math.random`/`Date.now` appear only in test mutants/comments after fix #2.
+
+Gate after fixes: **144 suites / 421 tests passing** (5 new cases, 0 failures).
+
+## Verification evidence
+
+- Convoy/escort/bandit loop suite: `tests/convoy-escort-bandit.test.js` — 7/7 passing (full cycle with belief provenance + causal chain, bandit-success conservation, cross-tick save/load bit-for-bit continuation, stage-gate invariants incl. invariant-before-business error precedence, mid-loop worldStep deferral, determinism).
+- CI workflow suite: `tests/ci-workflow.test.js` — 1/1 passing (workflow exists with `npm ci` + `npm test` on push/PR, Node version pinned, gate command matches `package.json`, README references the workflow).
+- Negative controls for RESP-CONVOY-ESCORT-BANDIT-LOOP-001: resolution status gate removed (stage-gate case killed), victory comparison inverted (full-cycle + bandit-conservation cases killed), generic-trip deferral removed (worldStep case killed) — all three mutants accounted for by distinct failures (4 failed / 3 survived-attributable), production restored and re-verified green.
+- Autopilot controller (`.agents/fear-ai-autopilot.mjs`): attempted standalone run 2026-09-22 — `@codebuff/sdk` is not vendored in this checkout and `CODEBUFF_APP_ID` is unset, so the controller cannot self-execute outside the Codebuff runtime. Its DIRECTIVE was executed manually for this wave (evidence-first work units, focused tests, negative controls, durable state updates, certificate-only completion); the file stays `keep` per the module-scan decision.
+- Git fingerprinting unblocked 2026-09-22: repository initialized inside `fear-ai-sim/` (branch `main`, `node_modules/` ignored), initial commit stages the full checkout (165 files) — source hashes fingerprintable at HEAD.
+- Latency/decay/distortion/recipient-local suite: `tests/observation-rumor-latency-decay.test.js` — 11/11 passing.
+- Negative controls: latency-decay mutant killed (3 failures), recipient-trust mutant killed (2 failures), raw-relay mutant killed (1 failure); production restored and re-verified.
+- Hidden-truth audit: `tests/observation-hidden-truth-twin-audit.test.js` — 2/2 passing.
+- Belief-path event causality suite: `tests/event-causality-belief-path.test.js` — 6/6 passing (rumor action parentage chain, TURN decay summary, provenance on TRADE/QUEUE decisions, evidence-gain invariant, determinism + save/load).
+- Negative controls for RESP-EVENT-CAUSALITY-001: dropped `RUMOR_DELIVERED` parentage killed (1 failure), stripped `beliefProvenance` killed (2 failures), TURN decay summary removed killed (1 failure); production restored and re-verified after each.
+- Utility/affordance runtime suite: `tests/utility-affordance-runtime.test.js` — 5/5 passing (registry gates, delegation parity, shared-RNG band selection, InteractionCore/AdvisoryGate wiring, society production paths).
+- Causal-chain inspector suite: `tests/causal-chain-inspector.test.js` — 4/4 passing (trade lineage to roots, rumor producer lineage, parentage validation, read-only).
+- Negative controls for this wave: registry type gate removed (2 failures), inverse response curve broken (1 failure), lineage order reversed (2 failures), advisory source tampered (1 failure) — all killed, production restored and re-verified after each.
+- Import scan: 8 modules, 0 orphans; advisory-gate and orphan-module UNKNOWN rows closed with evidence.
+- Interaction execution suite: `tests/character-interaction-execution.test.js` — 6/6 passing (full catalog, gate rejections without mutation, loop consequence, save/load, determinism, runtime-registered recruit effect).
+- Event graph audit suite: `tests/event-graph-audit.test.js` — 5/5 passing (healthy/empty/deserialized pass; dangling, order, tick, duplicate, mirror violations detected with clean restore).
+- Personality/Morale ownership suite: `tests/personality-morale-ownership.test.js` — 6/6 passing (band-formula ownership, seeded draws, DECISION wiring, MORALE_SHIFT, save/load revival, determinism).
+- Negative controls for this wave: audit parent-seq check removed (1 failure), advisory approval gate bypassed (3 failures), DECISION personality/morale wiring dropped (1 failure), decisionBandWidth ownership dropped (1 failure) — all killed, production restored and re-verified after each.
+- Ledger integrity suite: `tests/completion-ledger-integrity.test.js` — 3/3 passing (citation existence in both directions, closed status vocabulary, all eight retractions explicit). Negative control: phantom `fearcore.js` citation on the World-tick row killed (1 failure), ledger restored and re-verified.
+- Crime/justice/legitimacy/migration suite: `tests/crime-justice-legitimacy-migration.test.js` — 7/7 passing (full cycle in one turn, causal lineage + whole-history audit, primitive math parity, justice-flips-migration, report-gate stop, cross-tick save/load + continuation, determinism).
+- Negative controls for RESP-CRIME-JUSTICE-LEGITIMACY-LOOP-001: legitimacy write skipped (killed), `retaliationFear` dropped from the report math (killed), migration fed pre-justice legitimacy (killed), chain parentage dropped (killed) — production restored and re-verified after each.
+- Orientation doc consistency suite: `tests/doc-integrity.test.js` — 4/4 passing (gate agreement across the four docs incl. the IMPLEMENTATION_STATUS `Current gate` pointer + suite count vs disk, doc-map targets, README suite refs, next-responsibility agreement); first run caught three phantom README suite citations, corrected to real citations. Negative controls: README gate number drifted (killed), doc-map target renamed (killed), next-responsibility ids disagreed (killed). The 2026-09-22 audit found the IMPLEMENTATION_STATUS pointer had drifted to 142/405 unguarded, so that doc now joins the gate-agreement check.
+- Full gate: **146/146 suites, 430/430 tests passing**.
+- Existing route, economy, material, persistence, and mutation gates remain green.
+
+`RESP-CONVOY-ESCORT-BANDIT-LOOP-001` is development-verified.
+
+The convoy/escort/bandit production loop runs through canonical event emission: `CONVOY_DISPATCH` (merchant's in-transit trip leaves under escort — invariant guards, then business rejection for unavailable routes) → `CONVOY_BANDIT_THREAT` (parent-chained to the dispatch) → `CONVOY_ESCORT_RESOLUTION` (one world-RNG draw: escortStrength + roll vs banditStrength; victory delivers, defeat robs) → `MARKET_TRIP_SETTLE` (the market consequence, chained off the draw). Convoy-owned trips are deferral-gated: the generic `progressPendingTrips` skips trips with an active ESCORTED/THREATENED convoy, so settlement happens only through the escort loop. Full cycle verified across save/load (bit-for-bit identical continuation), market balance conserved in both outcomes, and the whole history passes `auditEventGraph` + `causalChain`. Closes the ledger's `Convoys/escorts/bandits` row and covers the convoy/escort portion of IMPLEMENTATION_STATUS item 8.
+
+## Next responsibility
+
+`RESP-PLAYER-INVASION-CHAIN-001` — connect player damage/death signals to the global threat loop: attack-driven FearEvent pressure, war-state escalation, and an invasion mobilization resolution through canonical event emission, save/load-verified with conservation checks. Closes the ledger's `Player-to-invasion chain` row (PROPOSED) and the remaining half of IMPLEMENTATION_STATUS item 9. After this, the remaining PROPOSED loop is routing/trade/economy.
