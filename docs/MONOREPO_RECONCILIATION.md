@@ -1,8 +1,10 @@
 # Monorepo reconciliation proposal — `main` vs `master`
 
-Status: **proposal only — no destructive git action taken.** Written 2026-09-23 during
+Status: **option 1 EXECUTED 2026-09-23** — repository default branch flipped to `main` via
+`gh repo edit --default-branch main` (a reversible setting; no force-push, no push to `master`,
+no history rewrite). Options 2–4 remain owner decisions. Written 2026-09-23 during
 RESP-REPUTATION-PUBLIC-PRIVATE-001 work; recorded durably because the repository carries two
-disjoint projects under one name and the repo owner should decide the merge strategy.
+disjoint projects under one name.
 
 ## The facts (measured, not assumed)
 
@@ -29,20 +31,19 @@ disjoint projects under one name and the repo owner should decide the merge stra
 ## Side discovery: the `SOURCE_ABSENT` sources are sitting on `master`
 
 Seven completion-ledger rows are `SOURCE_ABSENT` because their cited files are absent **from
-this checkout** ("re-open only with the files present"). The legacy tree visibly contains at
-least `brain.js` and `biofeedback.js` (and likely `fearcore.js`-class files — unverified until
-each row is checked). This is what makes the declared next responsibility
-`RESP-SOURCE-ABSENT-RECONCILIATION-001`: verify each of the seven citations against
-`origin/master:fear-ai-sim/`, then either (a) extract the specific file(s) with provenance
-into this checkout and re-open the row, or (b) formally supersede the row citing the V8
-design — both legal under the evidence rule, neither taken yet.
+this checkout** ("re-open only with the files present"). **Executed as
+`RESP-SOURCE-ABSENT-RECONCILIATION-001` (2026-09-23):** all 11 cited files were located on
+`origin/master:fear-ai-sim/` (blob + sha256 pinned) except `tests/fearcore.test.js` (in neither
+tree), FearBand Rust has 0 upstream paths, and every row received a disposition — supersede,
+open-by-absence, or deferred — in `docs/SOURCE_ABSENT_RECONCILIATION.md`, guarded by
+`tests/source-absent-reconciliation.test.js`. Nothing was extracted; extraction stays an
+explicit re-open procedure.
 
-## Options (owner decision required)
-
-1. **Status quo, dual branch (recommended until decided)** — `main` = V8 sim at root with its
-   own green CI (runs `35874405000`, `35874679330`, both success); `master` = untouched
-   legacy monorepo. Zero destructive operations. Cost: the repo *root* looks different per
-   branch, and GitHub's default branch (`master`) does not show the V8 sim.
+## Options (owner decision required)1. **Status quo, dual branch — EXECUTED 2026-09-23 (recommended)** — `main` = V8 sim at root
+with its own green CI (runs `35874405000`, `35874679330`, `35879709609`, all success);
+`master` = untouched legacy monorepo. Default branch flipped to `main` with
+`gh repo edit --default-branch main` (reversible: `--default-branch master`). Cost: the repo
+*root* looks different per branch; `master` no longer defaults but is fully intact.
 2. **Unrelated-history subtree merge** — branch off `master`, move our tree under a new
    top-level directory (e.g. `fear-ai-sim-v8/`) or replace the `fear-ai-sim/` subtree, commit
    with `--allow-unrelated-histories`, open a PR. Preserves both histories; requires CI
@@ -57,6 +58,7 @@ design — both legal under the evidence rule, neither taken yet.
 
 ## What was deliberately NOT done
 
-No force-push, no push to `master`, no history rewrite, no subtree deletion, no default-branch
-change. Both pushes to `main` were plain fast-forward updates of a branch that did not exist
-before 2026-09-23.
+No force-push, no push to `master`, no history rewrite, no subtree deletion. The only settings
+ever touched: remote (`origin` added) and the default-branch pointer (`master` → `main`,
+reversible). Both pushes to `main` were plain fast-forward updates of a branch that did not
+exist before 2026-09-23.

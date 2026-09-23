@@ -4,7 +4,7 @@
 **Status:** Active engineering baseline  
 **Evidence rule:** Current source, tests, and build output outrank historical claims.
 
-> **Superseded snapshot (historical).** Counts and scope below describe 2026-08-26 only (66 tests / 18 suites) and are no longer the current state. For current state see [`../README.md`](../README.md) (orientation), `CAMPAIGN_STATE.md` (next responsibility + evidence), `FEAR_AI_GLOBAL_WORK_LEDGER.md` (counters), and `../completion-ledger.md` (per-area status, machine-checked by `tests/completion-ledger-integrity.test.js`). Current gate: **150 suites / 449 tests** — this pointer is machine-checked against the other three docs by `tests/doc-integrity.test.js` (it drifted to 142/405 unguarded before the 2026-09-22 audit; the historical counts in this snapshot itself remain 2026-08-26-only).
+> **Superseded snapshot (historical).** Counts and scope below describe 2026-08-26 only (66 tests / 18 suites) and are no longer the current state. For current state see [`../README.md`](../README.md) (orientation), `CAMPAIGN_STATE.md` (next responsibility + evidence), `FEAR_AI_GLOBAL_WORK_LEDGER.md` (counters), and `../completion-ledger.md` (per-area status, machine-checked by `tests/completion-ledger-integrity.test.js`). Current gate: **151 suites / 453 tests** — this pointer is machine-checked against the other three docs by `tests/doc-integrity.test.js` (it drifted to 142/405 unguarded before the 2026-09-22 audit; the historical counts in this snapshot itself remain 2026-08-26-only).
 
 ## Verified baseline
 

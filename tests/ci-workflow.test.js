@@ -19,6 +19,7 @@ describe('CI workflow', () => {
         expect(yml).toMatch(/node-version/);
         expect(yml).toMatch(/push:/);
         expect(yml).toMatch(/pull_request:/);
+        expect(yml).toContain('fetch-depth: 0'); // the reconciliation guard re-reads origin/master blobs — a depth-1 CI checkout would fail it
     });
 
     it('the workflow command is exactly the package test script', () => {

@@ -12,7 +12,7 @@ Repository evidence outranks historical claims. `DEVELOPMENT_VERIFIED` is not su
 - `P2_OPEN`: many open-ended world-expansion items
 - `BLOCKED_EXTERNAL`: 1 (Knowledge DB outside checkout; git/source fingerprinting unblocked 2026-09-22 — repo initialized inside fear-ai-sim, fingerprintable at HEAD)
 - `FAILED_TESTS`: 0
-- `CURRENT_TEST_GATE`: 150 suites / 449 tests green
+- `CURRENT_TEST_GATE`: 151 suites / 453 tests green
 
 ## Recently verified
 
@@ -70,9 +70,9 @@ The convoy/escort/bandit loop runs as parent-chained canonical events (`CONVOY_D
 
 ## Current selected responsibility
 
-`RESP-SOURCE-ABSENT-RECONCILIATION-001` — open.
+`RESP-FACTION-RAID-LOOP-001` — open.
 
-Disposition the seven `SOURCE_ABSENT` rows against the legacy tree on `origin/master:fear-ai-sim/` — their cited files (`brain.js`, `biofeedback.js`, …) exist there — by extracting with provenance and re-opening, or formally superseding citing the V8 design (evidence rule governs). Facts + four safe options in `docs/MONOREPO_RECONCILIATION.md` (no destructive git action taken). Previous selection closed 2026-09-23: `RESP-REPUTATION-PUBLIC-PRIVATE-001` (public/private channels + production decision consumption, 6/6 with 4/4 negative controls), after `RESP-PLAYER-INVASION-CHAIN-001` and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001`.
+Wire the dormant macro layer: `evaluateRaid` (`raidUtility` + `FactionState.escalationLevel`) has zero production callers — implement the faction raid loop as canonical parented events (evaluation → dispatch → resolution with retaliation/escalation consequences), save/load-verified with conservation. Selection closed 2026-09-23: `RESP-SOURCE-ABSENT-RECONCILIATION-001` (all seven rows dispositioned against `origin/master:fear-ai-sim/`, blob+sha256 manifest in `docs/SOURCE_ABSENT_RECONCILIATION.md`, guarded by `tests/source-absent-reconciliation.test.js`; nothing extracted; monorepo option 1 executed — default branch `main`, master untouched). Earlier: `RESP-REPUTATION-PUBLIC-PRIVATE-001` (public/private channels + production decision consumption, 6/6 with 4/4 negative controls), after `RESP-PLAYER-INVASION-CHAIN-001` and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001`.
 
 ## Verification record
 
@@ -85,8 +85,10 @@ Disposition the seven `SOURCE_ABSENT` rows against the legacy tree on `origin/ma
 - Negative controls for the 2026-09-23 wave: lethal double-pressure removed (killed), war-state gate removed (killed), war-loot credit removed (killed ×2), profitability gate removed (killed) — production restored and re-verified green.
 - Reputation contract suite: `tests/reputation-public-private.test.js` — 6/6 passing (public blend + chaining, per-observer isolation, guards, DECISION consumption, save/load, determinism); negative controls: private-folded (killed), chain-dropped (killed), serialize-drop (killed, isolated 1/1), context-rewiring (killed) — restored and re-verified green.
 - Monorepo recon: `main` vs `master` subtree share exactly 4 files (measured); the legacy tree holds the `SOURCE_ABSENT` sources (`brain.js`, `biofeedback.js`, …) — proposal in `docs/MONOREPO_RECONCILIATION.md` (no destructive git action taken).
-- Autopilot live attempt 2026-09-23: `tools/run-autopilot-step.mjs` traversed the full protocol path (auth, run id, certificate `run_terminal_command` probe executed on the platform, `STEP_TEXT` dispatched, codebuff.com chat call) and halted at **HTTP 402 Payment Required** for `mimo-v2-flash` — blocker is account credits (`AUTOPILOT_MODEL` override available for retry).
-- Full Jest gate: 150/150 suites and 449/449 tests passing.
+- Autopilot live attempt 2026-09-23: `tools/run-autopilot-step.mjs` traversed the full protocol path (auth, run id, certificate `run_terminal_command` probe executed on the platform, `STEP_TEXT` dispatched, codebuff.com chat call) and halted at **HTTP 402 Payment Required** for `mimo-v2-flash` — blocker is account credits (`AUTOPILOT_MODEL` override available for retry). Retry with `claude-3-5-haiku-20241022` (2026-09-23): same 402, explicit message `Out of credits. Please add credits at https://www.codebuff.com/usage.` — account-level, model-independent.
+- SOURCE_ABSENT reconciliation 2026-09-23: `tests/source-absent-reconciliation.test.js` 4/4 — manifest covers exactly the seven rows, 11 upstream blobs re-resolved with matching sha256, `tests/fearcore.test.js` ABSENT_BOTH, FearBand 0 upstream paths, zero extraction, every row carries blob provenance + manifest citation; CI `fetch-depth: 0` pinned in `tests/ci-workflow.test.js`.
+- Monorepo option 1 executed 2026-09-23: default branch → `main` (`gh repo edit --default-branch master` reverses it); `master` untouched — status recorded in `docs/MONOREPO_RECONCILIATION.md`.
+- Full Jest gate: 151/151 suites and 453/453 tests passing.
 - Latency/decay/distortion/recipient-local suite: 11/11 passing.
 - Negative controls: latency-decay mutant (3 failures), recipient-trust mutant (2 failures), raw-relay mutant (1 failure) — all killed, production restored.
 - Hidden-truth audit: 2/2 passing.
