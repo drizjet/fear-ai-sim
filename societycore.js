@@ -630,12 +630,13 @@ export class SocietyCore {
         }
         return actions;
     }
-    worldStep({ market, season = 'SPRING', harvest = 0, destination, good = 'grain', minimumPrice = 0, routes, actorId = null, rumor, rumorRecipients = [], faction, factionTarget, factionContext = {}, factionTurns = false, migration, actions = [] } = {}) {
+    worldStep({ market, season = 'SPRING', harvest = 0, destination, good = 'grain', minimumPrice = 0, routes, actorId = null, rumor, rumorRecipients = [], faction, factionTarget, factionContext = {}, factionTurns = false, combatTurns = false, migration, actions = [] } = {}) {
         const planned = [
             ...(market ? [{ kind: 'SEASON_UPDATE', market, season, harvest }] : []),
             ...(destination && routes ? [{ kind: 'TRADE_ROUTE_DECISION', destination, good, minimumPrice, routes, actorId }] : []),
             ...(faction ? [{ kind: 'FACTION_EVALUATION', faction, targetId: factionTarget, context: factionContext }] : []),
             ...(factionTurns ? [{ kind: 'FACTION_MACRO_TICK' }] : []),
+            ...(combatTurns ? [{ kind: 'COMBAT_MACRO_TICK' }] : []),
             ...(migration ? [migration] : []),
             ...actions,
         ];
@@ -1098,6 +1099,59 @@ export class SocietyCore {
                     const target = factions.filter(other => other !== faction).sort((a, b) => b.loot - a.loot)[0];
                     const context = Object.fromEntries(Object.entries(faction.state).filter(([key, value]) => key !== 'rng' && typeof value === 'number' && Number.isFinite(value)));
                     pending = this.executeAction({ kind: 'FACTION_EVALUATION', faction: faction.id, targetId: target.id, context }, macro);
+                }
+                return pending;
+            }
+            // RESP-AUTONOMOUS-COMBAT-TICK-001: the macro COMBAT tick. `FACTION_MACRO_TICK` gave the
+            // macro layer an autonomous turn and `COMBAT_DEPLOY`/`COMBAT_ENGAGEMENT` gave the world
+            // actors that can fight — but nobody fought on its own (every engagement was an explicit
+            // caller action). This tick joins the two: every faction that has LIVING actors runs its
+            // OWN production evaluation (the same `FactionRuntime.evaluateAction` seam
+            // `FACTION_EVALUATION` drives, on the faction's own numeric state, drawing the world RNG
+            // exactly as the production seam does), the counterpart it names is the richest other
+            // faction that still has living actors (resolved WHEN the turn runs, so a fight that
+            // already resolved this tick reshapes the loot map — the faction tick's own rule), and a
+            // hostile selection dispatches ONE engagement between the two factions' actors as the
+            // same TURN-rooted single-tail chain. A faction whose evaluation declines (HOLD/PATROL)
+            // says so on the chain and fights nothing — the decision is load-bearing, not decorative.
+            // Contract: each faction's tail commits BEFORE the next faction allocates (seq/id
+            // integrity) and the final tail returns uncommitted for the turn driver; fewer than two
+            // factions with living actors means no counterpart, so the macro event itself is the
+            // untouched tail.
+            case 'COMBAT_MACRO_TICK': {
+                const livingUnits = faction => this.combat.unitsOf(faction.id).filter(unit => unit.alive);
+                const roster = Object.fromEntries([...this.factions.values()].map(faction => [faction.id, livingUnits(faction).map(unit => unit.id)]));
+                const macro = this.allocateEvent({ type: 'COMBAT_MACRO_TICK', parent, factions: [...this.factions.keys()], roster });
+                const belligerents = [...this.factions.values()].filter(faction => livingUnits(faction).length > 0);
+                if (belligerents.length < 2) return macro; // no counterpart with actors to fight
+                this.commitEvent(macro);
+                // Every faction that had actors at the top of the tick gets its turn, and EVERY turn
+                // writes exactly one COMBAT_MACRO_EVALUATION — so the tail handed back at the end is
+                // always this loop's own uncommitted event, never one already committed earlier. A
+                // faction that sits out says why (`reason`) instead of silently vanishing: its people
+                // may already have died this tick, or everyone left standing may be its own side.
+                let pending = null;
+                for (const faction of belligerents) {
+                    if (pending) this.commitEvent(pending);
+                    const own = livingUnits(faction);
+                    const others = belligerents.filter(other => other !== faction && livingUnits(other).length > 0);
+                    const sittingOut = !own.length ? 'NO_ACTORS' : !others.length ? 'NO_COUNTERPART' : null;
+                    if (sittingOut) {
+                        pending = this.allocateEvent({ type: 'COMBAT_MACRO_EVALUATION', parent: macro, factionId: faction.id, targetId: null, engagementId: null, willEngage: false, selected: null, reason: sittingOut, alternatives: [], roster, worldTime: this.now() });
+                        continue;
+                    }
+                    const target = others.sort((a, b) => b.loot - a.loot)[0];
+                    const context = Object.fromEntries(Object.entries(faction.state).filter(([key, value]) => key !== 'rng' && typeof value === 'number' && Number.isFinite(value)));
+                    const decision = faction.evaluateAction({ id: target.id }, { ...context, rng: this.rng });
+                    const selected = decision.selected;
+                    const willEngage = selected === 'RAID';
+                    const engagementId = `${faction.id}->${target.id}@${this.time}`;
+                    const evaluation = this.allocateEvent({ type: 'COMBAT_MACRO_EVALUATION', parent: macro, factionId: faction.id, targetId: target.id, engagementId: willEngage ? engagementId : null, willEngage, selected, reason: willEngage ? null : 'DECLINED', alternatives: decision.alternatives.map(candidate => ({ action: candidate.action, score: candidate.finalScore })), roster, worldTime: this.now() });
+                    if (!willEngage) { pending = evaluation; continue; }
+                    this.commitEvent(evaluation);
+                    const [attacker] = own;
+                    const [defender] = livingUnits(target);
+                    pending = this.executeAction({ kind: 'COMBAT_ENGAGEMENT', engagementId, attacker: attacker.id, defender: defender.id, location: defender.location ?? attacker.location ?? null }, evaluation);
                 }
                 return pending;
             }

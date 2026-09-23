@@ -16,4 +16,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # RESP-GATE-COUNT-DERIVATION-001: the gate counts are DERIVED from the runner, so a
+      # hand-copied count fails the build here instead of drifting into four documents. This
+      # runs the suite itself, so it also fails if anything is red.
+      - run: npm run gate:check
       - run: npm test
