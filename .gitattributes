@@ -1,0 +1,2 @@
+# Extracted legacy sources must stay byte-exact: no line-ending conversion, ever.
+legacy/** -text

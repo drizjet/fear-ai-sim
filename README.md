@@ -2,7 +2,7 @@
 
 Orientation for this repository. **Evidence rule: repository evidence outranks historical claims.** Development verification is not supervisor acceptance.
 
-**Current gate: 151 suites / 453 tests passing** (`npm test`) — as of 2026-09-23.
+**Current gate: 153 suites / 467 tests passing** (`npm test`) — as of 2026-09-23.
 
 ## What this is
 
@@ -13,7 +13,7 @@ Scope: deterministic world clock, event ids, market stock/resource flows, inject
 ## Quick start
 
 ```bash
-npm test          # full gate: 151 suites / 453 tests (ESM + Jest via --experimental-vm-modules)
+npm test          # full gate: 153 suites / 467 tests (ESM + Jest via --experimental-vm-modules)
 ```
 
 Key APIs (see `tests/world-tick.test.js` for canonical world setup):
@@ -106,6 +106,6 @@ Mutation-gate/defect policy: when adversarial tests or new tests expose a real d
 Counters: `ACTIONABLE_OPEN 0`, `P0_OPEN 0`, `P1_OPEN 0`, `FAILED_TESTS 0`, `BLOCKED_EXTERNAL 1` (Knowledge DB; git/source fingerprinting unblocked — repo initialized 2026-09-22, branch `main` pushed to drizjet/fear-ai-sim 2026-09-23 with a green first CI run), `P2_OPEN` many (world-expansion).
 
 - Closed 2026-09-23: `RESP-REPUTATION-PUBLIC-PRIVATE-001` (`tests/reputation-public-private.test.js`, 6/6 with 4/4 negative controls) — public/private reputation channels as canonical `REPUTATION_UPDATE` events plus production DECISION consumption via `evaluationContext`. The autopilot now runs LIVE: `tools/run-autopilot-step.mjs` drives it over the real runner protocol (certificate tool call executed on the platform, chat call issued to codebuff.com) and halts at **HTTP 402 Payment Required** for model `mimo-v2-flash` — account credits, not code; retry with `AUTOPILOT_MODEL=<model>` once topped up. Earlier closures: player-to-invasion, routing/trade/economy (both 2026-09-23), convoy loop (2026-09-22).
-- **Next responsibility: `RESP-FACTION-RAID-LOOP-001`** — societycore's `evaluateRaid` (macrocore `raidUtility`/`FactionState.escalationLevel`) has zero production callers; wire the faction raid loop as canonical parented events (evaluation → dispatch → resolution with escalation consequences), save/load-verified. Closed 2026-09-23: `RESP-SOURCE-ABSENT-RECONCILIATION-001` — all seven `SOURCE_ABSENT` rows dispositioned vs `origin/master:fear-ai-sim/` with blob+sha256 manifest (`docs/SOURCE_ABSENT_RECONCILIATION.md`, guard suite `tests/source-absent-reconciliation.test.js`, nothing extracted); monorepo option 1 executed (default branch → `main`, master untouched) — measured divergence + four options: `docs/MONOREPO_RECONCILIATION.md`.
+- **Next responsibility: `RESP-FACTION-EVALUATION-RAID-CHAIN-001`** — `FACTION_EVALUATION`'s RAID selection (DecisionCore) only nudges `resourceNeed`; chain it into the new raid loop so a production RAID choice dispatches through `FACTION_RAID_EVALUATION` → `FACTION_RAID_DISPATCH` as one canonical lineage, save/load-verified. Closed 2026-09-23: `RESP-FACTION-RAID-LOOP-001` (the orphaned `evaluateRaid`/`raidUtility`/`escalationLevel` macro layer is production-wired — `tests/faction-raid-loop.test.js` 7/7, 7/7 negative controls) and the Habituation re-open (`legacy/habituation.js` byte-exact + `HabituationBook`/`FEAR_HABITUATED` — six `SOURCE_ABSENT` rows remain). Earlier: `RESP-SOURCE-ABSENT-RECONCILIATION-001` (blob+sha256 manifest `docs/SOURCE_ABSENT_RECONCILIATION.md`, guard suite, monorepo option 1 executed — default branch `main`, master untouched) — divergence facts: `docs/MONOREPO_RECONCILIATION.md`.
 - Seven `SOURCE_ABSENT` rows await their sources actually landing in this checkout (simulation/agents/combat, FearCore, brain, habituation, hysteresis, VR/biofeedback, neural fear) — re-open only with the files present. CI left `SOURCE_ABSENT` when `.github/workflows/ci.yml` landed (now `PARTIALLY_IMPLEMENTED` — remote execution pending a push).
 - Global completion exists only via `docs/FEAR_AI_GLOBAL_STOP_CERTIFICATE.json` independently verifying all closure audits — never declared by an executor.

@@ -1,4 +1,4 @@
-import { AgentBelief, BeliefEvidence, Morale, Personality, ReputationBook } from './socialcore.js';
+import { AgentBelief, BeliefEvidence, HabituationBook, Morale, Personality, ReputationBook } from './socialcore.js';
 import { DecisionCore } from './decisioncore.js';
 import { InteractionCore } from './interactioncore.js';
 import { AdvisoryGate } from './advisorygate.js';
@@ -260,7 +260,7 @@ export class RouteNetwork {
 // in this model (observe/greet/feed/protect/flee record only).
 const INTERACTION_EFFECTS = { transform: [{ subject: 'target', set: { type: 'VAMPIRE' } }], recruit: [{ subject: 'target', set: { type: 'VAMPIRE' } }] };
 export class FactionRuntime {
-    constructor(id, values = {}) { this.id = id; this.state = new FactionState(values); this.history = []; }
+    constructor(id, values = {}) { const { loot, ...stateValues } = values; this.id = id; this.state = new FactionState(stateValues); this.history = []; this.loot = num(loot, 0); } // RESP-FACTION-RAID-LOOP-001: `loot` is the faction's raid-stash, conserved across resolutions
     evaluateRaid(target, values = {}) { const score = raidUtility({ ...values, retaliationRisk: values.retaliationRisk ?? target.state?.militaryConfidence ?? .5 }); const decision = score > 0 ? 'RAID' : 'DEESCALATE'; this.history.push({ target: target.id, score, decision }); return { target: target.id, score, decision, escalationLevel: this.state.escalationLevel() }; }
     evaluateAction(target, context = {}) {
         const candidates = [
@@ -284,6 +284,10 @@ export class SocietyCore {
         this.infrastructure = new Map();
         // RESP-CONVOY-ESCORT-BANDIT-LOOP-001: escort-managed convoys over market trips.
         this.convoys = new Map();
+        // RESP-FACTION-RAID-LOOP-001: raids in flight (evaluation → dispatch → resolution).
+        this.raids = new Map();
+        // Re-opened `Habituation` row: exposure book attenuating faction fear gains.
+        this.habituation = new HabituationBook();
         // RESP-PLAYER-INVASION-CHAIN-001: player vitals, war-pressure state, resolved invasions.
         this.player = { hp: 100, maxHp: 100, alive: true, deaths: 0 };
         this.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70 };
@@ -921,6 +925,75 @@ export class SocietyCore {
                 faction.history.push({ tick: this.now(), target: target.id, selected, score: result.candidates.find(candidate => candidate.action === selected)?.finalScore ?? 0 });
                 return this.allocateEvent({ type: 'FACTION_EVALUATION', parent, factionId: faction.id, targetId: target.id, selected, legitimacy: faction.state.legitimacy, resourceNeed: faction.state.resourceNeed, supplySecurity: faction.state.supplySecurity, alternatives: result.alternatives.map(candidate => ({ action: candidate.action, score: candidate.finalScore })) });
             }
+            // RESP-FACTION-RAID-LOOP-001: the faction raid loop — production-wires the once-
+            // orphaned macro layer (FactionRuntime.evaluateRaid → macrocore raidUtility and
+            // escalationLevel) through canonical parent-chained events: evaluation → dispatch →
+            // one-draw resolution with exact loot conservation.
+            case 'FACTION_RAID_EVALUATION': {
+                const attacker = this.factions.get(action.faction);
+                if (!attacker) throw new Error(`Unknown faction "${action.faction}"`);
+                const targetId = action.targetId ?? action.target ?? null;
+                const target = this.factions.get(targetId);
+                if (!target) throw new Error(`Unknown faction "${targetId}"`);
+                if (attacker === target) throw new Error('FACTION_RAID_EVALUATION requires two distinct factions');
+                for (const [term, value] of Object.entries(action.values ?? {})) {
+                    if (value != null && !Number.isFinite(value)) throw new Error(`RAID evaluation term "${term}" must be a finite number`);
+                }
+                // Guards precede mutation: evaluateRaid records into faction history below.
+                const evaluation = attacker.evaluateRaid(target, action.values ?? {});
+                return this.allocateEvent({ type: 'FACTION_RAID_EVALUATION', parent, factionId: attacker.id, targetId: target.id, score: evaluation.score, decision: evaluation.decision, escalationLevel: evaluation.escalationLevel, militaryConfidence: attacker.state.militaryConfidence });
+            }
+            case 'FACTION_RAID_DISPATCH': {
+                if (!action.raidId) throw new Error('FACTION_RAID_DISPATCH requires a raidId');
+                if (this.raids.has(action.raidId)) throw new Error(`Duplicate raid id "${action.raidId}"`);
+                const attacker = this.factions.get(action.faction);
+                if (!attacker) throw new Error(`Unknown faction "${action.faction}"`);
+                const targetId = action.targetId ?? action.target ?? null;
+                const target = this.factions.get(targetId);
+                if (!target) throw new Error(`Unknown faction "${targetId}"`);
+                if (attacker === target) throw new Error('FACTION_RAID_DISPATCH requires two distinct factions');
+                const evaluation = [...this.events].reverse().find(event => event.type === 'FACTION_RAID_EVALUATION' && event.factionId === attacker.id && event.targetId === target.id);
+                if (!evaluation) throw new Error(`FACTION_RAID_DISPATCH requires an evaluation of "${attacker.id}" against "${target.id}"`);
+                if (evaluation.decision !== 'RAID') {
+                    return this.allocateEvent({ type: 'FACTION_RAID_DISPATCH', parent: evaluation, raidId: action.raidId, factionId: attacker.id, targetId: target.id, status: 'REJECTED', reason: 'NOT_RAID_WORTHY', score: evaluation.score });
+                }
+                const force = num(action.force, NaN);
+                if (!Number.isFinite(force) || force <= 0) throw new Error('FACTION_RAID_DISPATCH requires a positive force');
+                const bagSize = Math.max(0, num(action.bagSize, 0));
+                const raid = { id: action.raidId, factionId: attacker.id, targetId: target.id, force, bagSize, status: 'RAIDING', outcome: null, roll: null, stolen: 0, dispatchedTick: this.now() };
+                this.raids.set(raid.id, raid);
+                return this.allocateEvent({ type: 'FACTION_RAID_DISPATCH', parent: evaluation, raidId: raid.id, factionId: attacker.id, targetId: target.id, force, bagSize, status: 'RAIDING', escalationLevel: attacker.state.escalationLevel() });
+            }
+            case 'FACTION_RAID_RESOLUTION': {
+                const raid = this.raids.get(action.raidId);
+                if (!raid) throw new Error(`Unknown raid "${action.raidId}"`);
+                if (raid.status !== 'RAIDING') throw new Error(`cannot resolve raid "${raid.id}" from status "${raid.status}"`);
+                const attacker = this.factions.get(raid.factionId);
+                const target = this.factions.get(raid.targetId);
+                if (!attacker) throw new Error(`Unknown faction "${raid.factionId}"`);
+                if (!target) throw new Error(`Unknown faction "${raid.targetId}"`);
+                const defense = Math.max(0, num(action.defense, 0));
+                const roll = this.random(); // the single world-RNG draw
+                const victory = raid.force > defense + roll;
+                const attackerLootBefore = attacker.loot;
+                const targetLootBefore = target.loot;
+                const stolen = victory ? Math.min(targetLootBefore, raid.bagSize) : 0;
+                attacker.loot = attackerLootBefore + stolen;
+                target.loot = targetLootBefore - stolen;
+                raid.status = victory ? 'SUCCEEDED' : 'REPULSED';
+                raid.outcome = victory ? 'LOOT_TAKEN' : 'REPULSED';
+                raid.roll = roll;
+                raid.stolen = stolen;
+                // Escalation consequences (macro layer surfaced in the event graph).
+                attacker.state.militaryConfidence = clamp(attacker.state.militaryConfidence + (victory ? .1 : -.1));
+                target.state.militaryConfidence = clamp(target.state.militaryConfidence - (victory ? .05 : 0));
+                target.state.grievance = clamp(target.state.grievance + (victory ? .15 : .05));
+                target.state.anger = clamp(target.state.anger + (victory ? .1 : .02));
+                target.state.threatPerception = clamp(target.state.threatPerception + (victory ? .1 : .05));
+                const dispatch = [...this.events].reverse().find(event => event.type === 'FACTION_RAID_DISPATCH' && event.raidId === raid.id);
+                if (!dispatch) throw new Error(`Raid "${raid.id}" has no committed dispatch event`);
+                return this.allocateEvent({ type: 'FACTION_RAID_RESOLUTION', parent: dispatch, raidId: raid.id, factionId: raid.factionId, targetId: raid.targetId, force: raid.force, defense, roll, victory, outcome: raid.outcome, stolen, attackerLootBefore, attackerLootAfter: attacker.loot, targetLootBefore, targetLootAfter: target.loot, escalationLevel: attacker.state.escalationLevel() });
+            }
             case 'JUSTICE_RESOLUTION': {
                 const faction = this.factions.get(action.faction);
                 if (!faction) throw new Error(`Unknown faction "${action.faction}"`);
@@ -1070,11 +1143,21 @@ export class SocietyCore {
                 this.warState.pressure = pressureBefore + pressureGain;
                 const wound = this.allocateEvent({ type: 'PLAYER_WOUNDED', parent, amount: applied, requested: amount, hpBefore, hpAfter: this.player.hp, alive: this.player.alive, deaths: this.player.deaths, source: action.source ?? 'unknown' });
                 this.commitEvent(wound);
+                const baseFearGain = pressureGain / 100;
+                let habituation = null;
                 if (faction) {
-                    faction.state.fear = clamp(num(faction.state.fear, 0) + pressureGain / 100);
+                    // Re-opened `Habituation` row: the exposure book attenuates the fear gain —
+                    // novelty protects the first exposures, recovery runs on world time.
+                    habituation = this.habituation.attenuate(baseFearGain, { stimulusType: action.source ?? 'unknown', actorId: faction.id, now: this.now() });
+                    faction.state.fear = clamp(num(faction.state.fear, 0) + habituation.adjusted);
                     faction.state.threatPerception = clamp(num(faction.state.threatPerception, 0) + pressureGain / 200);
                 }
-                return this.allocateEvent({ type: 'FEAR_EVENT_RAISED', parent: wound, pressureBefore, pressureAfter: this.warState.pressure, pressureGain, factionId: faction?.id ?? null, factionFearAfter: faction ? faction.state.fear : null, source: action.source ?? 'unknown' });
+                const fearEvent = this.allocateEvent({ type: 'FEAR_EVENT_RAISED', parent: wound, pressureBefore, pressureAfter: this.warState.pressure, pressureGain, baseFearGain, fearGainApplied: habituation ? habituation.adjusted : 0, habituationLevel: habituation ? habituation.habituationLevel : 0, factionId: faction?.id ?? null, factionFearAfter: faction ? faction.state.fear : null, source: action.source ?? 'unknown' });
+                if (!faction) return fearEvent; // driver commits the returned event
+                // The exposure record chains off the fear event it shaped (commit → allocate →
+                // return keeps seq monotonic — same two-event pattern as the escort resolution).
+                this.commitEvent(fearEvent);
+                return this.allocateEvent({ type: 'FEAR_HABITUATED', parent: fearEvent, factionId: faction.id, source: fearEvent.source, stimulusKey: habituation.key, baseGain: habituation.base, appliedGain: habituation.adjusted, fearReduced: habituation.fearReduced, habituationLevel: habituation.habituationLevel, exposureCount: habituation.exposureCount });
             }
             case 'WAR_STATUS_EVALUATE': {
                 // RESP-PLAYER-INVASION-CHAIN-001 stage 2: war status is computed from the
@@ -1368,11 +1451,13 @@ export class SocietyCore {
             markets: Object.fromEntries([...this.markets.entries()].map(([id, m]) => [id, { prices: { ...m.prices }, stock: { ...m.stock }, initialStock: { ...m.initialStock }, history: m.history.map(h => ({ ...h })), inTransit: Object.fromEntries(m.inTransit.entries()) }])),
             routes: { edges: this.routes.edges.map(e => ({ ...e })) },
             infrastructure: Object.fromEntries([...this.infrastructure.entries()].map(([id, structure]) => [id, { ...structure }])),
-            factions: Object.fromEntries([...this.factions.entries()].map(([id, f]) => [id, { id: f.id, state: { ...f.state }, history: f.history.map(h => ({ ...h })) }])),
+            factions: Object.fromEntries([...this.factions.entries()].map(([id, f]) => [id, { id: f.id, state: { ...f.state }, loot: f.loot, history: f.history.map(h => ({ ...h })) }])),
             settlements: Object.fromEntries([...this.settlements.entries()].map(([id, settlement]) => [id, { ...settlement }])),
             migrationJourneys: Object.fromEntries([...this.migrationJourneys.entries()].map(([id, journey]) => [id, { ...journey }])),
             roamingGroups: Object.fromEntries([...this.roamingGroups.entries()].map(([id, group]) => [id, { ...group }])),
             convoys: Object.fromEntries([...this.convoys.entries()].map(([id, convoy]) => [id, { ...convoy }])),
+            raids: Object.fromEntries([...this.raids.entries()].map(([id, raid]) => [id, { ...raid }])),
+            habituation: Object.fromEntries([...this.habituation.exposures.entries()].map(([key, exposure]) => [key, { ...exposure }])),
             player: { ...this.player },
             warState: { ...this.warState },
             warLoot: this.warLoot,
@@ -1411,11 +1496,13 @@ export class SocietyCore {
         for (const [id, m] of Object.entries(json.markets ?? {})) { const market = new Market({ prices: m.prices, stock: m.stock }); market.initialStock = { ...(m.initialStock ?? m.stock) }; market.history = (m.history ?? []).map(h => ({ ...h })); market.inTransit = new Map(Object.entries(m.inTransit ?? {}).map(([tripId, trip]) => [tripId, { ...trip }])); society.markets.set(id, market); }
         society.routes = new RouteNetwork((json.routes?.edges ?? []).map(e => ({ ...e })));
         society.infrastructure = new Map(Object.entries(json.infrastructure ?? {}).map(([id, structure]) => [id, { ...structure }]));
-        for (const [id, f] of Object.entries(json.factions ?? {})) { const faction = new FactionRuntime(id, f.state ?? {}); faction.history = (f.history ?? []).map(h => ({ ...h })); society.factions.set(id, faction); }
+        for (const [id, f] of Object.entries(json.factions ?? {})) { const faction = new FactionRuntime(id, f.state ?? {}); faction.history = (f.history ?? []).map(h => ({ ...h })); faction.loot = num(f.loot, 0); society.factions.set(id, faction); }
         society.settlements = new Map(Object.entries(json.settlements ?? {}).map(([id, settlement]) => [id, { ...settlement }]));
         society.migrationJourneys = new Map(Object.entries(json.migrationJourneys ?? {}).map(([id, journey]) => [id, { ...journey }]));
         society.roamingGroups = new Map(Object.entries(json.roamingGroups ?? {}).map(([id, group]) => [id, { ...group }]));
         society.convoys = new Map(Object.entries(json.convoys ?? {}).map(([id, convoy]) => [id, { ...convoy }]));
+        society.raids = new Map(Object.entries(json.raids ?? {}).map(([id, raid]) => [id, { ...raid }]));
+        for (const [key, exposure] of Object.entries(json.habituation ?? {})) society.habituation.exposures.set(key, { ...exposure });
         society.player = { hp: 100, maxHp: 100, alive: true, deaths: 0, ...(json.player ?? {}) };
         society.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70, ...(json.warState ?? {}) };
         society.warLoot = num(json.warLoot, 0);

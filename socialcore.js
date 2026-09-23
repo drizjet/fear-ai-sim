@@ -47,3 +47,63 @@ export class ReputationBook {
     }
     getPrivate(observerId, targetId, fallback = .5) { return this.privateValues.get(observerId)?.get(targetId)?.value ?? fallback; }
 }
+// Re-opened `Habituation` row (RESP-SOURCE-ABSENT-RECONCILIATION-001 re-open procedure, legacy
+// source extracted byte-exact to legacy/habituation.js): repeated exposures to the same
+// stimulus attenuate the fear response — novelty protects the first exposures, recovery runs
+// over WORLD time (callers pass `now`; no wall-clock, per RESP-TIME-OWNERSHIP-001).
+export class HabituationBook {
+    constructor(config = {}) {
+        this.exposures = new Map(); // key → { count, habituationLevel, lastExposure, firstExposure, totalFearReduced }
+        this.config = {
+            habituationRate: config.habituationRate ?? 0.08, // 8% reduction per exposure
+            maxHabituation: config.maxHabituation ?? 0.60, // max 60% fear reduction
+            recoveryRate: config.recoveryRate ?? 0.02, // recovery per world-time unit
+            noveltyBoost: config.noveltyBoost ?? 0.15, // bonus for the first exposures
+            stimulusTypes: config.stimulusTypes ?? {
+                PREDATOR: { decaySpeed: 1.0, recoverySpeed: 1.0 },
+                PHEROMONE: { decaySpeed: 1.5, recoverySpeed: 2.0 },
+                SOUND: { decaySpeed: 0.8, recoverySpeed: 1.5 },
+                VISUAL: { decaySpeed: 1.2, recoverySpeed: 1.0 },
+                MEMORY: { decaySpeed: 0.5, recoverySpeed: 0.5 },
+                GROUP_PANIC: { decaySpeed: 2.0, recoverySpeed: 1.0 },
+            },
+        };
+    }
+    key(stimulusType, actorId, stimulusId = null) { return stimulusId == null ? `${stimulusType}:${actorId ?? 'world'}` : `${stimulusType}:${actorId ?? 'world'}:${stimulusId}`; }
+    typeConfig(stimulusType) { return this.config.stimulusTypes[stimulusType] ?? this.config.stimulusTypes.VISUAL; }
+    // Legacy semantics preserved: pending recovery first, then potential = min(cap, count *
+    // rate * decaySpeed) minus the novelty bonus for the first three exposures; the exposure
+    // count increments after the level is computed (the first exposure never reduces fear).
+    attenuate(baseFear, { stimulusType = 'VISUAL', actorId = null, stimulusId = null, now = 0 } = {}) {
+        const time = Number.isFinite(now) ? now : 0;
+        const typeConfig = this.typeConfig(stimulusType);
+        const key = this.key(stimulusType, actorId, stimulusId);
+        let exposure = this.exposures.get(key);
+        if (!exposure) {
+            exposure = { count: 0, habituationLevel: 0, lastExposure: time, firstExposure: time, totalFearReduced: 0 };
+            this.exposures.set(key, exposure);
+        } else {
+            const timeSince = Math.max(0, time - exposure.lastExposure);
+            exposure.habituationLevel = Math.max(0, exposure.habituationLevel - this.config.recoveryRate * typeConfig.recoverySpeed * timeSince);
+        }
+        const base = Number.isFinite(baseFear) ? Math.max(0, baseFear) : 0;
+        const potential = Math.min(this.config.maxHabituation, exposure.count * this.config.habituationRate * typeConfig.decaySpeed);
+        const novelty = exposure.count < 3 ? this.config.noveltyBoost * (3 - exposure.count) / 3 : 0;
+        const habituationLevel = Math.max(0, potential - novelty);
+        const adjusted = Math.max(0, base * (1 - habituationLevel));
+        exposure.habituationLevel = habituationLevel;
+        exposure.count += 1;
+        exposure.lastExposure = time;
+        exposure.totalFearReduced += base - adjusted;
+        return { key, base, adjusted, fearReduced: base - adjusted, habituationLevel, exposureCount: exposure.count };
+    }
+    // Read with pending recovery applied (legacy getHabituationInfo behavior).
+    read(stimulusType, actorId = null, stimulusId = null, now = 0) {
+        const exposure = this.exposures.get(this.key(stimulusType, actorId, stimulusId));
+        if (!exposure) return { exposureCount: 0, habituationLevel: 0, totalFearReduced: 0 };
+        const typeConfig = this.typeConfig(stimulusType);
+        const timeSince = Math.max(0, (Number.isFinite(now) ? now : 0) - exposure.lastExposure);
+        const habituationLevel = Math.max(0, exposure.habituationLevel - this.config.recoveryRate * typeConfig.recoverySpeed * timeSince);
+        return { exposureCount: exposure.count, habituationLevel, totalFearReduced: exposure.totalFearReduced };
+    }
+}

@@ -12,7 +12,7 @@ Repository evidence outranks historical claims. `DEVELOPMENT_VERIFIED` is not su
 - `P2_OPEN`: many open-ended world-expansion items
 - `BLOCKED_EXTERNAL`: 1 (Knowledge DB outside checkout; git/source fingerprinting unblocked 2026-09-22 — repo initialized inside fear-ai-sim, fingerprintable at HEAD)
 - `FAILED_TESTS`: 0
-- `CURRENT_TEST_GATE`: 151 suites / 453 tests green
+- `CURRENT_TEST_GATE`: 153 suites / 467 tests green
 
 ## Recently verified
 
@@ -54,7 +54,7 @@ Personality and Morale row closures: the `socialcore.js` classes are the sole ow
 
 `RESP-LEDGER-STALE-CLAIMS-AUDIT-001` — development-verified.
 
-Every completion-ledger row citing files this checkout does not contain was reconciled under the evidence rule: eight rows — `Simulation/agents/combat` (had claimed IMPLEMENTED_AND_VERIFIED), `FearCore live transitions`, `Brain scale cleanup`, `Habituation`, `Hysteresis`, `VR/biofeedback`, `Neural fear`, `CI` — retracted to the new `SOURCE_ABSENT` status with repo-wide glob evidence (0 matches for every cited source, no workflow file at either root, no FearBand rust in the workspace); `Reputation/trust`'s stale socialdynamics citation corrected to the real `socialcore.js` `ReputationBook` (row stays PARTIALLY_IMPLEMENTED — public/private flows remain); `Knowledge DB writeback` recorded `BLOCKED_EXTERNAL`. (CI left `SOURCE_ABSENT` on 2026-09-22 when `.github/workflows/ci.yml` landed — seven SOURCE_ABSENT rows remain.) Durable guard: `tests/completion-ledger-integrity.test.js` (3/3); phantom-citation mutant killed (1 failure).
+Every completion-ledger row citing files this checkout does not contain was reconciled under the evidence rule: eight rows — `Simulation/agents/combat` (had claimed IMPLEMENTED_AND_VERIFIED), `FearCore live transitions`, `Brain scale cleanup`, `Habituation`, `Hysteresis`, `VR/biofeedback`, `Neural fear`, `CI` — retracted to the new `SOURCE_ABSENT` status with repo-wide glob evidence (0 matches for every cited source, no workflow file at either root, no FearBand rust in the workspace); `Reputation/trust`'s stale socialdynamics citation corrected to the real `socialcore.js` `ReputationBook` (row stays PARTIALLY_IMPLEMENTED — public/private flows remain); `Knowledge DB writeback` recorded `BLOCKED_EXTERNAL`. (CI left `SOURCE_ABSENT` on 2026-09-22 when `.github/workflows/ci.yml` landed — seven SOURCE_ABSENT rows remained; **six remain since the 2026-09-23 Habituation re-open** (byte-exact extraction + V8 integration, row now `IMPLEMENTED_AND_VERIFIED`)). Durable guard: `tests/completion-ledger-integrity.test.js` (3/3); phantom-citation mutant killed (1 failure).
 
 `RESP-CRIME-JUSTICE-LEGITIMACY-LOOP-001` — development-verified.
 
@@ -70,9 +70,9 @@ The convoy/escort/bandit loop runs as parent-chained canonical events (`CONVOY_D
 
 ## Current selected responsibility
 
-`RESP-FACTION-RAID-LOOP-001` — open.
+`RESP-FACTION-EVALUATION-RAID-CHAIN-001` — open.
 
-Wire the dormant macro layer: `evaluateRaid` (`raidUtility` + `FactionState.escalationLevel`) has zero production callers — implement the faction raid loop as canonical parented events (evaluation → dispatch → resolution with retaliation/escalation consequences), save/load-verified with conservation. Selection closed 2026-09-23: `RESP-SOURCE-ABSENT-RECONCILIATION-001` (all seven rows dispositioned against `origin/master:fear-ai-sim/`, blob+sha256 manifest in `docs/SOURCE_ABSENT_RECONCILIATION.md`, guarded by `tests/source-absent-reconciliation.test.js`; nothing extracted; monorepo option 1 executed — default branch `main`, master untouched). Earlier: `RESP-REPUTATION-PUBLIC-PRIVATE-001` (public/private channels + production decision consumption, 6/6 with 4/4 negative controls), after `RESP-PLAYER-INVASION-CHAIN-001` and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001`.
+Chain `FACTION_EVALUATION`'s RAID selection (DecisionCore) into the raid loop: a production RAID choice must dispatch through `FACTION_RAID_EVALUATION` → `FACTION_RAID_DISPATCH` → resolution as one canonical lineage, save/load-verified with conservation. Selection closed 2026-09-23: `RESP-FACTION-RAID-LOOP-001` (dormant `evaluateRaid`/`raidUtility`/`escalationLevel` production-wired — `tests/faction-raid-loop.test.js` 7/7 with 7/7 negative controls; same day the Habituation row was re-opened — `legacy/habituation.js` byte-exact, `HabituationBook`/`FEAR_HABITUATED` in production, six `SOURCE_ABSENT` rows remain). Earlier: `RESP-SOURCE-ABSENT-RECONCILIATION-001` (blob+sha256 manifest + guards, monorepo option 1 executed), `RESP-REPUTATION-PUBLIC-PRIVATE-001` (public/private channels + production decision consumption, 6/6 with 4/4 negative controls), after `RESP-PLAYER-INVASION-CHAIN-001` and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001`.
 
 ## Verification record
 
@@ -86,9 +86,13 @@ Wire the dormant macro layer: `evaluateRaid` (`raidUtility` + `FactionState.esca
 - Reputation contract suite: `tests/reputation-public-private.test.js` — 6/6 passing (public blend + chaining, per-observer isolation, guards, DECISION consumption, save/load, determinism); negative controls: private-folded (killed), chain-dropped (killed), serialize-drop (killed, isolated 1/1), context-rewiring (killed) — restored and re-verified green.
 - Monorepo recon: `main` vs `master` subtree share exactly 4 files (measured); the legacy tree holds the `SOURCE_ABSENT` sources (`brain.js`, `biofeedback.js`, …) — proposal in `docs/MONOREPO_RECONCILIATION.md` (no destructive git action taken).
 - Autopilot live attempt 2026-09-23: `tools/run-autopilot-step.mjs` traversed the full protocol path (auth, run id, certificate `run_terminal_command` probe executed on the platform, `STEP_TEXT` dispatched, codebuff.com chat call) and halted at **HTTP 402 Payment Required** for `mimo-v2-flash` — blocker is account credits (`AUTOPILOT_MODEL` override available for retry). Retry with `claude-3-5-haiku-20241022` (2026-09-23): same 402, explicit message `Out of credits. Please add credits at https://www.codebuff.com/usage.` — account-level, model-independent.
-- SOURCE_ABSENT reconciliation 2026-09-23: `tests/source-absent-reconciliation.test.js` 4/4 — manifest covers exactly the seven rows, 11 upstream blobs re-resolved with matching sha256, `tests/fearcore.test.js` ABSENT_BOTH, FearBand 0 upstream paths, zero extraction, every row carries blob provenance + manifest citation; CI `fetch-depth: 0` pinned in `tests/ci-workflow.test.js`.
+- SOURCE_ABSENT reconciliation 2026-09-23: `tests/source-absent-reconciliation.test.js` 4/4 — manifest covers exactly the seven rows (six since the same-day Habituation re-open), 11 upstream blobs re-resolved with matching sha256, `tests/fearcore.test.js` ABSENT_BOTH, FearBand 0 upstream paths, zero extraction, every row carries blob provenance + manifest citation; CI `fetch-depth: 0` pinned in `tests/ci-workflow.test.js`.
 - Monorepo option 1 executed 2026-09-23: default branch → `main` (`gh repo edit --default-branch master` reverses it); `master` untouched — status recorded in `docs/MONOREPO_RECONCILIATION.md`.
-- Full Jest gate: 151/151 suites and 453/453 tests passing.
+- Raid contract suite: `tests/faction-raid-loop.test.js` — 7/7 (lineage, `raidUtility` scoring + `escalationLevel` surfaced, DEESCALATE rejection, stage gates, defeat path, conservation, save/load, determinism).
+- Habituation re-open 2026-09-23: `legacy/habituation.js` byte-exact (sha256 pinned, provenance recorded), `HabituationBook` + canonical `FEAR_HABITUATED` events wired into `FEAR_EVENT_RAISED`; row `SOURCE_ABSENT → IMPLEMENTED_AND_VERIFIED`; `tests/habituation-reopen.test.js` 7/7; manifest + both integrity guards updated through the tripwire.
+- Negative controls for both contracts: 7/7 mutants killed, each attributed by per-mutant isolation run (stage gate, victory inversion, loot credit, unattenuated gain, parentage, serialize drop, novelty), production restored and re-verified.
+- Live autopilot probe 2026-09-23 (default model): still 402 — account-level blocker reconfirmed.
+- Full Jest gate: 153/153 suites and 467/467 tests passing.
 - Latency/decay/distortion/recipient-local suite: 11/11 passing.
 - Negative controls: latency-decay mutant (3 failures), recipient-trust mutant (2 failures), raw-relay mutant (1 failure) — all killed, production restored.
 - Hidden-truth audit: 2/2 passing.

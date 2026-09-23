@@ -50,12 +50,15 @@ describe('RESP-LEDGER-STALE-CLAIMS-AUDIT-001: completion ledger integrity', () =
         expect(violations).toEqual([]);
     });
 
-    it('the seven remaining stale rows are explicitly retracted or blocked with absence evidence', () => {
-        const retracted = rows.filter(row => row.status === 'SOURCE_ABSENT').map(row => row.area);
-        expect(retracted).toEqual(expect.arrayContaining([
-            'Simulation/agents/combat', 'FearCore live transitions', 'Brain scale cleanup',
-            'Habituation', 'Hysteresis', 'VR/biofeedback', 'Neural fear',
-        ]));
+    it('the six remaining stale rows are explicitly retracted or blocked with absence evidence', () => {
+        const retracted = rows.filter(row => row.status === 'SOURCE_ABSENT').map(row => row.area).sort();
+        // Habituation left SOURCE_ABSENT on 2026-09-23 through the re-open procedure (extract
+        // byte-exact + V8 integration) — the row list is strict so a seventh can only appear here.
+        expect(retracted).toEqual([
+            'Brain scale cleanup', 'FearCore live transitions', 'Hysteresis',
+            'Neural fear', 'Simulation/agents/combat', 'VR/biofeedback',
+        ]);
+        expect(rows.find(row => row.area === 'Habituation').status).toBe('IMPLEMENTED_AND_VERIFIED'); // re-opened row
         for (const row of rows.filter(item => item.status === 'SOURCE_ABSENT')) {
             expect(row.evidence).toMatch(/absent|retracted|no workflow/i);
             expect(row.remaining).toMatch(/Re-open only when the cited sources exist|workflow file/i);

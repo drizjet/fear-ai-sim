@@ -60,15 +60,14 @@ describe('SOURCE_ABSENT reconciliation manifest', () => {
         expect(ledgerRows.map(row => row.name).sort()).toEqual([
             'Brain scale cleanup',
             'FearCore live transitions',
-            'Habituation',
             'Hysteresis',
             'Neural fear',
             'Simulation/agents/combat',
             'VR/biofeedback',
-        ]); // seven remaining SOURCE_ABSENT rows (mutant: a row renamed/dropped → fails here)
+        ]); // six remaining SOURCE_ABSENT rows — Habituation left via the re-open procedure 2026-09-23 (mutant: a row added/dropped → fails here)
 
         const entries = parseManifest();
-        expect(entries.length).toBe(12);
+        expect(entries.length).toBe(11); // habituation.js was extracted, so it left the manifest
         for (const entry of entries) {
             expect(['PRESENT', 'ABSENT_BOTH']).toContain(entry.presence); // mutant: presence mislabeled
             expect(entry.rows.length).toBeGreaterThan(0);
