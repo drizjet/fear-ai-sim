@@ -28,4 +28,22 @@ export class AgentBelief {
     addEvidence(input) { const evidence = input instanceof BeliefEvidence ? input : new BeliefEvidence(input); this.evidence.push(evidence); if (this.evidence.length > this.maxEvidence) this.evidence.splice(0, this.evidence.length - this.maxEvidence); const weight = evidence.confidence * evidence.sourceTrust * (evidence.directObservation ? 1.25 : 1); this.confidence = clamp((this.confidence + weight) / 2); if (evidence.valueEstimate !== null) this.estimate = evidence.valueEstimate; this.lastUpdated = evidence.timestamp; return this; }
     // Belief aging is owned by SocietyCore (decayRouteBeliefs/decayRumorBeliefs, world clock).
 }
-export class ReputationBook { constructor() { this.values = new Map(); } update(subject, value, weight = 1) { const old = this.values.get(subject) || { value: .5, weight: 0 }; const w = Math.max(0, Number.isFinite(weight) ? weight : 1); old.value = (old.value * old.weight + clamp(value) * w) / Math.max(1, old.weight + w); old.weight += w; this.values.set(subject, old); return old.value; } get(subject, fallback = .5) { return this.values.get(subject)?.value ?? fallback; } }
+const blendReputation = (old, value, weight) => { const w = Math.max(0, Number.isFinite(weight) ? weight : 1); old.value = (old.value * old.weight + clamp(value) * w) / Math.max(1, old.weight + w); old.weight += w; return old.value; };
+export class ReputationBook {
+    constructor() { this.values = new Map(); this.privateValues = new Map(); }
+    // PUBLIC channel: world-shared standing per subject (weighted blend, 0..1).
+    update(subject, value, weight = 1) { const old = this.values.get(subject) || { value: .5, weight: 0 }; const result = blendReputation(old, value, weight); this.values.set(subject, old); return result; }
+    get(subject, fallback = .5) { return this.values.get(subject)?.value ?? fallback; }
+    // RESP-REPUTATION-PUBLIC-PRIVATE-001 PRIVATE channel: one observer's local opinion of a
+    // target, isolated per observer — never visible through the public read (and vice versa).
+    updatePrivate(observerId, targetId, value, weight = 1) {
+        if (!observerId || !targetId) throw new Error('A private reputation entry requires an observer and a target');
+        let channel = this.privateValues.get(observerId);
+        if (!channel) { channel = new Map(); this.privateValues.set(observerId, channel); }
+        const old = channel.get(targetId) || { value: .5, weight: 0 };
+        const result = blendReputation(old, value, weight);
+        channel.set(targetId, old);
+        return result;
+    }
+    getPrivate(observerId, targetId, fallback = .5) { return this.privateValues.get(observerId)?.get(targetId)?.value ?? fallback; }
+}

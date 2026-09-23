@@ -2,7 +2,7 @@
 
 Orientation for this repository. **Evidence rule: repository evidence outranks historical claims.** Development verification is not supervisor acceptance.
 
-**Current gate: 149 suites / 443 tests passing** (`npm test`) — as of 2026-09-23.
+**Current gate: 150 suites / 449 tests passing** (`npm test`) — as of 2026-09-23.
 
 ## What this is
 
@@ -13,7 +13,7 @@ Scope: deterministic world clock, event ids, market stock/resource flows, inject
 ## Quick start
 
 ```bash
-npm test          # full gate: 149 suites / 443 tests (ESM + Jest via --experimental-vm-modules)
+npm test          # full gate: 150 suites / 449 tests (ESM + Jest via --experimental-vm-modules)
 ```
 
 Key APIs (see `tests/world-tick.test.js` for canonical world setup):
@@ -105,7 +105,7 @@ Mutation-gate/defect policy: when adversarial tests or new tests expose a real d
 
 Counters: `ACTIONABLE_OPEN 0`, `P0_OPEN 0`, `P1_OPEN 0`, `FAILED_TESTS 0`, `BLOCKED_EXTERNAL 1` (Knowledge DB; git/source fingerprinting unblocked — repo initialized 2026-09-22, branch `main` pushed to drizjet/fear-ai-sim 2026-09-23 with a green first CI run), `P2_OPEN` many (world-expansion).
 
-- Closed 2026-09-23: `RESP-PLAYER-INVASION-CHAIN-001` (`tests/player-invasion-chain.test.js`) and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001` (`tests/routing-trade-economy.test.js`) — both development-verified with negative controls (4/4 mutants killed), conservation checks, and save/load continuation. The autopilot controller is runnable again: `.agents/fear-ai-autopilot.mjs` loads through the installed `@codebuff/sdk` 0.10.7 (`loadLocalAgents` clean, `validateAgents` success with 0 errors) and its loop is driven headlessly by `tests/autopilot-agent.test.js`.
-- **Next responsibility: `RESP-REPUTATION-PUBLIC-PRIVATE-001`** — finish the public/private reputation flows behind the `Reputation/trust` PARTIALLY_IMPLEMENTED row through canonical parented events, save/load-verified. No PROPOSED production loop remains: routing/trade/economy and player-to-invasion both closed 2026-09-23.
+- Closed 2026-09-23: `RESP-REPUTATION-PUBLIC-PRIVATE-001` (`tests/reputation-public-private.test.js`, 6/6 with 4/4 negative controls) — public/private reputation channels as canonical `REPUTATION_UPDATE` events plus production DECISION consumption via `evaluationContext`. The autopilot now runs LIVE: `tools/run-autopilot-step.mjs` drives it over the real runner protocol (certificate tool call executed on the platform, chat call issued to codebuff.com) and halts at **HTTP 402 Payment Required** for model `mimo-v2-flash` — account credits, not code; retry with `AUTOPILOT_MODEL=<model>` once topped up. Earlier closures: player-to-invasion, routing/trade/economy (both 2026-09-23), convoy loop (2026-09-22).
+- **Next responsibility: `RESP-SOURCE-ABSENT-RECONCILIATION-001`** — the seven `SOURCE_ABSENT` rows' cited files (`brain.js`, `biofeedback.js`, …) exist on `origin/master:fear-ai-sim/` (the legacy tree); verify each citation against that tree and either extract with provenance or formally supersede under the evidence rule. Measured divergence + four safe repository options: `docs/MONOREPO_RECONCILIATION.md` (nothing destructive done).
 - Seven `SOURCE_ABSENT` rows await their sources actually landing in this checkout (simulation/agents/combat, FearCore, brain, habituation, hysteresis, VR/biofeedback, neural fear) — re-open only with the files present. CI left `SOURCE_ABSENT` when `.github/workflows/ci.yml` landed (now `PARTIALLY_IMPLEMENTED` — remote execution pending a push).
 - Global completion exists only via `docs/FEAR_AI_GLOBAL_STOP_CERTIFICATE.json` independently verifying all closure audits — never declared by an executor.

@@ -311,7 +311,9 @@ export class SocietyCore {
         const personality = context.personality ?? (actorId ? this.personalities.get(actorId) : null);
         const stored = actorId ? this.morales.get(actorId) : null;
         const morale = context.morale ?? stored?.value;
-        return { ...context, ...(personality ? { personality } : {}), ...(morale != null ? { morale } : {}) };
+        // RESP-REPUTATION-PUBLIC-PRIVATE-001: decisions consume the world reputation book —
+        // public standing via reputationOf, the observer-private channel via the book itself.
+        return { ...context, ...(personality ? { personality } : {}), ...(morale != null ? { morale } : {}), reputation: context.reputation ?? this.reputation, reputationOf: context.reputationOf ?? (subject => this.reputation.get(subject)) };
     }
     addMarket(id, market = new Market()) { this.markets.set(id, market); return market; }
     addFaction(id, state = {}) { const faction = new FactionRuntime(id, state); this.factions.set(id, faction); return faction; }
@@ -1324,6 +1326,27 @@ export class SocietyCore {
                     explanation: result.explanation,
                 });
             }
+            case 'REPUTATION_JUDGE': {
+                // RESP-REPUTATION-PUBLIC-PRIVATE-001: judgments land in one of two channels —
+                // PUBLIC standing shared world-wide, or PRIVATE observer-local opinion — both
+                // blended through ReputationBook weighted math and recorded as a canonical
+                // parent-chained event. All invariants validate before any mutation.
+                const scope = action.scope ?? 'public';
+                if (scope !== 'public' && scope !== 'private') throw new Error(`Reputation scope must be "public" or "private" (got "${scope}")`);
+                if (!action.subjectId) throw new Error('REPUTATION_JUDGE requires a subjectId');
+                const value = num(action.value, NaN);
+                if (!Number.isFinite(value) || value < 0 || value > 1) throw new Error('REPUTATION_JUDGE requires a value within 0..1');
+                const weight = action.weight == null ? 1 : num(action.weight, NaN);
+                if (!Number.isFinite(weight) || weight < 0) throw new Error('REPUTATION_JUDGE requires a non-negative weight');
+                const observerId = action.observerId ?? null;
+                if (scope === 'private' && !observerId) throw new Error('A private judgment requires an observerId');
+                const valueBefore = scope === 'public' ? this.reputation.get(action.subjectId) : this.reputation.getPrivate(observerId, action.subjectId);
+                const valueAfter = scope === 'public'
+                    ? this.reputation.update(action.subjectId, value, weight)
+                    : this.reputation.updatePrivate(observerId, action.subjectId, value, weight);
+                const prior = [...this.events].reverse().find(event => event.type === 'REPUTATION_UPDATE' && event.subjectId === action.subjectId) ?? null;
+                return this.allocateEvent({ type: 'REPUTATION_UPDATE', parent: action.parent ?? prior ?? parent, scope, subjectId: action.subjectId, observerId, valueBefore, valueAfter, weight, reason: action.reason ?? null });
+            }
             default: throw new Error(`Unknown action kind "${kind}"`);
         }
     }
@@ -1341,6 +1364,7 @@ export class SocietyCore {
             rumorMaxQueue: this.rumors.maxQueue,
             rumorConfidenceHalfLife: this.rumors.confidenceHalfLife,
             reputation: Object.fromEntries([...this.reputation.values.entries()].map(([k, v]) => [k, { ...v }])),
+            reputationPrivate: Object.fromEntries([...this.reputation.privateValues.entries()].map(([observer, channel]) => [observer, Object.fromEntries([...channel.entries()].map(([target, entry]) => [target, { ...entry }]))])),
             markets: Object.fromEntries([...this.markets.entries()].map(([id, m]) => [id, { prices: { ...m.prices }, stock: { ...m.stock }, initialStock: { ...m.initialStock }, history: m.history.map(h => ({ ...h })), inTransit: Object.fromEntries(m.inTransit.entries()) }])),
             routes: { edges: this.routes.edges.map(e => ({ ...e })) },
             infrastructure: Object.fromEntries([...this.infrastructure.entries()].map(([id, structure]) => [id, { ...structure }])),
@@ -1383,6 +1407,7 @@ export class SocietyCore {
         if (json.rumorMaxQueue != null) society.rumors.maxQueue = Math.max(1, Math.floor(json.rumorMaxQueue));
         if (json.rumorConfidenceHalfLife != null) society.rumors.confidenceHalfLife = Math.max(1, num(json.rumorConfidenceHalfLife, 10));
         for (const [k, v] of Object.entries(json.reputation ?? {})) society.reputation.values.set(k, { ...v });
+        for (const [observer, channel] of Object.entries(json.reputationPrivate ?? {})) society.reputation.privateValues.set(observer, new Map(Object.entries(channel).map(([target, entry]) => [target, { ...entry }])));
         for (const [id, m] of Object.entries(json.markets ?? {})) { const market = new Market({ prices: m.prices, stock: m.stock }); market.initialStock = { ...(m.initialStock ?? m.stock) }; market.history = (m.history ?? []).map(h => ({ ...h })); market.inTransit = new Map(Object.entries(m.inTransit ?? {}).map(([tripId, trip]) => [tripId, { ...trip }])); society.markets.set(id, market); }
         society.routes = new RouteNetwork((json.routes?.edges ?? []).map(e => ({ ...e })));
         society.infrastructure = new Map(Object.entries(json.infrastructure ?? {}).map(([id, structure]) => [id, { ...structure }]));
