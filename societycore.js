@@ -1,4 +1,4 @@
-import { AgentBelief, BeliefEvidence, HabituationBook, Morale, Personality, ReputationBook } from './socialcore.js';
+import { AgentBelief, BeliefEvidence, HabituationBook, HysteresisBook, Morale, Personality, ReputationBook } from './socialcore.js';
 import { DecisionCore } from './decisioncore.js';
 import { InteractionCore } from './interactioncore.js';
 import { AdvisoryGate } from './advisorygate.js';
@@ -288,6 +288,12 @@ export class SocietyCore {
         this.raids = new Map();
         // Re-opened `Habituation` row: exposure book attenuating faction fear gains.
         this.habituation = new HabituationBook();
+        // Re-opened `Hysteresis` row: per-faction fear state machine — asymmetric enter/exit
+        // thresholds behind the minimum-duration gate. minStateDuration 2: legacy's per-frame
+        // 10 assumed 60fps, V8 fear events are story beats, so the mechanism stays with a
+        // world-scale value. FREEZE only rolls on explicit low-morale context, so production
+        // updates consume zero RNG (the seeded world streams are untouched).
+        this.hysteresis = new HysteresisBook({ rng: () => this.rng(), minStateDuration: 2 });
         // RESP-PLAYER-INVASION-CHAIN-001: player vitals, war-pressure state, resolved invasions.
         this.player = { hp: 100, maxHp: 100, alive: true, deaths: 0 };
         this.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70 };
@@ -582,11 +588,12 @@ export class SocietyCore {
         }
         return actions;
     }
-    worldStep({ market, season = 'SPRING', harvest = 0, destination, good = 'grain', minimumPrice = 0, routes, actorId = null, rumor, rumorRecipients = [], faction, factionTarget, factionContext = {}, migration, actions = [] } = {}) {
+    worldStep({ market, season = 'SPRING', harvest = 0, destination, good = 'grain', minimumPrice = 0, routes, actorId = null, rumor, rumorRecipients = [], faction, factionTarget, factionContext = {}, factionTurns = false, migration, actions = [] } = {}) {
         const planned = [
             ...(market ? [{ kind: 'SEASON_UPDATE', market, season, harvest }] : []),
             ...(destination && routes ? [{ kind: 'TRADE_ROUTE_DECISION', destination, good, minimumPrice, routes, actorId }] : []),
             ...(faction ? [{ kind: 'FACTION_EVALUATION', faction, targetId: factionTarget, context: factionContext }] : []),
+            ...(factionTurns ? [{ kind: 'FACTION_MACRO_TICK' }] : []),
             ...(migration ? [migration] : []),
             ...actions,
         ];
@@ -955,6 +962,31 @@ export class SocietyCore {
                 const defense = Number.isFinite(action.context?.defense) && action.context.defense >= 0 ? action.context.defense : Math.max(0, num(targetFaction.state.militaryConfidence, .5) * 10);
                 return this.executeAction({ kind: 'FACTION_RAID_RESOLUTION', raidId, defense }, dispatch);
             }
+            // RESP-FACTION-AUTONOMOUS-TICK-001: the macro layer runs autonomously — one action
+            // gives EVERY registered faction a turn with no manual targeting: the target is the
+            // richest other registered faction (stable sort → insertion order breaks loot ties),
+            // the context is the faction's own numeric state, and each turn flows through the
+            // production FACTION_EVALUATION → raid chain. Same single-tail contract as the
+            // economy cycle: each turn's tail commits BEFORE the next turn allocates (seq/id
+            // integrity), the final tail returns uncommitted for the turn driver; fewer than two
+            // factions means no counterpart to turn against, so the macro event itself is the
+            // untouched tail.
+            case 'FACTION_MACRO_TICK': {
+                const macro = this.allocateEvent({ type: 'FACTION_MACRO_TICK', parent, factions: [...this.factions.keys()] });
+                const factions = [...this.factions.values()];
+                if (factions.length < 2) return macro; // no counterpart to turn against
+                this.commitEvent(macro);
+                let pending = null;
+                for (const faction of factions) {
+                    if (pending) this.commitEvent(pending);
+                    // The richest-other target resolves WHEN the turn runs — later turns see
+                    // earlier turns' effects (a raid that just resolved reshapes the loot map).
+                    const target = factions.filter(other => other !== faction).sort((a, b) => b.loot - a.loot)[0];
+                    const context = Object.fromEntries(Object.entries(faction.state).filter(([key, value]) => key !== 'rng' && typeof value === 'number' && Number.isFinite(value)));
+                    pending = this.executeAction({ kind: 'FACTION_EVALUATION', faction: faction.id, targetId: target.id, context }, macro);
+                }
+                return pending;
+            }
             // RESP-FACTION-RAID-LOOP-001: the faction raid loop — production-wires the once-
             // orphaned macro layer (FactionRuntime.evaluateRaid → macrocore raidUtility and
             // escalationLevel) through canonical parent-chained events: evaluation → dispatch →
@@ -1187,7 +1219,15 @@ export class SocietyCore {
                 // The exposure record chains off the fear event it shaped (commit → allocate →
                 // return keeps seq monotonic — same two-event pattern as the escort resolution).
                 this.commitEvent(fearEvent);
-                return this.allocateEvent({ type: 'FEAR_HABITUATED', parent: fearEvent, factionId: faction.id, source: fearEvent.source, stimulusKey: habituation.key, baseGain: habituation.base, appliedGain: habituation.adjusted, fearReduced: habituation.fearReduced, habituationLevel: habituation.habituationLevel, exposureCount: habituation.exposureCount });
+                const habituated = this.allocateEvent({ type: 'FEAR_HABITUATED', parent: fearEvent, factionId: faction.id, source: fearEvent.source, stimulusKey: habituation.key, baseGain: habituation.base, appliedGain: habituation.adjusted, fearReduced: habituation.fearReduced, habituationLevel: habituation.habituationLevel, exposureCount: habituation.exposureCount });
+                // Re-opened `Hysteresis` row: the fear state machine consumes the POST-attenuation
+                // fear — asymmetric enter/exit thresholds behind the minimum-duration gate — and a
+                // real transition records as a canonical event chained off the exposure that
+                // produced the level it read. Blocked/gate updates emit nothing (no event spam).
+                const transition = this.hysteresis.update(faction.id, faction.state.fear, {}, this.now());
+                if (!transition.transitioned) return habituated;
+                this.commitEvent(habituated);
+                return this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() });
             }
             case 'WAR_STATUS_EVALUATE': {
                 // RESP-PLAYER-INVASION-CHAIN-001 stage 2: war status is computed from the
@@ -1488,6 +1528,7 @@ export class SocietyCore {
             convoys: Object.fromEntries([...this.convoys.entries()].map(([id, convoy]) => [id, { ...convoy }])),
             raids: Object.fromEntries([...this.raids.entries()].map(([id, raid]) => [id, { ...raid }])),
             habituation: Object.fromEntries([...this.habituation.exposures.entries()].map(([key, exposure]) => [key, { ...exposure }])),
+            hysteresis: Object.fromEntries([...this.hysteresis.actors.entries()].map(([id, controller]) => [id, { state: controller.state, stateTimer: controller.stateTimer, transitionHistory: controller.transitionHistory.map(entry => ({ ...entry })) }])),
             player: { ...this.player },
             warState: { ...this.warState },
             warLoot: this.warLoot,
@@ -1533,6 +1574,7 @@ export class SocietyCore {
         society.convoys = new Map(Object.entries(json.convoys ?? {}).map(([id, convoy]) => [id, { ...convoy }]));
         society.raids = new Map(Object.entries(json.raids ?? {}).map(([id, raid]) => [id, { ...raid }]));
         for (const [key, exposure] of Object.entries(json.habituation ?? {})) society.habituation.exposures.set(key, { ...exposure });
+        for (const [id, controller] of Object.entries(json.hysteresis ?? {})) society.hysteresis.actors.set(id, { state: controller.state, stateTimer: controller.stateTimer, transitionHistory: (controller.transitionHistory ?? []).map(entry => ({ ...entry })) });
         society.player = { hp: 100, maxHp: 100, alive: true, deaths: 0, ...(json.player ?? {}) };
         society.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70, ...(json.warState ?? {}) };
         society.warLoot = num(json.warLoot, 0);

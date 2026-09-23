@@ -10,15 +10,18 @@ imported by production code.
 | file | upstream path | blob | sha256 | extracted |
 | --- | --- | --- | --- | --- |
 | `legacy/habituation.js` | `origin/master:fear-ai-sim/` + `habituation.js` | `df69efd8bf62c1b7ac38161fcdb9e9909e764c5d` | `df02134b9227043baca61698a1a4f7d3b0cf6ce477667acd511e04a8d812db27` | 2026-09-23 |
+| `legacy/hysteresis.js` | `origin/master:fear-ai-sim/` + `hysteresis.js` | `208cbffc038a04a901b262024d5ad414b9dcdcd9` | `40e5cb26595ff5c33b9ffc11c17816fdbcc1ff56615d20c334149abaf59a3da5` | 2026-09-23 |
 
 Extraction command (reproduce and diff against the sha256 above):
 
 ```sh
 git show origin/master:fear-ai-sim/habituation.js | sha256sum
+git show origin/master:fear-ai-sim/hysteresis.js | sha256sum
 ```
 
 Byte-exactness of every file in this directory is asserted on each gate run by
-`tests/habituation-reopen.test.js` (and `.gitattributes` marks `legacy/**` as `-text` so no
+`tests/habituation-reopen.test.js` and `tests/hysteresis-reopen.test.js`
+(and `.gitattributes` marks `legacy/**` as `-text` so no
 line-ending conversion can ever touch the bytes).
 
 Wall-clock note: the legacy sources use `Date.now()`; V8 integration replaces the wall clock

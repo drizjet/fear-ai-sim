@@ -47,6 +47,109 @@ export class ReputationBook {
     }
     getPrivate(observerId, targetId, fallback = .5) { return this.privateValues.get(observerId)?.get(targetId)?.value ?? fallback; }
 }
+// Re-opened `Hysteresis` row (RESP-SOURCE-ABSENT-RECONCILIATION-001 re-open procedure, legacy
+// source extracted byte-exact to legacy/hysteresis.js): a per-actor fear state machine
+// (CALM → ALERT → ANXIOUS → PANIC → HIDE/RECOVER/FREEZE) where ENTERING and EXITING a state
+// use DIFFERENT thresholds — that gap is what prevents oscillation — plus a minimum-duration
+// gate so a state cannot flip on every reading. Two deviations from legacy, both forced by
+// repository rules: the legacy wall-clock timestamp becomes the caller-provided world time
+// (RESP-TIME-OWNERSHIP-001),
+// and `minStateDuration` becomes configurable (legacy hardcodes 10 per frame; V8 fear events
+// are story beats, so SocietyCore passes 2). The FREEZE roll keeps legacy's injected-rng
+// determinism contract.
+export class HysteresisBook {
+    constructor({ rng = Math.random, minStateDuration = 10 } = {}) {
+        this.actors = new Map(); // actorId → { state, stateTimer, transitionHistory }
+        this.rng = rng;
+        this.minStateDuration = Math.max(1, Number.isFinite(minStateDuration) ? Math.floor(minStateDuration) : 10);
+        this.maxHistoryLength = 50;
+        // Faithful copy of the legacy thresholds: exitUp — leave upward when fear exceeds it;
+        // exitDown — leave downward when fear drops below it; enter — documents the gap of the
+        // state above (exitUp of one rung equals enter of the next — the asymmetry is exitUp vs
+        // exitDown inside each rung, so ALERT holds between .15 and .55).
+        this.thresholds = {
+            CALM: { enter: 0.0, exitUp: 0.25, exitDown: -1.0 },
+            ALERT: { enter: 0.25, exitUp: 0.55, exitDown: 0.15 },
+            ANXIOUS: { enter: 0.55, exitUp: 0.75, exitDown: 0.45 },
+            PANIC: { enter: 0.75, exitUp: 0.85, exitDown: 0.65 },
+            HIDE: { enter: 0.85, exitUp: 0.90, exitDown: 0.60 },
+            RECOVER: { enter: 0.0, exitUp: 0.30, exitDown: 0.20 },
+            FREEZE: { enter: 0.80, exitUp: 0.95, exitDown: 0.50 },
+        };
+    }
+    controller(actorId) {
+        if (!this.actors.has(actorId)) this.actors.set(actorId, { state: 'CALM', stateTimer: 0, transitionHistory: [] });
+        return this.actors.get(actorId);
+    }
+    getState(actorId) { return this.controller(actorId).state; }
+    getStateDuration(actorId) { return this.controller(actorId).stateTimer; }
+    getHistory(actorId) { return [...this.controller(actorId).transitionHistory]; }
+    canChangeState(actorId) { return this.controller(actorId).stateTimer >= this.minStateDuration; }
+    // Faithful port of legacy `update()`: wall clock replaced by the caller-provided world
+    // time, per-actor history instead of one shared log. Returns the transition (or none).
+    update(actorId, fearLevel, context = {}, now = 0) {
+        const { skill = 0.5, morale = 1.0, threats = [] } = context;
+        const actor = this.controller(actorId);
+        actor.stateTimer += 1;
+        // Enforce minimum state duration to prevent rapid oscillation (legacy gate).
+        if (actor.stateTimer < this.minStateDuration) {
+            return { actorId, state: actor.state, transitioned: false, from: actor.state, to: actor.state, fearLevel, stateTimer: actor.stateTimer };
+        }
+        const oldState = actor.state;
+        let newState = actor.state;
+        const currentThresholds = this.thresholds[actor.state];
+        switch (actor.state) {
+            case 'CALM':
+                if (fearLevel > currentThresholds.exitUp) newState = 'ALERT';
+                break;
+            case 'ALERT':
+                if (fearLevel > currentThresholds.exitUp) newState = 'ANXIOUS';
+                else if (fearLevel < currentThresholds.exitDown) newState = 'CALM';
+                break;
+            case 'ANXIOUS':
+                if (fearLevel > currentThresholds.exitUp) newState = 'PANIC';
+                else if (fearLevel < currentThresholds.exitDown) newState = 'ALERT';
+                break;
+            case 'PANIC':
+                if (morale < 0.4 && fearLevel > 0.8 && this.rng() < 0.05) newState = 'FREEZE';
+                else if (fearLevel > currentThresholds.exitUp && skill > 0.6) newState = 'HIDE';
+                else if (fearLevel < currentThresholds.exitDown) newState = 'ANXIOUS';
+                break;
+            case 'HIDE':
+                if (fearLevel > currentThresholds.exitUp) newState = 'PANIC';
+                else if (fearLevel < currentThresholds.exitDown || threats.length === 0) newState = 'RECOVER';
+                break;
+            case 'RECOVER':
+                if (fearLevel > currentThresholds.exitUp) newState = 'ANXIOUS';
+                else if (fearLevel < currentThresholds.exitDown) newState = 'CALM';
+                break;
+            case 'FREEZE':
+                if (fearLevel < currentThresholds.exitDown || this.rng() < 0.02) newState = 'RECOVER';
+                break;
+        }
+        if (newState !== actor.state) {
+            this.record(actor, actor.state, newState, fearLevel, 'automatic', now); // legacy records BEFORE the reset
+            actor.state = newState;
+            actor.stateTimer = 0;
+            return { actorId, state: newState, transitioned: true, from: oldState, to: newState, fearLevel, stateTimer: 0 };
+        }
+        return { actorId, state: actor.state, transitioned: false, from: oldState, to: oldState, fearLevel, stateTimer: actor.stateTimer };
+    }
+    record(actor, from, to, fearLevel, reason, now) {
+        actor.transitionHistory.push({ timestamp: now, from, to, fearLevel, reason, stateTimer: actor.stateTimer });
+        if (actor.transitionHistory.length > this.maxHistoryLength) actor.transitionHistory.shift();
+    }
+    // Legacy `getHysteresisGap`: how far fear must overshoot/undershoot for the ladder to move.
+    getHysteresisGap(fromState, toState) {
+        const fromThresholds = this.thresholds[fromState];
+        const states = ['CALM', 'ALERT', 'ANXIOUS', 'PANIC', 'HIDE'];
+        const fromIndex = states.indexOf(fromState);
+        const toIndex = states.indexOf(toState);
+        if (toIndex > fromIndex) return fromThresholds.exitUp - this.thresholds[toState].enter;
+        if (toIndex < fromIndex) return this.thresholds[toState].enter - fromThresholds.exitDown;
+        return 0;
+    }
+}
 // Re-opened `Habituation` row (RESP-SOURCE-ABSENT-RECONCILIATION-001 re-open procedure, legacy
 // source extracted byte-exact to legacy/habituation.js): repeated exposures to the same
 // stimulus attenuate the fear response — novelty protects the first exposures, recovery runs
