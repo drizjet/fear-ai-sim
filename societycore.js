@@ -1,4 +1,4 @@
-import { AgentBelief, BeliefEvidence, HabituationBook, HysteresisBook, Morale, Personality, ReputationBook } from './socialcore.js';
+import { AgentBelief, BeliefEvidence, HabituationBook, HysteresisBook, Morale, NeuralFearModel, Personality, ReputationBook } from './socialcore.js';
 import { DecisionCore } from './decisioncore.js';
 import { InteractionCore } from './interactioncore.js';
 import { AdvisoryGate } from './advisorygate.js';
@@ -293,7 +293,13 @@ export class SocietyCore {
         // 10 assumed 60fps, V8 fear events are story beats, so the mechanism stays with a
         // world-scale value. FREEZE only rolls on explicit low-morale context, so production
         // updates consume zero RNG (the seeded world streams are untouched).
-        this.hysteresis = new HysteresisBook({ rng: () => this.rng(), minStateDuration: 2 });
+        // `this.rng` is a SOURCE OBJECT (draw via this.random() → rng.next()); passing it as a
+        // callable would throw the moment the seeded FREEZE roll fired.
+        this.hysteresis = new HysteresisBook({ rng: () => this.random(), minStateDuration: 2 });
+        // Re-opened `Neural fear` row: the extracted legacy MLP, deterministic and LAZY — this
+        // constructor draws nothing, so every existing seeded world's RNG stream is untouched
+        // until the model is first used. Its input vector is the faction's canonical state.
+        this.neuralFear = new NeuralFearModel({ rng: () => this.random() });
         // RESP-PLAYER-INVASION-CHAIN-001: player vitals, war-pressure state, resolved invasions.
         this.player = { hp: 100, maxHp: 100, alive: true, deaths: 0 };
         this.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70 };
@@ -924,13 +930,18 @@ export class SocietyCore {
                 const faction = this.factions.get(action.faction);
                 if (!faction) throw new Error(`Unknown faction "${action.faction}"`);
                 const target = action.target ?? { id: action.targetId ?? null };
+                // RESP-FACTION-RETALIATION-LOOP-001: a counter-raid enters through this same
+                // production evaluation seam, tagged with the raid it answers and with one level
+                // of retaliation budget already spent — the counter's own resolution sees depth 0.
+                const retaliationOf = action.retaliationOf ?? null;
+                const retaliationDepth = Math.max(0, Math.floor(num(action.retaliationDepth, 0)));
                 const result = faction.evaluateAction(target, { ...action.context, rng: this.rng });
                 const selected = result.selected;
                 if (selected === 'RAID') faction.state.resourceNeed = Math.max(0, faction.state.resourceNeed - 0.1);
                 if (selected === 'PATROL') faction.state.supplySecurity = Math.min(1, faction.state.supplySecurity + 0.1);
                 if (selected === 'HOLD' && Number.isFinite(action.context?.cooperation)) faction.state.legitimacy = this.updateLegitimacy(faction.state.legitimacy, { cooperation: action.context.cooperation });
                 faction.history.push({ tick: this.now(), target: target.id, selected, score: result.candidates.find(candidate => candidate.action === selected)?.finalScore ?? 0 });
-                const evaluation = this.allocateEvent({ type: 'FACTION_EVALUATION', parent, factionId: faction.id, targetId: target.id, selected, legitimacy: faction.state.legitimacy, resourceNeed: faction.state.resourceNeed, supplySecurity: faction.state.supplySecurity, alternatives: result.alternatives.map(candidate => ({ action: candidate.action, score: candidate.finalScore })) });
+                const evaluation = this.allocateEvent({ type: 'FACTION_EVALUATION', parent, factionId: faction.id, targetId: target.id, retaliationOf, selected, legitimacy: faction.state.legitimacy, resourceNeed: faction.state.resourceNeed, supplySecurity: faction.state.supplySecurity, alternatives: result.alternatives.map(candidate => ({ action: candidate.action, score: candidate.finalScore })) });
                 // RESP-FACTION-EVALUATION-RAID-CHAIN-001: a production RAID choice (DecisionCore)
                 // dispatches through the raid loop instead of only nudging resourceNeed. The
                 // reference guards decide BEFORE any chain event exists: an unregistered or self
@@ -960,7 +971,11 @@ export class SocietyCore {
                 this.commitEvent(dispatch);
                 // Stage 3: one world-RNG draw; defense honors context or the defender's confidence.
                 const defense = Number.isFinite(action.context?.defense) && action.context.defense >= 0 ? action.context.defense : Math.max(0, num(targetFaction.state.militaryConfidence, .5) * 10);
-                return this.executeAction({ kind: 'FACTION_RAID_RESOLUTION', raidId, defense }, dispatch);
+                // A counter raid carries its spent retaliation budget (and the threshold it was
+                // judged under) into the resolution; ordinary evaluation-driven raids keep the
+                // resolution's own default (one level), so the autonomous macro tick can still
+                // provoke a counter-attack.
+                return this.executeAction({ kind: 'FACTION_RAID_RESOLUTION', raidId, defense, ...(retaliationOf ? { retaliationDepth, retaliationThreshold: num(action.retaliationThreshold, .5) } : {}) }, dispatch);
             }
             // RESP-FACTION-AUTONOMOUS-TICK-001: the macro layer runs autonomously — one action
             // gives EVERY registered faction a turn with no manual targeting: the target is the
@@ -1034,6 +1049,15 @@ export class SocietyCore {
                 const target = this.factions.get(raid.targetId);
                 if (!attacker) throw new Error(`Unknown faction "${raid.factionId}"`);
                 if (!target) throw new Error(`Unknown faction "${raid.targetId}"`);
+                // RESP-FACTION-RETALIATION-LOOP-001: the victim's grievance decides whether it
+                // strikes back. Guards resolve before any mutation; `retaliationDepth` bounds the
+                // loop (the counter raid resolves at depth 0); the default threshold .5 leaves
+                // ordinary raid worlds untouched — a faction must be *seriously* aggrieved
+                // (roughly three lootings' worth) before it counter-attacks.
+                const retaliate = action.retaliate !== false;
+                const depth = Math.max(0, Math.floor(num(action.retaliationDepth, 1)));
+                const threshold = clamp(num(action.retaliationThreshold, .5));
+                const grievanceBefore = clamp(num(target.state.grievance, 0));
                 const defense = Math.max(0, num(action.defense, 0));
                 const roll = this.random(); // the single world-RNG draw
                 const victory = raid.force > defense + roll;
@@ -1054,7 +1078,37 @@ export class SocietyCore {
                 target.state.threatPerception = clamp(target.state.threatPerception + (victory ? .1 : .05));
                 const dispatch = [...this.events].reverse().find(event => event.type === 'FACTION_RAID_DISPATCH' && event.raidId === raid.id);
                 if (!dispatch) throw new Error(`Raid "${raid.id}" has no committed dispatch event`);
-                return this.allocateEvent({ type: 'FACTION_RAID_RESOLUTION', parent: dispatch, raidId: raid.id, factionId: raid.factionId, targetId: raid.targetId, force: raid.force, defense, roll, victory, outcome: raid.outcome, stolen, attackerLootBefore, attackerLootAfter: attacker.loot, targetLootBefore, targetLootAfter: target.loot, escalationLevel: attacker.state.escalationLevel() });
+                const grievanceAfter = clamp(num(target.state.grievance, 0));
+                const retaliationEligible = retaliate && depth > 0 && grievanceAfter >= threshold;
+                const resolution = this.allocateEvent({ type: 'FACTION_RAID_RESOLUTION', parent: dispatch, raidId: raid.id, factionId: raid.factionId, targetId: raid.targetId, force: raid.force, defense, roll, victory, outcome: raid.outcome, stolen, attackerLootBefore, attackerLootAfter: attacker.loot, targetLootBefore, targetLootAfter: target.loot, escalationLevel: attacker.state.escalationLevel(), grievanceBefore, grievanceAfter, retaliationThreshold: threshold, retaliationDepth: depth, retaliationEligible });
+                if (!retaliationEligible) return resolution;
+                // The struck faction strikes back: the victim runs its OWN canonical
+                // evaluation → dispatch → resolution chain against the attacker through the
+                // production seam DecisionCore uses — revenge as the raid value, the attacker's
+                // stash as the prize, the attacker's confidence as both risk and defense.
+                this.commitEvent(resolution);
+                return this.executeAction({
+                    kind: 'FACTION_EVALUATION',
+                    faction: target.id,
+                    targetId: attacker.id,
+                    // The context is the victim's own numeric state with the grievance folded into
+                    // the two considerations the production RAID candidate actually reads
+                    // (opportunity, resourceNeed) — being looted is BOTH the opening and the
+                    // material need — plus the legacy macro utility's first-class revenge term.
+                    context: {
+                        opportunity: clamp(num(target.state.opportunity, 0) + grievanceAfter),
+                        resourceNeed: clamp(num(target.state.resourceNeed, 0) + grievanceAfter),
+                        revengeValue: grievanceAfter,
+                        expectedLoot: clamp(num(attacker.loot, 0) / 100),
+                        retaliationRisk: clamp(num(attacker.state.militaryConfidence, .5)),
+                        force: Math.max(.1, num(target.state.militaryConfidence, .5) * 10),
+                        bagSize: Math.floor(num(attacker.loot, 0) / 2),
+                        defense: Math.max(0, num(attacker.state.militaryConfidence, .5) * 10),
+                    },
+                    retaliationOf: raid.id,
+                    retaliationDepth: depth - 1,
+                    retaliationThreshold: threshold,
+                }, resolution);
             }
             case 'JUSTICE_RESOLUTION': {
                 const faction = this.factions.get(action.faction);
@@ -1224,10 +1278,38 @@ export class SocietyCore {
                 // fear — asymmetric enter/exit thresholds behind the minimum-duration gate — and a
                 // real transition records as a canonical event chained off the exposure that
                 // produced the level it read. Blocked/gate updates emit nothing (no event spam).
-                const transition = this.hysteresis.update(faction.id, faction.state.fear, {}, this.now());
+                // Legacy FREEZE is reachable in production: a world that assigns a faction a
+                // Morale passes it here, so low morale behind high fear can roll FREEZE. Worlds
+                // that assign none keep the unfrozen path (undefined morale → no roll at all).
+                const transition = this.hysteresis.update(faction.id, faction.state.fear, { morale: this.morales.get(faction.id)?.value }, this.now());
                 if (!transition.transitioned) return habituated;
                 this.commitEvent(habituated);
                 return this.allocateEvent({ type: 'FEAR_STATE_TRANSITION', parent: habituated, factionId: faction.id, from: transition.from, to: transition.to, fearLevel: transition.fearLevel, stateTimer: transition.stateTimer, worldTime: this.now() });
+            }
+            // Re-opened `Neural fear` row: production wiring for the extracted legacy MLP. The
+            // feature vector is the faction's canonical numeric state; NEURAL_FEAR_PREDICT is
+            // read-only inference that records its error against the faction's ACTUAL fear, and
+            // NEURAL_FEAR_LEARN runs one online gradient step against that same actual fear —
+            // the model is trained by world truth, deterministically.
+            case 'NEURAL_FEAR_PREDICT': {
+                const faction = action.factionId ? this.factions.get(action.factionId) : null;
+                if (action.factionId && !faction) throw new Error(`Unknown faction "${action.factionId}"`);
+                const features = faction && !Array.isArray(action.features) ? this.fearFeatures(faction) : action.features;
+                if (!Array.isArray(features) || features.length !== this.neuralFear.inputSize) throw new Error(`NEURAL_FEAR_PREDICT requires ${this.neuralFear.inputSize} features`);
+                if (features.some(value => !Number.isFinite(value))) throw new Error('NEURAL_FEAR_PREDICT requires finite feature values');
+                const { prediction } = this.neuralFear.predict(features);
+                const actual = faction ? clamp(num(faction.state.fear, 0)) : null;
+                return this.allocateEvent({ type: 'NEURAL_FEAR_PREDICTION', parent, factionId: faction?.id ?? null, prediction, actual, error: actual == null ? null : Math.abs(prediction - actual), sampleCount: this.neuralFear.sampleCount, features: [...features] });
+            }
+            case 'NEURAL_FEAR_LEARN': {
+                const faction = action.factionId ? this.factions.get(action.factionId) : null;
+                if (action.factionId && !faction) throw new Error(`Unknown faction "${action.factionId}"`);
+                const features = faction && !Array.isArray(action.features) ? this.fearFeatures(faction) : action.features;
+                if (!Array.isArray(features) || features.length !== this.neuralFear.inputSize) throw new Error(`NEURAL_FEAR_LEARN requires ${this.neuralFear.inputSize} features`);
+                if (features.some(value => !Number.isFinite(value))) throw new Error('NEURAL_FEAR_LEARN requires finite feature values');
+                const target = Number.isFinite(action.target) ? clamp(action.target) : (faction ? clamp(num(faction.state.fear, 0)) : 0);
+                const step = this.neuralFear.learn(features, target, { now: this.now(), dropout: action.dropout !== false });
+                return this.allocateEvent({ type: 'NEURAL_FEAR_LEARNED', parent, factionId: faction?.id ?? null, target, features: [...features], prediction: step.prediction, lossBefore: step.lossBefore, lossAfter: step.lossAfter, sampleCount: step.sampleCount, earlyStopped: step.earlyStopped, worldTime: step.worldTime });
             }
             case 'WAR_STATUS_EVALUATE': {
                 // RESP-PLAYER-INVASION-CHAIN-001 stage 2: war status is computed from the
@@ -1412,6 +1494,27 @@ export class SocietyCore {
                     const latency = Math.max(0, deliveredAt - (Number.isFinite(item.queuedAt) ? item.queuedAt : (item.deliveryTick ?? deliveredAt) - 1) - 1);
                     const deliveredEvent = this.commitEvent(this.allocateEvent({ type: 'RUMOR_DELIVERED', parent: summary, rumorId: item.rumorId, recipientId: item.recipientId, claim, queuedAt: item.queuedAt ?? null, deliveryTick: item.deliveryTick ?? null, deliveredAt, latency, arrivedConfidence: lastEvidence ? clamp(lastEvidence.confidence) : null }));
                     this.commitEvent(this.allocateEvent({ type: 'BELIEF_UPDATED', parent: deliveredEvent, actorId: item.recipientId, claim, estimate: belief?.estimate ?? null, confidence: belief ? clamp(belief.confidence) : null }));
+                    // Rumors row, remaining item closed 2026-09-23: a delivered REPUTATION claim
+                    // judges its subject from the ARRIVED evidence — the verdict is the rumor's
+                    // estimate, the weight is the confidence that actually survived latency,
+                    // distortion, and recipient-local trust. Both channels move: PUBLIC world
+                    // standing and the recipient's OWN private opinion, each as a canonical
+                    // REPUTATION_UPDATE chained to the delivery that carried it. Claims outside
+                    // the `reputation:` namespace mutate nothing and emit nothing.
+                    const claimText = typeof claim === 'string' ? claim : '';
+                    if (claimText.startsWith('reputation:') && belief) {
+                        const subject = rumor?.subject ?? claimText.slice('reputation:'.length);
+                        const verdict = clamp(Number.isFinite(belief.estimate) ? belief.estimate : num(rumor?.valueEstimate, .5));
+                        const weight = Math.max(0, num(belief.confidence, 0));
+                        if (weight > 0) {
+                            const publicBefore = this.reputation.get(subject);
+                            const publicAfter = this.reputation.update(subject, verdict, weight);
+                            const privateBefore = this.reputation.getPrivate(item.recipientId, subject);
+                            const privateAfter = this.reputation.updatePrivate(item.recipientId, subject, verdict, weight);
+                            this.commitEvent(this.allocateEvent({ type: 'REPUTATION_UPDATE', parent: deliveredEvent, scope: 'public', origin: 'RUMOR_DELIVERED', rumorId: item.rumorId, subjectId: subject, observerId: null, value: verdict, weight, valueBefore: publicBefore, valueAfter: publicAfter }));
+                            this.commitEvent(this.allocateEvent({ type: 'REPUTATION_UPDATE', parent: deliveredEvent, scope: 'private', origin: 'RUMOR_DELIVERED', rumorId: item.rumorId, subjectId: subject, observerId: item.recipientId, value: verdict, weight, valueBefore: privateBefore, valueAfter: privateAfter }));
+                        }
+                    }
                 }
                 return [];
             }
@@ -1503,6 +1606,13 @@ export class SocietyCore {
             default: throw new Error(`Unknown action kind "${kind}"`);
         }
     }
+    // Re-opened `Neural fear` row: the canonical feature vector the model consumes — the
+    // faction's numeric state in a fixed order, so a given faction always yields the same
+    // vector (doctrine is categorical and deliberately excluded).
+    fearFeatures(faction) {
+        const state = faction.state ?? {};
+        return ['fear', 'anger', 'grievance', 'threatPerception', 'threatConfidence', 'militaryConfidence', 'enemyStrengthEstimate', 'enemyIntentEstimate', 'resourceNeed', 'riskTolerance', 'legitimacy', 'domesticSupport', 'supplySecurity', 'opportunity'].map(key => num(state[key], 0));
+    }
     // Plain-object state for a future save/load layer; round-trips through deserialize.
     serialize() {
         return {
@@ -1529,6 +1639,7 @@ export class SocietyCore {
             raids: Object.fromEntries([...this.raids.entries()].map(([id, raid]) => [id, { ...raid }])),
             habituation: Object.fromEntries([...this.habituation.exposures.entries()].map(([key, exposure]) => [key, { ...exposure }])),
             hysteresis: Object.fromEntries([...this.hysteresis.actors.entries()].map(([id, controller]) => [id, { state: controller.state, stateTimer: controller.stateTimer, transitionHistory: controller.transitionHistory.map(entry => ({ ...entry })) }])),
+            neuralFear: this.neuralFear.serialize(),
             player: { ...this.player },
             warState: { ...this.warState },
             warLoot: this.warLoot,
@@ -1575,6 +1686,7 @@ export class SocietyCore {
         society.raids = new Map(Object.entries(json.raids ?? {}).map(([id, raid]) => [id, { ...raid }]));
         for (const [key, exposure] of Object.entries(json.habituation ?? {})) society.habituation.exposures.set(key, { ...exposure });
         for (const [id, controller] of Object.entries(json.hysteresis ?? {})) society.hysteresis.actors.set(id, { state: controller.state, stateTimer: controller.stateTimer, transitionHistory: (controller.transitionHistory ?? []).map(entry => ({ ...entry })) });
+        if (json.neuralFear) society.neuralFear.loadState(json.neuralFear);
         society.player = { hp: 100, maxHp: 100, alive: true, deaths: 0, ...(json.player ?? {}) };
         society.warState = { status: 'PEACE', pressure: 0, tensionThreshold: 30, warThreshold: 70, ...(json.warState ?? {}) };
         society.warLoot = num(json.warLoot, 0);

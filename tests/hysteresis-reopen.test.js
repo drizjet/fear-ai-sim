@@ -14,7 +14,9 @@ import { SocietyCore } from '../societycore.js';
 // produced the level it read. World time only, save/load round-trip, seeded-deterministic.
 // Mutants pinned: machine not driven in production (no transitions); hysteresis gap removed
 // (exitDown lifted to exitUp → oscillates where state must hold); minimum-duration gate
-// removed; book dropped from serialize.
+// removed; book dropped from serialize; morale not supplied to the production driver (the
+// legacy FREEZE branch becomes unreachable); RNG adapter passed the source object instead of
+// a draw (the seeded FREEZE roll throws the moment it is taken).
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const LEGACY_SHA256 = '40e5cb26595ff5c33b9ffc11c17816fdbcc1ff56615d20c334149abaf59a3da5';
@@ -124,6 +126,28 @@ describe('re-opened Hysteresis row: extracted source + V8 integration', () => {
         bare.tick({ actions: [damage(15)] });
         expect(bare.hysteresis.actors.size).toBe(0);
         expect(eventsOf(bare, 'FEAR_STATE_TRANSITION')).toHaveLength(0);
+    });
+
+    it('reaches the legacy FREEZE branch in production: the driver supplies morale and the RNG adapter draws', () => {
+        // every world draw is 0, so the legacy 5% FREEZE roll is certain the first time it is taken
+        const bowed = (morale) => {
+            const society = new SocietyCore({ rng: () => 0 });
+            society.addFaction('bowed', { fear: .9, threatPerception: 0 });
+            if (morale != null) society.setMorale('bowed', morale);
+            // eight readings: the ladder needs two per rung plus the post-PANIC gate window
+            for (let i = 0; i < 8; i += 1) society.tick({ actions: [damage(1, { factionId: 'bowed' })] });
+            return society;
+        };
+
+        const desperate = bowed(.3);
+        expect(eventsOf(desperate, 'FEAR_STATE_TRANSITION').map(event => `${event.from}->${event.to}`)).toContain('PANIC->FREEZE');
+        expect(desperate.hysteresis.getState('bowed')).toBe('FREEZE');
+
+        // no morale assigned → the branch short-circuits before the roll, exactly as before
+        const steady = bowed(null);
+        expect(eventsOf(steady, 'FEAR_STATE_TRANSITION').map(event => event.to)).not.toContain('FREEZE');
+        expect(steady.hysteresis.getState('bowed')).toBe('PANIC');
+        expect(desperate.auditEventGraph().ok).toBe(true);
     });
 
     it('round-trips the machine across save/load with seeded-identical continuation', () => {

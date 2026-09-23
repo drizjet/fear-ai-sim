@@ -8,9 +8,9 @@ checkout**. The monorepo's untouched `master` branch carries the legacy JS tree 
 located (blob + sha256 pinned below) or confirmed absent in both trees. Rows stay
 `SOURCE_ABSENT` — that is their *dispositioned* final form under the evidence rule:
 locating a legacy file does not put it into the V8 design, and extracting one is a separate,
-explicit decision (procedure at the bottom). **Re-opens executed 2026-09-23:** `Habituation`
-and then `Hysteresis` left `SOURCE_ABSENT` through that procedure (byte-exact extraction +
-V8 integration); the manifest below covers the remaining five rows' sources.
+explicit decision (procedure at the bottom). **Re-opens executed 2026-09-23:** `Habituation`,
+then `Hysteresis`, then `Neural fear` left `SOURCE_ABSENT` through that procedure (byte-exact
+extraction + V8 integration); the manifest below covers the remaining four rows' sources.
 
 Method (head of `origin/master` at time of verification: `1e72d61`):
 
@@ -31,8 +31,6 @@ git ls-tree -r origin/master --name-only | grep -i fearband   # 0 matches
 | brain.js | 163dfa7a184fda3e831b19ab7fa8cb65f02b3b1e | b35aa3952b2650492a2b9f4d025a7132c23c09a62a42835a3ed0b6fe1006d3d6 | PRESENT | FearCore live transitions,Brain scale cleanup |
 | vrsystem.js | ac84c092aa94b5a32ed1bd2511974c7856e5f375 | d2a9c628874785178fe16b776dbd94fc2344ec29871151773de94bf7a8b4f4cd | PRESENT | VR/biofeedback |
 | biofeedback.js | 050b8c4c8f72fe0c2d21919f73ab92e45c3fc4f4 | f39f795564d83a0039fb4b7b7fe1429daf5fa167ef5ce4ea066a9dafb63ab23a | PRESENT | VR/biofeedback |
-| neuralfear.js | b521978dcb05a29569bd51a905143f2e61c7e0be | 9b397180b7aad56f29c0a2c7197d832229b5b9f16f23e1644be6086ed2e4504c | PRESENT | Neural fear |
-| neuralnet.js | 3d320bb2f8fd6d23dd16c78bf785804cd418dc41 | 9218cbde832e30093cce32ac29246eab8acb8f15b48fb04249d25b511d924a63 | PRESENT | Neural fear |
 | tests/fearcore.test.js | ABSENT | ABSENT | ABSENT_BOTH | FearCore live transitions |
 
 - `upstream blob` = `git rev-parse origin/master:fear-ai-sim/<file>`; `sha256` = digest of
@@ -41,8 +39,9 @@ git ls-tree -r origin/master --name-only | grep -i fearband   # 0 matches
 - `ABSENT_BOTH` = the path exists in neither tree (the legacy fearcore test was never committed).
 - **FearBand (Rust)**: `git ls-tree -r origin/master --name-only` has 0 paths matching
   `fearband|fear_band|fear-band` — absent workspace-wide *and* upstream.
-- **Nothing in this manifest has been extracted into this checkout** — the guard asserts every
-  manifest file still does not exist locally.
+- **No remaining manifest entry has been extracted into this checkout** — the guard asserts every
+  manifest file still does not exist locally. An extracted row leaves the manifest entirely (the
+  three same-day re-opens did exactly that, adding a `legacy/` extraction + provenance row).
 
 ## Dispositions (per ledger row)
 
@@ -54,7 +53,7 @@ git ls-tree -r origin/master --name-only | grep -i fearband   # 0 matches
 | Habituation | **EXTRACTED_AND_REOPENED 2026-09-23** — first re-open: source extracted byte-exact to `legacy/habituation.js` (sha256 `df02134b…` verified every gate by `tests/habituation-reopen.test.js`), V8 integration `HabituationBook` + canonical `FEAR_HABITUATED` events; row is `IMPLEMENTED_AND_VERIFIED`. |
 | Hysteresis | **EXTRACTED_AND_REOPENED 2026-09-23** — second re-open: source extracted byte-exact to `legacy/hysteresis.js` (sha256 `40e5cb26…` verified every gate by `tests/hysteresis-reopen.test.js`), V8 integration `HysteresisBook` (asymmetric thresholds, minimum-duration gate, seeded FREEZE roll, world-time records) + canonical `FEAR_STATE_TRANSITION` events; row is `IMPLEMENTED_AND_VERIFIED`. |
 | VR/biofeedback | **DEFERRED_PRODUCT_SCOPE** — both located upstream; V8 scope excludes them; a product-scope decision reopens the row. |
-| Neural fear | **OPEN_BY_ABSENCE (evidence corrected)** — `neuralfear.js`/`neuralnet.js` *do* exist upstream (the checkout-scoped glob-0 claim now says so explicitly); wire/defer decision has blob-pinned sources. |
+| Neural fear | **EXTRACTED_AND_REOPENED 2026-09-23** — third re-open: both sources extracted byte-exact to `legacy/neuralfear.js` (sha256 `9b397180…`) and `legacy/neuralnet.js` (sha256 `9218cbde…`), verified every gate by `tests/neural-fear-reopen.test.js`; V8 integration `NeuralFearModel` (ReLU hidden ladder + sigmoid output, Xavier init, online gradient descent against the faction's ACTUAL fear, dropout, patience early stopping, running normalization — world RNG, lazy initialization, world-time records) consumed by canonical `NEURAL_FEAR_PREDICTION`/`NEURAL_FEAR_LEARNED` events; row is `IMPLEMENTED_AND_VERIFIED`. |
 
 ## Re-open procedure (explicit extraction)
 
@@ -78,3 +77,12 @@ step 3 → row `IMPLEMENTED_AND_VERIFIED`, manifest and both guards updated in t
 `HysteresisBook` in `socialcore.js` consumed by `FEAR_EVENT_RAISED`, every real transition a
 canonical `FEAR_STATE_TRANSITION` event, pinned by `tests/hysteresis-reopen.test.js`; step 3 →
 row `IMPLEMENTED_AND_VERIFIED`, manifest and both guards updated in the same change.
+
+**Third:** `Neural fear`, same day — step 1 → `legacy/neuralfear.js` (sha256
+`9b397180b7aad56f29c0a2c7197d832229b5b9f16f23e1644be6086ed2e4504c`, blob
+`b521978dcb05a29569bd51a905143f2e61c7e0be`) and `legacy/neuralnet.js` (sha256
+`9218cbde832e30093cce32ac29246eab8acb8f15b48fb04249d25b511d924a63`, blob
+`3d320bb2f8fd6d23dd16c78bf785804cd418dc41`), both recorded in `legacy/PROVENANCE.md`; step 2 →
+`NeuralFearModel` in `socialcore.js` consumed by `NEURAL_FEAR_PREDICT`/`NEURAL_FEAR_LEARN`,
+pinned by `tests/neural-fear-reopen.test.js`; step 3 → row `IMPLEMENTED_AND_VERIFIED`, manifest
+and both guards updated in the same change (manifest 10 → 8 entries, row sets 5 → 4).

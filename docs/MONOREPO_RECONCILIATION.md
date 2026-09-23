@@ -19,7 +19,7 @@ disjoint projects under one name.
   workspace root `.git` purge — see `ROOT-RESIDUE-NOTES.md` outside this directory).
 - Tree comparison, `HEAD` vs `origin/master:fear-ai-sim`:
   - shared paths: **4** — `.gitignore`, `README.md`, `package.json`, `package-lock.json`
-  - only in ours: **164** files at that head (8 production modules, 150 test suites at measurement — 156 suites by the end of 2026-09-23, docs, ledger, CI)
+  - only in ours: **164** files at that head (8 production modules, 150 test suites at measurement — 159 suites by the end of 2026-09-23, docs, ledger, CI)
   - only in theirs: **653** files (legacy runtime: `agent.js`, `brain.js`, `behaviortree.js`,
     `biofeedback.js`, `beliefs.js`, MASAC/Tauri/desktop assets, benchmarks, bin…)
   - `societycore.js` (the entire V8 core) **never existed on the remote** — `git show

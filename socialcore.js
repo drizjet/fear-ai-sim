@@ -28,7 +28,24 @@ export class AgentBelief {
     addEvidence(input) { const evidence = input instanceof BeliefEvidence ? input : new BeliefEvidence(input); this.evidence.push(evidence); if (this.evidence.length > this.maxEvidence) this.evidence.splice(0, this.evidence.length - this.maxEvidence); const weight = evidence.confidence * evidence.sourceTrust * (evidence.directObservation ? 1.25 : 1); this.confidence = clamp((this.confidence + weight) / 2); if (evidence.valueEstimate !== null) this.estimate = evidence.valueEstimate; this.lastUpdated = evidence.timestamp; return this; }
     // Belief aging is owned by SocietyCore (decayRouteBeliefs/decayRumorBeliefs, world clock).
 }
-const blendReputation = (old, value, weight) => { const w = Math.max(0, Number.isFinite(weight) ? weight : 1); old.value = (old.value * old.weight + clamp(value) * w) / Math.max(1, old.weight + w); old.weight += w; return old.value; };
+// Weighted blend against standing. A subject nobody has judged yet is anchored at neutral .5 by
+// the weight its first judgment does not itself carry, so weak evidence moves standing gently
+// TOWARD the judgment — a favorable rumor can no longer push standing below neutral. Every
+// previously pinned case is bit-identical: a full-weight first judgment still lands exactly on
+// its value (anchor 0), and once any weight has accumulated the blend is the plain weighted
+// average. Only the 0 < weight < 1 opening judgment changes (RESP-RUMOR-REPUTATION-EVIDENCE-001).
+const blendReputation = (old, value, weight) => {
+    const w = Math.max(0, Number.isFinite(weight) ? weight : 1);
+    const claimed = clamp(value);
+    if (old.weight <= 0) {
+        const anchor = Math.max(0, 1 - w);
+        old.value = (0.5 * anchor + claimed * w) / Math.max(1e-9, anchor + w);
+    } else {
+        old.value = (old.value * old.weight + claimed * w) / Math.max(1e-9, old.weight + w);
+    }
+    old.weight += w;
+    return old.value;
+};
 export class ReputationBook {
     constructor() { this.values = new Map(); this.privateValues = new Map(); }
     // PUBLIC channel: world-shared standing per subject (weighted blend, 0..1).
@@ -208,5 +225,184 @@ export class HabituationBook {
         const timeSince = Math.max(0, (Number.isFinite(now) ? now : 0) - exposure.lastExposure);
         const habituationLevel = Math.max(0, exposure.habituationLevel - this.config.recoveryRate * typeConfig.recoverySpeed * timeSince);
         return { exposureCount: exposure.count, habituationLevel, totalFearReduced: exposure.totalFearReduced };
+    }
+}
+const sigmoid = value => 1 / (1 + Math.exp(-value));
+// Re-opened `Neural fear` row (re-open procedure from docs/SOURCE_ABSENT_RECONCILIATION.md):
+// the legacy sources are extracted byte-exact (legacy/neuralfear.js, legacy/neuralnet.js —
+// blob + sha256 pinned in legacy/PROVENANCE.md) and the V8 integration keeps their semantics:
+// a feedforward MLP (Xavier/Glorot init, ReLU hidden layers, sigmoid output, online gradient
+// descent, dropout, early stopping, running feature normalization) predicting a fear level
+// from faction features. Three deviations, all forced by repository rules and documented:
+//   - weight/statistic draws come from the injectable serializable RNG (legacy used
+//     Math.random), and initialization is LAZY — constructing a world consumes ZERO draws, so
+//     every existing seeded RNG stream is untouched until the model is first used;
+//   - training-history records carry the caller's world time (no wall clock,
+//     RESP-TIME-OWNERSHIP-001);
+//   - the default architecture is compact (14 faction-state features → [8, 4] → 1) so a
+//     serialized model stays small; legacy's [64, 32] remains configurable.
+export class NeuralFearModel {
+    constructor({ rng = null, inputSize = 14, hiddenLayers = [8, 4], outputSize = 1, learningRate = .05, dropoutRate = .2, patience = 10, maxHistory = 50 } = {}) {
+        const source = randomSource();
+        this.rng = typeof rng === 'function' ? rng : () => source.next();
+        this.inputSize = Math.max(1, Math.floor(Number.isFinite(inputSize) ? inputSize : 14));
+        this.hiddenLayers = (Array.isArray(hiddenLayers) && hiddenLayers.length ? hiddenLayers : [8, 4]).map(size => Math.max(1, Math.floor(Number(size) || 1)));
+        this.outputSize = Math.max(1, Math.floor(Number.isFinite(outputSize) ? outputSize : 1));
+        this.learningRate = Number.isFinite(learningRate) && learningRate > 0 ? learningRate : .05;
+        this.dropoutRate = Math.max(0, Math.min(.9, Number.isFinite(dropoutRate) ? dropoutRate : .2));
+        this.patience = Math.max(1, Math.floor(Number.isFinite(patience) ? patience : 10));
+        this.maxHistory = Math.max(1, Math.floor(Number.isFinite(maxHistory) ? maxHistory : 50));
+        this.initialized = false;
+        this.weights = [];
+        this.biases = [];
+        this.featureMeans = null;
+        this.featureM2 = null;
+        this.sampleCount = 0;
+        this.bestLoss = Infinity;
+        this.patienceCounter = 0;
+        this.history = [];
+    }
+    draw() { return Number(this.rng()); }
+    // Lazy Xavier/Glorot initialization — the only place weight draws happen.
+    ensureInitialized() {
+        if (this.initialized) return;
+        const sizes = [this.inputSize, ...this.hiddenLayers, this.outputSize];
+        for (let layer = 0; layer < sizes.length - 1; layer += 1) {
+            const fanIn = sizes[layer];
+            const fanOut = sizes[layer + 1];
+            const scale = Math.sqrt(2 / (fanIn + fanOut));
+            const layerWeights = [];
+            for (let out = 0; out < fanOut; out += 1) {
+                const row = [];
+                for (let input = 0; input < fanIn; input += 1) row.push((this.draw() * 2 - 1) * scale);
+                layerWeights.push(row);
+            }
+            this.weights.push(layerWeights);
+            this.biases.push(new Array(fanOut).fill(0));
+        }
+        this.featureMeans = new Array(this.inputSize).fill(0);
+        this.featureM2 = new Array(this.inputSize).fill(0);
+        this.initialized = true;
+    }
+    // Running feature normalization (legacy behavior), world-time free and deterministic.
+    normalize(features = []) {
+        const means = this.featureMeans ?? new Array(this.inputSize).fill(0);
+        const m2 = this.featureM2 ?? new Array(this.inputSize).fill(0);
+        const n = this.sampleCount;
+        return means.map((mean, index) => {
+            const std = n > 1 ? Math.sqrt(Math.max(1e-12, m2[index] / n)) : 1;
+            const value = Number.isFinite(features[index]) ? features[index] : 0;
+            return (value - mean) / (std === 0 ? 1 : std);
+        });
+    }
+    forward(normalized, { dropout = false } = {}) {
+        const activations = [normalized];
+        const masks = [];
+        let current = normalized;
+        for (let layer = 0; layer < this.weights.length; layer += 1) {
+            const layerWeights = this.weights[layer];
+            const layerBiases = this.biases[layer];
+            const isOutput = layer === this.weights.length - 1;
+            const out = layerWeights.map((row, index) => {
+                let sum = layerBiases[index];
+                for (let input = 0; input < row.length; input += 1) sum += row[input] * current[input];
+                return isOutput ? sigmoid(sum) : Math.max(0, sum); // sigmoid output, ReLU hidden
+            });
+            if (dropout && !isOutput) {
+                // Plain legacy dropout: one RNG draw per hidden unit, masked to zero or kept.
+                const mask = out.map(() => (this.draw() < this.dropoutRate ? 0 : 1));
+                for (let index = 0; index < out.length; index += 1) out[index] *= mask[index];
+                masks.push(mask);
+            } else masks.push(null);
+            activations.push(out);
+            current = out;
+        }
+        return { activations, masks, prediction: activations[activations.length - 1][0] };
+    }
+    // Inference — trains nothing and drops nothing out. The first call pays the one-time lazy
+    // initialization (the only draw site); every later call consumes zero further draws.
+    predict(features = []) {
+        this.ensureInitialized();
+        const normalized = this.normalize(features);
+        const { prediction } = this.forward(normalized, { dropout: false });
+        return { prediction, normalized, sampleCount: this.sampleCount, initialized: true };
+    }
+    // One online gradient-descent step (legacy online learning) with dropout, early-stopping
+    // bookkeeping, and running normalization updates on the returned record.
+    learn(features = [], target = 0, { now = 0, dropout = true } = {}) {
+        this.ensureInitialized();
+        const normalized = this.normalize(features);
+        const goal = clamp(Number.isFinite(target) ? target : 0);
+        const pass = this.forward(normalized, { dropout });
+        const { activations, masks } = pass;
+        const prediction = pass.prediction;
+        const lossBefore = (prediction - goal) ** 2;
+        // Backpropagation: sigmoid derivative at the output, then ReLU (+dropout mask) per
+        // hidden layer, updating every weight and bias against its own input activation.
+        let delta = [2 * (prediction - goal) * prediction * (1 - prediction)];
+        for (let layer = this.weights.length - 1; layer >= 0; layer -= 1) {
+            const layerWeights = this.weights[layer];
+            const layerBiases = this.biases[layer];
+            const previous = activations[layer];
+            for (let out = 0; out < layerWeights.length; out += 1) {
+                for (let input = 0; input < layerWeights[out].length; input += 1) {
+                    layerWeights[out][input] -= this.learningRate * delta[out] * previous[input];
+                }
+                layerBiases[out] -= this.learningRate * delta[out];
+            }
+            if (layer > 0) {
+                const hidden = activations[layer];
+                const mask = masks[layer - 1] ?? hidden.map(() => 1);
+                delta = hidden.map((activation, unit) => {
+                    let sum = 0;
+                    for (let out = 0; out < layerWeights.length; out += 1) sum += layerWeights[out][unit] * delta[out];
+                    return sum * (activation > 0 ? 1 : 0) * mask[unit];
+                });
+            }
+        }
+        return this.finishLearn({ features, goal, prediction, lossBefore, now });
+    }
+    finishLearn({ features, goal, prediction, lossBefore, now }) {
+        const n = this.sampleCount + 1;
+        for (let index = 0; index < this.inputSize; index += 1) {
+            const value = Number.isFinite(features[index]) ? features[index] : 0;
+            const deltaValue = value - this.featureMeans[index];
+            this.featureMeans[index] += deltaValue / n;
+            this.featureM2[index] += deltaValue * (value - this.featureMeans[index]);
+        }
+        this.sampleCount = n;
+        const lossAfter = (this.forward(this.normalize(features), { dropout: false }).prediction - goal) ** 2;
+        this.history.push({ at: now, loss: lossBefore, sampleCount: n });
+        if (this.history.length > this.maxHistory) this.history.shift();
+        if (lossBefore < this.bestLoss - 1e-9) { this.bestLoss = lossBefore; this.patienceCounter = 0; }
+        else this.patienceCounter += 1;
+        return { prediction, lossBefore, lossAfter, sampleCount: n, earlyStopped: this.patienceCounter >= this.patience, worldTime: now };
+    }
+    serialize() {
+        return {
+            initialized: this.initialized, inputSize: this.inputSize, hiddenLayers: [...this.hiddenLayers], outputSize: this.outputSize,
+            learningRate: this.learningRate, dropoutRate: this.dropoutRate, sampleCount: this.sampleCount,
+            weights: this.weights.map(layer => layer.map(row => [...row])), biases: this.biases.map(row => [...row]),
+            featureMeans: this.featureMeans ? [...this.featureMeans] : null, featureM2: this.featureM2 ? [...this.featureM2] : null,
+            bestLoss: Number.isFinite(this.bestLoss) ? this.bestLoss : null, patienceCounter: this.patienceCounter, history: this.history.map(entry => ({ ...entry })),
+        };
+    }
+    loadState(state = {}) {
+        if (!state?.initialized) return this; // an unused model stays lazily uninitialized
+        this.inputSize = Math.max(1, Math.floor(Number(state.inputSize) || this.inputSize));
+        this.hiddenLayers = (state.hiddenLayers ?? this.hiddenLayers).map(size => Math.max(1, Math.floor(Number(size) || 1)));
+        this.outputSize = Math.max(1, Math.floor(Number(state.outputSize) || this.outputSize));
+        if (Number.isFinite(state.learningRate) && state.learningRate > 0) this.learningRate = state.learningRate;
+        if (Number.isFinite(state.dropoutRate)) this.dropoutRate = Math.max(0, Math.min(.9, state.dropoutRate));
+        this.weights = (state.weights ?? []).map(layer => layer.map(row => row.map(Number)));
+        this.biases = (state.biases ?? []).map(row => row.map(Number));
+        this.featureMeans = (state.featureMeans ?? new Array(this.inputSize).fill(0)).map(Number);
+        this.featureM2 = (state.featureM2 ?? new Array(this.inputSize).fill(0)).map(Number);
+        this.sampleCount = Math.max(0, Math.floor(Number(state.sampleCount) || 0));
+        this.bestLoss = Number.isFinite(state.bestLoss) ? state.bestLoss : Infinity;
+        this.patienceCounter = Math.max(0, Math.floor(Number(state.patienceCounter) || 0));
+        this.history = (state.history ?? []).map(entry => ({ ...entry }));
+        this.initialized = true;
+        return this;
     }
 }

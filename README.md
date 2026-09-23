@@ -2,7 +2,7 @@
 
 Orientation for this repository. **Evidence rule: repository evidence outranks historical claims.** Development verification is not supervisor acceptance.
 
-**Current gate: 156 suites / 490 tests passing** (`npm test`) — as of 2026-09-23.
+**Current gate: 159 suites / 513 tests passing** (`npm test`) — as of 2026-09-23.
 
 ## What this is
 
@@ -13,7 +13,7 @@ Scope: deterministic world clock, event ids, market stock/resource flows, inject
 ## Quick start
 
 ```bash
-npm test          # full gate: 156 suites / 490 tests (ESM + Jest via --experimental-vm-modules)
+npm test          # full gate: 159 suites / 513 tests (ESM + Jest via --experimental-vm-modules)
 ```
 
 Key APIs (see `tests/world-tick.test.js` for canonical world setup):
@@ -42,12 +42,12 @@ ground truth → perception → belief/confidence → appraisal → affordances 
 
 | Module | Lines | Role |
 |---|---|---|
-| `societycore.js` | 1592 | The world: clock, event allocator/graph, action kinds, markets, routes, rumors, factions, settlements, roaming groups, queues, advisory wiring, serialize/deserialize, `causalChain`, `auditEventGraph` |
+| `societycore.js` | 1704 | The world: clock, event allocator/graph, action kinds, markets, routes, rumors, factions, settlements, roaming groups, queues, advisory wiring, retaliation chain, neural-fear integration, serialize/deserialize, `causalChain`, `auditEventGraph` |
 | `utilitycore.js` | 44 | Shared utility/affordance runtime: `AffordanceRegistry` (id-keyed, duplicate-rejecting, actor/target type gating, runtime register/unregister) + `UtilityRuntime` (prerequisites hard-block → response-curve/weight considerations → clamped-mean `finalScore` → narrow-band selection via shared RNG) — **canonical owner of scoring and affordances** |
 | `decisioncore.js` | 18 | Thin facade over `UtilityRuntime` (unchanged public API and RNG consumption order) |
 | `interactioncore.js` | 14 | Character affordance catalog (`INTERACTION_ACTIONS`) on the shared registry; `decide`/`validate` |
 | `advisorygate.js` | 6 | Pure validation gate (`source: 'ADVISORY_VALIDATOR'`), never mutates state; the only approval path for `INTERACTION_EXECUTION` |
-| `socialcore.js` | 211 | `Personality`, `Morale`, `AgentBelief`/`BeliefEvidence`, `ReputationBook`, `HabituationBook`, `HysteresisBook` — the canonical owners (no `brain.js` in this checkout) |
+| `socialcore.js` | 407 | `Personality`, `Morale`, `AgentBelief`/`BeliefEvidence`, `ReputationBook`, `HabituationBook`, `HysteresisBook`, `NeuralFearModel` — the canonical owners (no `brain.js` in this checkout) |
 | `macrocore.js` | 4 | `routeCost` (perceived risk), `raidUtility`, `FactionState` |
 | `randomcore.js` | 24 | `mulberry32`/`randomSource` — every random draw flows through the injectable serializable RNG |
 
@@ -106,6 +106,6 @@ Mutation-gate/defect policy: when adversarial tests or new tests expose a real d
 Counters: `ACTIONABLE_OPEN 0`, `P0_OPEN 0`, `P1_OPEN 0`, `FAILED_TESTS 0`, `BLOCKED_EXTERNAL 1` (Knowledge DB; git/source fingerprinting unblocked — repo initialized 2026-09-22, branch `main` pushed to drizjet/fear-ai-sim 2026-09-23 with a green first CI run), `P2_OPEN` many (world-expansion).
 
 - Closed 2026-09-23: `RESP-FACTION-EVALUATION-RAID-CHAIN-001` (`tests/faction-evaluation-raid-chain.test.js`, 8/8 with 4/4 negative controls) — a production DecisionCore RAID choice now drives `FACTION_RAID_EVALUATION` → `FACTION_RAID_DISPATCH` → `FACTION_RAID_RESOLUTION` as one TURN-rooted lineage (reference-guard skip markers for unregistered/self targets, context force/bagSize/defense honored, save/load-verified). Also `RESP-REPUTATION-PUBLIC-PRIVATE-001` (`tests/reputation-public-private.test.js`, 6/6 with 4/4 negative controls) — public/private reputation channels as canonical `REPUTATION_UPDATE` events plus production DECISION consumption via `evaluationContext`. The autopilot now runs LIVE: `tools/run-autopilot-step.mjs` drives it over the real runner protocol (certificate tool call executed on the platform, chat call issued to codebuff.com) and halts at **HTTP 402 Payment Required** for model `mimo-v2-flash` — account credits, not code; retry with `AUTOPILOT_MODEL=<model>` once topped up. Earlier closures: player-to-invasion, routing/trade/economy (both 2026-09-23), convoy loop (2026-09-22).
-- **Next responsibility: `RESP-FACTION-RETALIATION-LOOP-001`** — the struck faction strikes back: a raid RESOLUTION's outcome drives a grievance/escalation state on the victim that evaluates a counter-raid (the victim acts as its own canonical evaluation→dispatch→resolution chain against the attacker), closing the Factions row's retaliation leg. Selection closed 2026-09-23: `RESP-HYSTERESIS-REOPEN-001` (second re-open — `legacy/hysteresis.js` byte-exact + `HysteresisBook`/canonical `FEAR_STATE_TRANSITION`, `tests/hysteresis-reopen.test.js` 8/8) and `RESP-FACTION-AUTONOMOUS-TICK-001` (`FACTION_MACRO_TICK` autonomous faction turns — `tests/faction-macro-tick.test.js` 7/7), after `RESP-FACTION-EVALUATION-RAID-CHAIN-001` (evaluation→raid chain, above), `RESP-FACTION-RAID-LOOP-001` (the orphaned `evaluateRaid`/`raidUtility`/`escalationLevel` macro layer is production-wired — `tests/faction-raid-loop.test.js` 7/7, 7/7 negative controls) and the Habituation re-open (`legacy/habituation.js` byte-exact + `HabituationBook`/`FEAR_HABITUATED` — five `SOURCE_ABSENT` rows remain). Earlier: `RESP-SOURCE-ABSENT-RECONCILIATION-001` (blob+sha256 manifest `docs/SOURCE_ABSENT_RECONCILIATION.md`, guard suite, monorepo option 1 executed — default branch `main`, master untouched) — divergence facts: `docs/MONOREPO_RECONCILIATION.md`.
-- Five `SOURCE_ABSENT` rows await their sources actually landing in this checkout (simulation/agents/combat, FearCore, brain, VR/biofeedback, neural fear) — re-open only through the proven procedure (byte-exact extraction + provenance + guard tripwire). CI is `IMPLEMENTED_AND_VERIFIED` (green runs on `main`, cited in the ledger).
+- **Next responsibility: `RESP-FEARCORE-REOPEN-001`** — the fourth re-open through the proven procedure: `legacy/fearcore.js` (blob `185494c8…`) and `legacy/brain.js` (blob `163dfa7a…`) extracted byte-exact with provenance, a V8 live fear-transition primitive integrated in production, and the `FearCore live transitions` row dispositioned (its cited test is absent in *both* trees, so the row's disposition must say exactly what could and could not be verified). Closed 2026-09-23: `RESP-FACTION-RETALIATION-LOOP-001` (the struck faction evaluates and runs its own counter-raid off the resolution that hit it — `tests/faction-retaliation-loop.test.js` 8/8), `RESP-RUMOR-REPUTATION-EVIDENCE-001` (delivered `reputation:` claims judge their subject from ARRIVED evidence, moving both channels — `tests/rumor-reputation-evidence.test.js` 6/6) and `RESP-NEURAL-FEAR-REOPEN-001` (third re-open — `legacy/neuralfear.js` + `legacy/neuralnet.js` byte-exact, `NeuralFearModel` predicting/learning in production — `tests/neural-fear-reopen.test.js` 8/8); the same wave fixed three production defects (the fear machine's RNG adapter threw on the seeded FREEZE roll, production never supplied morale so the legacy FREEZE branch was unreachable, and the reputation blend pushed standing the wrong way for sub-unit weights) — four `SOURCE_ABSENT` rows remain. Earlier: `RESP-HYSTERESIS-REOPEN-001`, `RESP-FACTION-AUTONOMOUS-TICK-001`, `RESP-FACTION-EVALUATION-RAID-CHAIN-001`, `RESP-FACTION-RAID-LOOP-001`, the Habituation re-open, `RESP-SOURCE-ABSENT-RECONCILIATION-001` (blob+sha256 manifest `docs/SOURCE_ABSENT_RECONCILIATION.md`, guard suite, monorepo option 1 executed — default branch `main`, master untouched) — divergence facts: `docs/MONOREPO_RECONCILIATION.md`.
+- Four `SOURCE_ABSENT` rows await their sources actually landing in this checkout (simulation/agents/combat, FearCore, brain, VR/biofeedback) — re-open only through the proven procedure (byte-exact extraction + provenance + guard tripwire). CI is `IMPLEMENTED_AND_VERIFIED` (green runs on `main`, cited in the ledger).
 - **Global completion is NOT claimed and no stop certificate exists**: `docs/FEAR_AI_GLOBAL_STOP_CERTIFICATE.json` has never been created — a valid certificate can only come from an independent supervisor (never from an executor running the campaign), so every closure above is development-verified only..

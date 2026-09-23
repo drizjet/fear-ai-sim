@@ -50,17 +50,18 @@ describe('RESP-LEDGER-STALE-CLAIMS-AUDIT-001: completion ledger integrity', () =
         expect(violations).toEqual([]);
     });
 
-    it('the five remaining stale rows are explicitly retracted or blocked with absence evidence', () => {
+    it('the four remaining stale rows are explicitly retracted or blocked with absence evidence', () => {
         const retracted = rows.filter(row => row.status === 'SOURCE_ABSENT').map(row => row.area).sort();
-        // Habituation then Hysteresis left SOURCE_ABSENT on 2026-09-23 through the re-open
-        // procedure (extract byte-exact + V8 integration) — the row list is strict so a sixth
-        // can only appear here.
+        // Habituation, then Hysteresis, then Neural fear left SOURCE_ABSENT on 2026-09-23 through
+        // the re-open procedure (extract byte-exact + V8 integration) — the row list is strict so
+        // a fifth can only appear here.
         expect(retracted).toEqual([
             'Brain scale cleanup', 'FearCore live transitions',
-            'Neural fear', 'Simulation/agents/combat', 'VR/biofeedback',
+            'Simulation/agents/combat', 'VR/biofeedback',
         ]);
         expect(rows.find(row => row.area === 'Habituation').status).toBe('IMPLEMENTED_AND_VERIFIED'); // re-opened row
         expect(rows.find(row => row.area === 'Hysteresis').status).toBe('IMPLEMENTED_AND_VERIFIED'); // second re-opened row
+        expect(rows.find(row => row.area === 'Neural fear').status).toBe('IMPLEMENTED_AND_VERIFIED'); // third re-opened row
         for (const row of rows.filter(item => item.status === 'SOURCE_ABSENT')) {
             expect(row.evidence).toMatch(/absent|retracted|no workflow/i);
             expect(row.remaining).toMatch(/Re-open only when the cited sources exist|workflow file/i);

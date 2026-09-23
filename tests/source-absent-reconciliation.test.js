@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from '@jest/globals';
 
-// RESP-SOURCE-ABSENT-RECONCILIATION-001 — the five SOURCE_ABSENT completion-ledger rows are
+// RESP-SOURCE-ABSENT-RECONCILIATION-001 — the four remaining SOURCE_ABSENT ledger rows are
 // dispositioned against the legacy monorepo tree (origin/master:fear-ai-sim/): every cited file
 // is blob+sha256 pinned in docs/SOURCE_ABSENT_RECONCILIATION.md, every ledger row cites that
 // manifest, and no legacy source has been extracted into this checkout. The guard re-resolves
@@ -60,13 +60,12 @@ describe('SOURCE_ABSENT reconciliation manifest', () => {
         expect(ledgerRows.map(row => row.name).sort()).toEqual([
             'Brain scale cleanup',
             'FearCore live transitions',
-            'Neural fear',
             'Simulation/agents/combat',
             'VR/biofeedback',
-        ]); // five remaining SOURCE_ABSENT rows — Habituation then Hysteresis left via the re-open procedure 2026-09-23 (mutant: a row added/dropped → fails here)
+        ]); // four remaining SOURCE_ABSENT rows — Habituation, then Hysteresis, then Neural fear left via the re-open procedure 2026-09-23 (mutant: a row added/dropped → fails here)
 
         const entries = parseManifest();
-        expect(entries.length).toBe(10); // habituation.js and hysteresis.js were extracted, so they left the manifest
+        expect(entries.length).toBe(8); // habituation.js, hysteresis.js, neuralfear.js and neuralnet.js were extracted, so they left the manifest
         for (const entry of entries) {
             expect(['PRESENT', 'ABSENT_BOTH']).toContain(entry.presence); // mutant: presence mislabeled
             expect(entry.rows.length).toBeGreaterThan(0);
