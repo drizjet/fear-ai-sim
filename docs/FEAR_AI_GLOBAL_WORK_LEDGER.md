@@ -99,6 +99,8 @@ Finish the public/private reputation flows behind the ledger's `Reputation/trust
 - Ledger integrity suite: 3/3 passing; phantom-citation mutant killed (1 failure); 8 rows retracted to SOURCE_ABSENT, Knowledge DB recorded BLOCKED_EXTERNAL, Reputation citation corrected.
 - Crime/justice/legitimacy/migration suite: 7/7 passing; legitimacy-write, report-math, pre-justice-legitimacy, and chain-parentage mutants killed — production restored and re-verified after each.
 - Orientation doc consistency suite: 4/4 passing; it caught three phantom README suite citations on first run (corrected) and, on the 2026-09-22 audit, the stale 142/405 IMPLEMENTATION_STATUS pointer; gate-drift, doc-map-rename, and next-responsibility-mismatch mutants killed.
-- Full Jest gate: 146/146 suites and 430/430 tests passing.
+- Remote CI first run: branch `main` pushed to `drizjet/fear-ai-sim` 2026-09-23 (monorepo `master` untouched) — Actions run [35874405000](https://github.com/drizjet/fear-ai-sim/actions/runs/35874405000) `success`, `npm ci` + full 149/443 gate on ubuntu-latest; `CI` row moved PARTIALLY_IMPLEMENTED → IMPLEMENTED_AND_VERIFIED.
+- Git fingerprint: repo initialized 2026-09-22 (branch `main`), pushed to origin 2026-09-23 — fingerprintable at HEAD and on the remote.
+- Full Jest gate: 149/149 suites and 443/443 tests passing.
 - Existing route, economy, material, persistence, and mutation gates remain green.
 - No relevant tests are red.

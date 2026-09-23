@@ -103,7 +103,7 @@ Mutation-gate/defect policy: when adversarial tests or new tests expose a real d
 
 ## Open work (2026-09-23)
 
-Counters: `ACTIONABLE_OPEN 0`, `P0_OPEN 0`, `P1_OPEN 0`, `FAILED_TESTS 0`, `BLOCKED_EXTERNAL 1` (Knowledge DB; git/source fingerprinting unblocked 2026-09-22 — repo initialized inside fear-ai-sim), `P2_OPEN` many (world-expansion).
+Counters: `ACTIONABLE_OPEN 0`, `P0_OPEN 0`, `P1_OPEN 0`, `FAILED_TESTS 0`, `BLOCKED_EXTERNAL 1` (Knowledge DB; git/source fingerprinting unblocked — repo initialized 2026-09-22, branch `main` pushed to drizjet/fear-ai-sim 2026-09-23 with a green first CI run), `P2_OPEN` many (world-expansion).
 
 - Closed 2026-09-23: `RESP-PLAYER-INVASION-CHAIN-001` (`tests/player-invasion-chain.test.js`) and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001` (`tests/routing-trade-economy.test.js`) — both development-verified with negative controls (4/4 mutants killed), conservation checks, and save/load continuation. The autopilot controller is runnable again: `.agents/fear-ai-autopilot.mjs` loads through the installed `@codebuff/sdk` 0.10.7 (`loadLocalAgents` clean, `validateAgents` success with 0 errors) and its loop is driven headlessly by `tests/autopilot-agent.test.js`.
 - **Next responsibility: `RESP-REPUTATION-PUBLIC-PRIVATE-001`** — finish the public/private reputation flows behind the `Reputation/trust` PARTIALLY_IMPLEMENTED row through canonical parented events, save/load-verified. No PROPOSED production loop remains: routing/trade/economy and player-to-invasion both closed 2026-09-23.

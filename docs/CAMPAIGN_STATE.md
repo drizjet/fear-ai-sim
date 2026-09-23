@@ -97,6 +97,7 @@ Gate after fixes: **144 suites / 421 tests passing** (5 new cases, 0 failures).
 - Merchant economy loop suite: `tests/routing-trade-economy.test.js` — 5/5 passing (plan→ship→deliver→price-response lineage, exact two-market conservation, WAIT/REJECTED paths, input guards, save/load continuation).
 - Autopilot runnable suite: `tests/autopilot-agent.test.js` — 3/3 passing; `.agents/fear-ai-autopilot.mjs` loads through the installed `@codebuff/sdk` 0.10.7 (`loadLocalAgents` clean, `validateAgents` success with 0 errors), its controller loop driven headlessly (sync `function*` co-style per the SDK's `isValidGeneratorFunction`).
 - Negative controls for the 2026-09-23 wave: lethal double-pressure removed (killed), war-state gate removed (killed), war-loot credit removed (killed ×2), profitability gate removed (killed) — all four attributed to distinct pins, production restored and re-verified green.
+- Remote CI: branch `main` pushed to `drizjet/fear-ai-sim` 2026-09-23 (the monorepo's `master` untouched — our checkout is its `fear-ai-sim/` subtree, pushed as a new root branch); first Actions run green — [run 35874405000](https://github.com/drizjet/fear-ai-sim/actions/runs/35874405000), `npm ci` + the full 149/443 gate on ubuntu-latest. The `CI` ledger row moves PARTIALLY_IMPLEMENTED → IMPLEMENTED_AND_VERIFIED.
 - Full gate: **149/149 suites, 443/443 tests passing**.
 - Existing route, economy, material, persistence, and mutation gates remain green.
 
