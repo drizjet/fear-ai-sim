@@ -923,7 +923,37 @@ export class SocietyCore {
                 if (selected === 'PATROL') faction.state.supplySecurity = Math.min(1, faction.state.supplySecurity + 0.1);
                 if (selected === 'HOLD' && Number.isFinite(action.context?.cooperation)) faction.state.legitimacy = this.updateLegitimacy(faction.state.legitimacy, { cooperation: action.context.cooperation });
                 faction.history.push({ tick: this.now(), target: target.id, selected, score: result.candidates.find(candidate => candidate.action === selected)?.finalScore ?? 0 });
-                return this.allocateEvent({ type: 'FACTION_EVALUATION', parent, factionId: faction.id, targetId: target.id, selected, legitimacy: faction.state.legitimacy, resourceNeed: faction.state.resourceNeed, supplySecurity: faction.state.supplySecurity, alternatives: result.alternatives.map(candidate => ({ action: candidate.action, score: candidate.finalScore })) });
+                const evaluation = this.allocateEvent({ type: 'FACTION_EVALUATION', parent, factionId: faction.id, targetId: target.id, selected, legitimacy: faction.state.legitimacy, resourceNeed: faction.state.resourceNeed, supplySecurity: faction.state.supplySecurity, alternatives: result.alternatives.map(candidate => ({ action: candidate.action, score: candidate.finalScore })) });
+                // RESP-FACTION-EVALUATION-RAID-CHAIN-001: a production RAID choice (DecisionCore)
+                // dispatches through the raid loop instead of only nudging resourceNeed. The
+                // reference guards decide BEFORE any chain event exists: an unregistered or self
+                // target is recorded as a skip ON this event (existing worlds rely on that path),
+                // never a throw. Same contract as MERCHANT_ECONOMY_CYCLE: earlier stages commit
+                // here so each child resolves its committed parent at allocation time; EVERY path
+                // returns exactly one uncommitted tail event for the turn driver to commit.
+                if (selected !== 'RAID') return evaluation;
+                const targetFaction = target.id == null ? null : this.factions.get(target.id) ?? null;
+                const chainable = Boolean(targetFaction) && targetFaction !== faction;
+                if (!chainable) {
+                    return this.allocateEvent({ ...evaluation, raidChain: targetFaction === faction ? 'SKIPPED_SELF_TARGET' : 'SKIPPED_TARGET_NOT_REGISTERED' });
+                }
+                this.commitEvent(evaluation);
+                // Stage 1: the macro-layer raid evaluation, scored from the SAME context
+                // DecisionCore chose from (finite numbers only — rng stays out).
+                const values = Object.fromEntries(Object.entries(action.context ?? {}).filter(([key, value]) => key !== 'rng' && typeof value === 'number' && Number.isFinite(value)));
+                const raidEvaluation = this.executeAction({ kind: 'FACTION_RAID_EVALUATION', faction: faction.id, targetId: target.id, values }, evaluation);
+                this.commitEvent(raidEvaluation);
+                // Stage 2: dispatch — force/bagSize honor the caller's context, otherwise they
+                // default from the attacker's confidence and half the target's stash.
+                const force = Number.isFinite(action.context?.force) && action.context.force > 0 ? action.context.force : Math.max(.1, num(faction.state.militaryConfidence, .5) * 10);
+                const bagSize = Number.isFinite(action.context?.bagSize) && action.context.bagSize >= 0 ? action.context.bagSize : Math.floor(num(targetFaction.loot, 0) / 2);
+                const raidId = `${evaluation.id}:raid`;
+                const dispatch = this.executeAction({ kind: 'FACTION_RAID_DISPATCH', raidId, faction: faction.id, targetId: target.id, force, bagSize }, raidEvaluation);
+                if (dispatch.status !== 'RAIDING') return dispatch; // REJECTED — nothing to resolve
+                this.commitEvent(dispatch);
+                // Stage 3: one world-RNG draw; defense honors context or the defender's confidence.
+                const defense = Number.isFinite(action.context?.defense) && action.context.defense >= 0 ? action.context.defense : Math.max(0, num(targetFaction.state.militaryConfidence, .5) * 10);
+                return this.executeAction({ kind: 'FACTION_RAID_RESOLUTION', raidId, defense }, dispatch);
             }
             // RESP-FACTION-RAID-LOOP-001: the faction raid loop — production-wires the once-
             // orphaned macro layer (FactionRuntime.evaluateRaid → macrocore raidUtility and

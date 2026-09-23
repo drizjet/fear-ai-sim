@@ -12,7 +12,7 @@ Repository evidence outranks historical claims. `DEVELOPMENT_VERIFIED` is not su
 - `P2_OPEN`: many open-ended world-expansion items
 - `BLOCKED_EXTERNAL`: 1 (Knowledge DB outside checkout; git/source fingerprinting unblocked 2026-09-22 — repo initialized inside fear-ai-sim, fingerprintable at HEAD)
 - `FAILED_TESTS`: 0
-- `CURRENT_TEST_GATE`: 153 suites / 467 tests green
+- `CURRENT_TEST_GATE`: 154 suites / 475 tests green
 
 ## Recently verified
 
@@ -70,9 +70,9 @@ The convoy/escort/bandit loop runs as parent-chained canonical events (`CONVOY_D
 
 ## Current selected responsibility
 
-`RESP-FACTION-EVALUATION-RAID-CHAIN-001` — open.
+`RESP-HYSTERESIS-REOPEN-001` — open.
 
-Chain `FACTION_EVALUATION`'s RAID selection (DecisionCore) into the raid loop: a production RAID choice must dispatch through `FACTION_RAID_EVALUATION` → `FACTION_RAID_DISPATCH` → resolution as one canonical lineage, save/load-verified with conservation. Selection closed 2026-09-23: `RESP-FACTION-RAID-LOOP-001` (dormant `evaluateRaid`/`raidUtility`/`escalationLevel` production-wired — `tests/faction-raid-loop.test.js` 7/7 with 7/7 negative controls; same day the Habituation row was re-opened — `legacy/habituation.js` byte-exact, `HabituationBook`/`FEAR_HABITUATED` in production, six `SOURCE_ABSENT` rows remain). Earlier: `RESP-SOURCE-ABSENT-RECONCILIATION-001` (blob+sha256 manifest + guards, monorepo option 1 executed), `RESP-REPUTATION-PUBLIC-PRIVATE-001` (public/private channels + production decision consumption, 6/6 with 4/4 negative controls), after `RESP-PLAYER-INVASION-CHAIN-001` and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001`.
+Re-open the `Hysteresis` SOURCE_ABSENT row exactly the way the Habituation re-open proved: byte-exact extraction of `hysteresis.js` from the upstream blob already pinned in `docs/SOURCE_ABSENT_RECONCILIATION.md` (blob `208cbffc…`, sha256 `40e5cb26…`) with recorded provenance, V8 integration through canonical events on world-clock only, then the row moves `SOURCE_ABSENT → IMPLEMENTED_AND_VERIFIED` through the designed tripwire (manifest + both integrity guards). Selection closed 2026-09-23: `RESP-FACTION-EVALUATION-RAID-CHAIN-001` (production RAID choice → raid loop as one TURN-rooted lineage — `tests/faction-evaluation-raid-chain.test.js` 8/8 with 4/4 negative controls), after `RESP-FACTION-RAID-LOOP-001` (dormant `evaluateRaid`/`raidUtility`/`escalationLevel` production-wired — `tests/faction-raid-loop.test.js` 7/7 with 7/7 negative controls; same day the Habituation row was re-opened — `legacy/habituation.js` byte-exact, `HabituationBook`/`FEAR_HABITUATED` in production, six `SOURCE_ABSENT` rows remain). Earlier: `RESP-SOURCE-ABSENT-RECONCILIATION-001` (blob+sha256 manifest + guards, monorepo option 1 executed), `RESP-REPUTATION-PUBLIC-PRIVATE-001` (public/private channels + production decision consumption, 6/6 with 4/4 negative controls), after `RESP-PLAYER-INVASION-CHAIN-001` and `RESP-ROUTING-TRADE-ECONOMY-LOOP-001`.
 
 ## Verification record
 
@@ -91,8 +91,10 @@ Chain `FACTION_EVALUATION`'s RAID selection (DecisionCore) into the raid loop: a
 - Raid contract suite: `tests/faction-raid-loop.test.js` — 7/7 (lineage, `raidUtility` scoring + `escalationLevel` surfaced, DEESCALATE rejection, stage gates, defeat path, conservation, save/load, determinism).
 - Habituation re-open 2026-09-23: `legacy/habituation.js` byte-exact (sha256 pinned, provenance recorded), `HabituationBook` + canonical `FEAR_HABITUATED` events wired into `FEAR_EVENT_RAISED`; row `SOURCE_ABSENT → IMPLEMENTED_AND_VERIFIED`; `tests/habituation-reopen.test.js` 7/7; manifest + both integrity guards updated through the tripwire.
 - Negative controls for both contracts: 7/7 mutants killed, each attributed by per-mutant isolation run (stage gate, victory inversion, loot credit, unattenuated gain, parentage, serialize drop, novelty), production restored and re-verified.
-- Live autopilot probe 2026-09-23 (default model): still 402 — account-level blocker reconfirmed.
-- Full Jest gate: 153/153 suites and 467/467 tests passing.
+- Evaluation→raid chain suite: `tests/faction-evaluation-raid-chain.test.js` — 8/8 (one-TURN lineage via `causalChain`, context force/bagSize/defense overrides, DEESCALATE → REJECTED stop, `raidChain` skip markers for unregistered/self targets, non-RAID selections unchanged, `worldStep` production entry, save/load bit-for-bit, determinism).
+- Negative controls for the chain: chain never executes (5 failures), resolution stage dropped (4 failures), reference guard removed (killed — chain-suite skip test + legacy `event-causality-belief-path`), context overrides ignored (1 failure) — 4/4 isolated kills, production restored and re-verified.
+- Live autopilot probe 2026-09-23 (default model): still 402 — account-level blocker reconfirmed after the chain wave.
+- Full Jest gate: 154/154 suites and 475/475 tests passing.
 - Latency/decay/distortion/recipient-local suite: 11/11 passing.
 - Negative controls: latency-decay mutant (3 failures), recipient-trust mutant (2 failures), raw-relay mutant (1 failure) — all killed, production restored.
 - Hidden-truth audit: 2/2 passing.
