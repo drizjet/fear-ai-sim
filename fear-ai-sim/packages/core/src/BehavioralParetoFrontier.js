@@ -61,6 +61,7 @@ export class BehavioralParetoFrontier {
 
         this.evaluatedPopulation = [];
         this.paretoFronts = [];
+        this._candidateSeq = 0;
     }
 
     /**
@@ -74,7 +75,7 @@ export class BehavioralParetoFrontier {
             throw new Error('[BehavioralParetoFrontier] Candidate must be a non-null object');
         }
 
-        const candidateId = candidate.id || `candidate_${Math.random().toString(36).substring(2, 8)}`;
+        const candidateId = candidate.id || `candidate_${++this._candidateSeq}`;
         const traits = candidate.traits || { ...candidate };
         const behaviorCard = candidate.behaviorCard || null;
         const targetPreset = options.targetPreset || (candidate.presetId ? CANONICAL_PRESETS[candidate.presetId] : null);

@@ -276,7 +276,7 @@ export class Spatial3DAdapter {
         let escapeDir = Vector3.normalize(directAway);
         if (Vector3.magnitude(escapeDir) < 1e-7) {
             // Observer and threat are at identical coordinates: default to observer reverse
-            const fwd = observer.forward || Vector3.create(0, 0, 1);
+            const fwd = observer.forward || (convention === COORDINATE_CONVENTIONS.Y_UP ? Vector3.create(0, 0, 1) : Vector3.create(1, 0, 0));
             escapeDir = Vector3.scale(Vector3.normalize(fwd), -1);
         }
 
@@ -314,7 +314,7 @@ export class Spatial3DAdapter {
                         perp = Vector3.scale(perp, -1);
                     }
 
-                    const repulsionWeight = (safetyMargin - Math.max(0, clearanceDist)) / safetyMargin;
+                    const repulsionWeight = (safetyMargin - Math.max(0, clearanceDist)) / Math.max(0.001, safetyMargin);
                     deflectionAccumulator = Vector3.add(deflectionAccumulator, Vector3.scale(perp, repulsionWeight * 1.5));
                 }
             }

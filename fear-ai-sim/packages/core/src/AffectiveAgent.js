@@ -395,8 +395,9 @@ export class AffectiveAgent {
         // 4. Update Dominance (Conscientiousness promotes disciplined composure, neutral at 0.5 -> 0.0)
         const conscientiousnessBonus = this.enableOCEAN ? (((this.traits.conscientiousness ?? 0.5) - 0.5) * 0.2) : 0.0;
         const agentPower = (this.energy * 0.5) + (this.health * 0.5) + (this.traits.resilience * 0.3) + conscientiousnessBonus;
+        const safeAgentPower = Math.max(0, agentPower);
         const threatPower = (threats.length * 1.2) + totalPerceivedThreat + (traumaDread * 0.5) + 0.1;
-        this.currentDominance = Math.max(0, Math.min(1.0, agentPower / (agentPower + threatPower)));
+        this.currentDominance = Math.max(0, Math.min(1.0, safeAgentPower / Math.max(0.001, safeAgentPower + threatPower)));
 
         // 5. Fear Dynamics: Decay and Integration
         const resilienceMod = (this.traits.resilience - 0.5) * 0.08;

@@ -160,7 +160,7 @@ export class MultiFeedbackCascadeSystem {
     recordTickTelemetry(tick, telemetrySnapshot) {
         this.history.push({
             tick,
-            timestamp: Date.now(),
+            timestamp: telemetrySnapshot?.timestamp ?? tick * 1000,
             metrics: { ...telemetrySnapshot }
         });
 

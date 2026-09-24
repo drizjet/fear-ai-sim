@@ -175,7 +175,10 @@ export class BinaryWireProtocol {
             const bandCode = BAND_CODES[rec.band] ?? BAND_CODES.UNKNOWN;
 
             let flags = 0;
-            if (rec.fear >= 0.70) flags |= 0x01; // isPanicking
+            const isPanicking = typeof rec.isPanicking === 'boolean'
+                ? rec.isPanicking
+                : (rec.band === 'PANIC' || (typeof rec.fear === 'number' && rec.fear >= (3.8 / 4.2)));
+            if (isPanicking) flags |= 0x01; // isPanicking
             if (rec.inCombat) flags |= 0x02;     // inCombat
             if (rec.exhausted) flags |= 0x04;    // exhausted
 
