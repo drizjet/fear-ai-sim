@@ -15,7 +15,8 @@ import {
     SocialEventEngine,
     SOCIAL_EVENTS,
     HostTimeDiscipline,
-    InformationPropagationEngine
+    InformationPropagationEngine,
+    PackCoordinationEngine
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -104,6 +105,18 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 (this.seed ^ 0x9e3779b9) >>> 0
             )
             : null;
+        // RELEASE-SURFACE §3: PackCoordinationEngine joins the runtime surface
+        // as an opt-in tactical service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it never writes agent affect or fear,
+        // never mutates host state, and isolates its PRNG seed from the simulation RNG.
+        this.enablePackCoordination = options.enablePackCoordination ?? false;
+        this.packCoordination = this.enablePackCoordination
+            ? new PackCoordinationEngine({
+                ...(options.packCoordinationConfig || {}),
+                seed: options.packCoordinationConfig?.seed ?? ((this.seed ^ 0x85ebca6b) >>> 0)
+            })
+            : null;
         this.tickCount = 0;
     }
 
@@ -179,6 +192,13 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // Same reason the contagion cache is dropped: a departed agent must not
         // keep receiving information, and must not accumulate in a long world.
         if (this.informationPropagation) this.informationPropagation.removeAgent(id);
+        if (this.packCoordination) {
+            for (const pack of this.packCoordination.packs.values()) {
+                if (pack.members.has(id)) {
+                    this.packCoordination.removeMember(pack.id, id);
+                }
+            }
+        }
         return this.agents.delete(id);
     }
 
@@ -226,6 +246,146 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
      */
     propagatedInformation(agentId) {
         return this.informationPropagation ? this.informationPropagation.heldBy(agentId) : [];
+    }
+
+    /**
+     * Create a tactical pack managed by PackCoordinationEngine.
+     * Refuses when the service is not enabled.
+     * @param {string} packId
+     * @param {object} [options={}]
+     * @returns {object} PackRecord
+     */
+    createPack(packId, options = {}) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to create packs.');
+        }
+        return this.packCoordination.createPack(packId, options);
+    }
+
+    /**
+     * Register or update an agent as a member of a tactical pack.
+     * Requires the agent to be registered in the simulation.
+     * @param {string} packId
+     * @param {string} memberId
+     * @param {object} [traits={}]
+     * @param {object} [position=null]
+     * @returns {object} MemberProfile
+     */
+    registerPackMember(packId, memberId, traits = {}, position = null) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to register pack members.');
+        }
+        const id = String(memberId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${memberId} is not registered, so it cannot join a pack.`);
+        }
+        const agent = this.agents.get(id);
+        const resolvedTraits = {
+            dominance: traits.dominance ?? agent.traits?.dominance ?? 0.5,
+            courage: traits.courage ?? agent.traits?.courage ?? (1.0 - (agent.traits?.neuroticism ?? 0.5)),
+            fear: traits.fear ?? agent.currentFear ?? 0.0,
+            aggression: traits.aggression ?? agent.traits?.aggression ?? (1.0 - (agent.traits?.agreeableness ?? 0.5)),
+            speed: traits.speed ?? agent.traits?.speed ?? 1.0,
+            resilience: traits.resilience ?? agent.traits?.resilience ?? 0.5
+        };
+        const pos = position || { x: agent.x, y: agent.y, z: agent.z };
+        return this.packCoordination.registerMember(packId, id, resolvedTraits, pos);
+    }
+
+    /**
+     * Remove an agent from a tactical pack.
+     * @param {string} packId
+     * @param {string} memberId
+     * @returns {boolean}
+     */
+    removePackMember(packId, memberId) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to remove pack members.');
+        }
+        return this.packCoordination.removeMember(packId, memberId);
+    }
+
+    /**
+     * Get the latest advisory pack evaluation and member vectors.
+     * Returns null when the service is off or the pack is unknown.
+     * @param {string} packId
+     * @returns {object|null}
+     */
+    getPackAdvisories(packId) {
+        if (!this.packCoordination) return null;
+        const pack = this.packCoordination.packs.get(String(packId));
+        if (!pack) return null;
+        return {
+            packId: pack.id,
+            phase: pack.phase,
+            pattern: pack.pattern,
+            alphaId: pack.alphaId,
+            alphaDominance: pack.alphaDominance,
+            packCohesion: pack.packCohesion,
+            packMorale: pack.packMorale,
+            targetThreat: pack.targetThreat,
+            members: Array.from(pack.members.values()).map(m => ({
+                memberId: m.id,
+                role: m.role,
+                advisoryPosition: m.advisoryPosition,
+                headingVector: m.headingVector,
+                targetDistance: m.targetDistance,
+                effectiveFear: m.effectiveFear,
+                phase: pack.phase,
+                isFeinting: m.isFeinting
+            })),
+            host_authority: 'ADVISORY_ONLY'
+        };
+    }
+
+    /**
+     * Set target threat for an active pack.
+     * @param {string} packId
+     * @param {object} threat
+     */
+    setPackTargetThreat(packId, threat) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to update pack target threat.');
+        }
+        const pack = this.packCoordination.packs.get(String(packId));
+        if (!pack) throw new Error(`UNKNOWN_PACK: pack ${packId} does not exist.`);
+        pack.targetThreat = {
+            x: Number(threat.x) || 0,
+            y: Number(threat.y) || 0,
+            z: Number(threat.z) || 0,
+            id: threat.id || null
+        };
+        return pack.targetThreat;
+    }
+
+    /**
+     * Set tactical phase for an active pack.
+     * @param {string} packId
+     * @param {string} phase
+     */
+    setPackPhase(packId, phase) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to set pack phase.');
+        }
+        return this.packCoordination.setPhase(packId, phase);
+    }
+
+    /**
+     * Set encirclement pattern for an active pack.
+     * @param {string} packId
+     * @param {string} pattern
+     */
+    setPackPattern(packId, pattern) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to set pack pattern.');
+        }
+        return this.packCoordination.setPattern(packId, pattern);
     }
 
     /**
@@ -453,6 +613,21 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // than on a cadence because it is off by default and its cost is paid only
         // by a host that asked for it; a cadence can be added if a host needs one.
         if (this.informationPropagation) this.informationPropagation.advanceTick();
+        // Opt-in pack coordination advances once per tick, after the agents
+        // have been ticked for this frame. Live positions and fear sync to
+        // pack members, roles and geometry recalculate, and advisory vectors update.
+        if (this.packCoordination) {
+            for (const pack of this.packCoordination.packs.values()) {
+                for (const member of pack.members.values()) {
+                    const agent = this.agents.get(member.id);
+                    if (agent) {
+                        member.position = { x: agent.x, y: agent.y, z: agent.z };
+                        member.traits.fear = agent.currentFear;
+                    }
+                }
+                this.packCoordination.tickPack(pack.id, pack.targetThreat);
+            }
+        }
         // NEXT-20: trauma-to-behavior feedback. The engine lifecycle runs
         // first; then crystallized trait drift syncs back onto live agents
         // (their own fear machinery responds: higher N, lower R), the

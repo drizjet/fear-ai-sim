@@ -81,14 +81,11 @@ console.log('  * Core RuntimeSimulation services and live tick path: PASS');
 // source checks are deliberate tripwires: if a future change constructs one
 // here, the ledger and release scope must be revisited rather than silently
 // inheriting a broader "core" claim.
-// InformationPropagationEngine is deliberately ABSENT from this list. It left the
-// optional surface by the §3 change policy and joined the runtime as an opt-in
-// service, which is why the tripwire that guards it now points the other way: see
-// the opt-in assertion below. Removing a name from this list without adding the
-// corresponding positive check would be how an optional research module quietly
-// becomes part of every session.
+// InformationPropagationEngine and PackCoordinationEngine are deliberately ABSENT
+// from this list. They left the optional surface by the §3 change policy and joined
+// the runtime as opt-in services, which is why the tripwires that guard them now
+// point the other way: see the opt-in assertions below.
 const optionalRuntimeConstructors = [
-    'PackCoordinationEngine',
     'EconomicFeedbackSystem',
     'EpistemicBeliefEngine',
     'MoralDissonanceEngine',
@@ -121,6 +118,23 @@ const optIn = new RuntimeSimulation({ seed: 91339, enableInformationPropagation:
 assert(optIn.informationPropagation !== null && optOut.informationPropagation !== optIn.informationPropagation,
     'The opt-in flag did not construct a distinct information-propagation service');
 console.log('  * InformationPropagationEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for PackCoordinationEngine: promoted from §2.
+assert(hasConstructor(runtimeSource, 'PackCoordinationEngine'),
+    'PackCoordinationEngine is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enablePackCoordination\s*=\s*options\.enablePackCoordination\s*\?\?\s*false/.test(runtimeSource),
+    'PackCoordinationEngine no longer defaults to false, so it is not opt-in');
+assert(/this\.packCoordination\s*=\s*this\.enablePackCoordination\s*\?\s*new PackCoordinationEngine/.test(runtimeSource),
+    'PackCoordinationEngine is constructed outside its opt-in guard');
+const packOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(packOptOut.packCoordination === null,
+    'A default RuntimeSimulation constructed the optional pack-coordination service');
+assert(packOptOut.enablePackCoordination === false,
+    'The pack-coordination opt-in does not default to false');
+const packOptIn = new RuntimeSimulation({ seed: 91339, enablePackCoordination: true });
+assert(packOptIn.packCoordination !== null && packOptOut.packCoordination !== packOptIn.packCoordination,
+    'The opt-in flag did not construct a distinct pack-coordination service');
+console.log('  * PackCoordinationEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
 
 // Verify that the optional systems have explicit direct entry points rather
 // than being mistaken for implicit runtime services.
