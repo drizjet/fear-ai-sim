@@ -75,9 +75,10 @@ export class ReputationBook {
 // are story beats, so SocietyCore passes 2). The FREEZE roll keeps legacy's injected-rng
 // determinism contract.
 export class HysteresisBook {
-    constructor({ rng = Math.random, minStateDuration = 10 } = {}) {
+    constructor({ rng = null, minStateDuration = 10 } = {}) {
         this.actors = new Map(); // actorId → { state, stateTimer, transitionHistory }
-        this.rng = rng;
+        const src = randomSource(rng);
+        this.rng = typeof rng === 'function' ? rng : () => src.next();
         this.minStateDuration = Math.max(1, Number.isFinite(minStateDuration) ? Math.floor(minStateDuration) : 10);
         this.maxHistoryLength = 50;
         // Faithful copy of the legacy thresholds: exitUp — leave upward when fear exceeds it;
@@ -260,6 +261,16 @@ export const DEFAULT_FEARCORE_CONFIG = Object.freeze({
 // brain.js §332: the brain's fear is normalized 0..1, FearCore's raw scale is 0..3.8 (PANIC at
 // 3.8). The mapping is linear — 0.21/0.37/1.0 of normalized fear reach ALERT/ANXIOUS/PANIC.
 export const FEARCORE_RAW_SCALE = 3.8;
+export const FEAR_SCALE = 4.2;
+export function panicOnsetRawFear(enterConfig = DEFAULT_FEARCORE_CONFIG.enter) {
+    const threshold = Number(enterConfig?.PANIC);
+    return Number.isFinite(threshold) && threshold > 0 ? threshold / FEAR_SCALE : 1;
+}
+export function isPanicClass({ fearBand, rawFear } = {}, enterConfig = DEFAULT_FEARCORE_CONFIG.enter) {
+    if (fearBand === 'PANIC') return true;
+    const fear = Number(rawFear);
+    return Number.isFinite(fear) && fear >= panicOnsetRawFear(enterConfig);
+}
 export const fearScale = brainFear => (Number.isFinite(brainFear) ? Math.max(0, Math.min(1, brainFear)) * FEARCORE_RAW_SCALE : 0);
 export class FearCore {
     constructor(config = {}) {
@@ -278,6 +289,8 @@ export class FearCore {
         this.stateTimer = 0;
         this.decisionTrace = [];
         this.maxTraceLength = Math.max(1, Math.floor(finite(config.maxTraceLength, 100)));
+        this._rng = randomSource(config.rng, config.seed);
+        this._defaultRngFn = () => this._rng.next();
     }
     reset(state = 'CALM') {
         if (!FEAR_BANDS.includes(state)) throw new RangeError(`Unknown fear band: ${state}`);
@@ -287,6 +300,7 @@ export class FearCore {
         this.recoveryProgress = 0;
         this.stateTimer = 0;
         this.decisionTrace = [];
+        this._rng = randomSource(this.config.rng, this.config.seed);
         return this.state;
     }
     // The sole state-mutation entry point (legacy contract §260).
@@ -340,7 +354,8 @@ export class FearCore {
     }
     _evaluateExtendedBands(fear, context) {
         // `rng` stays a context input (legacy contract); production always injects the world RNG.
-        const { currentAnger = 0, morale = 1, threats = 0, skill = 0, obstacleAhead = false, obstaclePresent = false, rng = Math.random } = context;
+        const { currentAnger = 0, morale = 1, threats = 0, skill = 0, obstacleAhead = false, obstaclePresent = false, rng = null } = context;
+        const rngFn = typeof rng === 'function' ? rng : (this._defaultRngFn ?? (() => 0.5));
         const ext = this.config.extended;
         if (this.state !== 'AGGRESSIVE' && currentAnger > ext.AGGRESSIVE.enterAnger) return { from: this.state, to: 'AGGRESSIVE', reason: 'ANGER_OVERRIDE', threshold: ext.AGGRESSIVE.enterAnger };
         if (this.state === 'AGGRESSIVE' && currentAnger < ext.AGGRESSIVE.exitAnger) {
@@ -351,13 +366,13 @@ export class FearCore {
         }
         if (this.state === 'PANIC' && fear >= ext.PRESENCE_BREAK.enterFear && this.stateTimer >= ext.PRESENCE_BREAK.enterStateTimer) return { from: 'PANIC', to: 'PRESENCE_BREAK', reason: 'EXTREME_FEAR_LOCK', threshold: ext.PRESENCE_BREAK.enterFear };
         if (this.state === 'PRESENCE_BREAK' && fear < ext.PRESENCE_BREAK.exitFear) return { from: 'PRESENCE_BREAK', to: 'RECOVER', reason: 'EXIT_PRESENCE_BREAK', threshold: ext.PRESENCE_BREAK.exitFear };
-        if (this.state === 'PANIC' && skill > ext.HIDE.enterSkill && threats >= ext.HIDE.enterMinThreats && rng() < 0.3) return { from: 'PANIC', to: 'HIDE', reason: 'HIDE_UNDER_THREAT', threshold: ext.HIDE.enterSkill };
+        if (this.state === 'PANIC' && skill > ext.HIDE.enterSkill && threats >= ext.HIDE.enterMinThreats && rngFn() < 0.3) return { from: 'PANIC', to: 'HIDE', reason: 'HIDE_UNDER_THREAT', threshold: ext.HIDE.enterSkill };
         if (this.state === 'HIDE') {
             if (threats === 0) return { from: 'HIDE', to: 'RECOVER', reason: 'EXIT_HIDE_NO_THREATS', threshold: 0 };
             if (fear > ext.HIDE.exitPanicFear) return { from: 'HIDE', to: 'PANIC', reason: 'EXIT_HIDE_PANIC_ESCAPE', threshold: ext.HIDE.exitPanicFear };
         }
-        if (this.state === 'PANIC' && morale < ext.FREEZE.enterMorale && rng() < ext.FREEZE.exitProbability * 10) return { from: 'PANIC', to: 'FREEZE', reason: 'FREEZE_UNDER_PANIC', threshold: ext.FREEZE.enterMorale };
-        if (this.state === 'FREEZE' && rng() < ext.FREEZE.exitProbability) return { from: 'FREEZE', to: 'RECOVER', reason: 'EXIT_FREEZE', threshold: 0 };
+        if (this.state === 'PANIC' && morale < ext.FREEZE.enterMorale && rngFn() < ext.FREEZE.exitProbability * 10) return { from: 'PANIC', to: 'FREEZE', reason: 'FREEZE_UNDER_PANIC', threshold: ext.FREEZE.enterMorale };
+        if (this.state === 'FREEZE' && rngFn() < ext.FREEZE.exitProbability) return { from: 'FREEZE', to: 'RECOVER', reason: 'EXIT_FREEZE', threshold: 0 };
         if (obstacleAhead && skill > ext.VAULTING.enterSkill && this.state !== 'VAULTING') return { from: this.state, to: 'VAULTING', reason: 'OBSTACLE_VAULT', threshold: ext.VAULTING.enterSkill };
         if (this.state === 'VAULTING' && !obstacleAhead) {
             if (fear >= this.config.enter.PANIC) return { from: 'VAULTING', to: 'PANIC', reason: 'EXIT_VAULTING_PANIC', threshold: this.config.enter.PANIC };
