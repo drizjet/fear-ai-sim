@@ -20,4 +20,7 @@ jobs:
       # hand-copied count fails the build here instead of drifting into four documents. This
       # runs the suite itself, so it also fails if anything is red.
       - run: npm run gate:check
+      # Proves every document rule can still FAIL, on a throwaway copy — a guard that only ever ran
+      # passing is the defect class this gate exists to prevent.
+      - run: npm run gate:prove
       - run: npm test

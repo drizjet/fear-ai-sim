@@ -5,10 +5,11 @@
   "type": "module",
   "description": "Deterministic fear-AI simulation runtime (SocietyCore world/events, UtilityCore shared scoring, DecisionCore, InteractionCore, AdvisoryGate, SocialCore, MacroCore, RandomCore).",
   "scripts": {
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --passWithNoTests",
     "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
     "gate:sync": "node tools/gate-counts.mjs",
-    "gate:check": "node tools/gate-counts.mjs --check"
+    "gate:check": "node tools/gate-counts.mjs --check",
+    "gate:prove": "node tools/guard-selftest.mjs"
   },
   "devDependencies": {
     "@codebuff/sdk": "^0.10.7",

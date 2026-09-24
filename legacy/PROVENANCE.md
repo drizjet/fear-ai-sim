@@ -33,12 +33,11 @@ git show origin/master:fear-ai-sim/agent.js | sha256sum
 git show origin/master:fear-ai-sim/learningagent.js | sha256sum
 ```
 
-Byte-exactness of every file in this directory is asserted on each gate run by
-`tests/habituation-reopen.test.js`, `tests/hysteresis-reopen.test.js`,
-`tests/neural-fear-reopen.test.js`, `tests/fearcore-reopen.test.js` and
-`tests/simulation-agents-combat-reopen.test.js`
-(and `.gitattributes` marks `legacy/**` as `-text` so no
-line-ending conversion can ever touch the bytes).
+Byte-exactness of every file in this directory is asserted on each gate run by `npm run gate:check`:
+`tools/doc-guards.mjs` hashes each file here against the sha256 pinned in the table above and names
+any file that no longer matches. The five suites that used to do it are recorded in
+`docs/SUITE_RETIREMENT_LOG.md`, and `.gitattributes` marks `legacy/**` as `-text` so no line-ending
+conversion can ever touch the bytes.
 
 Wall-clock note: the legacy sources use `Date.now()`; V8 integration replaces the wall clock
 with the society's world time (`this.now()`), per the repository's no-wall-clock rule for

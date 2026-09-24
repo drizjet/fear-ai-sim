@@ -36,7 +36,7 @@ this checkout** ("re-open only with the files present"). **Executed as
 `origin/master:fear-ai-sim/` (blob + sha256 pinned) except `tests/fearcore.test.js` (in neither
 tree), FearBand Rust has 0 upstream paths, and every row received a disposition — supersede,
 open-by-absence, or deferred — in `docs/SOURCE_ABSENT_RECONCILIATION.md`, guarded by
-`tests/source-absent-reconciliation.test.js`. Nothing was extracted; extraction stays an
+`npm run gate:check` (`sourceAbsentRows`). Nothing was extracted; extraction stays an
 explicit re-open procedure.
 
 ## Options (owner decision required)1. **Status quo, dual branch — EXECUTED 2026-09-23 (recommended)** — `main` = V8 sim at root

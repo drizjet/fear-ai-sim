@@ -10,7 +10,6 @@
 //     'STEP' / 'STEP_ALL' pause markers, or { type: 'GENERATE_N', n }.
 //   - There is no `agent` object: terminal work is requested by yielding a
 //     run_terminal_command tool call and reading the fed-back toolResult.
-// tests/autopilot-agent.test.js drives this loop headlessly on every gate run.
 
 const DIRECTIVE = `
 You are an executor inside the Fear AI V8 autonomous campaign. Read README.md (orientation), docs/CAMPAIGN_STATE.md (next responsibility + evidence), docs/FEAR_AI_GLOBAL_WORK_LEDGER.md (counters), and completion-ledger.md (per-area status, machine-checked) before acting; repository evidence outranks historical claims. Work on the highest-priority actionable responsibility, inspect before editing, preserve strong contracts, implement production fixes, run focused tests, negative controls, and broader gates, update durable state, and continue through additional work units whenever budget permits. Never declare global completion yourself. A local work unit is not campaign completion. If work remains, continue. Global completion is valid only when docs/FEAR_AI_GLOBAL_STOP_CERTIFICATE.json exists, matches the current repository state, and independently verifies actionableOpen=0, p0Open=0, p1Open=0, finiteP2Open=0, unauditedImplementation=0, redRelevantTests=0, staleRequiredProofs=0, structuralClosureAudit=PASS, dynamicClosureAudit=PASS, ledgerAgreement=PASS, and authorityTruth=PASS.
@@ -33,8 +32,7 @@ const fearAiAutopilot = {
   tools: [readText],
   handleSteps: function* ({ prompt } = {}) {
     // Self-contained: the runner eval()s this function's SOURCE (toString → eval), so the
-    // body must not reference module-scope bindings. DIRECTIVE is embedded verbatim and
-    // pinned byte-equal to the exported copy by tests/autopilot-agent.test.js.
+    // body must not reference module-scope bindings, so DIRECTIVE is embedded verbatim here.
     const directive = `\nYou are an executor inside the Fear AI V8 autonomous campaign. Read README.md (orientation), docs/CAMPAIGN_STATE.md (next responsibility + evidence), docs/FEAR_AI_GLOBAL_WORK_LEDGER.md (counters), and completion-ledger.md (per-area status, machine-checked) before acting; repository evidence outranks historical claims. Work on the highest-priority actionable responsibility, inspect before editing, preserve strong contracts, implement production fixes, run focused tests, negative controls, and broader gates, update durable state, and continue through additional work units whenever budget permits. Never declare global completion yourself. A local work unit is not campaign completion. If work remains, continue. Global completion is valid only when docs/FEAR_AI_GLOBAL_STOP_CERTIFICATE.json exists, matches the current repository state, and independently verifies actionableOpen=0, p0Open=0, p1Open=0, finiteP2Open=0, unauditedImplementation=0, redRelevantTests=0, staleRequiredProofs=0, structuralClosureAudit=PASS, dynamicClosureAudit=PASS, ledgerAgreement=PASS, and authorityTruth=PASS.\n`;
     let step = 0;
     while (step++ < 1000) {

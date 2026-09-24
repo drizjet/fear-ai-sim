@@ -18,6 +18,9 @@ const GRIEVANCE_PER_FEAR = .5;
 // worth a third of the .15 fear a player wound applies — and it flows through the one fear seam,
 // so habituation attenuates it and both fear machines see it.
 const COMBAT_FEAR_PER_CASUALTY = .05;
+// RESP-AUTONOMOUS-COMBAT-DEPLOY-001: the cohort bound for a faction's self-raised actors. A policy
+// input to the recruit tick (overridable per action), not world state — the actors themselves persist.
+const DEFAULT_COMBAT_POPULATION_CAP = 8;
 
 export class RumorNetwork {
     constructor({ now, maxRumors = 2048, maxQueue = 4096, confidenceHalfLife = 10 } = {}) { this.rumors = []; this.seq = 0; this.queue = []; this.now = now || (() => 0); this.maxRumors = Math.max(1, Math.floor(maxRumors)); this.maxQueue = Math.max(1, Math.floor(maxQueue)); this.confidenceHalfLife = Math.max(1, num(confidenceHalfLife, 10)); }
@@ -350,6 +353,11 @@ export class SocietyCore {
         // public standing via reputationOf, the observer-private channel via the book itself.
         return { ...context, ...(personality ? { personality } : {}), ...(morale != null ? { morale } : {}), reputation: context.reputation ?? this.reputation, reputationOf: context.reputationOf ?? (subject => this.reputation.get(subject)) };
     }
+    // The numeric slice of a faction's OWN state — the context every autonomous evaluation runs on
+    // (the faction macro tick, the macro combat tick and the self-raise tick all score from it).
+    factionNumericContext(faction) {
+        return Object.fromEntries(Object.entries(faction.state).filter(([key, value]) => key !== 'rng' && typeof value === 'number' && Number.isFinite(value)));
+    }
     addMarket(id, market = new Market()) { this.markets.set(id, market); return market; }
     addFaction(id, state = {}) { const faction = new FactionRuntime(id, state); this.factions.set(id, faction); return faction; }
     lootBalanceSheet(group) {
@@ -630,13 +638,14 @@ export class SocietyCore {
         }
         return actions;
     }
-    worldStep({ market, season = 'SPRING', harvest = 0, destination, good = 'grain', minimumPrice = 0, routes, actorId = null, rumor, rumorRecipients = [], faction, factionTarget, factionContext = {}, factionTurns = false, combatTurns = false, migration, actions = [] } = {}) {
+    worldStep({ market, season = 'SPRING', harvest = 0, destination, good = 'grain', minimumPrice = 0, routes, actorId = null, rumor, rumorRecipients = [], faction, factionTarget, factionContext = {}, factionTurns = false, combatTurns = false, recruitTurns = false, migration, actions = [] } = {}) {
         const planned = [
             ...(market ? [{ kind: 'SEASON_UPDATE', market, season, harvest }] : []),
             ...(destination && routes ? [{ kind: 'TRADE_ROUTE_DECISION', destination, good, minimumPrice, routes, actorId }] : []),
             ...(faction ? [{ kind: 'FACTION_EVALUATION', faction, targetId: factionTarget, context: factionContext }] : []),
             ...(factionTurns ? [{ kind: 'FACTION_MACRO_TICK' }] : []),
             ...(combatTurns ? [{ kind: 'COMBAT_MACRO_TICK' }] : []),
+            ...(recruitTurns ? [{ kind: 'COMBAT_RECRUIT_TICK' }] : []),
             ...(migration ? [migration] : []),
             ...actions,
         ];
@@ -824,7 +833,9 @@ export class SocietyCore {
                 const amount = Math.min(group.loot, Math.max(0, num(action.quantity, 0)));
                 if (amount > 0) {
                     group.loot -= amount;
-                    market.receive(action.good ?? 'loot', amount);
+                    // RESP-MARKET-CONSERVATION-001: the entry below books this arrival; `receive()` would
+                    // add a second entry `balanceSheet()` also counts, reporting `balanced: false`.
+                    market.stock[action.good ?? 'loot'] = Math.max(0, num(market.stock[action.good ?? 'loot'], 0)) + amount;
                     group.lootTransferred = (group.lootTransferred ?? 0) + amount;
                     market.history.push({ kind: 'ROAMING_GROUP_LOOT_TRANSFER', good: action.good ?? 'loot', quantity: amount, groupId: group.id, settlement: action.market, interaction: action.aid ? 'AID' : 'TRADE' });
                 }
@@ -1097,7 +1108,7 @@ export class SocietyCore {
                     // The richest-other target resolves WHEN the turn runs — later turns see
                     // earlier turns' effects (a raid that just resolved reshapes the loot map).
                     const target = factions.filter(other => other !== faction).sort((a, b) => b.loot - a.loot)[0];
-                    const context = Object.fromEntries(Object.entries(faction.state).filter(([key, value]) => key !== 'rng' && typeof value === 'number' && Number.isFinite(value)));
+                    const context = this.factionNumericContext(faction);
                     pending = this.executeAction({ kind: 'FACTION_EVALUATION', faction: faction.id, targetId: target.id, context }, macro);
                 }
                 return pending;
@@ -1118,10 +1129,13 @@ export class SocietyCore {
             // integrity) and the final tail returns uncommitted for the turn driver; fewer than two
             // factions with living actors means no counterpart, so the macro event itself is the
             // untouched tail.
+            // The engagement id names the macro EVENT that opened it, never the world clock: two
+            // macro ticks inside one turn share a tick number, so a clock-stamped id hands two
+            // different engagements the same label. An actor deployed with no faction belongs to no
+            // faction's units, so no evaluation can name it — the deploy contract, not a silent drop.
             case 'COMBAT_MACRO_TICK': {
                 const livingUnits = faction => this.combat.unitsOf(faction.id).filter(unit => unit.alive);
-                const roster = Object.fromEntries([...this.factions.values()].map(faction => [faction.id, livingUnits(faction).map(unit => unit.id)]));
-                const macro = this.allocateEvent({ type: 'COMBAT_MACRO_TICK', parent, factions: [...this.factions.keys()], roster });
+                const macro = this.allocateEvent({ type: 'COMBAT_MACRO_TICK', parent, factions: [...this.factions.keys()] });
                 const belligerents = [...this.factions.values()].filter(faction => livingUnits(faction).length > 0);
                 if (belligerents.length < 2) return macro; // no counterpart with actors to fight
                 this.commitEvent(macro);
@@ -1137,21 +1151,59 @@ export class SocietyCore {
                     const others = belligerents.filter(other => other !== faction && livingUnits(other).length > 0);
                     const sittingOut = !own.length ? 'NO_ACTORS' : !others.length ? 'NO_COUNTERPART' : null;
                     if (sittingOut) {
-                        pending = this.allocateEvent({ type: 'COMBAT_MACRO_EVALUATION', parent: macro, factionId: faction.id, targetId: null, engagementId: null, willEngage: false, selected: null, reason: sittingOut, alternatives: [], roster, worldTime: this.now() });
+                        pending = this.allocateEvent({ type: 'COMBAT_MACRO_EVALUATION', parent: macro, factionId: faction.id, targetId: null, engagementId: null, willEngage: false, selected: null, reason: sittingOut, alternatives: [], worldTime: this.now() });
                         continue;
                     }
                     const target = others.sort((a, b) => b.loot - a.loot)[0];
-                    const context = Object.fromEntries(Object.entries(faction.state).filter(([key, value]) => key !== 'rng' && typeof value === 'number' && Number.isFinite(value)));
+                    const context = this.factionNumericContext(faction);
                     const decision = faction.evaluateAction({ id: target.id }, { ...context, rng: this.rng });
                     const selected = decision.selected;
                     const willEngage = selected === 'RAID';
-                    const engagementId = `${faction.id}->${target.id}@${this.time}`;
-                    const evaluation = this.allocateEvent({ type: 'COMBAT_MACRO_EVALUATION', parent: macro, factionId: faction.id, targetId: target.id, engagementId: willEngage ? engagementId : null, willEngage, selected, reason: willEngage ? null : 'DECLINED', alternatives: decision.alternatives.map(candidate => ({ action: candidate.action, score: candidate.finalScore })), roster, worldTime: this.now() });
+                    const engagementId = `${faction.id}->${target.id}@${macro.id}`;
+                    const evaluation = this.allocateEvent({ type: 'COMBAT_MACRO_EVALUATION', parent: macro, factionId: faction.id, targetId: target.id, engagementId: willEngage ? engagementId : null, willEngage, selected, reason: willEngage ? null : 'DECLINED', alternatives: decision.alternatives.map(candidate => ({ action: candidate.action, score: candidate.finalScore })), worldTime: this.now() });
                     if (!willEngage) { pending = evaluation; continue; }
                     this.commitEvent(evaluation);
                     const [attacker] = own;
                     const [defender] = livingUnits(target);
                     pending = this.executeAction({ kind: 'COMBAT_ENGAGEMENT', engagementId, attacker: attacker.id, defender: defender.id, location: defender.location ?? attacker.location ?? null }, evaluation);
+                }
+                return pending;
+            }
+            // RESP-AUTONOMOUS-COMBAT-DEPLOY-001: the autonomy thread's last leg. `COMBAT_MACRO_TICK`
+            // made the world's actors FIGHT with no caller, but every actor still ARRIVED through an
+            // explicit `COMBAT_DEPLOY` — the population was caller-fed. This tick lets each faction
+            // RAISE AND DEPLOY its own actors from its OWN production evaluation and state, through
+            // the same `COMBAT_DEPLOY` tail every other deploy uses. The legacy lineage rule is kept:
+            // a levy drawn off a living veteran names it as its parent (generation 0, and the veteran
+            // records the child), while a faction with no living actor raises a FOUNDER (no parent,
+            // generation 1). A population bound caps the cohort so an untouched world cannot grow
+            // without limit. Contract as with the combat macro tick: each faction's chain commits
+            // before the next allocates (seq/id integrity) and the final tail returns uncommitted.
+            case 'COMBAT_RECRUIT_TICK': {
+                const cap = Math.max(0, Math.floor(num(action.populationCap, DEFAULT_COMBAT_POPULATION_CAP)));
+                const tick = this.allocateEvent({ type: 'COMBAT_RECRUIT_TICK', parent, populationCap: cap, factions: [...this.factions.keys()] });
+                if (!this.factions.size) return tick; // nobody to levy from
+                this.commitEvent(tick);
+                let pending = null;
+                for (const faction of this.factions.values()) {
+                    if (pending) this.commitEvent(pending);
+                    const units = this.combat.unitsOf(faction.id);
+                    if (units.length >= cap) {
+                        pending = this.allocateEvent({ type: 'COMBAT_RECRUIT', parent: tick, factionId: faction.id, unitId: null, raised: false, reason: 'POPULATION_BOUND', population: units.length, worldTime: this.now() });
+                        continue;
+                    }
+                    const rival = [...this.factions.values()].filter(other => other !== faction).sort((a, b) => b.loot - a.loot)[0] ?? null;
+                    const context = this.factionNumericContext(faction);
+                    const decision = faction.evaluateAction(rival ? { id: rival.id } : null, { ...context, rng: this.rng });
+                    if (decision.selected === 'HOLD') {
+                        pending = this.allocateEvent({ type: 'COMBAT_RECRUIT', parent: tick, factionId: faction.id, unitId: null, raised: false, reason: 'DECLINED', selected: decision.selected, population: units.length, worldTime: this.now() });
+                        continue;
+                    }
+                    const veteran = units.filter(unit => unit.alive).sort((a, b) => (b.kills - a.kills) || (a.deployedTick - b.deployedTick) || a.id.localeCompare(b.id))[0] ?? null;
+                    const unitId = `${faction.id}-levy-${units.length + 1}`;
+                    const recruit = this.allocateEvent({ type: 'COMBAT_RECRUIT', parent: tick, factionId: faction.id, unitId, raised: true, reason: null, selected: decision.selected, generation: veteran ? 0 : 1, lineageParentId: veteran?.id ?? null, location: veteran?.location ? { ...veteran.location } : null, population: units.length + 1, worldTime: this.now() });
+                    this.commitEvent(recruit);
+                    pending = this.executeAction({ kind: 'COMBAT_DEPLOY', unit: unitId, faction: faction.id, parentId: veteran?.id ?? null, location: veteran?.location ?? null }, recruit);
                 }
                 return pending;
             }
