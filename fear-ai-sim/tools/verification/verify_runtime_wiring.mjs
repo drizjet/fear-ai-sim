@@ -82,12 +82,11 @@ console.log('  * Core RuntimeSimulation services and live tick path: PASS');
 // here, the ledger and release scope must be revisited rather than silently
 // inheriting a broader "core" claim.
 // InformationPropagationEngine, PackCoordinationEngine, EconomicFeedbackSystem,
-// and SettlementMigrationSystem are deliberately ABSENT from this list.
+// SettlementMigrationSystem, and EpistemicBeliefEngine are deliberately ABSENT from this list.
 // They left the optional surface by the §3 change policy and joined
 // the runtime as opt-in services, which is why the tripwires that guard them now
 // point the other way: see the opt-in assertions below.
 const optionalRuntimeConstructors = [
-    'EpistemicBeliefEngine',
     'MoralDissonanceEngine',
     'FunctionalPersonaSignatures',
     'WorldCounterfactualEngine',
@@ -169,6 +168,27 @@ const migOptIn = new RuntimeSimulation({ seed: 91339, enableSettlementMigration:
 assert(migOptIn.settlementMigration !== null && migOptOut.settlementMigration !== migOptIn.settlementMigration,
     'The opt-in flag did not construct a distinct settlement-migration service');
 console.log('  * SettlementMigrationSystem is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for EpistemicBeliefEngine: promoted from §2.
+assert(hasConstructor(runtimeSource, 'EpistemicBeliefEngine'),
+    'EpistemicBeliefEngine is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableEpistemicBelief\s*=\s*options\.enableEpistemicBelief\s*\?\?\s*false/.test(runtimeSource),
+    'EpistemicBeliefEngine no longer defaults to false, so it is not opt-in');
+assert(/this\.epistemicBelief\s*=\s*this\.enableEpistemicBelief\s*\?\s*new EpistemicBeliefEngine/.test(runtimeSource),
+    'EpistemicBeliefEngine is constructed outside its opt-in guard');
+const epistemicOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(epistemicOptOut.epistemicBelief === null,
+    'A default RuntimeSimulation constructed the optional epistemic-belief service');
+assert(epistemicOptOut.enableEpistemicBelief === false,
+    'The epistemic-belief opt-in does not default to false');
+assert(epistemicOptOut.agentEpistemicEngines === null,
+    'The agent epistemic engines map is not null when disabled');
+const epistemicOptIn = new RuntimeSimulation({ seed: 91339, enableEpistemicBelief: true });
+assert(epistemicOptIn.epistemicBelief !== null && epistemicOptOut.epistemicBelief !== epistemicOptIn.epistemicBelief,
+    'The opt-in flag did not construct a distinct epistemic-belief service');
+assert(epistemicOptIn.agentEpistemicEngines instanceof Map,
+    'The agent epistemic engines map was not constructed when opt-in enabled');
+console.log('  * EpistemicBeliefEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
 
 // Verify that the optional systems have explicit direct entry points rather
 // than being mistaken for implicit runtime services.

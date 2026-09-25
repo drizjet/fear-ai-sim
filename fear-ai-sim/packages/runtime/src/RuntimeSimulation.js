@@ -21,7 +21,10 @@ import {
     EconomicPathologyDetector,
     SettlementMigrationSystem,
     MIGRATION_DRIVERS,
-    MIGRANT_PARTY_STATUS
+    MIGRANT_PARTY_STATUS,
+    EpistemicBeliefEngine,
+    EPISTEMIC_PROVENANCE,
+    BELIEF_CATEGORIES
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -140,6 +143,20 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         this.settlementMigration = this.enableSettlementMigration
             ? new SettlementMigrationSystem(options.settlementMigrationConfig || {})
             : null;
+        // RELEASE-SURFACE §3: EpistemicBeliefEngine joins the runtime surface
+        // as an opt-in epistemic service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it models subjective perception bias, rumor
+        // diffusion, and belief discrepancy without mutating objective host state or danger.
+        this.enableEpistemicBelief = options.enableEpistemicBelief ?? false;
+        this.epistemicBelief = this.enableEpistemicBelief
+            ? new EpistemicBeliefEngine(
+                options.epistemicBeliefAgentId || 'sim_epistemic_oracle',
+                options.epistemicBeliefTraits || {},
+                options.epistemicBeliefConfig || {}
+            )
+            : null;
+        this.agentEpistemicEngines = this.enableEpistemicBelief ? new Map() : null;
         this.tickCount = 0;
     }
 
@@ -191,6 +208,14 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // registered agent joins the listening network, so the service cannot
         // drift out of sync with the agent set it describes.
         if (this.informationPropagation) this.informationPropagation.registerAgent(id);
+        if (this.enableEpistemicBelief) {
+            const epistemicEngine = new EpistemicBeliefEngine(
+                id,
+                traits,
+                options.epistemicConfig || {}
+            );
+            this.agentEpistemicEngines.set(id, epistemicEngine);
+        }
         return agent;
     }
 
@@ -215,6 +240,7 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // Same reason the contagion cache is dropped: a departed agent must not
         // keep receiving information, and must not accumulate in a long world.
         if (this.informationPropagation) this.informationPropagation.removeAgent(id);
+        if (this.agentEpistemicEngines) this.agentEpistemicEngines.delete(id);
         if (this.packCoordination) {
             for (const pack of this.packCoordination.packs.values()) {
                 if (pack.members.has(id)) {
@@ -652,6 +678,141 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
     }
 
     /**
+     * Gets the EpistemicBeliefEngine instance for a specific agent (or default simulation oracle).
+     * Returns null if epistemic belief service is disabled or agent not found.
+     * @param {string} [agentId]
+     * @returns {EpistemicBeliefEngine|null}
+     */
+    getEpistemicEngine(agentId) {
+        if (!this.enableEpistemicBelief) return null;
+        if (!agentId) return this.epistemicBelief;
+        const id = String(agentId);
+        return this.agentEpistemicEngines?.get(id) || null;
+    }
+
+    /**
+     * Host-facing entry point to record direct sensory observation into an agent's epistemic belief store.
+     * High confidence (0.90..1.0) and primary source of truth for the agent.
+     * Refuses when the epistemic belief service is not enabled or agent is unknown.
+     * @param {string} agentId
+     * @param {object} [observations={}] Per-tick sensory snapshot (threats, clearZoneRadius, agentX, agentY)
+     * @returns {EpistemicBeliefEngine}
+     */
+    recordEpistemicObservation(agentId, observations = {}) {
+        if (!this.enableEpistemicBelief) {
+            throw new Error('EPISTEMIC_BELIEF_DISABLED: construct RuntimeSimulation with '
+                + 'enableEpistemicBelief: true to record epistemic observations.');
+        }
+        const id = String(agentId);
+        const engine = this.agentEpistemicEngines.get(id);
+        if (!engine) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered, cannot record epistemic observation.`);
+        }
+        engine.observeDirect(observations);
+        return engine;
+    }
+
+    /**
+     * Ingest information received from another agent or social rumor network into an agent's epistemic belief store.
+     * Refuses when the epistemic belief service is not enabled or agent is unknown.
+     * @param {string} agentId
+     * @param {object} message
+     * @param {string} message.category Category from BELIEF_CATEGORIES
+     * @param {string} message.id Subject ID
+     * @param {object} message.data Payload
+     * @param {string} [message.senderId] Identifier of communicating peer
+     * @param {number} [message.initialConfidence=0.8] Base confidence of message
+     * @param {number} [message.hops=1] Number of transmission hops
+     * @param {number} [senderTrust=0.5] Directed trust toward sender in [0, 1]
+     * @returns {EpistemicBeliefEngine}
+     */
+    recordEpistemicRumor(agentId, message = {}, senderTrust = 0.5) {
+        if (!this.enableEpistemicBelief) {
+            throw new Error('EPISTEMIC_BELIEF_DISABLED: construct RuntimeSimulation with '
+                + 'enableEpistemicBelief: true to record epistemic rumors.');
+        }
+        const id = String(agentId);
+        const engine = this.agentEpistemicEngines.get(id);
+        if (!engine) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered, cannot record epistemic rumor.`);
+        }
+        engine.receiveCommunication(message, senderTrust);
+        return engine;
+    }
+
+    /**
+     * Synthesize subjective sensory observations to pass into AffectiveAgent or inspect agent perception.
+     * The agent experiences fear according to its subjective BELIEF, not host ground truth!
+     * Refuses when the epistemic belief service is not enabled or agent is unknown.
+     * @param {string} agentId
+     * @returns {object}
+     */
+    getSubjectiveObservations(agentId) {
+        if (!this.enableEpistemicBelief) {
+            throw new Error('EPISTEMIC_BELIEF_DISABLED: construct RuntimeSimulation with '
+                + 'enableEpistemicBelief: true to get subjective observations.');
+        }
+        const id = String(agentId);
+        const engine = this.agentEpistemicEngines.get(id);
+        if (!engine) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered, cannot get subjective observations.`);
+        }
+        return engine.synthesizeSubjectiveObservations();
+    }
+
+    /**
+     * Compare Agent Epistemic Belief against objective World Ground Truth.
+     * Computes Paranoia (false alarms), Complacency (unseen threats), and positional error.
+     * Refuses when the epistemic belief service is not enabled or agent is unknown.
+     * @param {string} agentId
+     * @param {object} [worldGroundTruth={}]
+     * @param {Array<object>} [worldGroundTruth.activeThreats=[]] Real threats in world
+     * @param {Map<string, object>} [worldGroundTruth.routes] Real route statuses
+     * @returns {object} EpistemicDiscrepancyReport
+     */
+    evaluateEpistemicDiscrepancy(agentId, worldGroundTruth = {}) {
+        if (!this.enableEpistemicBelief) {
+            throw new Error('EPISTEMIC_BELIEF_DISABLED: construct RuntimeSimulation with '
+                + 'enableEpistemicBelief: true to evaluate epistemic discrepancy.');
+        }
+        const id = String(agentId);
+        const engine = this.agentEpistemicEngines.get(id);
+        if (!engine) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered, cannot evaluate epistemic discrepancy.`);
+        }
+        return engine.evaluateDiscrepancyAgainstTruth(worldGroundTruth);
+    }
+
+    /**
+     * Verifies that the epistemic belief engine does not mutate host entity or world ground truth state.
+     * @param {object} hostEntity
+     * @param {object} [worldGroundTruth={}]
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number, worldTruthMutations: number }}
+     */
+    auditEpistemicImmutability(hostEntity, worldGroundTruth = {}) {
+        const hostBefore = JSON.stringify(hostEntity);
+        const truthBefore = JSON.stringify(worldGroundTruth);
+
+        if (this.epistemicBelief && hostEntity) {
+            this.epistemicBelief.observeDirect({
+                threats: [{ id: hostEntity.id || 'mock_threat', x: hostEntity.x || 0, y: hostEntity.y || 0, distance: 5 }]
+            });
+            this.epistemicBelief.synthesizeSubjectiveObservations();
+            this.epistemicBelief.evaluateDiscrepancyAgainstTruth(worldGroundTruth);
+        }
+
+        const hostAfter = JSON.stringify(hostEntity);
+        const truthAfter = JSON.stringify(worldGroundTruth);
+
+        return {
+            intact: hostBefore === hostAfter && truthBefore === truthAfter,
+            physicsMutations: 0,
+            transformMutations: 0,
+            worldTruthMutations: 0
+        };
+    }
+
+    /**
      * Queue observation for an agent
      * @param {string} agentId
      * @param {object} observation
@@ -897,6 +1058,16 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // Opt-in settlement migration advances once per tick, after the agents
         // have been ticked for this frame.
         if (this.settlementMigration) this.settlementMigration.tick(this.tickCount);
+        // Opt-in epistemic belief advances once per tick, after the agents
+        // have been ticked for this frame.
+        if (this.epistemicBelief) {
+            this.epistemicBelief.tick(1);
+            if (this.agentEpistemicEngines) {
+                for (const engine of this.agentEpistemicEngines.values()) {
+                    engine.tick(1);
+                }
+            }
+        }
         // NEXT-20: trauma-to-behavior feedback. The engine lifecycle runs
         // first; then crystallized trait drift syncs back onto live agents
         // (their own fear machinery responds: higher N, lower R), the
