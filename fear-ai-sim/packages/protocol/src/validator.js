@@ -187,6 +187,21 @@ export class ProtocolValidator {
             case MESSAGE_TYPES.MORAL_STATE_QUERY_REQUEST:
                 result = ProtocolValidator.validateMoralStateQuery(raw);
                 break;
+            case MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_REQUEST:
+                result = ProtocolValidator.validatePersonaSignatureQuery(raw);
+                break;
+            case MESSAGE_TYPES.PERSONA_REACTION_QUERY_REQUEST:
+                result = ProtocolValidator.validatePersonaReactionQuery(raw);
+                break;
+            case MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_REQUEST:
+                result = ProtocolValidator.validatePersonaDistanceQuery(raw);
+                break;
+            case MESSAGE_TYPES.PERSONA_IDENTIFY_REQUEST:
+                result = ProtocolValidator.validatePersonaIdentify(raw);
+                break;
+            case MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_REQUEST:
+                result = ProtocolValidator.validatePersonaCollapseQuery(raw);
+                break;
             default:
                 // Accept unknown messages defensively
                 result = { valid: true, value: raw };
@@ -1515,6 +1530,169 @@ export class ProtocolValidator {
             value: {
                 type: MESSAGE_TYPES.MORAL_STATE_QUERY_REQUEST,
                 agentId: String(agentId).trim()
+            }
+        };
+    }
+
+    /**
+     * Validate PERSONA_SIGNATURE_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePersonaSignatureQuery(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_REQUEST,
+                agentId: String(agentId).trim()
+            }
+        };
+    }
+
+    /**
+     * Validate PERSONA_REACTION_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePersonaReactionQuery(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        const rawProbe = raw.probeValue !== undefined ? raw.probeValue : (raw.probe_value !== undefined ? raw.probe_value : raw.probe);
+        const probeValue = clamp01Finite(rawProbe, 0.5);
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PERSONA_REACTION_QUERY_REQUEST,
+                agentId: String(agentId).trim(),
+                probeValue
+            }
+        };
+    }
+
+    /**
+     * Validate PERSONA_DISTANCE_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePersonaDistanceQuery(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentIdA = raw.agentIdA || raw.agent_id_a || raw.agentA || raw.agent_a;
+        if (!agentIdA || typeof agentIdA !== 'string' || !agentIdA.trim()) {
+            errors.push('Missing or invalid "agentIdA" string');
+        }
+        const agentIdB = raw.agentIdB || raw.agent_id_b || raw.agentB || raw.agent_b;
+        if (!agentIdB || typeof agentIdB !== 'string' || !agentIdB.trim()) {
+            errors.push('Missing or invalid "agentIdB" string');
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_REQUEST,
+                agentIdA: String(agentIdA).trim(),
+                agentIdB: String(agentIdB).trim()
+            }
+        };
+    }
+
+    /**
+     * Validate PERSONA_IDENTIFY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePersonaIdentify(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        let candidateIds = raw.candidateIds !== undefined ? raw.candidateIds : (raw.candidate_ids !== undefined ? raw.candidate_ids : raw.candidates);
+        if (candidateIds !== undefined && candidateIds !== null) {
+            if (!Array.isArray(candidateIds)) {
+                errors.push('"candidateIds" must be an array of agent ID strings if provided');
+            } else {
+                candidateIds = candidateIds.map(s => String(s).trim()).filter(Boolean);
+            }
+        } else {
+            candidateIds = null;
+        }
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PERSONA_IDENTIFY_REQUEST,
+                agentId: String(agentId).trim(),
+                candidateIds
+            }
+        };
+    }
+
+    /**
+     * Validate PERSONA_COLLAPSE_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePersonaCollapseQuery(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        let populationIds = raw.populationIds !== undefined ? raw.populationIds : (raw.population_ids !== undefined ? raw.population_ids : raw.population);
+        if (populationIds !== undefined && populationIds !== null) {
+            if (!Array.isArray(populationIds)) {
+                errors.push('"populationIds" must be an array of agent ID strings if provided');
+            } else {
+                populationIds = populationIds.map(s => String(s).trim()).filter(Boolean);
+            }
+        } else {
+            populationIds = null;
+        }
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_REQUEST,
+                agentId: String(agentId).trim(),
+                populationIds
             }
         };
     }

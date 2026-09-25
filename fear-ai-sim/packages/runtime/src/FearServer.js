@@ -352,7 +352,8 @@ export class FearServer {
                     economic_feedback: Boolean(this.simulation.economicFeedback),
                     settlement_migration: Boolean(this.simulation.settlementMigration),
                     epistemic_belief: Boolean(this.simulation.enableEpistemicBelief),
-                    moral_dissonance: Boolean(this.simulation.enableMoralDissonance)
+                    moral_dissonance: Boolean(this.simulation.enableMoralDissonance),
+                    persona_signatures: Boolean(this.simulation.enablePersonaSignatures)
                 });
             }
             case '/api/v1/register': {
@@ -1356,6 +1357,106 @@ export class FearServer {
                 }
             }
 
+            case '/api/v1/persona/signature/query': {
+                const val = ProtocolValidator.validatePersonaSignatureQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.computeAgentPersonaSignature(val.value.agentId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/reaction/query': {
+                const val = ProtocolValidator.validatePersonaReactionQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.evaluateAgentReaction(val.value.agentId, val.value.probeValue);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_REACTION_QUERY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/distance/query': {
+                const val = ProtocolValidator.validatePersonaDistanceQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.computeAgentPersonaDistance(val.value.agentIdA, val.value.agentIdB);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/identify': {
+                const val = ProtocolValidator.validatePersonaIdentify(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.identifyAgentPersona(val.value.agentId, val.value.candidateIds);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_IDENTIFY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/collapse/query': {
+                const val = ProtocolValidator.validatePersonaCollapseQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.evaluateAgentPersonaCollapse(val.value.agentId, val.value.populationIds);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
             default:
                 return this._sendJson(res, 404, { error: `Endpoint ${path} not found` });
         }
@@ -1909,7 +2010,8 @@ export class FearServer {
                     economic_feedback: Boolean(this.simulation.economicFeedback),
                     settlement_migration: Boolean(this.simulation.settlementMigration),
                     epistemic_belief: Boolean(this.simulation.enableEpistemicBelief),
-                    moral_dissonance: Boolean(this.simulation.enableMoralDissonance)
+                    moral_dissonance: Boolean(this.simulation.enableMoralDissonance),
+                    persona_signatures: Boolean(this.simulation.enablePersonaSignatures)
                 }, correlationId);
                 break;
             }
@@ -2762,6 +2864,116 @@ export class FearServer {
                         type: MESSAGE_TYPES.MORAL_STATE_QUERY_RESPONSE,
                         agentId: payload.agentId,
                         moralState: state
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.computeAgentPersonaSignature(payload.agentId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_REACTION_QUERY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.evaluateAgentReaction(payload.agentId, payload.probeValue);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_REACTION_QUERY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.computeAgentPersonaDistance(payload.agentIdA, payload.agentIdB);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_IDENTIFY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.identifyAgentPersona(payload.agentId, payload.candidateIds);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_IDENTIFY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.evaluateAgentPersonaCollapse(payload.agentId, payload.populationIds);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_RESPONSE,
+                        ...result
                     }, correlationId);
                 } catch (err) {
                     this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
