@@ -14,6 +14,11 @@ import { FEAR_BANDS } from '../../core/src/FearCore.js';
 import { ACTION_INTENTS } from '../../core/src/IntentResolver.js';
 import { SOCIAL_EVENTS } from '../../core/src/SocialEventEngine.js';
 import { INTENT_OUTCOMES, FAILURE_REASONS } from '../../core/src/HostFeedbackLoop.js';
+import {
+    PACK_ROLES,
+    TACTICAL_PHASES,
+    ENCIRCLEMENT_PATTERNS
+} from '../../core/src/PackCoordinationEngine.js';
 
 const finiteOr = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 const clamp01Finite = (v, fallback) => {
@@ -118,6 +123,21 @@ export class ProtocolValidator {
                 break;
             case MESSAGE_TYPES.AUTH_RESPONSE:
                 result = ProtocolValidator.validateAuthResponse(raw);
+                break;
+            case MESSAGE_TYPES.PACK_CREATE_REQUEST:
+                result = ProtocolValidator.validatePackCreate(raw);
+                break;
+            case MESSAGE_TYPES.PACK_ASSIGN_MEMBER_REQUEST:
+                result = ProtocolValidator.validatePackAssignMember(raw);
+                break;
+            case MESSAGE_TYPES.PACK_REMOVE_MEMBER_REQUEST:
+                result = ProtocolValidator.validatePackRemoveMember(raw);
+                break;
+            case MESSAGE_TYPES.PACK_UPDATE_REQUEST:
+                result = ProtocolValidator.validatePackUpdate(raw);
+                break;
+            case MESSAGE_TYPES.PACK_QUERY_REQUEST:
+                result = ProtocolValidator.validatePackQuery(raw);
                 break;
             default:
                 // Accept unknown messages defensively
@@ -761,6 +781,182 @@ export class ProtocolValidator {
             intensity: clamp01Finite(s.intensity, 1.0),
             confidence: clamp01Finite(s.confidence, 1.0),
             occluded: Boolean(s.occluded)
+        };
+    }
+
+    /**
+     * Validate PACK_CREATE_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePackCreate(raw) {
+        const errors = [];
+        if (!raw.packId || typeof raw.packId !== 'string' || !raw.packId.trim()) {
+            errors.push('Missing or invalid "packId" string');
+        }
+        const options = {};
+        if (raw.options && typeof raw.options === 'object' && !Array.isArray(raw.options)) {
+            const pat = raw.options.pattern || raw.options.formationPattern;
+            if (pat) {
+                if (!Object.values(ENCIRCLEMENT_PATTERNS).includes(pat)) {
+                    errors.push(`Invalid pattern: must be one of ${Object.values(ENCIRCLEMENT_PATTERNS).join(', ')}`);
+                } else {
+                    options.pattern = pat;
+                }
+            }
+            if (raw.options.phase) {
+                if (!Object.values(TACTICAL_PHASES).includes(raw.options.phase)) {
+                    errors.push(`Invalid phase: must be one of ${Object.values(TACTICAL_PHASES).join(', ')}`);
+                } else {
+                    options.phase = raw.options.phase;
+                }
+            }
+            if ('dynamicRoleAllocation' in raw.options) {
+                options.dynamicRoleAllocation = Boolean(raw.options.dynamicRoleAllocation);
+            }
+            if ('alphaDampingFactor' in raw.options) {
+                const adf = Number(raw.options.alphaDampingFactor);
+                if (Number.isFinite(adf)) {
+                    options.alphaDampingFactor = Math.max(0, Math.min(1, adf));
+                }
+            }
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PACK_CREATE_REQUEST,
+                packId: String(raw.packId).trim(),
+                options
+            }
+        };
+    }
+
+    /**
+     * Validate PACK_ASSIGN_MEMBER_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePackAssignMember(raw) {
+        const errors = [];
+        if (!raw.packId || typeof raw.packId !== 'string' || !raw.packId.trim()) {
+            errors.push('Missing or invalid "packId" string');
+        }
+        if (!raw.agentId || typeof raw.agentId !== 'string' || !raw.agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        let role = raw.role ? String(raw.role).trim() : null;
+        if (role && !Object.values(PACK_ROLES).includes(role)) {
+            errors.push(`Invalid role: must be one of ${Object.values(PACK_ROLES).join(', ')}`);
+        }
+        let traits = (raw.traits && typeof raw.traits === 'object' && !Array.isArray(raw.traits)) ? raw.traits : null;
+        let position = null;
+        if (raw.position && typeof raw.position === 'object' && !Array.isArray(raw.position)) {
+            position = {
+                x: finiteOr(Number(raw.position.x), 0),
+                y: finiteOr(Number(raw.position.y), 0),
+                z: finiteOr(Number(raw.position.z), 0)
+            };
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_REQUEST,
+                packId: String(raw.packId).trim(),
+                agentId: String(raw.agentId).trim(),
+                role,
+                traits,
+                position
+            }
+        };
+    }
+
+    /**
+     * Validate PACK_REMOVE_MEMBER_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePackRemoveMember(raw) {
+        const errors = [];
+        if (!raw.packId || typeof raw.packId !== 'string' || !raw.packId.trim()) {
+            errors.push('Missing or invalid "packId" string');
+        }
+        if (!raw.agentId || typeof raw.agentId !== 'string' || !raw.agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_REQUEST,
+                packId: String(raw.packId).trim(),
+                agentId: String(raw.agentId).trim()
+            }
+        };
+    }
+
+    /**
+     * Validate PACK_UPDATE_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePackUpdate(raw) {
+        const errors = [];
+        if (!raw.packId || typeof raw.packId !== 'string' || !raw.packId.trim()) {
+            errors.push('Missing or invalid "packId" string');
+        }
+        let phase = raw.phase ? String(raw.phase).trim() : null;
+        if (phase && !Object.values(TACTICAL_PHASES).includes(phase)) {
+            errors.push(`Invalid phase: must be one of ${Object.values(TACTICAL_PHASES).join(', ')}`);
+        }
+        let pattern = raw.pattern ? String(raw.pattern).trim() : null;
+        if (pattern && !Object.values(ENCIRCLEMENT_PATTERNS).includes(pattern)) {
+            errors.push(`Invalid pattern: must be one of ${Object.values(ENCIRCLEMENT_PATTERNS).join(', ')}`);
+        }
+        let targetThreat = null;
+        if (raw.targetThreat && typeof raw.targetThreat === 'object' && !Array.isArray(raw.targetThreat)) {
+            targetThreat = {
+                x: finiteOr(Number(raw.targetThreat.x), 0),
+                y: finiteOr(Number(raw.targetThreat.y), 0),
+                z: finiteOr(Number(raw.targetThreat.z), 0),
+                id: raw.targetThreat.id ? String(raw.targetThreat.id) : null
+            };
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PACK_UPDATE_REQUEST,
+                packId: String(raw.packId).trim(),
+                phase,
+                pattern,
+                targetThreat
+            }
+        };
+    }
+
+    /**
+     * Validate PACK_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validatePackQuery(raw) {
+        const packId = raw.packId ? String(raw.packId).trim() : null;
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.PACK_QUERY_REQUEST,
+                packId
+            }
         };
     }
 

@@ -347,7 +347,8 @@ export class FearServer {
                     // Advertised so a host can discover that this server expects
                     // signatures, and how many of its requests have been refused
                     // for what reason, before it starts guessing.
-                    signing: this.signing.summary()
+                    signing: this.signing.summary(),
+                    pack_coordination: Boolean(this.simulation.packCoordination)
                 });
             }
             case '/api/v1/register': {
@@ -823,6 +824,139 @@ export class FearServer {
                     unbroken: report.unbroken,
                     summary: report.summary
                 });
+            }
+
+            case '/api/v1/pack/create': {
+                const val = ProtocolValidator.validatePackCreate(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    const pack = this.simulation.createPack(val.value.packId, val.value.options);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PACK_CREATE_RESPONSE,
+                        status: 'CREATED',
+                        packId: pack.id,
+                        phase: pack.phase,
+                        pattern: pack.pattern
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/pack/assign': {
+                const val = ProtocolValidator.validatePackAssignMember(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    const member = this.simulation.registerPackMember(
+                        val.value.packId,
+                        val.value.agentId,
+                        val.value.traits,
+                        val.value.position,
+                        val.value.role
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_RESPONSE,
+                        status: 'ASSIGNED',
+                        packId: val.value.packId,
+                        agentId: val.value.agentId,
+                        role: member.role
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/pack/remove': {
+                const val = ProtocolValidator.validatePackRemoveMember(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    const ok = this.simulation.removePackMember(val.value.packId, val.value.agentId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_RESPONSE,
+                        status: ok ? 'REMOVED' : 'NOT_FOUND',
+                        packId: val.value.packId,
+                        agentId: val.value.agentId
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/pack/update': {
+                const val = ProtocolValidator.validatePackUpdate(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    if (val.value.phase) this.simulation.setPackPhase(val.value.packId, val.value.phase);
+                    if (val.value.pattern) this.simulation.setPackPattern(val.value.packId, val.value.pattern);
+                    if (val.value.targetThreat) this.simulation.setPackTargetThreat(val.value.packId, val.value.targetThreat);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PACK_UPDATE_RESPONSE,
+                        status: 'UPDATED',
+                        packId: val.value.packId
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/pack/query': {
+                const val = ProtocolValidator.validatePackQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    if (val.value.packId) {
+                        const advisories = this.simulation.getPackAdvisories(val.value.packId);
+                        if (!advisories) {
+                            return this._sendJson(res, 404, {
+                                error: `UNKNOWN_PACK: pack ${val.value.packId} does not exist.`,
+                                code: ERROR_CODES.UNKNOWN_PACK
+                            });
+                        }
+                        return this._sendJson(res, 200, {
+                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
+                            packId: val.value.packId,
+                            advisories
+                        });
+                    } else {
+                        const allAdvisories = this.simulation.getAllPackAdvisories();
+                        return this._sendJson(res, 200, {
+                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
+                            packId: null,
+                            packs: allAdvisories
+                        });
+                    }
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
             }
 
             default:
@@ -1373,7 +1507,8 @@ export class FearServer {
                     supported_pacing_metrics: SUPPORTED_PACING_METRICS,
                     host_capabilities: Object.values(HOST_CAPABILITIES),
                     capability_requirements: { ...INTENT_CAPABILITY_REQUIREMENTS },
-                    signing: this.signing.summary()
+                    signing: this.signing.summary(),
+                    pack_coordination: Boolean(this.simulation.packCoordination)
                 }, correlationId);
                 break;
             }
@@ -1661,6 +1796,147 @@ export class FearServer {
                     type: 'SET_PACING_OVERRIDE_ACK',
                     pacing: this.simulation.pacing.getState()
                 }, correlationId);
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_CREATE_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const pack = this.simulation.createPack(payload.packId, payload.options);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PACK_CREATE_RESPONSE,
+                        status: 'CREATED',
+                        packId: pack.id,
+                        phase: pack.phase,
+                        pattern: pack.pattern
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_ASSIGN_MEMBER_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const member = this.simulation.registerPackMember(
+                        payload.packId,
+                        payload.agentId,
+                        payload.traits,
+                        payload.position,
+                        payload.role
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_RESPONSE,
+                        status: 'ASSIGNED',
+                        packId: payload.packId,
+                        agentId: payload.agentId,
+                        role: member.role
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_REMOVE_MEMBER_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const ok = this.simulation.removePackMember(payload.packId, payload.agentId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_RESPONSE,
+                        status: ok ? 'REMOVED' : 'NOT_FOUND',
+                        packId: payload.packId,
+                        agentId: payload.agentId
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_UPDATE_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    if (payload.phase) this.simulation.setPackPhase(payload.packId, payload.phase);
+                    if (payload.pattern) this.simulation.setPackPattern(payload.packId, payload.pattern);
+                    if (payload.targetThreat) this.simulation.setPackTargetThreat(payload.packId, payload.targetThreat);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PACK_UPDATE_RESPONSE,
+                        status: 'UPDATED',
+                        packId: payload.packId
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_QUERY_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    if (payload.packId) {
+                        const advisories = this.simulation.getPackAdvisories(payload.packId);
+                        if (!advisories) {
+                            this._sendWsError(ws, `UNKNOWN_PACK: pack ${payload.packId} does not exist.`, ERROR_CODES.UNKNOWN_PACK, correlationId);
+                            break;
+                        }
+                        this._sendWs(ws, {
+                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
+                            packId: payload.packId,
+                            advisories
+                        }, correlationId);
+                    } else {
+                        const allAdvisories = this.simulation.getAllPackAdvisories();
+                        this._sendWs(ws, {
+                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
+                            packId: null,
+                            packs: allAdvisories
+                        }, correlationId);
+                    }
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
                 break;
             }
 

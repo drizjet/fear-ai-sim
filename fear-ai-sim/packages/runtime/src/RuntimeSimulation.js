@@ -272,7 +272,7 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
      * @param {object} [position=null]
      * @returns {object} MemberProfile
      */
-    registerPackMember(packId, memberId, traits = {}, position = null) {
+    registerPackMember(packId, memberId, traits = {}, position = null, role = null) {
         if (!this.packCoordination) {
             throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
                 + 'enablePackCoordination: true to register pack members.');
@@ -283,15 +283,26 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         }
         const agent = this.agents.get(id);
         const resolvedTraits = {
-            dominance: traits.dominance ?? agent.traits?.dominance ?? 0.5,
-            courage: traits.courage ?? agent.traits?.courage ?? (1.0 - (agent.traits?.neuroticism ?? 0.5)),
-            fear: traits.fear ?? agent.currentFear ?? 0.0,
-            aggression: traits.aggression ?? agent.traits?.aggression ?? (1.0 - (agent.traits?.agreeableness ?? 0.5)),
-            speed: traits.speed ?? agent.traits?.speed ?? 1.0,
-            resilience: traits.resilience ?? agent.traits?.resilience ?? 0.5
+            dominance: traits?.dominance ?? agent.traits?.dominance ?? 0.5,
+            courage: traits?.courage ?? agent.traits?.courage ?? (1.0 - (agent.traits?.neuroticism ?? 0.5)),
+            fear: traits?.fear ?? agent.currentFear ?? 0.0,
+            aggression: traits?.aggression ?? agent.traits?.aggression ?? (1.0 - (agent.traits?.agreeableness ?? 0.5)),
+            speed: traits?.speed ?? agent.traits?.speed ?? 1.0,
+            resilience: traits?.resilience ?? agent.traits?.resilience ?? 0.5
         };
         const pos = position || { x: agent.x, y: agent.y, z: agent.z };
-        return this.packCoordination.registerMember(packId, id, resolvedTraits, pos);
+        const member = this.packCoordination.registerMember(packId, id, resolvedTraits, pos);
+        if (member && role) {
+            member.role = role;
+            if (role === 'ALPHA_LEADER') {
+                const pack = this.packCoordination.packs.get(String(packId));
+                if (pack) {
+                    pack.alphaId = id;
+                    pack.alphaDominance = member.traits.dominance;
+                }
+            }
+        }
+        return member;
     }
 
     /**
@@ -339,6 +350,15 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             })),
             host_authority: 'ADVISORY_ONLY'
         };
+    }
+
+    /**
+     * Get tactical advisories for all active packs.
+     * @returns {Array<object>}
+     */
+    getAllPackAdvisories() {
+        if (!this.packCoordination) return [];
+        return Array.from(this.packCoordination.packs.keys()).map(id => this.getPackAdvisories(id));
     }
 
     /**
