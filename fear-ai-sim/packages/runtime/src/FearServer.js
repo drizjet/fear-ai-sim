@@ -348,7 +348,9 @@ export class FearServer {
                     // signatures, and how many of its requests have been refused
                     // for what reason, before it starts guessing.
                     signing: this.signing.summary(),
-                    pack_coordination: Boolean(this.simulation.packCoordination)
+                    pack_coordination: Boolean(this.simulation.packCoordination),
+                    economic_feedback: Boolean(this.simulation.economicFeedback),
+                    settlement_migration: Boolean(this.simulation.settlementMigration)
                 });
             }
             case '/api/v1/register': {
@@ -959,6 +961,161 @@ export class FearServer {
                 }
             }
 
+            case '/api/v1/economy/market/register': {
+                const val = ProtocolValidator.validateEconomyRegisterMarket(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.economicFeedback) {
+                    return this._sendJson(res, 400, {
+                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
+                    });
+                }
+                try {
+                    const market = this.simulation.registerSettlementMarket(val.value.settlementId, val.value.options);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_RESPONSE,
+                        status: 'REGISTERED',
+                        settlementId: val.value.settlementId,
+                        market
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/economy/trade': {
+                const val = ProtocolValidator.validateEconomyTrade(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.economicFeedback) {
+                    return this._sendJson(res, 400, {
+                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
+                    });
+                }
+                try {
+                    const success = this.simulation.recordTradeTransaction(
+                        val.value.sourceId,
+                        val.value.destId,
+                        val.value.commodity,
+                        val.value.amount
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.ECONOMY_TRADE_RESPONSE,
+                        status: success ? 'RECORDED' : 'FAILED',
+                        sourceId: val.value.sourceId,
+                        destId: val.value.destId,
+                        commodity: val.value.commodity,
+                        amount: val.value.amount,
+                        success
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/economy/raid/query': {
+                const val = ProtocolValidator.validateEconomyRaidQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.economicFeedback) {
+                    return this._sendJson(res, 400, {
+                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
+                    });
+                }
+                try {
+                    const raidDesirability = this.simulation.calculateRaidDesirability(val.value.settlementId);
+                    const marketSummary = this.simulation.getMarketSummary(val.value.settlementId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.ECONOMY_RAID_QUERY_RESPONSE,
+                        settlementId: val.value.settlementId,
+                        raidDesirability,
+                        marketSummary
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/settlement/register': {
+                const val = ProtocolValidator.validateSettlementRegister(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.settlementMigration) {
+                    return this._sendJson(res, 400, {
+                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
+                    });
+                }
+                try {
+                    const settlement = this.simulation.registerSettlement(val.value.settlementId, val.value.data);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.SETTLEMENT_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        settlementId: val.value.settlementId,
+                        settlement
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/settlement/pressure/query': {
+                const val = ProtocolValidator.validateSettlementPressureQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.settlementMigration) {
+                    return this._sendJson(res, 400, {
+                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
+                    });
+                }
+                try {
+                    const state = this.simulation.getSettlementMigrationState(val.value.settlementId);
+                    if (!state) {
+                        return this._sendJson(res, 404, {
+                            error: `UNKNOWN_SETTLEMENT: settlement ${val.value.settlementId} does not exist.`,
+                            code: ERROR_CODES.UNKNOWN_SETTLEMENT
+                        });
+                    }
+                    const pushPressure = this.simulation.evaluatePushPressure(val.value.settlementId);
+                    const pullAttraction = this.simulation.evaluatePullAttraction(val.value.settlementId, val.value.corridorDanger);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_RESPONSE,
+                        settlementId: val.value.settlementId,
+                        pushPressure,
+                        pullAttraction,
+                        state
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/settlement/migration/wave': {
+                const val = ProtocolValidator.validateSettlementMigrationWave(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.settlementMigration) {
+                    return this._sendJson(res, 400, {
+                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
+                    });
+                }
+                try {
+                    const party = this.simulation.triggerMigrationWave(
+                        val.value.sourceId,
+                        val.value.destId,
+                        val.value.corridorDanger
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_RESPONSE,
+                        status: party ? 'DISPATCHED' : 'NO_MIGRATION',
+                        sourceId: val.value.sourceId,
+                        destId: val.value.destId,
+                        party
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
             default:
                 return this._sendJson(res, 404, { error: `Endpoint ${path} not found` });
         }
@@ -1508,7 +1665,9 @@ export class FearServer {
                     host_capabilities: Object.values(HOST_CAPABILITIES),
                     capability_requirements: { ...INTENT_CAPABILITY_REQUIREMENTS },
                     signing: this.signing.summary(),
-                    pack_coordination: Boolean(this.simulation.packCoordination)
+                    pack_coordination: Boolean(this.simulation.packCoordination),
+                    economic_feedback: Boolean(this.simulation.economicFeedback),
+                    settlement_migration: Boolean(this.simulation.settlementMigration)
                 }, correlationId);
                 break;
             }
@@ -1934,6 +2093,176 @@ export class FearServer {
                             packs: allAdvisories
                         }, correlationId);
                     }
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_REQUEST: {
+                if (!this.simulation.economicFeedback) {
+                    this._sendWsError(
+                        ws,
+                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const market = this.simulation.registerSettlementMarket(payload.settlementId, payload.options);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_RESPONSE,
+                        status: 'REGISTERED',
+                        settlementId: payload.settlementId,
+                        market
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.ECONOMY_TRADE_REQUEST: {
+                if (!this.simulation.economicFeedback) {
+                    this._sendWsError(
+                        ws,
+                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const success = this.simulation.recordTradeTransaction(
+                        payload.sourceId,
+                        payload.destId,
+                        payload.commodity,
+                        payload.amount
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.ECONOMY_TRADE_RESPONSE,
+                        status: success ? 'RECORDED' : 'FAILED',
+                        sourceId: payload.sourceId,
+                        destId: payload.destId,
+                        commodity: payload.commodity,
+                        amount: payload.amount,
+                        success
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.ECONOMY_RAID_QUERY_REQUEST: {
+                if (!this.simulation.economicFeedback) {
+                    this._sendWsError(
+                        ws,
+                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const raidDesirability = this.simulation.calculateRaidDesirability(payload.settlementId);
+                    const marketSummary = this.simulation.getMarketSummary(payload.settlementId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.ECONOMY_RAID_QUERY_RESPONSE,
+                        settlementId: payload.settlementId,
+                        raidDesirability,
+                        marketSummary
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.SETTLEMENT_REGISTER_REQUEST: {
+                if (!this.simulation.settlementMigration) {
+                    this._sendWsError(
+                        ws,
+                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const settlement = this.simulation.registerSettlement(payload.settlementId, payload.data);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.SETTLEMENT_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        settlementId: payload.settlementId,
+                        settlement
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_REQUEST: {
+                if (!this.simulation.settlementMigration) {
+                    this._sendWsError(
+                        ws,
+                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const state = this.simulation.getSettlementMigrationState(payload.settlementId);
+                    if (!state) {
+                        this._sendWsError(
+                            ws,
+                            `UNKNOWN_SETTLEMENT: settlement ${payload.settlementId} does not exist.`,
+                            ERROR_CODES.UNKNOWN_SETTLEMENT,
+                            correlationId
+                        );
+                        break;
+                    }
+                    const pushPressure = this.simulation.evaluatePushPressure(payload.settlementId);
+                    const pullAttraction = this.simulation.evaluatePullAttraction(payload.settlementId, payload.corridorDanger);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_RESPONSE,
+                        settlementId: payload.settlementId,
+                        pushPressure,
+                        pullAttraction,
+                        state
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_REQUEST: {
+                if (!this.simulation.settlementMigration) {
+                    this._sendWsError(
+                        ws,
+                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const party = this.simulation.triggerMigrationWave(
+                        payload.sourceId,
+                        payload.destId,
+                        payload.corridorDanger
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_RESPONSE,
+                        status: party ? 'DISPATCHED' : 'NO_MIGRATION',
+                        sourceId: payload.sourceId,
+                        destId: payload.destId,
+                        party
+                    }, correlationId);
                 } catch (err) {
                     this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
                 }

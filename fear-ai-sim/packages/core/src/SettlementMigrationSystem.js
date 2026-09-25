@@ -46,7 +46,7 @@ export class SettlementMigrationSystem {
      * Registers a settlement with demographic and resource baselines.
      */
     registerSettlement(id, data = {}) {
-        this.settlements.set(id, {
+        const settlement = {
             id,
             population: data.population ?? 100,
             housingCapacity: data.housingCapacity ?? 120,
@@ -56,7 +56,9 @@ export class SettlementMigrationSystem {
             socialFriction: 0.0,
             laborBonus: 1.0,
             ...data
-        });
+        };
+        this.settlements.set(id, settlement);
+        return settlement;
     }
 
     /**

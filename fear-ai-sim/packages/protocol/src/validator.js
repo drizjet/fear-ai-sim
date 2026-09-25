@@ -139,6 +139,24 @@ export class ProtocolValidator {
             case MESSAGE_TYPES.PACK_QUERY_REQUEST:
                 result = ProtocolValidator.validatePackQuery(raw);
                 break;
+            case MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_REQUEST:
+                result = ProtocolValidator.validateEconomyRegisterMarket(raw);
+                break;
+            case MESSAGE_TYPES.ECONOMY_TRADE_REQUEST:
+                result = ProtocolValidator.validateEconomyTrade(raw);
+                break;
+            case MESSAGE_TYPES.ECONOMY_RAID_QUERY_REQUEST:
+                result = ProtocolValidator.validateEconomyRaidQuery(raw);
+                break;
+            case MESSAGE_TYPES.SETTLEMENT_REGISTER_REQUEST:
+                result = ProtocolValidator.validateSettlementRegister(raw);
+                break;
+            case MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_REQUEST:
+                result = ProtocolValidator.validateSettlementPressureQuery(raw);
+                break;
+            case MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_REQUEST:
+                result = ProtocolValidator.validateSettlementMigrationWave(raw);
+                break;
             default:
                 // Accept unknown messages defensively
                 result = { valid: true, value: raw };
@@ -956,6 +974,175 @@ export class ProtocolValidator {
             value: {
                 type: MESSAGE_TYPES.PACK_QUERY_REQUEST,
                 packId
+            }
+        };
+    }
+
+    /**
+     * Validate ECONOMY_REGISTER_MARKET_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateEconomyRegisterMarket(raw) {
+        const errors = [];
+        const settlementId = raw.settlementId || raw.settlement_id;
+        if (!settlementId || typeof settlementId !== 'string' || !settlementId.trim()) {
+            errors.push('Missing or invalid "settlementId" string');
+        }
+        const options = (raw.options && typeof raw.options === 'object' && !Array.isArray(raw.options)) ? raw.options : {};
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_REQUEST,
+                settlementId: String(settlementId).trim(),
+                options
+            }
+        };
+    }
+
+    /**
+     * Validate ECONOMY_TRADE_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateEconomyTrade(raw) {
+        const errors = [];
+        const sourceId = raw.sourceId || raw.source_id;
+        const destId = raw.destId || raw.dest_id;
+        if (!sourceId || typeof sourceId !== 'string' || !sourceId.trim()) {
+            errors.push('Missing or invalid "sourceId" string');
+        }
+        if (!destId || typeof destId !== 'string' || !destId.trim()) {
+            errors.push('Missing or invalid "destId" string');
+        }
+        if (!raw.commodity || typeof raw.commodity !== 'string' || !raw.commodity.trim()) {
+            errors.push('Missing or invalid "commodity" string');
+        }
+        const amount = Number(raw.amount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            errors.push('"amount" must be a positive finite number');
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.ECONOMY_TRADE_REQUEST,
+                sourceId: String(sourceId).trim(),
+                destId: String(destId).trim(),
+                commodity: String(raw.commodity).trim().toUpperCase(),
+                amount
+            }
+        };
+    }
+
+    /**
+     * Validate ECONOMY_RAID_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateEconomyRaidQuery(raw) {
+        const errors = [];
+        const settlementId = raw.settlementId || raw.settlement_id;
+        if (!settlementId || typeof settlementId !== 'string' || !settlementId.trim()) {
+            errors.push('Missing or invalid "settlementId" string');
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.ECONOMY_RAID_QUERY_REQUEST,
+                settlementId: String(settlementId).trim()
+            }
+        };
+    }
+
+    /**
+     * Validate SETTLEMENT_REGISTER_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateSettlementRegister(raw) {
+        const errors = [];
+        const settlementId = raw.settlementId || raw.settlement_id;
+        if (!settlementId || typeof settlementId !== 'string' || !settlementId.trim()) {
+            errors.push('Missing or invalid "settlementId" string');
+        }
+        const data = (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data)) ? raw.data : {};
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.SETTLEMENT_REGISTER_REQUEST,
+                settlementId: String(settlementId).trim(),
+                data
+            }
+        };
+    }
+
+    /**
+     * Validate SETTLEMENT_PRESSURE_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateSettlementPressureQuery(raw) {
+        const errors = [];
+        const settlementId = raw.settlementId || raw.settlement_id;
+        if (!settlementId || typeof settlementId !== 'string' || !settlementId.trim()) {
+            errors.push('Missing or invalid "settlementId" string');
+        }
+        const corridorDanger = Number.isFinite(Number(raw.corridorDanger ?? raw.corridor_danger))
+            ? Number(raw.corridorDanger ?? raw.corridor_danger)
+            : 0.0;
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_REQUEST,
+                settlementId: String(settlementId).trim(),
+                corridorDanger
+            }
+        };
+    }
+
+    /**
+     * Validate SETTLEMENT_MIGRATION_WAVE_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateSettlementMigrationWave(raw) {
+        const errors = [];
+        const sourceId = raw.sourceId || raw.source_id;
+        const destId = raw.destId || raw.dest_id;
+        if (!sourceId || typeof sourceId !== 'string' || !sourceId.trim()) {
+            errors.push('Missing or invalid "sourceId" string');
+        }
+        if (!destId || typeof destId !== 'string' || !destId.trim()) {
+            errors.push('Missing or invalid "destId" string');
+        }
+        const corridorDanger = Number.isFinite(Number(raw.corridorDanger ?? raw.corridor_danger))
+            ? Number(raw.corridorDanger ?? raw.corridor_danger)
+            : 0.0;
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_REQUEST,
+                sourceId: String(sourceId).trim(),
+                destId: String(destId).trim(),
+                corridorDanger
             }
         };
     }

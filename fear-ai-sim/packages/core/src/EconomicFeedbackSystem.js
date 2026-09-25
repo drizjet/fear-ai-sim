@@ -92,7 +92,7 @@ export class EconomicFeedbackSystem {
             [COMMODITY_TYPES.LUXURY]: options.production?.[COMMODITY_TYPES.LUXURY] ?? options.production?.luxury ?? 0.1
         };
 
-        this.settlementMarkets.set(id, {
+        const market = {
             id,
             population,
             garrison: options.garrison ?? 0.5,
@@ -104,7 +104,9 @@ export class EconomicFeedbackSystem {
             famineTicks: 0,
             desperationFearModifier: 0.0,
             escortReadiness: 0.0
-        });
+        };
+        this.settlementMarkets.set(id, market);
+        return market;
     }
 
     /**

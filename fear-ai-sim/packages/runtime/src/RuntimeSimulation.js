@@ -501,6 +501,19 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
     }
 
     /**
+     * Gets summary metrics of all settlement markets. Returns empty array if service disabled.
+     * @returns {Array<object>}
+     */
+    getAllMarketSummaries() {
+        if (!this.economicFeedback) return [];
+        const summaries = [];
+        for (const id of this.economicFeedback.settlementMarkets.keys()) {
+            summaries.push(this.economicFeedback.getMarketSummary(id));
+        }
+        return summaries;
+    }
+
+    /**
      * Validates economic health against Section 43 pathologies.
      * Refuses when the economic feedback service is not enabled.
      * @returns {{ healthy: boolean, pathologies: Array<{ type: string, description: string, severity: string }> }}
@@ -587,6 +600,15 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
      */
     getSettlementMigrationState(settlementId) {
         return this.settlementMigration ? (this.settlementMigration.settlements.get(String(settlementId)) || null) : null;
+    }
+
+    /**
+     * Gets migration states of all registered settlements. Returns empty array if service disabled.
+     * @returns {Array<object>}
+     */
+    getAllSettlementMigrationStates() {
+        if (!this.settlementMigration) return [];
+        return Array.from(this.settlementMigration.settlements.values());
     }
 
     /**
