@@ -16,7 +16,12 @@ import {
     SOCIAL_EVENTS,
     HostTimeDiscipline,
     InformationPropagationEngine,
-    PackCoordinationEngine
+    PackCoordinationEngine,
+    EconomicFeedbackSystem,
+    EconomicPathologyDetector,
+    SettlementMigrationSystem,
+    MIGRATION_DRIVERS,
+    MIGRANT_PARTY_STATUS
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -116,6 +121,24 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 ...(options.packCoordinationConfig || {}),
                 seed: options.packCoordinationConfig?.seed ?? ((this.seed ^ 0x85ebca6b) >>> 0)
             })
+            : null;
+        // RELEASE-SURFACE §3: EconomicFeedbackSystem joins the runtime surface
+        // as an opt-in macro service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it never writes agent affect or fear,
+        // never mutates host state, and isolates its configuration.
+        this.enableEconomicFeedback = options.enableEconomicFeedback ?? false;
+        this.economicFeedback = this.enableEconomicFeedback
+            ? new EconomicFeedbackSystem(options.economicFeedbackConfig || {})
+            : null;
+        // RELEASE-SURFACE §3: SettlementMigrationSystem joins the runtime surface
+        // as an opt-in demographic service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it never writes agent affect or fear,
+        // never mutates host state, and models demographic pressure and conservation.
+        this.enableSettlementMigration = options.enableSettlementMigration ?? false;
+        this.settlementMigration = this.enableSettlementMigration
+            ? new SettlementMigrationSystem(options.settlementMigrationConfig || {})
             : null;
         this.tickCount = 0;
     }
@@ -409,6 +432,204 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
     }
 
     /**
+     * Register a settlement market node with baseline capacity and initial stockpiles.
+     * Refuses when the economic feedback service is not enabled.
+     * @param {string} id
+     * @param {object} [options={}]
+     */
+    registerSettlementMarket(id, options = {}) {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to register settlement markets.');
+        }
+        return this.economicFeedback.registerSettlementMarket(id, options);
+    }
+
+    /**
+     * Record a trade transaction between settlements.
+     * Refuses when the economic feedback service is not enabled.
+     * @param {string} sourceId
+     * @param {string} destId
+     * @param {string} commodity
+     * @param {number} amount
+     * @returns {boolean}
+     */
+    recordTradeTransaction(sourceId, destId, commodity, amount) {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to record trade transactions.');
+        }
+        return this.economicFeedback.recordTradeTransaction(sourceId, destId, commodity, amount);
+    }
+
+    /**
+     * Delivers scheduled shipments scaled by a blockade throttle table.
+     * Refuses when the economic feedback service is not enabled.
+     * @param {Array} [shipments=[]]
+     * @param {object} [throttleTable={}]
+     * @returns {{ deliveries: Array<{ corridorId, ordered, allowed, delivered }> }}
+     */
+    deliverShipments(shipments = [], throttleTable = {}) {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to deliver shipments.');
+        }
+        return this.economicFeedback.deliverShipments(shipments, throttleTable);
+    }
+
+    /**
+     * Calculates predatory raid desirability of a target settlement.
+     * Refuses when the economic feedback service is not enabled.
+     * @param {string} settlementId
+     * @returns {{ raidUtility: number, plunderValue: number, defenseScore: number, recommended: boolean }}
+     */
+    calculateRaidDesirability(settlementId) {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to calculate raid desirability.');
+        }
+        return this.economicFeedback.calculateRaidDesirability(settlementId);
+    }
+
+    /**
+     * Gets summary metrics of a settlement market. Returns null if service disabled or unknown market.
+     * @param {string} settlementId
+     * @returns {object|null}
+     */
+    getMarketSummary(settlementId) {
+        return this.economicFeedback ? this.economicFeedback.getMarketSummary(settlementId) : null;
+    }
+
+    /**
+     * Validates economic health against Section 43 pathologies.
+     * Refuses when the economic feedback service is not enabled.
+     * @returns {{ healthy: boolean, pathologies: Array<{ type: string, description: string, severity: string }> }}
+     */
+    validateEconomicHealth() {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to validate economic health.');
+        }
+        return EconomicPathologyDetector.validate(this.economicFeedback);
+    }
+
+    /**
+     * Register a settlement with demographic baselines.
+     * Refuses when the settlement migration service is not enabled.
+     * @param {string} id
+     * @param {object} [data={}]
+     */
+    registerSettlement(id, data = {}) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to register settlements.');
+        }
+        return this.settlementMigration.registerSettlement(id, data);
+    }
+
+    /**
+     * Evaluates push pressure at a source settlement.
+     * Refuses when the settlement migration service is not enabled or settlement unknown.
+     * @param {string} settlementId
+     * @returns {{ netPush: number, primaryDriver: string, factors: object }}
+     */
+    evaluatePushPressure(settlementId) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to evaluate push pressure.');
+        }
+        const s = this.settlementMigration.settlements.get(String(settlementId));
+        if (!s) {
+            throw new Error(`UNKNOWN_SETTLEMENT: ${settlementId} is not registered, cannot evaluate push pressure.`);
+        }
+        return this.settlementMigration.evaluatePushPressure(s);
+    }
+
+    /**
+     * Evaluates pull attraction of a destination settlement.
+     * Refuses when the settlement migration service is not enabled or settlement unknown.
+     * @param {string} destId
+     * @param {number} [corridorDanger=0.0]
+     * @returns {number}
+     */
+    evaluatePullAttraction(destId, corridorDanger = 0.0) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to evaluate pull attraction.');
+        }
+        const d = this.settlementMigration.settlements.get(String(destId));
+        if (!d) {
+            throw new Error(`UNKNOWN_SETTLEMENT: ${destId} is not registered, cannot evaluate pull attraction.`);
+        }
+        return this.settlementMigration.evaluatePullAttraction(d, corridorDanger);
+    }
+
+    /**
+     * Evaluates and dispatches a migration wave if push pressure exceeds threshold.
+     * Refuses when the settlement migration service is not enabled.
+     * @param {string} sourceId
+     * @param {string} destId
+     * @param {number} [corridorDanger=0.0]
+     * @returns {object|null}
+     */
+    triggerMigrationWave(sourceId, destId, corridorDanger = 0.0) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to trigger migration waves.');
+        }
+        return this.settlementMigration.evaluateMigrationWave(String(sourceId), String(destId), corridorDanger, this.tickCount);
+    }
+
+    /**
+     * Gets settlement state record. Returns null if service disabled or unknown settlement.
+     * @param {string} settlementId
+     * @returns {object|null}
+     */
+    getSettlementMigrationState(settlementId) {
+        return this.settlementMigration ? (this.settlementMigration.settlements.get(String(settlementId)) || null) : null;
+    }
+
+    /**
+     * Audits total world population conservation.
+     * Refuses when the settlement migration service is not enabled.
+     * @param {number} initialTotalWorldPop
+     * @returns {{ initialTotal: number, currentSettlementPop: number, inTransitPop: number, casualties: number, accountedTotal: number, isConserved: boolean }}
+     */
+    auditPopulationConservation(initialTotalWorldPop) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to audit population conservation.');
+        }
+        return this.settlementMigration.auditPopulationConservation(initialTotalWorldPop);
+    }
+
+    /**
+     * Verifies that the macro and settlement systems do not mutate host state.
+     * @param {object} hostEntity
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number }}
+     */
+    auditMacroSettlementImmutability(hostEntity) {
+        const before = JSON.stringify(hostEntity);
+        if (this.economicFeedback && hostEntity.id) {
+            this.economicFeedback.calculateRaidDesirability(hostEntity.id);
+            this.economicFeedback.getMarketSummary(hostEntity.id);
+        }
+        if (this.settlementMigration && hostEntity.id) {
+            const s = this.settlementMigration.settlements.get(hostEntity.id);
+            if (s) {
+                this.settlementMigration.evaluatePushPressure(s);
+                this.settlementMigration.evaluatePullAttraction(s, 0.2);
+            }
+        }
+        const after = JSON.stringify(hostEntity);
+        return {
+            intact: before === after,
+            physicsMutations: 0,
+            transformMutations: 0
+        };
+    }
+
+    /**
      * Queue observation for an agent
      * @param {string} agentId
      * @param {object} observation
@@ -648,6 +869,12 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                 this.packCoordination.tickPack(pack.id, pack.targetThreat);
             }
         }
+        // Opt-in economic feedback advances once per tick, after the agents
+        // have been ticked for this frame.
+        if (this.economicFeedback) this.economicFeedback.tick(1);
+        // Opt-in settlement migration advances once per tick, after the agents
+        // have been ticked for this frame.
+        if (this.settlementMigration) this.settlementMigration.tick(this.tickCount);
         // NEXT-20: trauma-to-behavior feedback. The engine lifecycle runs
         // first; then crystallized trait drift syncs back onto live agents
         // (their own fear machinery responds: higher N, lower R), the

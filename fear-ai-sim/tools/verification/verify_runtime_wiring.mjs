@@ -81,12 +81,12 @@ console.log('  * Core RuntimeSimulation services and live tick path: PASS');
 // source checks are deliberate tripwires: if a future change constructs one
 // here, the ledger and release scope must be revisited rather than silently
 // inheriting a broader "core" claim.
-// InformationPropagationEngine and PackCoordinationEngine are deliberately ABSENT
-// from this list. They left the optional surface by the §3 change policy and joined
+// InformationPropagationEngine, PackCoordinationEngine, EconomicFeedbackSystem,
+// and SettlementMigrationSystem are deliberately ABSENT from this list.
+// They left the optional surface by the §3 change policy and joined
 // the runtime as opt-in services, which is why the tripwires that guard them now
 // point the other way: see the opt-in assertions below.
 const optionalRuntimeConstructors = [
-    'EconomicFeedbackSystem',
     'EpistemicBeliefEngine',
     'MoralDissonanceEngine',
     'FunctionalPersonaSignatures',
@@ -136,11 +136,46 @@ assert(packOptIn.packCoordination !== null && packOptOut.packCoordination !== pa
     'The opt-in flag did not construct a distinct pack-coordination service');
 console.log('  * PackCoordinationEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
 
+// RELEASE-SURFACE §3 condition 4 for EconomicFeedbackSystem: promoted from §2.
+assert(hasConstructor(runtimeSource, 'EconomicFeedbackSystem'),
+    'EconomicFeedbackSystem is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableEconomicFeedback\s*=\s*options\.enableEconomicFeedback\s*\?\?\s*false/.test(runtimeSource),
+    'EconomicFeedbackSystem no longer defaults to false, so it is not opt-in');
+assert(/this\.economicFeedback\s*=\s*this\.enableEconomicFeedback\s*\?\s*new EconomicFeedbackSystem/.test(runtimeSource),
+    'EconomicFeedbackSystem is constructed outside its opt-in guard');
+const econOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(econOptOut.economicFeedback === null,
+    'A default RuntimeSimulation constructed the optional economic-feedback service');
+assert(econOptOut.enableEconomicFeedback === false,
+    'The economic-feedback opt-in does not default to false');
+const econOptIn = new RuntimeSimulation({ seed: 91339, enableEconomicFeedback: true });
+assert(econOptIn.economicFeedback !== null && econOptOut.economicFeedback !== econOptIn.economicFeedback,
+    'The opt-in flag did not construct a distinct economic-feedback service');
+console.log('  * EconomicFeedbackSystem is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for SettlementMigrationSystem: promoted from §2.
+assert(hasConstructor(runtimeSource, 'SettlementMigrationSystem'),
+    'SettlementMigrationSystem is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableSettlementMigration\s*=\s*options\.enableSettlementMigration\s*\?\?\s*false/.test(runtimeSource),
+    'SettlementMigrationSystem no longer defaults to false, so it is not opt-in');
+assert(/this\.settlementMigration\s*=\s*this\.enableSettlementMigration\s*\?\s*new SettlementMigrationSystem/.test(runtimeSource),
+    'SettlementMigrationSystem is constructed outside its opt-in guard');
+const migOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(migOptOut.settlementMigration === null,
+    'A default RuntimeSimulation constructed the optional settlement-migration service');
+assert(migOptOut.enableSettlementMigration === false,
+    'The settlement-migration opt-in does not default to false');
+const migOptIn = new RuntimeSimulation({ seed: 91339, enableSettlementMigration: true });
+assert(migOptIn.settlementMigration !== null && migOptOut.settlementMigration !== migOptIn.settlementMigration,
+    'The opt-in flag did not construct a distinct settlement-migration service');
+console.log('  * SettlementMigrationSystem is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
 // Verify that the optional systems have explicit direct entry points rather
 // than being mistaken for implicit runtime services.
 const cliEntryPoints = [
     ['PackCoordinationEngine', /new PackCoordinationEngine\b/],
     ['EconomicFeedbackSystem', /new EconomicFeedbackSystem\b/],
+    ['SettlementMigrationSystem', /new SettlementMigrationSystem\b/],
     ['EpistemicBeliefEngine via MultiObserverEpistemicHarness', /new MultiObserverEpistemicHarness\b/],
     ['MoralDissonanceEngine', /new MoralDissonanceEngine\b/],
     ['FunctionalPersonaSignatures', /new FunctionalPersonaSignatures\b/],
