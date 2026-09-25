@@ -169,6 +169,24 @@ export class ProtocolValidator {
             case MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_REQUEST:
                 result = ProtocolValidator.validateEpistemicSubjectiveQuery(raw);
                 break;
+            case MESSAGE_TYPES.MORAL_PROFILE_REGISTER_REQUEST:
+                result = ProtocolValidator.validateMoralProfileRegister(raw);
+                break;
+            case MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_REQUEST:
+                result = ProtocolValidator.validateMoralDissonanceQuery(raw);
+                break;
+            case MESSAGE_TYPES.MORAL_TRANSGRESSION_REQUEST:
+                result = ProtocolValidator.validateMoralTransgression(raw);
+                break;
+            case MESSAGE_TYPES.MORAL_ATONEMENT_REQUEST:
+                result = ProtocolValidator.validateMoralAtonement(raw);
+                break;
+            case MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_REQUEST:
+                result = ProtocolValidator.validateMoralOrderCompliance(raw);
+                break;
+            case MESSAGE_TYPES.MORAL_STATE_QUERY_REQUEST:
+                result = ProtocolValidator.validateMoralStateQuery(raw);
+                break;
             default:
                 // Accept unknown messages defensively
                 result = { valid: true, value: raw };
@@ -1284,6 +1302,218 @@ export class ProtocolValidator {
             valid: true,
             value: {
                 type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_REQUEST,
+                agentId: String(agentId).trim()
+            }
+        };
+    }
+
+    /**
+     * Validate MORAL_PROFILE_REGISTER_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateMoralProfileRegister(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        let profile = raw.profile;
+        if (profile === undefined || profile === null) {
+            profile = 'HONORABLE_GUARDIAN';
+        } else if (typeof profile === 'string') {
+            profile = profile.trim().toUpperCase();
+        } else if (typeof profile === 'object' && !Array.isArray(profile)) {
+            const sanitized = {};
+            for (const [k, v] of Object.entries(profile)) {
+                if (k === '__proto__' || k === 'constructor' || k === 'prototype') continue;
+                const upperK = String(k).toUpperCase();
+                if (typeof v === 'number' && Number.isFinite(v)) {
+                    sanitized[upperK] = Math.max(0, Math.min(1.0, v));
+                }
+            }
+            profile = sanitized;
+        } else {
+            errors.push('Property "profile" must be a preset string name or a foundation weights object');
+        }
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.MORAL_PROFILE_REGISTER_REQUEST,
+                agentId: String(agentId).trim(),
+                profile
+            }
+        };
+    }
+
+    /**
+     * Validate MORAL_DISSONANCE_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateMoralDissonanceQuery(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        const transgressionType = raw.transgressionType || raw.transgression_type || raw.transgression || raw.actionType || raw.action_type || raw.action;
+        if (!transgressionType || typeof transgressionType !== 'string' || !transgressionType.trim()) {
+            errors.push('Missing or invalid "transgressionType" string');
+        }
+        const context = raw.context && typeof raw.context === 'object' && !Array.isArray(raw.context) ? raw.context : {};
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_REQUEST,
+                agentId: String(agentId).trim(),
+                transgressionType: String(transgressionType).trim().toUpperCase(),
+                context
+            }
+        };
+    }
+
+    /**
+     * Validate MORAL_TRANSGRESSION_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateMoralTransgression(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        const transgressionType = raw.transgressionType || raw.transgression_type || raw.transgression || raw.type;
+        if (!transgressionType || typeof transgressionType !== 'string' || !transgressionType.trim()) {
+            errors.push('Missing or invalid "transgressionType" string');
+        }
+        const context = raw.context && typeof raw.context === 'object' && !Array.isArray(raw.context) ? raw.context : {};
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.MORAL_TRANSGRESSION_REQUEST,
+                agentId: String(agentId).trim(),
+                transgressionType: String(transgressionType).trim().toUpperCase(),
+                context
+            }
+        };
+    }
+
+    /**
+     * Validate MORAL_ATONEMENT_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateMoralAtonement(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        const atonementType = raw.atonementType || raw.atonement_type || raw.atonement || raw.type;
+        if (!atonementType || typeof atonementType !== 'string' || !atonementType.trim()) {
+            errors.push('Missing or invalid "atonementType" string');
+        }
+        const context = raw.context && typeof raw.context === 'object' && !Array.isArray(raw.context) ? raw.context : {};
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.MORAL_ATONEMENT_REQUEST,
+                agentId: String(agentId).trim(),
+                atonementType: String(atonementType).trim().toUpperCase(),
+                context
+            }
+        };
+    }
+
+    /**
+     * Validate MORAL_ORDER_COMPLIANCE_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateMoralOrderCompliance(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        let proposedTransgression = raw.proposedTransgression || raw.proposed_transgression || raw.transgressionType || raw.transgression_type || raw.transgression || raw.order || raw.action;
+        let context = raw.context && typeof raw.context === 'object' && !Array.isArray(raw.context) ? { ...raw.context } : {};
+        if (typeof proposedTransgression === 'object' && proposedTransgression !== null) {
+            context = { ...proposedTransgression, ...context };
+            proposedTransgression = proposedTransgression.transgression || proposedTransgression.type || proposedTransgression.action || proposedTransgression.proposedTransgression;
+        }
+        if (!proposedTransgression || typeof proposedTransgression !== 'string' || !proposedTransgression.trim()) {
+            errors.push('Missing or invalid "proposedTransgression" string');
+        }
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_REQUEST,
+                agentId: String(agentId).trim(),
+                proposedTransgression: String(proposedTransgression).trim().toUpperCase(),
+                context
+            }
+        };
+    }
+
+    /**
+     * Validate MORAL_STATE_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateMoralStateQuery(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.MORAL_STATE_QUERY_REQUEST,
                 agentId: String(agentId).trim()
             }
         };

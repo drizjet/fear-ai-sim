@@ -45,7 +45,40 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
     }
     return Math.max(0, Math.min(1, sum / 2));
 }
- export class RuntimeSimulation {
+
+const MORAL_PROFILE_ALIASES = Object.freeze({
+    AUTHORITARIAN: DEFAULT_MORAL_PROFILES.ZEALOUS_CRUSADER,
+    ZEALOT: DEFAULT_MORAL_PROFILES.ZEALOUS_CRUSADER,
+    ALTRUIST: DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN,
+    GUARDIAN: DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN,
+    REBEL: DEFAULT_MORAL_PROFILES.REBEL_FREE_SPIRIT,
+    PRAGMATIST: DEFAULT_MORAL_PROFILES.MERCENARY_PRAGMATIST,
+    MERCENARY: DEFAULT_MORAL_PROFILES.MERCENARY_PRAGMATIST,
+    UTILITARIAN: DEFAULT_MORAL_PROFILES.COLD_UTILITARIAN
+});
+
+const TRANSGRESSION_ALIASES = Object.freeze({
+    HARM: TRANSGRESSION_TYPES.EXECUTE_DEFENSELESS,
+    BETRAYAL: TRANSGRESSION_TYPES.BETRAY_COMMANDER,
+    INSUBORDINATION: TRANSGRESSION_TYPES.BETRAY_COMMANDER,
+    DESERTION: TRANSGRESSION_TYPES.ABANDON_COMRADE,
+    LOOTING: TRANSGRESSION_TYPES.LOOT_SETTLEMENT,
+    DESECRATION: TRANSGRESSION_TYPES.DESECRATE_SANCTUARY,
+    FLIGHT: TRANSGRESSION_TYPES.COWARDLY_FLIGHT,
+    TREASON: TRANSGRESSION_TYPES.BREAK_SWORN_TREATY
+});
+
+const ATONEMENT_ALIASES = Object.freeze({
+    CONFESSION: ATONEMENT_TYPES.CONFESSION_AND_PENANCE,
+    PENANCE: ATONEMENT_TYPES.CONFESSION_AND_PENANCE,
+    REPARATION: ATONEMENT_TYPES.RESTITUTION_OF_GOODS,
+    RESTITUTION: ATONEMENT_TYPES.RESTITUTION_OF_GOODS,
+    DEFENSE: ATONEMENT_TYPES.DEFEND_THE_HELPLESS,
+    SACRIFICE: ATONEMENT_TYPES.SACRIFICIAL_INTERVENTION,
+    AID: ATONEMENT_TYPES.AID_VICTIMS
+});
+
+export class RuntimeSimulation {
     /**
      * @param {object} [options={}]
      */
@@ -851,7 +884,21 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         if (!this.agents.has(id)) {
             throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
         }
-        return this.moralDissonance.registerAgentMoralProfile(id, profile);
+        let moralProfile = profile;
+        let profileName = null;
+        if (typeof profile === 'string') {
+            profileName = profile.trim().toUpperCase();
+            if (DEFAULT_MORAL_PROFILES[profileName]) {
+                moralProfile = DEFAULT_MORAL_PROFILES[profileName];
+            } else if (MORAL_PROFILE_ALIASES[profileName]) {
+                moralProfile = MORAL_PROFILE_ALIASES[profileName];
+            }
+        }
+        const state = this.moralDissonance.registerAgentMoralProfile(id, moralProfile);
+        if (state && profileName) {
+            state.moralProfile = profileName;
+        }
+        return state;
     }
 
     /**
@@ -870,7 +917,9 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         if (!this.agents.has(id)) {
             throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
         }
-        return this.moralDissonance.computeDissonance(id, transgressionType, context);
+        const upper = typeof transgressionType === 'string' ? transgressionType.trim().toUpperCase() : transgressionType;
+        const canonicalType = TRANSGRESSION_ALIASES[upper] || upper;
+        return this.moralDissonance.computeDissonance(id, canonicalType, context);
     }
 
     /**
@@ -889,7 +938,9 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         if (!this.agents.has(id)) {
             throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
         }
-        return this.moralDissonance.recordTransgression(id, transgressionType, context);
+        const upper = typeof transgressionType === 'string' ? transgressionType.trim().toUpperCase() : transgressionType;
+        const canonicalType = TRANSGRESSION_ALIASES[upper] || upper;
+        return this.moralDissonance.recordTransgression(id, canonicalType, context);
     }
 
     /**
@@ -908,7 +959,9 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         if (!this.agents.has(id)) {
             throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
         }
-        return this.moralDissonance.recordAtonement(id, atonementType, context);
+        const upper = typeof atonementType === 'string' ? atonementType.trim().toUpperCase() : atonementType;
+        const canonicalType = ATONEMENT_ALIASES[upper] || upper;
+        return this.moralDissonance.recordAtonement(id, canonicalType, context);
     }
 
     /**
@@ -927,7 +980,9 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         if (!this.agents.has(id)) {
             throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
         }
-        return this.moralDissonance.evaluateOrderCompliance(id, proposedTransgression, context);
+        const upper = typeof proposedTransgression === 'string' ? proposedTransgression.trim().toUpperCase() : proposedTransgression;
+        const canonicalType = TRANSGRESSION_ALIASES[upper] || upper;
+        return this.moralDissonance.evaluateOrderCompliance(id, canonicalType, context);
     }
 
     /**
@@ -944,7 +999,12 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         if (!this.agents.has(id)) {
             throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
         }
-        return this.moralDissonance.getAgentMoralState(id);
+        const state = this.moralDissonance.getAgentMoralState(id);
+        const internal = this.moralDissonance.agents.get(id);
+        if (state && internal && internal.moralProfile) {
+            state.moralProfile = internal.moralProfile;
+        }
+        return state;
     }
 
     /**

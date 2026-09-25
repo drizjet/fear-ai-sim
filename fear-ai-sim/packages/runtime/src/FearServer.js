@@ -351,7 +351,8 @@ export class FearServer {
                     pack_coordination: Boolean(this.simulation.packCoordination),
                     economic_feedback: Boolean(this.simulation.economicFeedback),
                     settlement_migration: Boolean(this.simulation.settlementMigration),
-                    epistemic_belief: Boolean(this.simulation.enableEpistemicBelief)
+                    epistemic_belief: Boolean(this.simulation.enableEpistemicBelief),
+                    moral_dissonance: Boolean(this.simulation.enableMoralDissonance)
                 });
             }
             case '/api/v1/register': {
@@ -1210,6 +1211,151 @@ export class FearServer {
                 }
             }
 
+            case '/api/v1/moral/profile/register': {
+                const val = ProtocolValidator.validateMoralProfileRegister(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const profile = this.simulation.registerAgentMoralProfile(val.value.agentId, val.value.profile);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_PROFILE_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        agentId: val.value.agentId,
+                        profile
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/dissonance/query': {
+                const val = ProtocolValidator.validateMoralDissonanceQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const evaluation = this.simulation.computeMoralDissonance(
+                        val.value.agentId,
+                        val.value.transgressionType,
+                        val.value.context
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_RESPONSE,
+                        agentId: val.value.agentId,
+                        dissonance: evaluation
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/transgression': {
+                const val = ProtocolValidator.validateMoralTransgression(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const report = this.simulation.recordMoralTransgression(
+                        val.value.agentId,
+                        val.value.transgressionType,
+                        val.value.context
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_TRANSGRESSION_RESPONSE,
+                        status: 'RECORDED',
+                        agentId: val.value.agentId,
+                        transgression: report
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/atonement': {
+                const val = ProtocolValidator.validateMoralAtonement(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const report = this.simulation.recordMoralAtonement(
+                        val.value.agentId,
+                        val.value.atonementType,
+                        val.value.context
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_ATONEMENT_RESPONSE,
+                        status: 'RECORDED',
+                        agentId: val.value.agentId,
+                        atonement: report
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/order/compliance': {
+                const val = ProtocolValidator.validateMoralOrderCompliance(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const compliance = this.simulation.evaluateMoralOrderCompliance(
+                        val.value.agentId,
+                        val.value.proposedTransgression,
+                        val.value.context
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_RESPONSE,
+                        agentId: val.value.agentId,
+                        compliance
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/state/query': {
+                const val = ProtocolValidator.validateMoralStateQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const state = this.simulation.getAgentMoralState(val.value.agentId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_STATE_QUERY_RESPONSE,
+                        agentId: val.value.agentId,
+                        moralState: state
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
             default:
                 return this._sendJson(res, 404, { error: `Endpoint ${path} not found` });
         }
@@ -1762,7 +1908,8 @@ export class FearServer {
                     pack_coordination: Boolean(this.simulation.packCoordination),
                     economic_feedback: Boolean(this.simulation.economicFeedback),
                     settlement_migration: Boolean(this.simulation.settlementMigration),
-                    epistemic_belief: Boolean(this.simulation.enableEpistemicBelief)
+                    epistemic_belief: Boolean(this.simulation.enableEpistemicBelief),
+                    moral_dissonance: Boolean(this.simulation.enableMoralDissonance)
                 }, correlationId);
                 break;
             }
@@ -2458,6 +2605,163 @@ export class FearServer {
                         type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_RESPONSE,
                         agentId: payload.agentId,
                         subjectiveObservations: subjective
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_PROFILE_REGISTER_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const profile = this.simulation.registerAgentMoralProfile(payload.agentId, payload.profile);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_PROFILE_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        agentId: payload.agentId,
+                        profile
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const evaluation = this.simulation.computeMoralDissonance(
+                        payload.agentId,
+                        payload.transgressionType,
+                        payload.context
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_RESPONSE,
+                        agentId: payload.agentId,
+                        dissonance: evaluation
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_TRANSGRESSION_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const report = this.simulation.recordMoralTransgression(
+                        payload.agentId,
+                        payload.transgressionType,
+                        payload.context
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_TRANSGRESSION_RESPONSE,
+                        status: 'RECORDED',
+                        agentId: payload.agentId,
+                        transgression: report
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_ATONEMENT_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const report = this.simulation.recordMoralAtonement(
+                        payload.agentId,
+                        payload.atonementType,
+                        payload.context
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_ATONEMENT_RESPONSE,
+                        status: 'RECORDED',
+                        agentId: payload.agentId,
+                        atonement: report
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const compliance = this.simulation.evaluateMoralOrderCompliance(
+                        payload.agentId,
+                        payload.proposedTransgression,
+                        payload.context
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_RESPONSE,
+                        agentId: payload.agentId,
+                        compliance
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_STATE_QUERY_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const state = this.simulation.getAgentMoralState(payload.agentId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_STATE_QUERY_RESPONSE,
+                        agentId: payload.agentId,
+                        moralState: state
                     }, correlationId);
                 } catch (err) {
                     this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
