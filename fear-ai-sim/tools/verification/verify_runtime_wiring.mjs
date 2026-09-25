@@ -82,12 +82,11 @@ console.log('  * Core RuntimeSimulation services and live tick path: PASS');
 // here, the ledger and release scope must be revisited rather than silently
 // inheriting a broader "core" claim.
 // InformationPropagationEngine, PackCoordinationEngine, EconomicFeedbackSystem,
-// SettlementMigrationSystem, EpistemicBeliefEngine, and MoralDissonanceEngine are deliberately ABSENT from this list.
+// SettlementMigrationSystem, EpistemicBeliefEngine, MoralDissonanceEngine, and FunctionalPersonaSignatures are deliberately ABSENT from this list.
 // They left the optional surface by the §3 change policy and joined
 // the runtime as opt-in services, which is why the tripwires that guard them now
 // point the other way: see the opt-in assertions below.
 const optionalRuntimeConstructors = [
-    'FunctionalPersonaSignatures',
     'WorldCounterfactualEngine',
     'FrontierValleySimulation'
 ];
@@ -205,6 +204,23 @@ const moralOptIn = new RuntimeSimulation({ seed: 91339, enableMoralDissonance: t
 assert(moralOptIn.moralDissonance !== null && moralOptOut.moralDissonance !== moralOptIn.moralDissonance,
     'The opt-in flag did not construct a distinct moral-dissonance service');
 console.log('  * MoralDissonanceEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for FunctionalPersonaSignatures: promoted from §2.
+assert(hasConstructor(runtimeSource, 'FunctionalPersonaSignatures'),
+    'FunctionalPersonaSignatures is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enablePersonaSignatures\s*=\s*options\.enablePersonaSignatures\s*\?\?\s*false/.test(runtimeSource),
+    'FunctionalPersonaSignatures no longer defaults to false, so it is not opt-in');
+assert(/this\.personaSignatures\s*=\s*this\.enablePersonaSignatures\s*\?\s*new FunctionalPersonaSignatures/.test(runtimeSource),
+    'FunctionalPersonaSignatures is constructed outside its opt-in guard');
+const personaOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(personaOptOut.personaSignatures === null,
+    'A default RuntimeSimulation constructed the optional persona-signatures service');
+assert(personaOptOut.enablePersonaSignatures === false,
+    'The persona-signatures opt-in does not default to false');
+const personaOptIn = new RuntimeSimulation({ seed: 91339, enablePersonaSignatures: true });
+assert(personaOptIn.personaSignatures !== null && personaOptOut.personaSignatures !== personaOptIn.personaSignatures,
+    'The opt-in flag did not construct a distinct persona-signatures service');
+console.log('  * FunctionalPersonaSignatures is opt-in only: absent by default, present (and distinct) when asked for: PASS');
 
 // Verify that the optional systems have explicit direct entry points rather
 // than being mistaken for implicit runtime services.

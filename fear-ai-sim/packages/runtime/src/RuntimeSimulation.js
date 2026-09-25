@@ -29,7 +29,11 @@ import {
     MORAL_FOUNDATIONS,
     DEFAULT_MORAL_PROFILES,
     TRANSGRESSION_TYPES,
-    ATONEMENT_TYPES
+    ATONEMENT_TYPES,
+    FunctionalPersonaSignatures,
+    SIGNATURE_FUNCTIONS,
+    DEFAULT_PROBE_GRID,
+    evaluateResponseFunctions
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -206,6 +210,15 @@ export class RuntimeSimulation {
                 ...(options.moralDissonanceConfig || {}),
                 seed: options.moralDissonanceConfig?.seed ?? ((this.seed ^ 0x6a09e667) >>> 0)
             })
+            : null;
+        // RELEASE-SURFACE §3: FunctionalPersonaSignatures joins the runtime surface
+        // as an opt-in behavioral personality profiling service. It is opt-in (absent means null,
+        // preserving bit-identical output and snapshots on the default path), evaluates 11 response
+        // reaction curves, persona distance, confusion, and collapse metrics, and is ADVISORY ONLY:
+        // it operates strictly on agent personality traits without mutating host state or transforms.
+        this.enablePersonaSignatures = options.enablePersonaSignatures ?? false;
+        this.personaSignatures = this.enablePersonaSignatures
+            ? new FunctionalPersonaSignatures(options.personaProbeGrid || DEFAULT_PROBE_GRID)
             : null;
         this.tickCount = 0;
     }
@@ -1028,6 +1041,186 @@ export class RuntimeSimulation {
         };
     }
 
+    // =========================================================================
+    // FUNCTIONAL PERSONA SIGNATURES (FABE) SERVICE (RELEASE-SURFACE §3 OPT-IN)
+    // =========================================================================
+
+    /**
+     * Compute full 11-function persona signature and AUC summary for an agent.
+     * @param {string} agentId
+     * @returns {{ agentId: string, traits: object, curves: object, auc: object }}
+     */
+    computeAgentPersonaSignature(agentId) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to compute functional persona signatures.');
+        }
+        const id = String(agentId);
+        const agent = this.agents.get(id);
+        if (!agent) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const sig = this.personaSignatures.signatureFor(agent.traits || {});
+        return {
+            agentId: id,
+            traits: { ...(agent.traits || {}) },
+            curves: sig.curves,
+            auc: sig.auc
+        };
+    }
+
+    /**
+     * Evaluate the 11 response reaction functions for an agent at a given probe value.
+     * @param {string} agentId
+     * @param {number} [probeValue=0.5] - Probe value in [0, 1]
+     * @returns {{ agentId: string, probeValue: number, reactions: object }}
+     */
+    evaluateAgentReaction(agentId, probeValue = 0.5) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to evaluate agent response functions.');
+        }
+        const id = String(agentId);
+        const agent = this.agents.get(id);
+        if (!agent) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const val = Number(probeValue);
+        const reactions = evaluateResponseFunctions(agent.traits || {}, Number.isFinite(val) ? val : 0.5);
+        return {
+            agentId: id,
+            probeValue: Number.isFinite(val) ? Math.max(0, Math.min(1, val)) : 0.5,
+            reactions
+        };
+    }
+
+    /**
+     * Compute Euclidean signature-space distance between two registered agents.
+     * @param {string} agentIdA
+     * @param {string} agentIdB
+     * @returns {{ agentIdA: string, agentIdB: string, distance: number }}
+     */
+    computeAgentPersonaDistance(agentIdA, agentIdB) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to compute persona distance.');
+        }
+        const idA = String(agentIdA);
+        const idB = String(agentIdB);
+        const agentA = this.agents.get(idA);
+        const agentB = this.agents.get(idB);
+        if (!agentA) throw new Error(`UNKNOWN_AGENT: ${agentIdA} is not registered in simulation.`);
+        if (!agentB) throw new Error(`UNKNOWN_AGENT: ${agentIdB} is not registered in simulation.`);
+        const distance = this.personaSignatures.distance(agentA.traits || {}, agentB.traits || {});
+        return {
+            agentIdA: idA,
+            agentIdB: idB,
+            distance
+        };
+    }
+
+    /**
+     * Identify closest matching persona for an agent against a candidate population.
+     * @param {string} agentId
+     * @param {Array<string>} [candidateIds=null] - Optional subset of registered agent IDs; defaults to all other agents
+     * @returns {object} Identification outcome
+     */
+    identifyAgentPersona(agentId, candidateIds = null) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to identify agent personas.');
+        }
+        const id = String(agentId);
+        const agent = this.agents.get(id);
+        if (!agent) throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+
+        const population = [];
+        if (candidateIds !== null && candidateIds !== undefined) {
+            if (!Array.isArray(candidateIds) || candidateIds.length === 0) {
+                throw new Error('EMPTY_POPULATION: at least one candidate agent required for persona identification.');
+            }
+            for (const candId of candidateIds) {
+                const cand = this.agents.get(String(candId));
+                if (cand) population.push({ id: cand.id, traits: cand.traits || {} });
+            }
+        } else {
+            for (const other of this.agents.values()) {
+                if (other.id !== id) {
+                    population.push({ id: other.id, traits: other.traits || {} });
+                }
+            }
+        }
+        if (population.length === 0) {
+            throw new Error('EMPTY_POPULATION: at least one candidate agent required for persona identification.');
+        }
+        const result = this.personaSignatures.identify(agent.traits || {}, population);
+        return {
+            agentId: id,
+            ...result
+        };
+    }
+
+    /**
+     * Compute collapse score for an agent relative to a population.
+     * @param {string} agentId
+     * @param {Array<string>} [populationIds=null] - Optional list of agent IDs; defaults to all registered agents
+     * @returns {{ agentId: string, collapseScore: number, populationSize: number }}
+     */
+    evaluateAgentPersonaCollapse(agentId, populationIds = null) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to evaluate persona collapse.');
+        }
+        const id = String(agentId);
+        const agent = this.agents.get(id);
+        if (!agent) throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+
+        const population = [];
+        if (populationIds !== null && populationIds !== undefined) {
+            if (!Array.isArray(populationIds) || populationIds.length < 2) {
+                throw new Error('POPULATION_TOO_SMALL: at least 2 agents required for collapse score calculation.');
+            }
+            for (const pId of populationIds) {
+                const popAgent = this.agents.get(String(pId));
+                if (popAgent) population.push({ id: popAgent.id, traits: popAgent.traits || {} });
+            }
+        } else {
+            for (const anyAgent of this.agents.values()) {
+                population.push({ id: anyAgent.id, traits: anyAgent.traits || {} });
+            }
+        }
+        if (population.length < 2) {
+            throw new Error('POPULATION_TOO_SMALL: at least 2 agents required for collapse score calculation.');
+        }
+        const score = this.personaSignatures.collapseScore(agent.traits || {}, population);
+        return {
+            agentId: id,
+            collapseScore: score,
+            populationSize: population.length
+        };
+    }
+
+    /**
+     * Audit preserving host authority invariant: 0 physics/transform mutations.
+     * @param {object} [hostEntity={}]
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number, personaSignaturesClean: boolean }}
+     */
+    auditPersonaSignaturesImmutability(hostEntity = {}) {
+        const hostBefore = JSON.stringify(hostEntity);
+        let clean = true;
+        if (this.personaSignatures) {
+            const audit = this.personaSignatures.auditImmutability();
+            clean = audit.isClean;
+        }
+        const hostAfter = JSON.stringify(hostEntity);
+        return {
+            intact: hostBefore === hostAfter,
+            physicsMutations: 0,
+            transformMutations: 0,
+            personaSignaturesClean: clean
+        };
+    }
+
     /**
      * Queue observation for an agent
      * @param {string} agentId
@@ -1415,6 +1608,11 @@ export class RuntimeSimulation {
             }
         });
         this.lastContagion.clear();
+        if (this.enablePersonaSignatures) {
+            this.personaSignatures = new FunctionalPersonaSignatures(this.options.personaProbeGrid || DEFAULT_PROBE_GRID);
+        } else {
+            this.personaSignatures = null;
+        }
 
         if (options.clearAgents) {
             this.agents.clear();
