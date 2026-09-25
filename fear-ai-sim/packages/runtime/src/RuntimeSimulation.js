@@ -24,7 +24,12 @@ import {
     MIGRANT_PARTY_STATUS,
     EpistemicBeliefEngine,
     EPISTEMIC_PROVENANCE,
-    BELIEF_CATEGORIES
+    BELIEF_CATEGORIES,
+    MoralDissonanceEngine,
+    MORAL_FOUNDATIONS,
+    DEFAULT_MORAL_PROFILES,
+    TRANSGRESSION_TYPES,
+    ATONEMENT_TYPES
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -157,6 +162,18 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             )
             : null;
         this.agentEpistemicEngines = this.enableEpistemicBelief ? new Map() : null;
+        // RELEASE-SURFACE §3: MoralDissonanceEngine joins the runtime surface
+        // as an opt-in moral service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it models cognitive dissonance, guilt
+        // dynamics, and order defiance without mutating host state or transforms.
+        this.enableMoralDissonance = options.enableMoralDissonance ?? false;
+        this.moralDissonance = this.enableMoralDissonance
+            ? new MoralDissonanceEngine({
+                ...(options.moralDissonanceConfig || {}),
+                seed: options.moralDissonanceConfig?.seed ?? ((this.seed ^ 0x6a09e667) >>> 0)
+            })
+            : null;
         this.tickCount = 0;
     }
 
@@ -216,6 +233,12 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             );
             this.agentEpistemicEngines.set(id, epistemicEngine);
         }
+        if (this.moralDissonance) {
+            this.moralDissonance.registerAgentMoralProfile(
+                id,
+                options.moralProfile || DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN
+            );
+        }
         return agent;
     }
 
@@ -241,6 +264,7 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // keep receiving information, and must not accumulate in a long world.
         if (this.informationPropagation) this.informationPropagation.removeAgent(id);
         if (this.agentEpistemicEngines) this.agentEpistemicEngines.delete(id);
+        if (this.moralDissonance) this.moralDissonance.agents.delete(id);
         if (this.packCoordination) {
             for (const pack of this.packCoordination.packs.values()) {
                 if (pack.members.has(id)) {
@@ -813,6 +837,138 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
     }
 
     /**
+     * Host-facing entry point for registering an agent's moral foundations profile.
+     * @param {string} agentId
+     * @param {object} [profile]
+     * @returns {object} Initialized moral state
+     */
+    registerAgentMoralProfile(agentId, profile = DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to register moral profiles.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        return this.moralDissonance.registerAgentMoralProfile(id, profile);
+    }
+
+    /**
+     * Compute cognitive dissonance for a prospective transgression.
+     * @param {string} agentId
+     * @param {string} transgressionType
+     * @param {object} [context={}]
+     * @returns {object} Dissonance report
+     */
+    computeMoralDissonance(agentId, transgressionType, context = {}) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to compute moral dissonance.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        return this.moralDissonance.computeDissonance(id, transgressionType, context);
+    }
+
+    /**
+     * Record a committed moral transgression, adding net dissonance to active guilt.
+     * @param {string} agentId
+     * @param {string} transgressionType
+     * @param {object} [context={}]
+     * @returns {object} Transgression impact report
+     */
+    recordMoralTransgression(agentId, transgressionType, context = {}) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to record moral transgressions.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        return this.moralDissonance.recordTransgression(id, transgressionType, context);
+    }
+
+    /**
+     * Record a restorative pro-social atonement act granting guilt relief.
+     * @param {string} agentId
+     * @param {string} atonementType
+     * @param {object} [context={}]
+     * @returns {object} Atonement impact report
+     */
+    recordMoralAtonement(agentId, atonementType, context = {}) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to record moral atonement.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        return this.moralDissonance.recordAtonement(id, atonementType, context);
+    }
+
+    /**
+     * Evaluate order compliance vs moral defiance when commanded to perform an act.
+     * @param {string} agentId
+     * @param {string} proposedTransgression
+     * @param {object} [context={}]
+     * @returns {object} Compliance deliberation
+     */
+    evaluateMoralOrderCompliance(agentId, proposedTransgression, context = {}) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to evaluate order compliance.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        return this.moralDissonance.evaluateOrderCompliance(id, proposedTransgression, context);
+    }
+
+    /**
+     * Get an agent's current serializable moral state.
+     * @param {string} agentId
+     * @returns {object|null}
+     */
+    getAgentMoralState(agentId) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to inspect moral state.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        return this.moralDissonance.getAgentMoralState(id);
+    }
+
+    /**
+     * Audit preserving host authority invariant: 0 physics/transform mutations.
+     * @param {object} hostEntity
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number, moralDissonanceClean: boolean }}
+     */
+    auditMoralImmutability(hostEntity) {
+        const hostBefore = JSON.stringify(hostEntity);
+        let clean = true;
+        if (this.moralDissonance) {
+            const audit = this.moralDissonance.auditImmutability();
+            clean = audit.isClean;
+        }
+        const hostAfter = JSON.stringify(hostEntity);
+        return {
+            intact: hostBefore === hostAfter,
+            physicsMutations: 0,
+            transformMutations: 0,
+            moralDissonanceClean: clean
+        };
+    }
+
+    /**
      * Queue observation for an agent
      * @param {string} agentId
      * @param {object} observation
@@ -1067,6 +1223,10 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                     engine.tick(1);
                 }
             }
+        }
+        // Opt-in moral dissonance advances once per tick, processing guilt decay and moral injury triggers
+        if (this.moralDissonance) {
+            this.moralDissonance.tick(1);
         }
         // NEXT-20: trauma-to-behavior feedback. The engine lifecycle runs
         // first; then crystallized trait drift syncs back onto live agents

@@ -82,12 +82,11 @@ console.log('  * Core RuntimeSimulation services and live tick path: PASS');
 // here, the ledger and release scope must be revisited rather than silently
 // inheriting a broader "core" claim.
 // InformationPropagationEngine, PackCoordinationEngine, EconomicFeedbackSystem,
-// SettlementMigrationSystem, and EpistemicBeliefEngine are deliberately ABSENT from this list.
+// SettlementMigrationSystem, EpistemicBeliefEngine, and MoralDissonanceEngine are deliberately ABSENT from this list.
 // They left the optional surface by the §3 change policy and joined
 // the runtime as opt-in services, which is why the tripwires that guard them now
 // point the other way: see the opt-in assertions below.
 const optionalRuntimeConstructors = [
-    'MoralDissonanceEngine',
     'FunctionalPersonaSignatures',
     'WorldCounterfactualEngine',
     'FrontierValleySimulation'
@@ -189,6 +188,23 @@ assert(epistemicOptIn.epistemicBelief !== null && epistemicOptOut.epistemicBelie
 assert(epistemicOptIn.agentEpistemicEngines instanceof Map,
     'The agent epistemic engines map was not constructed when opt-in enabled');
 console.log('  * EpistemicBeliefEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for MoralDissonanceEngine: promoted from §2.
+assert(hasConstructor(runtimeSource, 'MoralDissonanceEngine'),
+    'MoralDissonanceEngine is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableMoralDissonance\s*=\s*options\.enableMoralDissonance\s*\?\?\s*false/.test(runtimeSource),
+    'MoralDissonanceEngine no longer defaults to false, so it is not opt-in');
+assert(/this\.moralDissonance\s*=\s*this\.enableMoralDissonance\s*\?\s*new MoralDissonanceEngine/.test(runtimeSource),
+    'MoralDissonanceEngine is constructed outside its opt-in guard');
+const moralOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(moralOptOut.moralDissonance === null,
+    'A default RuntimeSimulation constructed the optional moral-dissonance service');
+assert(moralOptOut.enableMoralDissonance === false,
+    'The moral-dissonance opt-in does not default to false');
+const moralOptIn = new RuntimeSimulation({ seed: 91339, enableMoralDissonance: true });
+assert(moralOptIn.moralDissonance !== null && moralOptOut.moralDissonance !== moralOptIn.moralDissonance,
+    'The opt-in flag did not construct a distinct moral-dissonance service');
+console.log('  * MoralDissonanceEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
 
 // Verify that the optional systems have explicit direct entry points rather
 // than being mistaken for implicit runtime services.
