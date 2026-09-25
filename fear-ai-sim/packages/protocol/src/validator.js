@@ -157,6 +157,18 @@ export class ProtocolValidator {
             case MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_REQUEST:
                 result = ProtocolValidator.validateSettlementMigrationWave(raw);
                 break;
+            case MESSAGE_TYPES.EPISTEMIC_OBSERVE_REQUEST:
+                result = ProtocolValidator.validateEpistemicObserve(raw);
+                break;
+            case MESSAGE_TYPES.EPISTEMIC_RUMOR_REQUEST:
+                result = ProtocolValidator.validateEpistemicRumor(raw);
+                break;
+            case MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_REQUEST:
+                result = ProtocolValidator.validateEpistemicDiscrepancyQuery(raw);
+                break;
+            case MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_REQUEST:
+                result = ProtocolValidator.validateEpistemicSubjectiveQuery(raw);
+                break;
             default:
                 // Accept unknown messages defensively
                 result = { valid: true, value: raw };
@@ -1143,6 +1155,136 @@ export class ProtocolValidator {
                 sourceId: String(sourceId).trim(),
                 destId: String(destId).trim(),
                 corridorDanger
+            }
+        };
+    }
+
+    /**
+     * Validate EPISTEMIC_OBSERVE_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateEpistemicObserve(raw) {
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        const observations = (raw.observations && typeof raw.observations === 'object' && !Array.isArray(raw.observations))
+            ? raw.observations
+            : {};
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.EPISTEMIC_OBSERVE_REQUEST,
+                agentId: String(agentId).trim(),
+                observations
+            }
+        };
+    }
+
+    /**
+     * Validate EPISTEMIC_RUMOR_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateEpistemicRumor(raw) {
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        const message = raw.message;
+        let normalizedMessage = null;
+        if (!message || typeof message !== 'object' || Array.isArray(message)) {
+            errors.push('Missing or invalid "message" object');
+        } else {
+            if (!message.category || typeof message.category !== 'string') {
+                errors.push('Missing or invalid "message.category" string');
+            }
+            if (!message.id || typeof message.id !== 'string') {
+                errors.push('Missing or invalid "message.id" string');
+            }
+            if (message.category && typeof message.category === 'string') {
+                let cat = message.category.trim().toUpperCase();
+                if (cat === 'ROUTE') cat = 'ROUTE_SAFETY';
+                if (cat === 'FACTION') cat = 'FACTION_STANCE';
+                normalizedMessage = {
+                    ...message,
+                    category: cat,
+                    id: String(message.id || '').trim()
+                };
+            }
+        }
+        const senderTrust = Number.isFinite(Number(raw.senderTrust ?? raw.sender_trust))
+            ? Math.max(0.0, Math.min(1.0, Number(raw.senderTrust ?? raw.sender_trust)))
+            : 0.5;
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.EPISTEMIC_RUMOR_REQUEST,
+                agentId: String(agentId).trim(),
+                message: normalizedMessage || message,
+                senderTrust
+            }
+        };
+    }
+
+    /**
+     * Validate EPISTEMIC_DISCREPANCY_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateEpistemicDiscrepancyQuery(raw) {
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        const worldGroundTruth = (raw.worldGroundTruth || raw.world_ground_truth) && typeof (raw.worldGroundTruth || raw.world_ground_truth) === 'object'
+            ? (raw.worldGroundTruth || raw.world_ground_truth)
+            : {};
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_REQUEST,
+                agentId: String(agentId).trim(),
+                worldGroundTruth
+            }
+        };
+    }
+
+    /**
+     * Validate EPISTEMIC_SUBJECTIVE_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateEpistemicSubjectiveQuery(raw) {
+        const errors = [];
+        const agentId = raw.agentId || raw.agent_id;
+        if (!agentId || typeof agentId !== 'string' || !agentId.trim()) {
+            errors.push('Missing or invalid "agentId" string');
+        }
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_REQUEST,
+                agentId: String(agentId).trim()
             }
         };
     }

@@ -350,7 +350,8 @@ export class FearServer {
                     signing: this.signing.summary(),
                     pack_coordination: Boolean(this.simulation.packCoordination),
                     economic_feedback: Boolean(this.simulation.economicFeedback),
-                    settlement_migration: Boolean(this.simulation.settlementMigration)
+                    settlement_migration: Boolean(this.simulation.settlementMigration),
+                    epistemic_belief: Boolean(this.simulation.enableEpistemicBelief)
                 });
             }
             case '/api/v1/register': {
@@ -1116,6 +1117,99 @@ export class FearServer {
                 }
             }
 
+            case '/api/v1/epistemic/observe': {
+                const val = ProtocolValidator.validateEpistemicObserve(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableEpistemicBelief) {
+                    return this._sendJson(res, 400, {
+                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
+                    });
+                }
+                try {
+                    const engine = this.simulation.recordEpistemicObservation(val.value.agentId, val.value.observations);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.EPISTEMIC_OBSERVE_RESPONSE,
+                        status: 'OBSERVED',
+                        agentId: val.value.agentId,
+                        believedThreatsCount: engine.threatBeliefs.size,
+                        contradictionsCount: engine.contradictionLog.length
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/epistemic/rumor': {
+                const val = ProtocolValidator.validateEpistemicRumor(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableEpistemicBelief) {
+                    return this._sendJson(res, 400, {
+                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
+                    });
+                }
+                try {
+                    const engine = this.simulation.recordEpistemicRumor(val.value.agentId, val.value.message, val.value.senderTrust);
+                    const belief = engine.threatBeliefs.get(val.value.message.id)
+                        || engine.routeBeliefs.get(val.value.message.id)
+                        || engine.factionBeliefs.get(val.value.message.id)
+                        || engine.sanctuaryBeliefs.get(val.value.message.id)
+                        || null;
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.EPISTEMIC_RUMOR_RESPONSE,
+                        status: 'INGESTED',
+                        agentId: val.value.agentId,
+                        messageId: val.value.message.id,
+                        belief
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/epistemic/discrepancy/query': {
+                const val = ProtocolValidator.validateEpistemicDiscrepancyQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableEpistemicBelief) {
+                    return this._sendJson(res, 400, {
+                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
+                    });
+                }
+                try {
+                    const report = this.simulation.evaluateEpistemicDiscrepancy(val.value.agentId, val.value.worldGroundTruth);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_RESPONSE,
+                        agentId: val.value.agentId,
+                        discrepancy: report
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/epistemic/subjective/query': {
+                const val = ProtocolValidator.validateEpistemicSubjectiveQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableEpistemicBelief) {
+                    return this._sendJson(res, 400, {
+                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
+                    });
+                }
+                try {
+                    const subjective = this.simulation.getSubjectiveObservations(val.value.agentId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_RESPONSE,
+                        agentId: val.value.agentId,
+                        subjectiveObservations: subjective
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
             default:
                 return this._sendJson(res, 404, { error: `Endpoint ${path} not found` });
         }
@@ -1667,7 +1761,8 @@ export class FearServer {
                     signing: this.signing.summary(),
                     pack_coordination: Boolean(this.simulation.packCoordination),
                     economic_feedback: Boolean(this.simulation.economicFeedback),
-                    settlement_migration: Boolean(this.simulation.settlementMigration)
+                    settlement_migration: Boolean(this.simulation.settlementMigration),
+                    epistemic_belief: Boolean(this.simulation.enableEpistemicBelief)
                 }, correlationId);
                 break;
             }
@@ -2262,6 +2357,107 @@ export class FearServer {
                         sourceId: payload.sourceId,
                         destId: payload.destId,
                         party
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.EPISTEMIC_OBSERVE_REQUEST: {
+                if (!this.simulation.enableEpistemicBelief) {
+                    this._sendWsError(
+                        ws,
+                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const engine = this.simulation.recordEpistemicObservation(payload.agentId, payload.observations);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.EPISTEMIC_OBSERVE_RESPONSE,
+                        status: 'OBSERVED',
+                        agentId: payload.agentId,
+                        believedThreatsCount: engine.threatBeliefs.size,
+                        contradictionsCount: engine.contradictionLog.length
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.EPISTEMIC_RUMOR_REQUEST: {
+                if (!this.simulation.enableEpistemicBelief) {
+                    this._sendWsError(
+                        ws,
+                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const engine = this.simulation.recordEpistemicRumor(payload.agentId, payload.message, payload.senderTrust);
+                    const belief = engine.threatBeliefs.get(payload.message.id)
+                        || engine.routeBeliefs.get(payload.message.id)
+                        || engine.factionBeliefs.get(payload.message.id)
+                        || engine.sanctuaryBeliefs.get(payload.message.id)
+                        || null;
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.EPISTEMIC_RUMOR_RESPONSE,
+                        status: 'INGESTED',
+                        agentId: payload.agentId,
+                        messageId: payload.message.id,
+                        belief
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_REQUEST: {
+                if (!this.simulation.enableEpistemicBelief) {
+                    this._sendWsError(
+                        ws,
+                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const report = this.simulation.evaluateEpistemicDiscrepancy(payload.agentId, payload.worldGroundTruth);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_RESPONSE,
+                        agentId: payload.agentId,
+                        discrepancy: report
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_REQUEST: {
+                if (!this.simulation.enableEpistemicBelief) {
+                    this._sendWsError(
+                        ws,
+                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const subjective = this.simulation.getSubjectiveObservations(payload.agentId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_RESPONSE,
+                        agentId: payload.agentId,
+                        subjectiveObservations: subjective
                     }, correlationId);
                 } catch (err) {
                     this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
