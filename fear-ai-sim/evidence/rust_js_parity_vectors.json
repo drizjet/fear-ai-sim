@@ -60,6 +60,50 @@
       "parity_match": "ADVISORY_PARITY (Rust 5th core band; JS handles 4.6+ via IntentResolver FLEE_FROM/PANIC and panic bias)"
     }
   ],
+  "boundary_scale_conversion": {
+    "policy": "DEC-0001 Option C: Canonical Rust scale (0.0–5.0+) is authoritative internally; adapters accept/emit normalized [0, 1] at host boundaries.",
+    "conversion_formula": "core_score = clamp(normalized_fear * 5.0, 0.0, 5.0)",
+    "inverse_formula": "normalized_fear = clamp(core_score / 5.0, 0.0, 1.0)",
+    "threshold_mapping": [
+      {
+        "boundary_normalized": 0.0,
+        "core_score": 0.0,
+        "expected_band": "Calm",
+        "description": "Baseline calm"
+      },
+      {
+        "boundary_normalized": 0.16,
+        "core_score": 0.80,
+        "expected_band": "Alert",
+        "description": "Alert enter threshold (0.8 / 5.0 = 0.16)"
+      },
+      {
+        "boundary_normalized": 0.28,
+        "core_score": 1.40,
+        "expected_band": "Afraid",
+        "description": "Afraid / Anxious enter threshold (1.4 / 5.0 = 0.28)"
+      },
+      {
+        "boundary_normalized": 0.76,
+        "core_score": 3.80,
+        "expected_band": "Panicked",
+        "description": "Panicked enter threshold (3.8 / 5.0 = 0.76)"
+      },
+      {
+        "boundary_normalized": 0.92,
+        "core_score": 4.60,
+        "expected_band": "Routed",
+        "description": "Routed enter threshold (4.6 / 5.0 = 0.92)"
+      },
+      {
+        "boundary_normalized": 1.0,
+        "core_score": 5.0,
+        "expected_band": "Routed",
+        "description": "Maximum normal input (5.0 / 5.0 = 1.0)"
+      }
+    ],
+    "legacy_js_4_2_scale_note": "JS AffectiveAgent historically multiplied normalized fear by FEAR_SCALE = 4.2, leaving Routed (4.6) unreachable without external panic bias. Under DEC-0001, canonical mapping reaches full 5.0 scale."
+  },
   "observation_expectations": {
     "consecutive_lock_hold": {
       "description": "After entering panic, how many further consecutive evaluations at score 1.0 (>= 0.8) stay in panic. Equal on both sides when evaluations are consecutive.",

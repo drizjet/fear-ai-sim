@@ -276,8 +276,33 @@ async function main() {
         console.log(`  * B10 berserk: Rust BerserkOverride is absorbing (stays at score 0 and 5); JS AGGRESSIVE exits to ${js} when anger drops => DECLARED DIVERGENCE B10`);
     }
 
+    // --- DEC-0001 Boundary Scale Conversion Table Verification --------------
+    console.log('\n--- DEC-0001 Boundary Scale Conversion & Threshold Parity ---');
+    const scaleConv = parityData.boundary_scale_conversion;
+    assert(scaleConv && Array.isArray(scaleConv.threshold_mapping), 'boundary_scale_conversion section missing from parity vectors');
+    for (const entry of scaleConv.threshold_mapping) {
+        const computedCore = Math.min(5.0, Math.max(0.0, Number((entry.boundary_normalized * 5.0).toFixed(4))));
+        const roundtripNorm = Math.min(1.0, Math.max(0.0, Number((entry.core_score / 5.0).toFixed(4))));
+        assert(Math.abs(computedCore - entry.core_score) < 1e-4,
+            `DEC-0001 mapping mismatch: norm ${entry.boundary_normalized} -> computed ${computedCore} vs expected ${entry.core_score}`);
+        assert(Math.abs(roundtripNorm - entry.boundary_normalized) < 1e-4,
+            `DEC-0001 inverse mapping mismatch: core ${entry.core_score} -> roundtrip ${roundtripNorm} vs original ${entry.boundary_normalized}`);
+
+        // Verify band classification matches Rust thresholds
+        let expectedBand = 'Calm';
+        if (entry.core_score >= 4.6) expectedBand = 'Routed';
+        else if (entry.core_score >= 3.8) expectedBand = 'Panicked';
+        else if (entry.core_score >= 1.4) expectedBand = 'Afraid';
+        else if (entry.core_score >= 0.8) expectedBand = 'Alert';
+
+        assert(expectedBand === entry.expected_band,
+            `DEC-0001 band mismatch at core score ${entry.core_score}: derived ${expectedBand} vs recorded ${entry.expected_band}`);
+
+        console.log(`  * norm ${entry.boundary_normalized.toFixed(2)} -> core ${entry.core_score.toFixed(2)} [${entry.expected_band}] => PASS (${entry.description})`);
+    }
+
     console.log('\n============================================================');
-    console.log(`SUCCESS: ${vectors.length} cross-tree vectors verified against the EXECUTED Rust oracle: ${agree} agree, ${diverge} declared divergences (each reproduced on both sides); lock/clamp/berserk observations B7-B10 hold.`);
+    console.log(`SUCCESS: ${vectors.length} cross-tree vectors verified against the EXECUTED Rust oracle: ${agree} agree, ${diverge} declared divergences (each reproduced on both sides); lock/clamp/berserk observations B7-B10 hold; DEC-0001 boundary scale table verified.`);
     console.log('This is a measured Rust-vs-JS comparison, not a claim of bit-identical behaviour.');
     console.log('============================================================\n');
 }

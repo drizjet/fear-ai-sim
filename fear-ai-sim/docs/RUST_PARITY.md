@@ -254,3 +254,37 @@ Each of these is a coherent slice. The smallest coherent first step is **(1)** a
 ### 10.6 Status of this inventory
 
 `CODE_VERIFIED` for every entry. The test-only and dead-code verdicts are based on the same import-graph grep that was used for the Phase 3 reach audit. The migration is parked as P0/P1 work for the next autonomous sessions per the master plan's phase sequence.
+
+## 11. Canonical Conversion Specification (DEC-0001 & DEC-0003)
+
+### 11.1 Canonical Fear Scale (DEC-0001 Option C)
+
+Under **`DEC-0001` (Option C)**, the reference Rust model (`pixel-pets/src/engine/ai/fear.rs`) is the authoritative definition of the internal fear scale:
+- Range: `[0.0, 5.0+]`
+- Band enter thresholds: Alert (`0.8`), Afraid/Anxious (`1.4`), Panicked (`3.8`), Routed (`4.6`).
+- Band exit thresholds: Calm (`0.55`), Alert (`0.8`), Afraid (`1.2`), Panicked (`3.0`).
+
+All external host game interfaces, engine adapters, and perception inputs interface using normalized `[0, 1]` values adapted at the boundary using explicit conversion:
+- **Boundary to Core:** `core_score = clamp(normalized_fear * 5.0, 0.0, 5.0)`
+- **Core to Boundary:** `normalized_fear = clamp(core_score / 5.0, 0.0, 1.0)`
+
+#### Table-Driven Boundary Conversion Matrix
+
+| Normalized `[0, 1]` | Core Score `[0, 5]` | Target Band | Description / Threshold Boundary |
+|:---:|:---:|:---:|:---|
+| `0.00` | `0.00` | Calm | Baseline calm |
+| `0.16` | `0.80` | Alert | Alert enter threshold (`0.8 / 5.0`) |
+| `0.28` | `1.40` | Afraid | Afraid / Anxious enter threshold (`1.4 / 5.0`) |
+| `0.76` | `3.80` | Panicked | Panicked enter threshold (`3.8 / 5.0`) |
+| `0.92` | `4.60` | Routed | Routed enter threshold (`4.6 / 5.0`) |
+| `1.00` | `5.00` | Routed | Maximum normal input (`5.0 / 5.0`) |
+
+*Note on legacy JS scale:* Early JS prototypes used `FEAR_SCALE = 4.2` (`AffectiveAgent`), leaving `Routed` (4.6) unreachable from normalized inputs without external panic bias. DEC-0001 establishes full 5.0 reachability.
+
+### 11.2 Habituation Ownership (DEC-0003 Option A)
+
+Under **`DEC-0003` (Option A)**:
+- `packages/core/src/HabituationSystem.js` (`HabituationSystem`) is the **canonical production owner** of habituation for the middleware runtime (`AffectiveAgent`, `RuntimeSimulation`). It provides stimulus-specific exposure tracking, recovery decay, and snapshot persistence.
+- `Brain.calculateHabituatedFear()` remains an inline utility inside the standalone research sim agent (`brain.js`).
+- The root `habituation.js` remains quarantined as `RETAIN_OPTIONAL` (`config/quarantined-modules.json`) with zero production callers.
+
