@@ -28,6 +28,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { spawn, spawnSync } from 'node:child_process';
+
+import { FearServer } from '../../packages/runtime/src/FearServer.js';
+import { FearAIClient as NodeFearClient } from '../../packages/adapters/node/fear_ai_client.mjs';
 
 import {
   BinaryWireProtocol,
@@ -541,6 +545,98 @@ async function main() {
     check(`${adapter.name} reports a not-owner teardown rather than dropping it`,
       src.includes(adapter.refusalSignal), adapter.refusalSignal);
   }
+ 
+  // ------------------------------------------------------------------
+  // SUITE 8: Live Adapter Execution (Node, Python, Rust)
+  // ------------------------------------------------------------------
+  console.log('\n--- Suite 8: Live Adapter Execution (Node, Python, Rust) ---');
+
+  // 1. Node Reference Adapter live conformance
+  const nodeServer = new FearServer({ port: 0, host: '127.0.0.1', seed: 42 });
+  const nodeNet = await nodeServer.start();
+  const nodeClient = new NodeFearClient({ host: nodeNet.host, port: nodeNet.port });
+
+  const nodeHealth = await nodeClient.checkHealth();
+  check('Node client checkHealth returns ok status', nodeHealth && nodeHealth.status === 'ok');
+
+  const nodeReg = await nodeClient.registerAgent('node_c1', { bravery: 0.8 }, { name: 'NodeScout' });
+  check('Node client registers agent successfully', nodeReg && nodeReg.status === 'REGISTERED');
+
+  const nodeTick = await nodeClient.tick([
+    { agent_id: 'node_c1', x: 0, y: 0, z: 0, threats: [{ distance: 5.0, intensity: 0.8 }] }
+  ]);
+  check('Node client tick returns affective results', Array.isArray(nodeTick.results) && nodeTick.results.length === 1);
+
+  const nodeOutcome = await nodeClient.reportOutcome({
+    agentId: 'node_c1',
+    intentType: 'FLEE_FROM',
+    outcome: 'GOAL_COMPLETED'
+  });
+  check('Node client reports outcome acknowledgment', nodeOutcome && nodeOutcome.status === 'RECORDED');
+
+  await nodeClient.connectWs();
+  check('Node client establishes WebSocket connection', nodeClient.ws && nodeClient.ws.readyState === 1);
+  nodeClient.close();
+  await nodeServer.stop();
+
+  // 2. Python Adapter live run with credential persistence
+  const pyServer = new FearServer({ port: 0, host: '127.0.0.1', seed: 42 });
+  const pyNet = await pyServer.start();
+  const pyRes = await new Promise((resolve) => {
+    const child = spawn('python', [
+      path.join(REPO, 'packages/adapters/python/fear_ai_client.py'),
+      '--self-check',
+      `http://${pyNet.host}:${pyNet.port}`
+    ]);
+    let out = '', err = '';
+    child.stdout.on('data', (d) => out += d);
+    child.stderr.on('data', (d) => err += d);
+    child.on('close', (status) => resolve({ status, stdout: out, stderr: err }));
+  });
+  await pyServer.stop();
+
+  check('Python client live self-check runs with exit code 0', pyRes.status === 0, pyRes.stderr || '');
+  let pyJson = {};
+  try { pyJson = JSON.parse(pyRes.stdout || '{}'); } catch {}
+  check('Python client self-check reports all checks passed', pyJson.passed === true);
+  check('Python client cross-process credential file persistence verified',
+    pyJson.checks && pyJson.checks.credential_file_persisted_and_loaded === true);
+
+  // 3. Rust SDK in-process evaluator and capability negotiator
+  const rustRes = spawnSync('cargo', [
+    'run', '--example', 'conformance', '--quiet'
+  ], {
+    cwd: path.join(REPO, 'packages/adapters/rust'),
+    encoding: 'utf8',
+    timeout: 60000
+  });
+  check('Rust SDK conformance example compiles and runs cleanly', rustRes.status === 0, rustRes.stderr || '');
+  check('Rust SDK verifies hysteresis, negotiation, and pack coordination',
+    /SUCCESS: All \d+ Rust SDK conformance assertions PASSED/.test(rustRes.stdout || ''));
+
+  // 4. C# Adapter live run against ephemeral FearServer
+  const csServer = new FearServer({ port: 0, host: '127.0.0.1', seed: 42 });
+  const csNet = await csServer.start();
+  const csRes = await new Promise((resolve) => {
+    const child = spawn('dotnet', [
+      'run',
+      '--project',
+      path.join(REPO, 'packages/adapters/csharp/examples/conformance/Conformance.csproj'),
+      '--',
+      `http://${csNet.host}:${csNet.port}`
+    ], {
+      cwd: REPO
+    });
+    let out = '', err = '';
+    child.stdout.on('data', (d) => out += d);
+    child.stderr.on('data', (d) => err += d);
+    child.on('close', (status) => resolve({ status, stdout: out, stderr: err }));
+  });
+  await csServer.stop();
+
+  check('C# client conformance example compiles and runs cleanly', csRes.status === 0, csRes.stderr || csRes.stdout || '');
+  check('C# client verifies handshake, registration, tick, outcome, and teardown',
+    /SUCCESS: All \d+ C# client live conformance assertions PASSED/.test(csRes.stdout || ''));
 
   console.log('\n============================================================');
   console.log(`SUCCESS: All ${PASS} adapter conformance assertions PASSED.`);

@@ -186,7 +186,7 @@ namespace FearAI.Client
         [JsonPropertyName("type")] public string? Type { get; set; }
         [JsonPropertyName("status")] public string Status { get; set; } = "";
         [JsonPropertyName("count")] public int Count { get; set; }
-        [JsonPropertyName("zone_ids")] public List<string> ZoneIds { get; set; } = new();
+        [JsonPropertyName("zone_ids")] public List<int> ZoneIds { get; set; } = new();
         [JsonPropertyName("rejected")] public List<ClaimRefusal> Rejected { get; set; } = new();
     }
 

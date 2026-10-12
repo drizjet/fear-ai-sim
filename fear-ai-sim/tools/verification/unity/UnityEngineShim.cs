@@ -162,6 +162,15 @@ namespace UnityEngine
         /// harness says which order it means, and `UnityLifecycle` below states the
         /// difference rather than hiding it.
         /// </summary>
+        private Transform _transform;
+        public Transform transform => _transform ??= new Transform { gameObject = this };
+
+        public T GetComponent<T>() where T : Component
+        {
+            foreach (var c in _components) if (c is T t) return t;
+            return null;
+        }
+
         public T AddComponent<T>() where T : Component
         {
             var component = Activator.CreateInstance<T>();
@@ -257,9 +266,23 @@ namespace UnityEngine
         }
     }
 
+    public class Transform : Component
+    {
+        public Vector3 position { get; set; } = Vector3.zero;
+        public Vector3 forward => Vector3.forward;
+    }
+
     public class Component : Object
     {
-        public GameObject gameObject { get; internal set; } = new GameObject();
+        private GameObject _gameObject;
+        public GameObject gameObject
+        {
+            get => _gameObject ??= new GameObject();
+            internal set => _gameObject = value;
+        }
+        public Transform transform => gameObject.transform;
+        public T GetComponent<T>() where T : Component => gameObject.GetComponent<T>();
+        public int GetInstanceID() => GetHashCode();
     }
 
     public class Coroutine { }
@@ -323,6 +346,8 @@ namespace UnityEngine
         public static int Max(int a, int b) => Math.Max(a, b);
         public static float Min(float a, float b) => Math.Min(a, b);
         public static float Max(float a, float b) => Math.Max(a, b);
+        public static float Clamp(float value, float min, float max) => Math.Clamp(value, min, max);
+        public static float Clamp01(float value) => Math.Clamp(value, 0f, 1f);
     }
 
     public static class SystemInfo
@@ -341,6 +366,103 @@ namespace UnityEngine
     {
         public float x, y, z;
         public Vector3(float x, float y, float z) { this.x = x; this.y = y; this.z = z; }
+        public float magnitude => (float)Math.Sqrt(x * x + y * y + z * z);
+        public Vector3 normalized => magnitude > 0.00001f ? new Vector3(x / magnitude, y / magnitude, z / magnitude) : zero;
+        public static Vector3 forward => new Vector3(0, 0, 1);
+        public static Vector3 up => new Vector3(0, 1, 0);
+        public static Vector3 zero => new Vector3(0, 0, 0);
+        public static Vector3 operator +(Vector3 a, Vector3 b) => new Vector3(a.x + b.x, a.y + b.y, a.z + b.z);
+        public static Vector3 operator -(Vector3 a, Vector3 b) => new Vector3(a.x - b.x, a.y - b.y, a.z - b.z);
+        public static Vector3 operator *(Vector3 a, float d) => new Vector3(a.x * d, a.y * d, a.z * d);
+        public static float Angle(Vector3 from, Vector3 to) => 0.0f;
+    }
+
+    public struct LayerMask { public int value; }
+    public class Collider : Component { }
+    public class AudioSource : Component { public float pitch { get; set; } = 1.0f; }
+
+    public static class Physics
+    {
+        public static Collider[] OverlapSphere(Vector3 position, float radius, LayerMask layerMask) => Array.Empty<Collider>();
+        public static bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, LayerMask layerMask) => false;
+    }
+
+    [AttributeUsage(AttributeTargets.Class)]
+    public class RequireComponent : Attribute
+    {
+        public RequireComponent(Type requiredComponent) { }
+    }
+
+    public struct Color
+    {
+        public float r, g, b, a;
+        public Color(float r, float g, float b, float a = 1.0f) { this.r = r; this.g = g; this.b = b; this.a = a; }
+        public static Color white => new Color(1, 1, 1, 1);
+        public static Color green => new Color(0, 1, 0, 1);
+    }
+
+    public struct Rect
+    {
+        public float x, y, width, height;
+        public Rect(float x, float y, float width, float height) { this.x = x; this.y = y; this.width = width; this.height = height; }
+    }
+
+    public class Texture2D : Object
+    {
+        public Texture2D(int width, int height) { }
+        public void SetPixels(Color[] colors) { }
+        public void Apply() { }
+    }
+
+    public static class Screen
+    {
+        public static int width => 1920;
+        public static int height => 1080;
+    }
+
+    public class Camera : Component
+    {
+        public static Camera main { get; set; } = new Camera();
+        public Vector3 WorldToScreenPoint(Vector3 position) => new Vector3(position.x, position.y, 1.0f);
+    }
+
+    public enum TextAnchor { UpperLeft, UpperCenter, UpperRight, MiddleLeft, MiddleCenter, MiddleRight, LowerLeft, LowerCenter, LowerRight }
+    public enum FontStyle { Normal, Bold, Italic, BoldAndItalic }
+
+    public class GUIStyleState
+    {
+        public Color textColor { get; set; } = Color.white;
+    }
+
+    public class GUIStyle
+    {
+        public TextAnchor alignment { get; set; } = TextAnchor.UpperLeft;
+        public int fontSize { get; set; } = 12;
+        public FontStyle fontStyle { get; set; } = FontStyle.Normal;
+        public GUIStyleState normal { get; set; } = new GUIStyleState();
+        public GUIStyle() { }
+        public GUIStyle(GUIStyle other)
+        {
+            if (other != null)
+            {
+                alignment = other.alignment;
+                fontSize = other.fontSize;
+                fontStyle = other.fontStyle;
+            }
+        }
+    }
+
+    public class GUISkin
+    {
+        public GUIStyle label { get; set; } = new GUIStyle();
+    }
+
+    public static class GUI
+    {
+        public static Color color { get; set; } = Color.white;
+        public static GUISkin skin { get; set; } = new GUISkin();
+        public static void DrawTexture(Rect position, Texture2D image) { }
+        public static void Label(Rect position, string text, GUIStyle style = null) { }
     }
 
     [AttributeUsage(AttributeTargets.Field)] public class SerializeField : Attribute { }

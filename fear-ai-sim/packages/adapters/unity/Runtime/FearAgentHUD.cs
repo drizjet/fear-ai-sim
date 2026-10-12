@@ -1,4 +1,5 @@
 using UnityEngine;
+using FearAI;
 
 namespace FearAI.Unity
 {
@@ -47,8 +48,8 @@ namespace FearAI.Unity
             GUI.DrawTexture(new Rect(x, y, barWidth, barHeight), _bgTexture);
 
             // 2. Filled Bar
-            float fear01 = Mathf.Clamp01(_agent.currentFear);
-            Color barColor = GetBandColor(_agent.currentFearBand);
+            float fear01 = Mathf.Clamp01(_agent.CurrentFear);
+            Color barColor = GetBandColor(_agent.CurrentFearBand);
             GUI.color = barColor;
             GUI.DrawTexture(new Rect(x, y, barWidth * fear01, barHeight), _fillTexture);
             GUI.color = Color.white;
@@ -66,7 +67,7 @@ namespace FearAI.Unity
                     };
                 }
                 _badgeStyle.normal.textColor = barColor;
-                string badge = $"[{_agent.currentIntent}]";
+                string badge = $"[{_agent.CurrentIntent}]";
                 GUI.Label(new Rect(screenPos.x - 100, y - 18, 200, 16), badge, _badgeStyle);
             }
 
@@ -81,8 +82,8 @@ namespace FearAI.Unity
                         fontSize = 10
                     };
                 }
-                _bpmStyle.normal.textColor = _agent.currentHeartbeatBpm > 100 ? new Color(1f, 0.35f, 0.35f) : new Color(0.7f, 0.75f, 0.85f);
-                string bpm = $"♥ {_agent.currentHeartbeatBpm} BPM";
+                _bpmStyle.normal.textColor = _agent.CurrentHeartbeatBpm > 100 ? new Color(1f, 0.35f, 0.35f) : new Color(0.7f, 0.75f, 0.85f);
+                string bpm = $"♥ {_agent.CurrentHeartbeatBpm} BPM";
                 GUI.Label(new Rect(screenPos.x - 100, y + barHeight + 2, 200, 16), bpm, _bpmStyle);
             }
         }

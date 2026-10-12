@@ -114,12 +114,9 @@ const CONTROL_PLANE_SOURCES = [
   'FearTypes.cs',
   'FearSessionStore.cs',
   'FearSigning.cs',
-  // The encrypted store container. It has NO UnityEngine dependency on purpose, so
-  // the store interop probe can compile and RUN it outside the Editor and
-  // byte-compare its output against the Node and Godot writers - which is the only
-  // way a container shared by three runtimes gets checked on a machine with no
-  // Editor installed at all.
-  'FearEncryptedStore.cs'
+  'FearEncryptedStore.cs',
+  'FearAgent.cs',
+  'FearAgentHUD.cs'
 ];
 
 const CSPROJ = `<Project Sdk="Microsoft.NET.Sdk">

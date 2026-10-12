@@ -10,6 +10,22 @@ status: active
 
 This is the durable map for humans and agents. It does **not** store volatile test counts or commit hashes.
 
+## Quick Index / Navigation
+- [Product Goal](#product-goal)
+  - [Engine Policy](#engine-policy-owner-decision-2026-09-07)
+  - [Verification Policy](#verification-policy-owner-mandate-2026-09-14)
+  - [Current Release-Claim Boundary](#current-release-claim-boundary-2026-09-19)
+- [Three Live Trees](#three-live-trees-siblings-not-one-binary)
+- [Subsystem Inventory & What Is in This JS Repo](#what-is-in-this-js-repo)
+  - [Core Affective & Cognitive Engine (`packages/core`)](#what-is-in-this-js-repo)
+  - [Runtime & Server Architecture (`packages/runtime`)](#what-is-in-this-js-repo)
+  - [Binary Wire & Protocol (`packages/protocol`)](#what-is-in-this-js-repo)
+  - [Engine Adapters (`packages/adapters`)](#what-is-in-this-js-repo)
+  - [Verification Probes & Harnesses (`tools/verification`)](#what-is-in-this-js-repo)
+- [Engine Gates](#engine-gates-do-not-upgrade-without-a-real-editor-run)
+- [Scientific Honesty](#scientific-honesty-do-not-bury)
+- [Source of Truth vs Stale Files](#source-of-truth-vs-stale-files)
+
 ## Product goal
 
 Build the **best fear AI in the world that plugs into any game**.

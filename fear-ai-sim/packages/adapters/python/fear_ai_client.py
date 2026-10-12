@@ -46,8 +46,9 @@ SIGNING_VERSION = "FEAR-AI-SIGN-V1"
 
 
 class FearAIClient:
-    def __init__(self, base_url="http://127.0.0.1:8765", session_id=None, claim="join"):
-        self.base_url = base_url.rstrip("/")
+    def __init__(self, base_url=None, session_id=None, claim="join"):
+        url = base_url or os.environ.get("FEAR_AI_URL") or "http://127.0.0.1:8765"
+        self.base_url = url.rstrip("/")
         # A host-chosen NAME. It survives a host process restart, but it is not a
         # credential: anyone can write down a name they saw.
         self.session_id = session_id or f"python_client_{int(time.time())}"
@@ -216,6 +217,40 @@ class FearAIClient:
             ).decode("ascii")
         )
         return True
+
+    def save_credential(self, file_path):
+        """Persist session credential to disk so a restarted host reconnects.
+
+        Writes session_id, session_token, and (if present) signing_key_id.
+        Does NOT write the private key, which is kept separately via key_path.
+        """
+        payload = {
+            "session_id": self.session_id,
+            "session_token": self.session_token,
+            "signing_key_id": self.signing_key_id,
+            "saved_at": int(time.time()),
+        }
+        with open(file_path, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, indent=2)
+        return True
+
+    def load_credential(self, file_path):
+        """Load a previously persisted session credential from disk."""
+        try:
+            with open(file_path, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+            if isinstance(payload, dict):
+                if payload.get("session_id"):
+                    self.session_id = payload["session_id"]
+                if payload.get("session_token"):
+                    self.session_token = payload["session_token"]
+                    self.session_token_issued = True
+                if payload.get("signing_key_id"):
+                    self.signing_key_id = payload["signing_key_id"]
+                return True
+        except (OSError, json.JSONDecodeError):
+            return False
+        return False
 
     @staticmethod
     def _sha256_hex(data):
@@ -695,20 +730,21 @@ class FearAIClient:
         return self._post("/api/v1/load", {"snapshot": snapshot})
 
 
-def run_demo():
+def run_demo(base_url=None):
     print("=" * 65)
     print("   FEAR AI PYTHON REFERENCE INTEGRATION DEMO")
     print("=" * 65)
 
-    client = FearAIClient(session_id="python_demo_session")
+    client = FearAIClient(base_url=base_url, session_id="python_demo_session")
 
     try:
         health = client.check_health()
         print(f"[+] Server Status: {health.get('status')} | Version: {health.get('protocol_version')}")
-    except ConnectionError:
-        print("[-] Could not connect to Fear AI Server at 127.0.0.1:8765.")
+    except (urllib.error.URLError, ConnectionError, OSError):
+        target = client.base_url
+        print(f"[-] Could not connect to Fear AI Server at {target}.")
         print("    Please start the server using:")
-        print("    node fear-ai-sim/fear-ai-sim/packages/runtime/bin/fear-ai-server.js")
+        print("    node packages/runtime/bin/fear-ai-server.js")
         sys.exit(1)
 
     # 1. Handshake
@@ -812,7 +848,7 @@ def run_demo():
 
     # 7. Session identity: a rival that knows the name but not the token is refused
     print("\n[+] Session Identity Check (a rival claiming the same name is REFUSED):")
-    rival = FearAIClient(session_id=client.session_id)
+    rival = FearAIClient(base_url=client.base_url, session_id=client.session_id)
     refusal = rival.register_agent("alice", traits=alice_traits)
     print(f"    - Rival claim on a live session's agent: {refusal.get('claim') or refusal.get('status')} "
           f"(owner: {refusal.get('owner_session_id', client.session_id)})")
@@ -869,10 +905,26 @@ def run_self_check(base_url, agent_count=8):
     report["checks"]["refusal_does_not_transfer_ownership"] = bool(mine_after) and mine_after[0].get("agent_count") == agent_count
 
     # The token, not the name, is what proves continuity across a reconnect.
-    reconnect = FearAIClient(base_url=base_url, session_id=client.session_id)
-    reconnect.session_token = client.session_token
-    reclaimed = reconnect.register_agent(ids[0])
-    report["checks"]["proven_token_reconnects"] = reclaimed.get("status") == "REGISTERED" and reconnect.refused_claims == 0
+    # Exercise cross-process credential file persistence.
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as tmp:
+        cred_path = tmp.name
+    try:
+        client.save_credential(cred_path)
+        reconnect = FearAIClient(base_url=base_url)
+        loaded = reconnect.load_credential(cred_path)
+        report["checks"]["credential_file_persisted_and_loaded"] = (
+            loaded is True
+            and reconnect.session_token == client.session_token
+            and reconnect.session_id == client.session_id
+        )
+        reclaimed = reconnect.register_agent(ids[0])
+        report["checks"]["proven_token_reconnects"] = reclaimed.get("status") == "REGISTERED" and reconnect.refused_claims == 0
+    finally:
+        try:
+            os.remove(cred_path)
+        except OSError:
+            pass
 
     trauma = client.add_trauma_zones([{"x": 1, "y": 0, "z": 0, "intensity": 0.8},
                                       {"x": 4, "y": 0, "z": 0, "intensity": 0.4}])
@@ -902,8 +954,9 @@ def run_self_check(base_url, agent_count=8):
 
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "--self-check":
-        target = sys.argv[2] if len(sys.argv) >= 3 else "http://127.0.0.1:8765"
+        target = sys.argv[2] if len(sys.argv) >= 3 else (os.environ.get("FEAR_AI_URL") or "http://127.0.0.1:8765")
         result = run_self_check(target)
         print(json.dumps(result, indent=2))
         sys.exit(0 if result["passed"] else 1)
-    run_demo()
+    target = sys.argv[1] if len(sys.argv) >= 2 else (os.environ.get("FEAR_AI_URL") or "http://127.0.0.1:8765")
+    run_demo(target)

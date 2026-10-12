@@ -113,30 +113,39 @@ BLOCKED
 
 ## DEC-0004 — Planner/executor boundary
 
-- Date: 2026-08-26
-- Status: OPEN
+- Date: 2026-10-12
+- Status: APPROVED
 - Owner: Project owner
 - Affected parts: 4, 5
 - Question: Which system selects intent, which system plans, and which system executes?
 - Recommendation: Affordance/prerequisite/utility selects intent; GOAP/HTN plans; behavior tree/FSM executes.
-- Required tests: planner invocation, prerequisite preservation, interrupted action, failed action, trace completeness.
+- Decision: APPROVED. Affordance and prerequisite utility evaluation selects agent intent; GOAP/HTN constructs plan sequences; Behavior Tree / FSM handles action execution and motor primitive dispatch. Host games remain authoritative over physics, path execution, and motor actuation.
+- Evidence/source IDs: `packages/core/src/IntentResolver.js`, `packages/core/src/HostCapabilityNegotiator.js`.
+- Required tests: Planner invocation, prerequisite preservation, interrupted action, failed action, trace completeness.
+- Revisit condition: None.
 
 ## DEC-0005 — BadAI identity relationship
 
-- Date: 2026-08-26
-- Status: OPEN
+- Date: 2026-10-12
+- Status: APPROVED
 - Owner: Project owner
 - Affected parts: all
 - Question: Is BadAI a rename, successor, experimental branch, or separate product?
 - Recommendation: Treat BadAI as a proposed successor architecture while preserving Fear AI as lineage and current repository identity until an owner-approved rename is made.
-- Required tests: Documentation and package identity consistency after a decision.
+- Decision: APPROVED. BadAI is designated as the proposed successor architecture for extended multi-agent research. Fear AI remains the formal product lineage and current repository identity. No breaking renames or package rebrands are permitted on the frozen RC1 surface.
+- Evidence/source IDs: `docs/SYSTEM_MAP.md`, `docs/RELEASE_SURFACE.md`.
+- Required tests: Documentation and package identity consistency across all adapters and runtime manifests.
+- Revisit condition: Explicit owner authorization of next-generation product rebrand.
 
 ## DEC-0006 — Knowledge database ownership
 
-- Date: 2026-08-26
-- Status: OPEN
+- Date: 2026-10-12
+- Status: APPROVED
 - Owner: Project owner
 - Affected parts: 1, 5, 12
 - Question: Is the knowledge database a developer-only evidence archive, a bundled research asset, or a future application feature?
 - Recommendation: Keep it as a developer/research asset first; define a versioned read API before bundling it into runtime.
+- Decision: APPROVED. `fear_ai_knowledge.db` is designated as a developer and research offline archive asset. It is not bundled into the production middleware runtime or required for agent tick evaluation. Production runtime state is backed exclusively by `FearSessionStore` and `FearEncryptedStore`.
+- Evidence/source IDs: `packages/runtime/src/FearSessionStore.js`, `docs/RELEASE_SURFACE.md`.
 - Required tests: Read-only integrity, schema version, export/re-import compatibility.
+- Revisit condition: Future post-RC1 feature proposal introducing runtime knowledge graph queries.

@@ -1083,3 +1083,33 @@ One genuinely-open audit P0 was found and fixed this pass:
 
 lint:evidence: exit 1, 0 admissible, 267 stale, 0 errors — fingerprints stale against
 HEAD movement; rebuild is a later evidence slice, not a code bug. Honest, not fixed here.
+
+## What was done 2026-10-12 (Autonomous Session: Parity, Decisions, Adapters, Quarantines, Release Gates)
+- **DEC Decisions Formalized & Enacted**:
+  - `DEC-0001` (Canonical fear scale): APPROVED Option C. Rust scale (0.0–5.0+) canonical internally; normalized 0–1 adapted at boundaries. Table-driven conversions and 22 parity vectors verified against real host `fear.rs` via `rust_fear_oracle`.
+  - `DEC-0002` (Fear transition authority): APPROVED FearCore authority (`packages/core/src/FearCore.js`). Inline mutations in `brain.js` eliminated; panic-lock semantics intact.
+  - `DEC-0003` (Habituation canonical owner): APPROVED Option A. `HabituationSystem` canonical middleware owner; inline research sim utility retained; root `habituation.js` quarantined.
+  - `DEC-0004` (Planner/executor boundary): Affordance/utility selects intent, GOAP/HTN plans, BT/FSM executes.
+  - `DEC-0005` (BadAI identity): Successor architecture while preserving Fear AI repo identity.
+  - `DEC-0006` (Knowledge database): Developer/research archive asset first (`fear_ai_knowledge.db`).
+  - TLS: Plaintext loopback with explicit boundary; host RTS fear: canonical Rust `fear.rs` (no external adapter).
+- **Engine Adapters Live Conformance (Suite 8)**:
+  - Python: Cross-process credential file persistence (`save_credential`, `load_credential`), configurable URL, live self-check 18/18 PASS.
+  - Unity: `FearAgent.cs` and `FearAgentHUD.cs` public PascalCase property alignment, `UnityEngineShim.cs` physics/audio/GUI stubs, all 7 runtime sources compiled and verified in `verify_dotnet_adapters_compile.mjs`.
+  - Rust: `packages/adapters/rust/examples/conformance.rs` asserting hysteresis, `HostCapabilityNegotiator`, `PackCoordinator`, and serde roundtrip.
+  - C#: Standalone runner `packages/adapters/csharp/examples/conformance/` executing handshake, registration, tick, outcome, trauma authoring, ownership, teardown against ephemeral `FearServer`.
+  - All 4 runtimes + Node reference client live execution verified in `verify_adapter_conformance.mjs` (222/222 assertions PASS).
+- **Godot 4.6 Headless In-Engine Evidence Verified**:
+  - `npm run godot:evidence` executes 4/4 suites (13/13 stations, 3/3 civ checks, 4/4 fixtures, 38/38 live pipeline assertions PASS).
+- **Quarantined Modules & Domain Scoping**:
+  - 4 SPECIFIED domains (`procedural narrative`, `quests`, `background simulation`, `simulation LOD`) formally bounded out-of-scope in `docs/RELEASE_SURFACE.md`.
+  - 6 quarantined modules aligned in `config/quarantined-modules.json` (including `masac_worker.js` and `featureengineer.js` marked `RETAIN_OPTIONAL`).
+- **Backup Created**:
+  - Offline Git bundle created and verified: `C:\Backups\fear-ai-sim-all-20261012.bundle`.
+- **Verification Gates**:
+  - `npm run verify:probes` -> 38/38 probes (37 passed, 1 declared skip for Unity Editor, 0 failed).
+  - `npm run verify:hard-rule-9` -> 28/28 passed.
+  - `npm run verify:release-claims` -> passed.
+  - `npm run codegen:release-dossier:check` -> passed.
+  - `npm run codegen:maturity-map:check` -> passed.
+

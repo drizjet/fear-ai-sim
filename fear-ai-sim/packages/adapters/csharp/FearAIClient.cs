@@ -157,7 +157,15 @@ namespace FearAI.Client
 
         public FearAIClient(string host = "127.0.0.1", int port = 8765, HttpClient? httpClient = null, string? sessionId = null)
         {
-            _baseUrl = $"http://{host}:{port}";
+            if (host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || host.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                var uri = new Uri(host);
+                _baseUrl = $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+            }
+            else
+            {
+                _baseUrl = $"http://{host}:{port}";
+            }
             _httpClient = httpClient ?? new HttpClient();
             SessionId = sessionId ?? $"csharp_client_{Guid.NewGuid():N}";
         }
