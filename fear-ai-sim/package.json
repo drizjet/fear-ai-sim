@@ -26,6 +26,8 @@
     "codegen:release-dossier:check": "node tools/codegen/generate_release_dossier.mjs --check",
     "codegen:godot-fallback": "node tools/codegen/generate_godot_fallback.mjs",
     "codegen:godot-fallback:check": "node tools/codegen/generate_godot_fallback.mjs --check",
+    "codegen:rust-fear-oracle": "node tools/codegen/generate_rust_fear_oracle.mjs",
+    "codegen:rust-fear-oracle:check": "node tools/codegen/generate_rust_fear_oracle.mjs --check",
     "measure:session-bringup": "node tools/verification/measure_session_bringup.mjs",
     "verify:host-provenance": "node tools/verification/verify_host_provenance.mjs",
     "verify:dotnet-adapters": "node tools/verification/verify_dotnet_adapters_compile.mjs",

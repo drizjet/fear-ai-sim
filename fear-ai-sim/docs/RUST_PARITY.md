@@ -1,19 +1,18 @@
 ---
 title: "FearCore / Rust Parity Matrix"
 created: 2026-08-27
-updated: 2026-09-06
+updated: 2026-10-12
 type: parity-matrix
 status: partially_verified
 ---
 
 # FearCore / Rust Parity Matrix
 
-**Status:** `PARTIALLY_VERIFIED` — canonical Rust fear model exists **outside this JS repository**  
-**Part 1 implementation:** `fearcore.js` / `packages/core` in *this* tree; Pixel Pets `fear.rs` is the reference model  
-**Date:** 2026-08-27 (corrected 2026-09-07)  
-**Phase:** Part 1  
-**Canonical rule:** This document distinguishes repository facts, historical claims, and unverified reference behavior.  
-**See also:** `docs/SYSTEM_MAP.md`
+**Status:** `PARTIALLY_VERIFIED` — canonical Rust fear model exists in sibling tree `pixel-pets/src/engine/ai/fear.rs`.
+**Part 1 implementation:** `packages/core/src/FearCore.js` in *this* tree; Pixel Pets `fear.rs` is the reference model.  
+**Executed Parity Measurement:** v1.1.0 (2026-10-12) via `tools/codegen/generate_rust_fear_oracle.mjs` and `tools/verification/verify_cross_tree_parity.mjs`.  
+**Canonical rule:** This document distinguishes repository facts, historical claims, and executed reference behavior.  
+**See also:** `docs/SYSTEM_MAP.md`, `evidence/rust_js_parity_vectors.json`, `evidence/rust_fear_oracle_results.json`.
 
 ## 1. Reference availability
 
@@ -119,17 +118,26 @@ Once source evidence exists, add table-driven cases for:
 - invalid numeric inputs;
 - deterministic sequences.
 
-## 6. Divergence matrix
+## 6. Divergence matrix (Executed Reference Parity, v1.1.0)
 
-| Behavior | JavaScript current path | Reference target | Resolution |
-|---|---|---|---|
-| Fear scale | normalized value then local 0–100 conversion | not source-verified | inspect Rust/reference source |
-| Calm escalation | can move to ALERT/ANXIOUS based on 20/30 after conversion | unknown | add source vector |
-| Panic escalation | threshold 80 after conversion | unknown | add source vector |
-| Panic recovery | threshold 70 after conversion; no verified lock | claimed 10-tick lock, source unknown | resolve source and implement tests |
-| Hysteresis owner | embedded in `brain.js` for live path | unknown | make one owner explicit |
-| Habituation owner | inline `brain.js` path | stimulus-aware module exists separately | decide after call-graph evidence |
-| Skilled path | behavior tree gate at skill > 0.4 | unknown | preserve until DecisionCore migration tests |
+Executed measurement against real host `pixel-pets/src/engine/ai/fear.rs` (commit `db19d1fb6` / `d25ac1625`):
+
+| ID | Behavior | Rust Canonical (`fear.rs`) | JavaScript (`FearCore.js`) | Parity Status / Resolution |
+|---|---|---|---|---|
+| **Core** | Alert / Afraid≡Anxious / Panic | Enter: 0.8, 1.4, 3.8<br>Exit: 0.55, 0.8, 1.2 | Enter: 0.8, 1.4, 3.8<br>Exit: 0.55, 0.8, 1.2 | **EXACT PARITY MATCH** |
+| **Core** | Panic Lock Duration | 10 ticks | 10 ticks | **EXACT PARITY MATCH** |
+| **Core** | NaN / Non-finite sanitization | Sanitizes to 0.0 | Sanitizes to 0.0 | **EXACT PARITY MATCH** |
+| **B1** | Locked Panic Hold | Lock holds ONLY while `score >= exit.afraid (0.8)`. Below 0.8 (e.g. 0.0 or 0.79), exits to Calm/Alert | Holds lock at ANY score (`panicLocked = tickCount < panicLockedUntil`) | **DECLARED DIVERGENCE B1**: Rust allows low-stimulus escape; JS hard-locks. VEC-12 corrected in v1.1.0. |
+| **B3** | Exit Cascade from Panicked | Cascades `Panicked -> Calm/Alert/Afraid` in a single evaluation based on score | Steps down strictly 1 band per update (`PANIC -> ANXIOUS` only) | **DECLARED DIVERGENCE B3**: Rust score-driven multi-band exit vs JS stepped ladder (VEC-17). |
+| **B4** | Exit from Afraid/Anxious | `Afraid` at `score < exit.alert (0.55)` drops directly to `Calm` | `ANXIOUS` at `score < 0.8` steps to `ALERT` first | **DECLARED DIVERGENCE B4**: Rust skips Alert on low score vs JS stepped ladder (VEC-18). |
+| **B5** | Entry Jump from Alert | `Alert` at `score >= 3.8` jumps directly to `Panicked` (or `Routed`) in 1 eval | `ALERT` steps to `ANXIOUS` first (1-band-per-tick ladder) | **DECLARED DIVERGENCE B5**: Rust multi-band jump vs JS stepped ladder (VEC-19). |
+| **B6** | Entry Jump from Calm | `Calm` at `score >= 4.6` jumps to `Routed` (or `Panicked` at 3.8) in 1 eval | `CALM` steps to `ALERT` only (1-band-per-tick ladder) | **DECLARED DIVERGENCE B6**: Documented in VEC-15B. |
+| **B7** | Lock Clock & Sparse Ticks | Lock is tied to host `eval_tick` (`recovery_lock_until = eval_tick + 10`). If `eval_tick == None`, **no lock is armed** | Internal `tickCount` counts `update()` calls. Always arms lock. | **DECLARED DIVERGENCE B7**: In sparse evaluation (e.g. evaluated at tick 10 then 25), Rust lock expires while JS remains locked. |
+| **B8** | Lock Re-Arming | Only arms on `!is_panicked() -> is_panicked()` (Panicked -> Routed does not re-arm) | Re-arms a fresh 10-tick lock on every re-entry into `PANIC` from extended bands | **DECLARED DIVERGENCE B8**: Validated in observation suite. |
+| **B9** | Input Score Clamping | Clamps `raw_score` to `[0.0, 5.0]` (`MAX_FEAR_SCORE`) | Floors at `0` only; preserves unbounded value (e.g. `fear: 999`) in trace | **DECLARED DIVERGENCE B9**: Band transitions agree; stored fear traces diverge. |
+| **B10** | Berserk vs Aggressive | `BerserkOverride` is absorbing (cannot exit once set; ignores score) | `AGGRESSIVE` is an extended band; exits to Calm/Alert/Anxious/Panic when anger drops | **DECLARED DIVERGENCE B10**: Validated in observation suite. |
+| **B11** | Routed Band | 5th core band `Routed` (`enter 4.6`, `exit 3.0`) | 4 core bands; Routed handled at higher middleware layers via `IntentResolver` | **DECLARED DIVERGENCE B11**: Documented in VEC-15A / VEC-15B. |
+| **Scale** | Input Scale & Max Feeder | Unbounded ratio clamped to `[0.0, 5.0]` | Normalized `[0, 1]` scaled by `FEAR_SCALE = 4.2` (+ `panicBias * 4.2`) | **FINDING C / DEC-0001**: Maximum raw fear in JS feeds 4.2 (< Routed 4.6); Routed reachable only via panic bias. |
 
 ## 7. Part 1 implementation guardrails
 
@@ -145,21 +153,24 @@ No behavior-changing FearCore patch should be described as parity until:
 
 ## 8. Part 1 implementation record
 
-`fearcore.js` now provides an isolated normalized FearCore contract using the documented target thresholds currently available in project records:
+`packages/core/src/FearCore.js` provides the isolated FearCore contract using the exact matching core thresholds:
 
 - `CALM → ALERT` at `0.8`;
 - `ALERT → ANXIOUS` at `1.4`;
 - `ANXIOUS → PANIC` at `3.8`;
 - recovery thresholds `0.55`, `0.8`, and `1.2`;
 - a ten-tick panic lock;
-- no skipped intermediate bands;
 - finite-input sanitization.
 
-These defaults are explicitly **not claimed to be Rust parity**. They are an isolated, tested contract pending authoritative Rust source evidence. The reactive `brain.js` path now delegates CALM/ALERT/ANXIOUS/PANIC transitions to FearCore. Special states such as HIDE, RECOVER, FREEZE, AGGRESSIVE, and PRESENCE_BREAK remain Brain-owned compatibility behavior and require separate migration tests. FearCore now records bounded decision traces for every update, including input fear, threshold, previous/current state, transition reason, and panic-lock status. Replay frames persist each sampled agent's `fearTrace`, and the inspector can display the historical trace during playback.
+As of v1.1.0 (2026-10-12), the Rust reference model (`fear.rs`) is directly executed via `tools/codegen/generate_rust_fear_oracle.mjs`, producing `evidence/rust_fear_oracle_results.json`. The verification probe `tools/verification/verify_cross_tree_parity.mjs` executes both sides and asserts:
+1. Exact threshold matrix equality;
+2. Byte-level freshness of `fear.rs` and scenario definitions;
+3. 22 boundary vectors with strict divergence declaration enforcement (15 agree, 7 declared divergences);
+4. Automated verification of observations B7 through B10.
 
 ## 9. Current conclusion
 
-Part 1 is prepared and has a tested isolated contract, but it is not yet behaviorally complete. The repository has enough evidence to build the parity harness and document divergence. It does **not** yet justify selecting a Rust-to-JavaScript mapping or rewriting the live transition logic. The next safe action is authoritative Rust/reference inspection followed by table-driven vectors.
+Cross-tree threshold parity is **proven and executed**, not merely claimed. The 7 behavioral divergences (B1, B3, B4, B5, B6, B11) and 4 operational divergences (B7, B8, B9, B10) are formally characterized, measured, and locked into automated verification. The next steps for DEC-0001 (fear scale normalization) and DEC-0002 (transition ownership) are grounded on verified code execution rather than speculative documentation.
 
 ## 10. Live fear producers and consumers (Part 1 inventory)
 
