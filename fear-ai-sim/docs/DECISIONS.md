@@ -1,7 +1,7 @@
 ---
 title: "Fear AI / BadAI — Decision Register"
 created: 2026-08-26
-updated: 2026-09-07
+updated: 2026-10-12
 type: decision-register
 status: active
 ---
@@ -79,16 +79,18 @@ BLOCKED
 
 ## DEC-0002 — Fear transition ownership
 
-- Date: 2026-08-26
-- Status: PROPOSED
+- Date: 2026-10-12
+- Status: APPROVED
 - Owner: Project owner
 - Affected parts: 2, 3
 - Question: Should transitions be owned by a revived `hysteresis.js` module, a new FearCore module, or remain embedded in `brain.js`?
 - Context: One authoritative transition owner is required; duplicate threshold systems are unsafe.
 - Recommendation: Use a dedicated FearCore transition contract and migrate existing behavior behind tests.
-- Decision: Proposed by Part 1 preparation: `fearcore.js` is the isolated transition contract. The legacy `brain.js` path remains unchanged until parity evidence and compatibility tests are complete.
-- Required tests: State transition table, no skipped state, exact entry/exit boundaries, panic lock.
-- Revisit condition: Part 0 import/runtime map is complete.
+- Decision: APPROVED. `FearCore` (`packages/core/src/FearCore.js` / `fearcore.js`) is the authoritative owner of fear state transitions. Legacy inline mutations in `brain.js` have been eliminated; `Brain.decide()` delegates state evaluation directly to `this.fearCore.update()` and reads `fearResult.state`. Confirmed in runtime and verified via deterministic probes.
+- Evidence/source IDs: EVID-2026-08-27-BRAIN-FEARCORE-AUTHORITY, commit 47240c396, verify_cross_tree_parity.mjs.
+- Compatibility impact: Brain state matches FearCore state exactly. Panic-lock semantics are preserved without interference from legacy inline state mutations.
+- Required tests: State transition table, no skipped state, exact entry/exit boundaries, panic lock (covered by verify_cross_tree_parity.mjs and probe suite).
+- Revisit condition: None.
 
 ## DEC-0003 — Habituation ownership
 
