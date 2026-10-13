@@ -212,12 +212,21 @@ export class FearCore {
         }
 
         // Phase 1: Panic Lock Check
-        if (this.state === 'PANIC' && this.tickCount < this.panicLockedUntil) {
+        // Canonical Rust rule (pixel-pets fear.rs `panic_locked && score >=
+        // exit.afraid`): the lock only HOLDS the band while fear stays at or
+        // above the exit-alert level (0.8 by default). Below it the lock
+        // releases and the ordinary hysteresis ladder below applies, so a
+        // locked agent whose stimulus vanished is no longer frozen in PANIC.
+        if (
+            this.state === 'PANIC' &&
+            this.tickCount < this.panicLockedUntil &&
+            fear >= this.config.exit.ALERT
+        ) {
             return this._result(previous, fear, {
                 from: previous,
                 to: previous,
                 reason: 'PANIC_LOCK',
-                threshold: this.config.exit.ANXIOUS
+                threshold: this.config.exit.ALERT
             });
         }
 

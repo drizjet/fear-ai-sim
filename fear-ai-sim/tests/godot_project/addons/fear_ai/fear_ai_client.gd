@@ -74,7 +74,8 @@ const BAND_MAP = {
 	6: "AGGRESSIVE",
 	7: "CRAWLING",
 	8: "PRESENCE_BREAK",
-	9: "RECOVER"
+	9: "RECOVER",
+	10: "VAULTING"
 }
 
 var _socket: WebSocketPeer = WebSocketPeer.new()

@@ -1,9 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Rust-JS FearCore Cross-Tree Parity Vectors",
-  "version": "1.1.0",
-  "date": "2026-10-12",
-  "revision_note": "1.1.0 (2026-10-12): the Rust column is now MEASURED. Every vector carries a rust_scenario that tools/codegen/generate_rust_fear_oracle.mjs executes against the real fear.rs (results: evidence/rust_fear_oracle_results.json). VEC-12 expected_rust_band corrected Panicked -> Calm (1.0.0 asserted the JS behaviour for Rust). Added VEC-12b/12c and exit-side/skip-side vectors 17-19. Divergences are now declared per vector and the probe fails if a declared divergence does not occur or an undeclared one does.",
+  "version": "1.2.0",
+  "date": "2026-10-13",
+  "revision_note": "1.2.0 (2026-10-13): B1 RESOLVED. FearCore's panic lock now holds only while fear >= exit.ALERT (0.8), matching real Rust fear.rs (`panic_locked && score >= exit.afraid`); VEC-12/12b now expect JS to release to ANXIOUS and carry the already-declared B3 (stepped ladder) instead of B1, and B1 is removed from declared_divergences. 1.1.0 (2026-10-12): the Rust column is now MEASURED. Every vector carries a rust_scenario that tools/codegen/generate_rust_fear_oracle.mjs executes against the real fear.rs (results: evidence/rust_fear_oracle_results.json). VEC-12 expected_rust_band corrected Panicked -> Calm (1.0.0 asserted the JS behaviour for Rust). Added VEC-12b/12c and exit-side/skip-side vectors 17-19. Divergences are now declared per vector and the probe fails if a declared divergence does not occur or an undeclared one does.",
   "provenance": {
     "rust_canonical_source": "pixel-pets/src/engine/ai/fear.rs",
     "rust_host_bridge": "pixel-pets/src/engine/ai/fear_ai_bridge.rs",
@@ -22,7 +22,6 @@
     "BerserkOverride": "BERSERK (Rust State / JS Extended Band)"
   },
   "declared_divergences": {
-    "B1": "Locked panic: Rust holds the lock only while score >= exit.afraid (0.8); JS holds it at any score.",
     "B3": "Exit side, Panicked: Rust cascades Panicked -> Calm/Alert/Afraid in one evaluation by score; JS steps PANIC -> ANXIOUS only.",
     "B4": "Exit side, Afraid: Rust Afraid below exit.alert goes straight to Calm; JS ANXIOUS goes to ALERT first.",
     "B5": "Entry side, Alert: Rust Alert can jump to Panicked/Routed in one evaluation; JS ALERT goes to ANXIOUS first.",
@@ -233,9 +232,9 @@
       "panic_locked": true,
       "stimulus_score": 0.0,
       "expected_rust_band": "Calm",
-      "expected_js_state": "PANIC",
-      "divergence": ["B1"],
-      "note": "CORRECTED 2026-10-12. 1.0.0 recorded expected_rust_band=Panicked with the note 'score 0.0 cannot break panic'; that describes JS. Real Rust only holds a locked Panicked band while score >= exit.afraid (0.8), so at 0.0 it falls through to Calm. JS holds the lock at any score.",
+      "expected_js_state": "ANXIOUS",
+      "divergence": ["B3"],
+      "note": "CORRECTED 2026-10-12; JS lock aligned 2026-10-13. 1.0.0 recorded expected_rust_band=Panicked with the note 'score 0.0 cannot break panic'; that described the old JS hard lock, not Rust. Real Rust only holds a locked Panicked band while score >= exit.afraid (0.8), so at 0.0 it falls through to Calm. JS now follows the same release rule (B1 resolved) but steps PANIC -> ANXIOUS rather than cascading to Calm: the declared B3 stepped ladder.",
       "rust_scenario": { "initial_band": "Panicked", "recovery_lock_until": 20, "eval_tick": 15, "score": 0.0 }
     },
     {
@@ -244,9 +243,9 @@
       "panic_locked": true,
       "stimulus_score": 0.79,
       "expected_rust_band": "Alert",
-      "expected_js_state": "PANIC",
-      "divergence": ["B1"],
-      "note": "Just below Rust's lock-hold score (0.8): Rust leaves Panicked (to Alert, because 0.79 >= exit.alert 0.55); JS still holds.",
+      "expected_js_state": "ANXIOUS",
+      "divergence": ["B3"],
+      "note": "Just below the lock-hold score (0.8): both engines now RELEASE the lock (B1 resolved 2026-10-13). Rust cascades Panicked -> Alert in one evaluation (0.79 >= exit.alert 0.55); JS steps PANIC -> ANXIOUS only, the declared B3 stepped ladder.",
       "rust_scenario": { "initial_band": "Panicked", "recovery_lock_until": 20, "eval_tick": 15, "score": 0.79 }
     },
     {

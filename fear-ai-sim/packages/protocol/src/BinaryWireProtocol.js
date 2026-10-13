@@ -106,6 +106,7 @@ export const BAND_CODES = Object.freeze({
     CRAWLING: 7,
     PRESENCE_BREAK: 8,
     RECOVER: 9,
+    VAULTING: 10,
     UNKNOWN: 255
 });
 
