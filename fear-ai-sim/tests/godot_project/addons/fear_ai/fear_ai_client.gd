@@ -27,6 +27,7 @@ const FEAR_ENCRYPTED_STORE = preload("fear_encrypted_store.gd")
 signal connected_to_server
 signal disconnected_from_server
 signal agent_state_received(agent_id: String, state: Dictionary)
+signal outcome_reported(receipt: Dictionary)
 signal agent_registered(agent_id: String)
 signal agent_registration_failed(agent_id: String, reason: String)
 signal trauma_zone_added(ok: bool)
@@ -40,6 +41,7 @@ signal control_plane_idle_reached
 @export var server_port: int = 8765
 @export var use_websocket: bool = true
 @export var use_binary_wire: bool = false
+@export var host_capabilities: Array[String] = []
 
 # Binary Protocol Constants (Front D / Section 83 & Sections 74-75)
 const BINARY_MAGIC = 0x52414546 # "FEAR" in little-endian uint32
@@ -91,8 +93,8 @@ var _control_queue: Array[Dictionary] = []
 var _control_in_flight: Dictionary = {}
 var _registered_agents: Dictionary = {}
 ## Observations refused by the client because their agent was not yet
-## registered. A non-zero value at the end of a live run means the control
-## plane did not settle in time and the run is not trustworthy.
+## registered. A non-zero value at the end of a run means the control plane did
+## not settle in time and the run is not trustworthy.
 var dropped_unregistered_observations: int = 0
 var registration_failures: int = 0
 var trauma_zones_added: int = 0
@@ -114,10 +116,9 @@ var session_id: String = ""
 var session_token: String = ""
 ## What this host may displace when it claims an agent another session owns.
 ## `join` (the default) never takes an agent from a session that is still live;
-## `adopt` claims agents whose owner is gone, which is automatic anyway and is
-## kept only for explicitness; `takeover` deliberately displaces a LIVE owner
-## and should be set only for a real host migration. Agents owned by a session
-## that has died are always adoptable regardless of this value.
+## `takeover` deliberately displaces a LIVE owner and belongs only to a real
+## host migration. Agents owned by a session that has died are always adoptable
+## regardless of this value, so a restarted host recovers its own crowd.
 var claim_mode: String = "join"
 
 ## Persist `session_id` + `session_token` so a restart of THIS host process is a
@@ -255,9 +256,9 @@ var reset_refusals: int = 0
 ## silent divergence the rest of this control plane exists to prevent.
 var _reset_pending_clear: bool = false
 
-## Registrations, unregistrations and trauma zones per batch request, matching
-## the server's MAX_BATCH_CONTROL_ITEMS. One request carries a whole host
-## population instead of one round trip per item.
+## Items per batch control request (register, unregister, trauma zones),
+## matching the server's MAX_BATCH_CONTROL_ITEMS. One request carries a whole
+## host population instead of one round trip per item.
 const BATCH_REGISTRATION_LIMIT: int = 512
 ## Bounded individual retries for an agent a batch did not confirm.
 const MAX_REGISTRATION_ATTEMPTS: int = 3
@@ -279,10 +280,6 @@ var unregistration_rejections: int = 0
 ## Trauma zones the server explicitly refused (malformed entries). Counted so a
 ## partial application can never be mistaken for a complete one.
 var trauma_zones_rejected: int = 0
-## True once a 404 on a batch control route told us this server predates it; the
-## client then sends the same work one item at a time for the rest of the session.
-var batch_control_unsupported: bool = false
-var _batch_control_supported: bool = true
 ## Registrations the server refused because a LIVE session already owned the
 ## agent. A non-zero value means this host is competing with another one for
 ## the same crowd, which is a host/session problem, not a middleware one.
@@ -293,10 +290,13 @@ var refused_claims: int = 0
 var session_token_issued: bool = false
 var _unregister_queue: Array[String] = []
 var _trauma_queue: Array[Dictionary] = []
-## True once a 404 on the batch route told us this server predates it; the
-## client then registers individually for the rest of the session.
+## True once a 404 on a batch registration route told us this server predates
+## it; the client then registers individually for the rest of the session.
 var batch_registration_unsupported: bool = false
 var _batch_registration_supported: bool = true
+## Same, for the batch control routes (unregister, trauma).
+var batch_control_unsupported: bool = false
+var _batch_control_supported: bool = true
 
 func _ready() -> void:
 	# Identity FIRST: the store is the only thing that can tell this process it
@@ -339,7 +339,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	# The control plane is pumped from both frame callbacks: HTTPRequest can only
 	# carry one request at a time, so registration throughput is bounded by how
-	# often it can be advanced. A showcase with dozens of agents otherwise spends
+	# often it can be advanced. A host with dozens of agents otherwise spends
 	# seconds registering before the first advisory can come back.
 	_pump_control_plane()
 
@@ -368,9 +368,9 @@ func _process(_delta: float) -> void:
 func _physics_process(delta: float) -> void:
 	_pump_control_plane()
 
-	# Data plane waits on the control plane: sending an observation for an
-	# agent the server has not registered is a silent no-op, so it is better to
-	# hold the batch one frame than to lose the tick.
+	# Data plane waits on the control plane: sending an observation for an agent
+	# the server has not registered is a silent no-op, so it is better to hold
+	# the batch one frame than to lose the tick.
 	if not control_plane_idle():
 		return
 
@@ -396,6 +396,8 @@ func _physics_process(delta: float) -> void:
 			"dt": delta,
 			"observations": batch
 		}
+		if host_capabilities.size() > 0:
+			payload["capabilities"] = host_capabilities
 		_socket.send_text(JSON.stringify(payload))
 	else:
 		var payload = {
@@ -403,6 +405,8 @@ func _physics_process(delta: float) -> void:
 			"dt": delta,
 			"observations": batch
 		}
+		if host_capabilities.size() > 0:
+			payload["capabilities"] = host_capabilities
 		_send_http_batch(payload)
 
 func queue_observation(obs: Dictionary) -> void:
@@ -489,7 +493,6 @@ func _requeue_registrations(entries: Array) -> void:
 ##
 ## Zones are QUEUED and sent as one batch on the next control-plane pump, so a
 ## scene that authors forty of them at load costs one round trip, not forty.
-## A single call still costs one request, because a batch of one is a batch.
 func add_trauma_zone(x: float, y: float, z: float = 0.0, intensity: float = 1.0, radius: float = 150.0, lifetime_ticks: int = 1800) -> void:
 	_trauma_queue.append({
 		"x": x, "y": y, "z": z, "intensity": intensity,
@@ -507,15 +510,18 @@ func add_trauma_zones(zones: Array) -> void:
 				int(zone.get("lifetimeTicks", 1800)))
 
 ## Ask the server to forget every agent (session hygiene between live runs).
+##
+## A reset that clears agents is ownership-gated on the server, and this host IS
+## the owning session, so the request has to carry its proof or it would refuse
+## itself. A caller with no identity still works when nothing is owned.
 func reset_server(clear_agents: bool = true) -> void:
-	# A reset that clears agents is ownership-gated on the server, and this host
-	# IS the owning session, so the request carries its proof or it would refuse
-	# itself. A caller with no identity still works when nothing is owned.
 	var payload: Dictionary = { "clear_agents": clear_agents }
 	if not session_id.is_empty():
 		payload["session_id"] = session_id
 		if not session_token.is_empty():
 			payload["session_token"] = session_token
+		if signing_enabled and not signing_key_registered and not signing_public_key_pem.is_empty():
+			payload["signing_public_key"] = signing_public_key_pem
 	_control_queue.append({
 		"kind": "reset",
 		"path": "/api/v1/reset",
@@ -1439,15 +1445,54 @@ func _process_message(json_str: String) -> void:
 	var json = JSON.new()
 	if json.parse(json_str) == OK:
 		var data = json.get_data()
-		if data is Dictionary and data.has("results"):
-			for agent_output in data["results"]:
-				if agent_output.has("agent_id"):
-					agent_state_received.emit(agent_output["agent_id"], agent_output)
-		# Request signing: answer the challenge this server issued on this
-		# connection, and note when an answer was accepted or refused.
-		if data is Dictionary and data.get("type") == "AUTH_CHALLENGE":
-			_answer_auth_challenge(data)
-		elif data is Dictionary and data.get("type") == "AUTH_ACK":
-			ws_authenticated = true
-		elif data is Dictionary and str(data.get("code", "")).begins_with("SIGNATURE"):
-			signing_refusals += 1
+		if data is Dictionary:
+			if data.has("results"):
+				for agent_output in data["results"]:
+					if agent_output.has("agent_id"):
+						agent_state_received.emit(agent_output["agent_id"], agent_output)
+			elif data.get("type") == "INTENT_OUTCOME_ACK":
+				outcome_reported.emit(data)
+			elif data.get("type") == "AUTH_CHALLENGE":
+				_answer_auth_challenge(data)
+			elif data.get("type") == "AUTH_ACK":
+				ws_authenticated = true
+			elif data.get("type") == "ERROR_RESPONSE" and str(data.get("code", "")).begins_with("SIGNATURE"):
+				signing_refusals += 1
+
+## Report what the host did with an advised intent (R36/R38).
+func report_outcome(agent_id: String, intent_type: String, outcome: String, reason: String = "", tick: int = 0) -> void:
+	var payload = {
+		"type": "INTENT_OUTCOME_REPORT",
+		"agent_id": agent_id,
+		"intent_type": intent_type,
+		"outcome": outcome,
+		"tick": tick
+	}
+	if not reason.is_empty():
+		payload["reason"] = reason
+
+	if use_websocket and _is_connected:
+		_socket.send_text(JSON.stringify(payload))
+	else:
+		_send_http_outcome(payload)
+
+var _outcome_http_request: HTTPRequest
+
+func _send_http_outcome(payload: Dictionary) -> void:
+	if not is_instance_valid(_outcome_http_request):
+		_outcome_http_request = HTTPRequest.new()
+		add_child(_outcome_http_request)
+		_outcome_http_request.request_completed.connect(_on_outcome_http_response)
+
+	var url = "http://%s:%d/api/v1/outcome" % [server_host, server_port]
+	var headers = ["Content-Type: application/json"]
+	_outcome_http_request.request(url, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
+
+func _on_outcome_http_response(_result: int, response_code: int, _headers: PackedStringArray, body: PackedByteArray) -> void:
+	if response_code == 200:
+		var json = JSON.new()
+		if json.parse(body.get_string_from_utf8()) == OK:
+			var data = json.get_data()
+			if data is Dictionary:
+				outcome_reported.emit(data)
+

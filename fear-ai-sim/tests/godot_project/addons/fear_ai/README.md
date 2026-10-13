@@ -18,7 +18,7 @@ This addon talks to the Fear AI middleware server (`npm run server` in the JS re
 - **`examples/quickstart_2d.tscn`**: Out-of-the-box 5-minute interactive demo scene. Move Player with arrow keys/WASD, press `[Space]` to emit acoustic startle shouts, and watch NPC flee and slide around walls.
 
 ## Architecture
-- `FearAIClient`: WebSocket / HTTP client. Autoload. Supports `host_capabilities` array for dynamic intent filtering and `report_outcome()` for execution feedback.
+- `FearAIClient`: WebSocket / HTTP client. Autoload. Supports `host_capabilities` array for dynamic intent filtering and `report_outcome()` for execution feedback. Registration goes through the server's batch route (`POST /api/v1/register/batch`, up to 512 agents per request), with individual fallback.
 - `FearAgent`: Queues observations (with optional `peer_ids`), receives affective state, recommended **advisory** intents, and capability/affordance downgrades. Supports offline `evaluate_local()` fallback.
 - `FearAgentHUD2D`: Reusable floating HUD with zero texture dependencies.
 - `FearSteering2D`: Host-authoritative 2D steering controller for `CharacterBody2D`.
