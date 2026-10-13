@@ -143,7 +143,7 @@ namespace FearAI.Client
 
         private static string? ExtractKeyOutcome(string? body)
         {
-            if (string.IsNullOrEmpty(body)) return null;
+            if (body == null || body.Length == 0) return null;
             const string marker = "\"signing_key\"";
             var at = body.IndexOf(marker, StringComparison.Ordinal);
             if (at < 0) return null;
