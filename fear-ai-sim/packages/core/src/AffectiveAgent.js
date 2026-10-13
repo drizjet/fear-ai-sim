@@ -489,7 +489,7 @@ export class AffectiveAgent {
         // and any floor or bias would lock RECOVER permanently.
         const recovering = this.fearCore.state === 'RECOVER';
         const panicBias = recovering ? 0 : Math.max(0, Number(context.panicFearBias ?? 0), Number(traumaPanicBias) || 0);
-        const coreResult = this.fearCore.update(this._fearScale(this.currentFear) + panicBias * 4.2, fearContext);
+        const coreResult = this.fearCore.update(this._fearScale(this.currentFear) + panicBias * FEAR_SCALE, fearContext);
 
         // 10. Resolve Action Intent & Audio Hints
         const actionIntent = IntentResolver.resolveIntent(this, observations);

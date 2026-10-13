@@ -30,7 +30,9 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { FearCore } from '../../packages/core/src/FearCore.js';
+import { FearCore, FEAR_SCALE, panicOnsetRawFear } from '../../packages/core/src/FearCore.js';
+import { AffectiveAgent } from '../../packages/core/src/AffectiveAgent.js';
+import { WIRE_PANIC_ONSET_NORMALIZED } from '../../packages/protocol/src/BinaryWireProtocol.js';
 import {
     JS_STATE_FOR_RUST,
     scenariosSha256,
@@ -300,6 +302,20 @@ async function main() {
 
         console.log(`  * norm ${entry.boundary_normalized.toFixed(2)} -> core ${entry.core_score.toFixed(2)} [${entry.expected_band}] => PASS (${entry.description})`);
     }
+
+    // Assert that the wire protocol's panic onset is synchronized with FearCore's
+    // derived panic onset, and that AffectiveAgent converts with FEAR_SCALE.
+    console.log('\n--- Core & Wire Scale Synchronization ---');
+    assert(FEAR_SCALE === 4.2,
+        `FearCore FEAR_SCALE is ${FEAR_SCALE}, expected 4.2`);
+    assert(Math.abs(panicOnsetRawFear() - (core.config.enter.PANIC / 4.2)) < 1e-12,
+        `panicOnsetRawFear() ${panicOnsetRawFear()} != enter.PANIC / 4.2`);
+    assert(Math.abs(WIRE_PANIC_ONSET_NORMALIZED - panicOnsetRawFear()) < 1e-12,
+        `Wire panic onset ${WIRE_PANIC_ONSET_NORMALIZED} drifted from FearCore.panicOnsetRawFear() ${panicOnsetRawFear()}`);
+    const probeAgent = new AffectiveAgent('scale-probe', {}, { seed: 'scale-probe' });
+    assert(Math.abs(probeAgent._fearScale(1.0) - 4.2) < 1e-12,
+        `AffectiveAgent._fearScale(1.0) was ${probeAgent._fearScale(1.0)}, expected 4.2`);
+    console.log(`  * FEAR_SCALE=${FEAR_SCALE}; panic onset ${panicOnsetRawFear().toFixed(4)} (core, wire and agent conversion agree) => PASS`);
 
     console.log('\n============================================================');
     console.log(`SUCCESS: ${vectors.length} cross-tree vectors verified against the EXECUTED Rust oracle: ${agree} agree, ${diverge} declared divergences (each reproduced on both sides); lock/clamp/berserk observations B7-B10 hold; DEC-0001 boundary scale table verified.`);
