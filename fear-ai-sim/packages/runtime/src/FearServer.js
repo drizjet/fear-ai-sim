@@ -92,6 +92,14 @@ export class FearServer {
         this.chainScenario = new ValleyChainScenario();
         this.maxPayloadBytes = options.maxPayloadBytes || (50 * 1024 * 1024);
 
+        this.heartbeatIntervalMs = Number.isFinite(Number(options.heartbeatIntervalMs))
+            ? Number(options.heartbeatIntervalMs)
+            : 30000;
+        this.autoCleanupAbandonedAgents = Boolean(options.autoCleanupAbandonedAgents);
+        this.heartbeatTimer = null;
+        this.heartbeatsSent = 0;
+        this.heartbeatFailures = 0;
+
         this.httpServer = null;
         this.wss = null;
         this.isRunning = false;
@@ -136,6 +144,9 @@ export class FearServer {
                 // listening port (mirrors DesignerDashboardServer).
                 const bound = this.httpServer.address();
                 if (bound && typeof bound.port === 'number') this.port = bound.port;
+                if (this.heartbeatIntervalMs > 0) {
+                    this._startHeartbeat();
+                }
                 resolve({ host: this.host, port: this.port });
             });
         });
@@ -148,6 +159,11 @@ export class FearServer {
     stop() {
         if (!this.isRunning) {
             return Promise.resolve();
+        }
+
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
         }
 
         return new Promise((resolve) => {
@@ -1716,6 +1732,11 @@ export class FearServer {
 
     _handleWsConnection(ws, req) {
         this.connectedClients.add(ws);
+        ws.isAlive = true;
+        ws.on('pong', () => {
+            ws.isAlive = true;
+        });
+
         // A socket starts unauthenticated. `fearAuthenticatedSession` is set only
         // by a valid signature over a challenge THIS server generated for THIS
         // connection, which is what makes it unreplayable: there is nothing on
@@ -1756,19 +1777,77 @@ export class FearServer {
             }
         });
 
-        // A dropped socket detaches the session but does NOT retire its agents.
-        // A lost connection is not a host decision, and the state is exactly
-        // what a reconnect needs. Detaching only makes the session adoptable by
-        // a DIFFERENT host once it has aged out of the liveness window.
+        // A dropped socket detaches the session. By default agent state is
+        // preserved so a reconnect can recover its crowd. If configured with
+        // autoCleanupAbandonedAgents=true, detached agents are retired immediately.
         ws.on('close', () => {
             this.connectedClients.delete(ws);
-            this.claims.detach(ws);
+            const detached = this.claims.detach(ws);
+            if (this.autoCleanupAbandonedAgents) {
+                this._cleanupAbandonedSessions(detached);
+            }
         });
 
         ws.on('error', () => {
             this.connectedClients.delete(ws);
-            this.claims.detach(ws);
+            const detached = this.claims.detach(ws);
+            if (this.autoCleanupAbandonedAgents) {
+                this._cleanupAbandonedSessions(detached);
+            }
         });
+    }
+
+    _startHeartbeat() {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = setInterval(() => {
+            if (!this.isRunning || !this.wss) return;
+            for (const ws of this.connectedClients) {
+                if (ws.isAlive === false) {
+                    this.heartbeatFailures++;
+                    this.connectedClients.delete(ws);
+                    const detached = this.claims.detach(ws);
+                    if (this.autoCleanupAbandonedAgents) {
+                        this._cleanupAbandonedSessions(detached);
+                    }
+                    try {
+                        ws.terminate();
+                    } catch { /* ignore */ }
+                    continue;
+                }
+                ws.isAlive = false;
+                try {
+                    ws.ping();
+                    this.heartbeatsSent++;
+                } catch {
+                    // ignore send error
+                }
+            }
+        }, this.heartbeatIntervalMs);
+        if (this.heartbeatTimer && this.heartbeatTimer.unref) {
+            this.heartbeatTimer.unref();
+        }
+    }
+
+    _cleanupAbandonedSessions(sessionNames) {
+        if (!sessionNames || !sessionNames.length) return;
+        for (const name of sessionNames) {
+            const session = this.claims.sessions.get(String(name));
+            if (!session) continue;
+            const agentIds = Array.from(session.agentIds || []);
+            for (const agentId of agentIds) {
+                this.simulation.unregisterAgent(agentId);
+                this.claims.release(agentId);
+            }
+        }
+        this.claims.prune();
+    }
+
+    cleanupAbandonedAgents(sessionNames = null) {
+        const targets = sessionNames
+            ? (Array.isArray(sessionNames) ? sessionNames : [sessionNames])
+            : Array.from(this.claims.sessions.keys()).filter((name) => !this.claims.isLive(name));
+        this._cleanupAbandonedSessions(targets);
+        return targets;
     }
 
     _handleBinaryMessage(ws, buf) {
@@ -1790,8 +1869,19 @@ export class FearServer {
             const decoded = BinaryWireProtocol.decodeObservationBatch(arrayBuf);
             const batchObservations = [];
 
+            const activeSession = ws.fearAuthenticatedSession ||
+                Array.from(this.claims.sessions.values()).find((s) => s.connection === ws)?.name;
+
             for (const rec of decoded.records) {
                 const agentId = rec.agent_id;
+                const owner = this.claims.ownerOf(agentId);
+
+                // Binary frame session integrity:
+                // An agent owned by another live session cannot be observed or mutated by an unauthorized socket
+                if (owner && this.claims.isLive(owner) && owner !== activeSession) {
+                    continue;
+                }
+
                 if (!this.simulation.agents.has(agentId)) {
                     this.simulation.registerAgent(agentId, {
                         neuroticism: 0.60,
@@ -1800,6 +1890,9 @@ export class FearServer {
                     }, {
                         initial_position: rec.position
                     });
+                    if (activeSession) {
+                        this.claims.claimUnder(agentId, activeSession);
+                    }
                 }
                 const agent = this.simulation.agents.get(agentId);
                 if (agent) {

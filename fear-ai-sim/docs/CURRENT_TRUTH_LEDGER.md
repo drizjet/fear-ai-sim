@@ -1,7 +1,7 @@
 ---
 title: "Fear AI — Authoritative Current Truth Ledger"
 created: 2026-09-17
-updated: 2026-09-21
+updated: 2026-10-13
 type: specification
 status: active
 ---
@@ -573,3 +573,12 @@ Each capability retained as `VERIFIED_CURRENT` or `SCENARIO_VERIFIED` identifies
   3. **Dual-transport dispatch**: Added HTTP POST routes (`/api/v1/persona/signature/query`, `/api/v1/persona/reaction/query`, `/api/v1/persona/distance/query`, `/api/v1/persona/identify`, `/api/v1/persona/collapse/query`) and matching WebSocket message handlers in `FearServer`. Both transports advertise `persona_signatures` boolean in `HANDSHAKE_RESPONSE`.
   4. **Strict opt-in enforcement & host immutability**: When constructed without `enablePersonaSignatures: true`, all persona endpoints refuse with HTTP 400 or WebSocket `ERROR_RESPONSE` carrying `code: PERSONA_SIGNATURES_DISABLED`. Zero host physics, transforms, or entity state mutations are strictly maintained (`auditPersonaSignaturesImmutability`).
 - **Evidence**: `node tools/verification/verify_server_persona_signatures.mjs` → **All 6 suites PASSED**; `npm run verify:probes` → **38 probes: 37 passed, 1 declared skip, 0 failed**.
+
+### 56. WebSocket Heartbeat Tracking, Abandoned Session Cleanup, Binary Wire Integrity, and Unity Behavioral Verification (`packages/runtime/src/FearServer.js`, `tools/verification/verify_server_reconnect.mjs`, `tools/verification/verify_unity_adapter_behavior.mjs`, `examples/external-game-proof/PIXEL_PETS_INTEGRATION_REPORT.md`)
+- **Transport Liveness, Session Hardening & Unity Lifecycle Verification**: Hardened `FearServer` connection lifecycle, multi-session boundary integrity, and engine adapter behavioral execution:
+  1. **Active WebSocket Ping/Pong Heartbeat**: Implemented periodic ping dispatch (`ws.ping()`) at configurable `heartbeatIntervalMs` (default 30,000ms), detecting unresponsive/hung sockets (`ws.isAlive === false`), terminating dead connections, and triggering detached session reconciliation.
+  2. **Configurable Abandoned Agent Cleanup**: Added `autoCleanupAbandonedAgents: boolean` (default false preserving reconnect continuity). When enabled, dropping a connection automatically calls `_cleanupAbandonedSessions`, deregistering abandoned crowd agents from `RuntimeSimulation` and releasing session claims in `ClaimArbitration`.
+  3. **Binary Wire Session Integrity**: In `_handleBinaryMessage`, verified that inbound `FRAME_TYPES.OBSERVATION_BATCH` entities cannot inject observations into agents owned by a different active session. Binary entity registrations dynamically associate with the active connection session.
+  4. **Unity Behavioral Component Verification**: Expanded `verify_unity_adapter_behavior.mjs` Phase 1 with `FearAgent.cs` and `FearAgentHUD.cs`, driving lifecycle execution (`Awake`, `Start`, threat scanning via `Physics.OverlapSphereHandler`, affective state unpacking, speed scaling, heartbeat pitch modulation, live HTTP outcome reporting, and cleanup) yielding 36/36 assertions passed.
+  5. **Host Commit Provenance**: Documented clean host commit `6867da9f4` in `PIXEL_PETS_INTEGRATION_REPORT.md` Section 6, certifying unified persistence restore and geometry formation safeguards.
+- **Evidence**: `node tools/verification/verify_server_reconnect.mjs` → **All suites PASSED**; `node tools/verification/verify_unity_adapter_behavior.mjs` → **36/36 Phase 1 assertions, SUCCESS**; `npm run verify:probes` → **38 probes: 37 passed, 1 declared skip, 0 failed**; `npm run verify:hard-rule-9` → **28/28 PASSED**.
