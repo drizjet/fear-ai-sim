@@ -299,6 +299,12 @@ async function main() {
     readRepo('packages/adapters/unity/FearTypes.cs') === readRepo('packages/adapters/unity/Runtime/FearTypes.cs'));
   check('Unity root FearAgentHUD matches Runtime byte-for-byte',
     readRepo('packages/adapters/unity/FearAgentHUD.cs') === readRepo('packages/adapters/unity/Runtime/FearAgentHUD.cs'));
+  check('Unity root FearSessionStore matches Runtime byte-for-byte',
+    readRepo('packages/adapters/unity/FearSessionStore.cs') === readRepo('packages/adapters/unity/Runtime/FearSessionStore.cs'));
+  check('Unity root FearSigning matches Runtime byte-for-byte',
+    readRepo('packages/adapters/unity/FearSigning.cs') === readRepo('packages/adapters/unity/Runtime/FearSigning.cs'));
+  check('Unity root FearEncryptedStore matches Runtime byte-for-byte',
+    readRepo('packages/adapters/unity/FearEncryptedStore.cs') === readRepo('packages/adapters/unity/Runtime/FearEncryptedStore.cs'));
 
   // ------------------------------------------------------------------
   // SUITE 5: Canonical band vocabulary across every engine adapter
