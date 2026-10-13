@@ -52,7 +52,7 @@
  *   * Frame scheduling: the shim runs coroutines to completion synchronously.
  *   * API fidelity: the shim's UnityWebRequest/JsonUtility are implementations,
  *     not Unity's. A stub-vs-real mismatch would compile and pass here.
- *   * Anything visual: `FearAgent.cs` and `FearAgentHUD.cs` are not covered.
+ *   * Real display buffer: `FearAgentHUD.cs` renders IMGUI elements headlessly against shimmed GUI/Texture2D without a physical GPU display.
  *
  * Hard Rule 9 note: standalone deterministic probe; not an automated test runner.
  */
@@ -80,7 +80,11 @@ const ADAPTER_FILES = [
     // itself - `verify_store_encryption.mjs` compiles it and runs it against the
     // Node and Godot writers - but `FearSessionStore.cs` implements the store half
     // against it, so it has to be present for either file to build at all.
-    'packages/adapters/unity/Runtime/FearEncryptedStore.cs'
+    'packages/adapters/unity/Runtime/FearEncryptedStore.cs',
+    // Agent sensory perception, intent/speed translation, and IMGUI HUD rendering
+    // are compiled and executed in Phase 1 against a live server.
+    'packages/adapters/unity/Runtime/FearAgent.cs',
+    'packages/adapters/unity/Runtime/FearAgentHUD.cs'
 ];
 
 const OWNER_SESSION = 'unity_host';
@@ -414,12 +418,13 @@ async function main() {
         console.log(`SUCCESS: ${PASS} Unity behavioural assertions passed across 4 separate processes.`);
         console.log(`Server policy for this run: ${SIGNATURE_POLICY} (phases 1-2 never register a key, so they are the control).`);
         console.log('Phase 4 needs no server, and its store file is read back by BOTH the adapter and');
-console.log('the Node reference, so the container is not checked only by its own author.');        console.log('The lifecycle bodies are DRIVEN here (Awake/OnEnable/Start/Update/OnDisable/OnDestroy, in');
+console.log('the Node reference, so the container is not checked only by its own author.');
+        console.log('The lifecycle bodies are DRIVEN here (Awake/OnEnable/Start/Update/OnDisable/OnDestroy, in');
         console.log('Unity\'s order, asserted on an instrumented component first), so a body that can never');
-        console.log('work is caught without an Editor. Limits NOT covered here: WHEN Unity calls them');
-        console.log('(construction and waking are separate phases here, FixedUpdate is not pumped, async');
-        console.log('void bodies are not awaited), frame scheduling, shim-vs-real API fidelity, and the');
-        console.log('non-control-plane files (FearAgent/_HUD).');
+        console.log('work is caught without an Editor. FearAgent and FearAgentHUD are compiled and executed');
+        console.log('in Phase 1 (sensory threat scan, fear band unpacking, speed scaling, audio pitch clamping,');
+        console.log('HUD OnGUI, outcome reporting, and callback teardown). Remaining limits: WHEN Unity calls them,');
+        console.log('frame scheduling, and shim-vs-real API fidelity.');
         console.log('============================================================');
     } finally {
         if (server.exitCode === null) server.kill('SIGKILL');

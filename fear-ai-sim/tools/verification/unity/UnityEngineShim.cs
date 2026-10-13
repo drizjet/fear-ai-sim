@@ -383,7 +383,9 @@ namespace UnityEngine
 
     public static class Physics
     {
-        public static Collider[] OverlapSphere(Vector3 position, float radius, LayerMask layerMask) => Array.Empty<Collider>();
+        public static Func<Vector3, float, LayerMask, Collider[]> OverlapSphereHandler;
+        public static Collider[] OverlapSphere(Vector3 position, float radius, LayerMask layerMask) =>
+            OverlapSphereHandler != null ? OverlapSphereHandler(position, radius, layerMask) : Array.Empty<Collider>();
         public static bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, LayerMask layerMask) => false;
     }
 
