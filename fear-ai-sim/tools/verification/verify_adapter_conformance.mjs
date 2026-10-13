@@ -288,6 +288,18 @@ async function main() {
   check('Unity agent stores RecommendedVector (advisory)', unityAgent.includes('RecommendedVector'));
   check('Unity agent notes host applies NavMesh', unityAgent.includes('Host game applies'));
 
+  // Package-to-showcase and root-to-runtime adapter parity
+  check('Godot packaged fear_ai_client matches showcase byte-for-byte',
+    readRepo('packages/adapters/godot/fear_ai_client.gd') === readRepo('tests/godot_project/addons/fear_ai/fear_ai_client.gd'));
+  check('Unity root FearAIClient matches Runtime byte-for-byte',
+    readRepo('packages/adapters/unity/FearAIClient.cs') === readRepo('packages/adapters/unity/Runtime/FearAIClient.cs'));
+  check('Unity root FearAgent matches Runtime byte-for-byte',
+    readRepo('packages/adapters/unity/FearAgent.cs') === readRepo('packages/adapters/unity/Runtime/FearAgent.cs'));
+  check('Unity root FearTypes matches Runtime byte-for-byte',
+    readRepo('packages/adapters/unity/FearTypes.cs') === readRepo('packages/adapters/unity/Runtime/FearTypes.cs'));
+  check('Unity root FearAgentHUD matches Runtime byte-for-byte',
+    readRepo('packages/adapters/unity/FearAgentHUD.cs') === readRepo('packages/adapters/unity/Runtime/FearAgentHUD.cs'));
+
   // ------------------------------------------------------------------
   // SUITE 5: Canonical band vocabulary across every engine adapter
   // ------------------------------------------------------------------
