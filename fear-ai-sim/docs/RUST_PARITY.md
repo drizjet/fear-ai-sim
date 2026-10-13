@@ -1,7 +1,7 @@
 ---
 title: "FearCore / Rust Parity Matrix"
 created: 2026-08-27
-updated: 2026-10-12
+updated: 2026-10-13
 type: parity-matrix
 status: partially_verified
 ---
@@ -10,7 +10,7 @@ status: partially_verified
 
 **Status:** `PARTIALLY_VERIFIED` — canonical Rust fear model exists in sibling tree `pixel-pets/src/engine/ai/fear.rs`.
 **Part 1 implementation:** `packages/core/src/FearCore.js` in *this* tree; Pixel Pets `fear.rs` is the reference model.  
-**Executed Parity Measurement:** v1.1.0 (2026-10-12) via `tools/codegen/generate_rust_fear_oracle.mjs` and `tools/verification/verify_cross_tree_parity.mjs`.  
+**Executed Parity Measurement:** v1.2.0 (2026-10-13) via `tools/codegen/generate_rust_fear_oracle.mjs` and `tools/verification/verify_cross_tree_parity.mjs`.  
 **Canonical rule:** This document distinguishes repository facts, historical claims, and executed reference behavior.  
 **See also:** `docs/SYSTEM_MAP.md`, `evidence/rust_js_parity_vectors.json`, `evidence/rust_fear_oracle_results.json`.
 
@@ -127,7 +127,7 @@ Executed measurement against real host `pixel-pets/src/engine/ai/fear.rs` (commi
 | **Core** | Alert / Afraid≡Anxious / Panic | Enter: 0.8, 1.4, 3.8<br>Exit: 0.55, 0.8, 1.2 | Enter: 0.8, 1.4, 3.8<br>Exit: 0.55, 0.8, 1.2 | **EXACT PARITY MATCH** |
 | **Core** | Panic Lock Duration | 10 ticks | 10 ticks | **EXACT PARITY MATCH** |
 | **Core** | NaN / Non-finite sanitization | Sanitizes to 0.0 | Sanitizes to 0.0 | **EXACT PARITY MATCH** |
-| **B1** | Locked Panic Hold | Lock holds ONLY while `score >= exit.afraid (0.8)`. Below 0.8 (e.g. 0.0 or 0.79), exits to Calm/Alert | Holds lock at ANY score (`panicLocked = tickCount < panicLockedUntil`) | **DECLARED DIVERGENCE B1**: Rust allows low-stimulus escape; JS hard-locks. VEC-12 corrected in v1.1.0. |
+| **B1** | Locked Panic Hold | Lock holds ONLY while `score >= exit.afraid (0.8)`. Below 0.8 (e.g. 0.0 or 0.79), exits to Calm/Alert | Lock holds ONLY while `fear >= exit.ALERT (0.8)` | **RESOLVED IN v1.2.0 (commit 7e67a51)**: Parity achieved. Lock releases when stimulus drops below exit threshold. Retired from divergence count. |
 | **B3** | Exit Cascade from Panicked | Cascades `Panicked -> Calm/Alert/Afraid` in a single evaluation based on score | Steps down strictly 1 band per update (`PANIC -> ANXIOUS` only) | **DECLARED DIVERGENCE B3**: Rust score-driven multi-band exit vs JS stepped ladder (VEC-17). |
 | **B4** | Exit from Afraid/Anxious | `Afraid` at `score < exit.alert (0.55)` drops directly to `Calm` | `ANXIOUS` at `score < 0.8` steps to `ALERT` first | **DECLARED DIVERGENCE B4**: Rust skips Alert on low score vs JS stepped ladder (VEC-18). |
 | **B5** | Entry Jump from Alert | `Alert` at `score >= 3.8` jumps directly to `Panicked` (or `Routed`) in 1 eval | `ALERT` steps to `ANXIOUS` first (1-band-per-tick ladder) | **DECLARED DIVERGENCE B5**: Rust multi-band jump vs JS stepped ladder (VEC-19). |
@@ -137,7 +137,7 @@ Executed measurement against real host `pixel-pets/src/engine/ai/fear.rs` (commi
 | **B9** | Input Score Clamping | Clamps `raw_score` to `[0.0, 5.0]` (`MAX_FEAR_SCORE`) | Floors at `0` only; preserves unbounded value (e.g. `fear: 999`) in trace | **DECLARED DIVERGENCE B9**: Band transitions agree; stored fear traces diverge. |
 | **B10** | Berserk vs Aggressive | `BerserkOverride` is absorbing (cannot exit once set; ignores score) | `AGGRESSIVE` is an extended band; exits to Calm/Alert/Anxious/Panic when anger drops | **DECLARED DIVERGENCE B10**: Validated in observation suite. |
 | **B11** | Routed Band | 5th core band `Routed` (`enter 4.6`, `exit 3.0`) | 4 core bands; Routed handled at higher middleware layers via `IntentResolver` | **DECLARED DIVERGENCE B11**: Documented in VEC-15A / VEC-15B. |
-| **Scale** | Input Scale & Max Feeder | Unbounded ratio clamped to `[0.0, 5.0]` | Normalized `[0, 1]` scaled by `FEAR_SCALE = 4.2` (+ `panicBias * 4.2`) | **FINDING C / DEC-0001**: Maximum raw fear in JS feeds 4.2 (< Routed 4.6); Routed reachable only via panic bias. |
+| **Scale** | Input Scale & Max Feeder | Unbounded ratio clamped to `[0.0, 5.0]` | Normalized `[0, 1]` scaled by `FEAR_SCALE = 4.2` (+ `panicBias * FEAR_SCALE`) | **FINDING C / DEC-0001**: Maximum raw fear in JS feeds 4.2 (< Routed 4.6); Routed reachable via panic bias. Wire panic onset bound to `3.8 / 4.2` (`WIRE_PANIC_ONSET_NORMALIZED`). |
 
 ## 7. Part 1 implementation guardrails
 
@@ -162,15 +162,16 @@ No behavior-changing FearCore patch should be described as parity until:
 - a ten-tick panic lock;
 - finite-input sanitization.
 
-As of v1.1.0 (2026-10-12), the Rust reference model (`fear.rs`) is directly executed via `tools/codegen/generate_rust_fear_oracle.mjs`, producing `evidence/rust_fear_oracle_results.json`. The verification probe `tools/verification/verify_cross_tree_parity.mjs` executes both sides and asserts:
+As of v1.2.0 (2026-10-13), the Rust reference model (`fear.rs`) is directly executed via `tools/codegen/generate_rust_fear_oracle.mjs`, producing `evidence/rust_fear_oracle_results.json`. The verification probe `tools/verification/verify_cross_tree_parity.mjs` executes both sides and asserts:
 1. Exact threshold matrix equality;
 2. Byte-level freshness of `fear.rs` and scenario definitions;
-3. 22 boundary vectors with strict divergence declaration enforcement (15 agree, 7 declared divergences);
-4. Automated verification of observations B7 through B10.
+3. 22 boundary vectors with strict divergence declaration enforcement (15 agree, 7 declared divergences; B1 retired, B3 stepped ladder verified on VEC-12/12b);
+4. Automated verification of observations B7 through B10;
+5. FearCore, wire protocol (`WIRE_PANIC_ONSET_NORMALIZED`), and AffectiveAgent scale synchronization.
 
 ## 9. Current conclusion
 
-Cross-tree threshold parity is **proven and executed**, not merely claimed. The 7 behavioral divergences (B1, B3, B4, B5, B6, B11) and 4 operational divergences (B7, B8, B9, B10) are formally characterized, measured, and locked into automated verification. The next steps for DEC-0001 (fear scale normalization) and DEC-0002 (transition ownership) are grounded on verified code execution rather than speculative documentation.
+Cross-tree threshold parity is **proven and executed**, not merely claimed. With B1 resolved in commit `7e67a51`, the remaining behavioral divergences (B3, B4, B5, B6, B11) and operational divergences (B7, B8, B9, B10) are formally characterized, measured, and locked into automated verification. The simulation runtime keeps `FEAR_SCALE = 4.2` to protect scenario and contagion calibrations, with panic onset synchronized across the wire protocol.
 
 ## 10. Live fear producers and consumers (Part 1 inventory)
 
@@ -279,7 +280,7 @@ All external host game interfaces, engine adapters, and perception inputs interf
 | `0.92` | `4.60` | Routed | Routed enter threshold (`4.6 / 5.0`) |
 | `1.00` | `5.00` | Routed | Maximum normal input (`5.0 / 5.0`) |
 
-*Note on legacy JS scale:* Early JS prototypes used `FEAR_SCALE = 4.2` (`AffectiveAgent`), leaving `Routed` (4.6) unreachable from normalized inputs without external panic bias. DEC-0001 establishes full 5.0 reachability.
+*Note on simulation runtime scale:* Inside the JS simulation runtime (`AffectiveAgent`, `FearCore`), `FEAR_SCALE = 4.2` is retained (panic onset `3.8 / 4.2 = 0.9048`), calibrated against all deterministic scenarios, Chen panic thresholds, and Godot fallbacks. Setting runtime `FEAR_SCALE = 5.0` broke scenario timings and contagion dynamics. `Routed` (4.6) is reachable via additive panic bias (`panicBias * FEAR_SCALE`). The wire protocol exports `WIRE_PANIC_ONSET_NORMALIZED = 3.8 / 4.2`, verified in `verify_cross_tree_parity.mjs`.
 
 ### 11.2 Habituation Ownership (DEC-0003 Option A)
 

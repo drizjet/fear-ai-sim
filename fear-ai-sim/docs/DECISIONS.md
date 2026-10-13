@@ -1,7 +1,7 @@
 ---
 title: "Fear AI / BadAI — Decision Register"
 created: 2026-08-26
-updated: 2026-10-12
+updated: 2026-10-13
 type: decision-register
 status: active
 ---
@@ -57,7 +57,7 @@ BLOCKED
 
 ## DEC-0001 — Canonical fear scale
 
-- Date: 2026-10-12
+- Date: 2026-10-12 (Clarified 2026-10-13)
 - Status: APPROVED
 - Owner: Project owner
 - Affected parts: 1, 2, 3, 4, 6, 11
@@ -69,6 +69,7 @@ BLOCKED
   3. Use a reference/Rust scale internally and adapt at boundaries.
 - Recommendation: Option 3 (Option C): Use the reference/Rust scale internally (`0.0–5.0+`) and adapt to `0–1` at boundary interfaces.
 - Decision: APPROVED (Option C). The reference/Rust scale (`0.0–5.0+`) is the canonical internal fear scale for bands, thresholds, and hysteresis: Calm (`< 0.5`), Alert (`0.5 .. 1.5`), Afraid (`1.5 .. 3.0`), Panicked (`3.0 .. 4.6`), Routed (`4.6+`). External host game interfaces and engine adapters communicate via normalized `[0, 1]` values adapted at the boundary using explicit table-driven conversions and clamping.
+  *Simulation calibration note (2026-10-13):* Inside the JS simulation runtime (`AffectiveAgent`, `FearCore`), `FEAR_SCALE = 4.2` is retained (enter.PANIC = 3.8, panic onset `3.8 / 4.2 = 0.9048`), calibrated against all deterministic scenarios, Chen panic thresholds, and Godot fallbacks. Setting runtime `FEAR_SCALE = 5.0` broke scenario timings and contagion dynamics. Routed (`4.6+`) is reachable via additive panic bias (`panicBias * FEAR_SCALE`). The wire protocol explicitly exports `WIRE_PANIC_ONSET_NORMALIZED = 3.8 / 4.2`, synchronized with `FearCore.panicOnsetRawFear()`.
 - Evidence/source IDs: `pixel-pets/src/engine/ai/fear.rs`, `evidence/rust_js_parity_vectors.json`, `docs/RUST_PARITY.md`.
 - Assumptions: Adapters map normalized inputs to the canonical scale.
 - Rejected alternatives and why: Option 1 rejected because it creates artificial truncation against canonical Rust bands. Option 2 rejected because hardcoded 4.2 scale without boundary specification causes divergence.
