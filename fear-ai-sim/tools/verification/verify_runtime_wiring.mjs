@@ -82,7 +82,8 @@ console.log('  * Core RuntimeSimulation services and live tick path: PASS');
 // here, the ledger and release scope must be revisited rather than silently
 // inheriting a broader "core" claim.
 // InformationPropagationEngine, PackCoordinationEngine, EconomicFeedbackSystem,
-// SettlementMigrationSystem, EpistemicBeliefEngine, MoralDissonanceEngine, and FunctionalPersonaSignatures are deliberately ABSENT from this list.
+// SettlementMigrationSystem, EpistemicBeliefEngine, MoralDissonanceEngine,
+// FunctionalPersonaSignatures, and FactionGovernanceSystem are deliberately ABSENT from this list.
 // They left the optional surface by the §3 change policy and joined
 // the runtime as opt-in services, which is why the tripwires that guard them now
 // point the other way: see the opt-in assertions below.
@@ -222,6 +223,23 @@ assert(personaOptIn.personaSignatures !== null && personaOptOut.personaSignature
     'The opt-in flag did not construct a distinct persona-signatures service');
 console.log('  * FunctionalPersonaSignatures is opt-in only: absent by default, present (and distinct) when asked for: PASS');
 
+// RELEASE-SURFACE §3 condition 4 for FactionGovernanceSystem: promoted from §2.
+assert(hasConstructor(runtimeSource, 'FactionGovernanceSystem'),
+    'FactionGovernanceSystem is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableFactionGovernance\s*=\s*options\.enableFactionGovernance\s*\?\?\s*false/.test(runtimeSource),
+    'FactionGovernanceSystem no longer defaults to false, so it is not opt-in');
+assert(/this\.factionGovernance\s*=\s*this\.enableFactionGovernance\s*\?\s*new Map/.test(runtimeSource),
+    'FactionGovernanceSystem is constructed outside its opt-in guard');
+const factionOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(factionOptOut.factionGovernance === null,
+    'A default RuntimeSimulation constructed the optional faction-governance service');
+assert(factionOptOut.enableFactionGovernance === false,
+    'The faction-governance opt-in does not default to false');
+const factionOptIn = new RuntimeSimulation({ seed: 91339, enableFactionGovernance: true });
+assert(factionOptIn.factionGovernance instanceof Map && factionOptOut.factionGovernance !== factionOptIn.factionGovernance,
+    'The opt-in flag did not construct a distinct faction-governance map');
+console.log('  * FactionGovernanceSystem is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
 // Verify that the optional systems have explicit direct entry points rather
 // than being mistaken for implicit runtime services.
 const cliEntryPoints = [
@@ -231,6 +249,7 @@ const cliEntryPoints = [
     ['EpistemicBeliefEngine via MultiObserverEpistemicHarness', /new MultiObserverEpistemicHarness\b/],
     ['MoralDissonanceEngine', /new MoralDissonanceEngine\b/],
     ['FunctionalPersonaSignatures', /new FunctionalPersonaSignatures\b/],
+    ['FactionGovernanceSystem', /new FactionGovernanceSystem\b/],
     ['FrontierValleySimulation', /new FrontierValleySimulation\b/],
     ['WorldCounterfactualEngine', /WorldCounterfactualEngine\.runExperiment\b/]
 ];

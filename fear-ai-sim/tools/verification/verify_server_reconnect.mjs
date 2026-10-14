@@ -445,6 +445,7 @@ async function main() {
 
         // Test dead/unresponsive client handling
         const unresponsiveWs = Array.from(heartbeatServer.connectedClients)[0];
+        unresponsiveWs.removeAllListeners('pong');
         unresponsiveWs.isAlive = false; // simulate missing pong response
         await waitFor(() => heartbeatServer.heartbeatFailures >= 1, 'heartbeat dead client termination');
         assert(heartbeatServer.heartbeatFailures >= 1, 'server must record heartbeat failure for unresponsive client');

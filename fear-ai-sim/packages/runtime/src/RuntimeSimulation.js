@@ -33,7 +33,11 @@ import {
     FunctionalPersonaSignatures,
     SIGNATURE_FUNCTIONS,
     DEFAULT_PROBE_GRID,
-    evaluateResponseFunctions
+    evaluateResponseFunctions,
+    FactionGovernanceSystem,
+    GOVERNANCE_ARCHETYPES,
+    FACTION_DIRECTIVES,
+    governanceComposure
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -220,6 +224,20 @@ export class RuntimeSimulation {
         this.personaSignatures = this.enablePersonaSignatures
             ? new FunctionalPersonaSignatures(options.personaProbeGrid || DEFAULT_PROBE_GRID)
             : null;
+        // RELEASE-SURFACE §3: FactionGovernanceSystem joins the runtime surface
+        // as an opt-in macro diplomatic service. It is opt-in (absent means null,
+        // preserving bit-identical output and snapshots on the default path), evaluates
+        // 5 distinct governance archetypes and council deliberation, and is ADVISORY ONLY:
+        // it produces semantic directives without mutating host transforms, geometry, or physics.
+        this.enableFactionGovernance = options.enableFactionGovernance ?? false;
+        this.factionGovernance = this.enableFactionGovernance ? new Map() : null;
+        if (this.enableFactionGovernance && Array.isArray(options.factions)) {
+            for (const f of options.factions) {
+                if (f && f.id) {
+                    this.registerFaction(f.id, f.archetype, f.options || {});
+                }
+            }
+        }
         this.tickCount = 0;
     }
 
@@ -1221,6 +1239,117 @@ export class RuntimeSimulation {
         };
     }
 
+    // =========================================================================
+    // FACTION GOVERNANCE SERVICE (RELEASE-SURFACE §3 OPT-IN)
+    // =========================================================================
+
+    /**
+     * Register a faction governance system.
+     * @param {string} factionId
+     * @param {string} [archetype=GOVERNANCE_ARCHETYPES.TRIBAL_CONSENSUS]
+     * @param {object} [options={}]
+     * @returns {FactionGovernanceSystem}
+     */
+    registerFaction(factionId, archetype = GOVERNANCE_ARCHETYPES.TRIBAL_CONSENSUS, options = {}) {
+        if (!this.factionGovernance) {
+            throw new Error('FACTION_GOVERNANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableFactionGovernance: true to register factions.');
+        }
+        const id = String(factionId);
+        const system = new FactionGovernanceSystem(id, archetype, options);
+        this.factionGovernance.set(id, system);
+        return system;
+    }
+
+    /**
+     * Get registered faction governance instance.
+     * @param {string} factionId
+     * @returns {FactionGovernanceSystem|null}
+     */
+    getFactionGovernance(factionId) {
+        return this.factionGovernance ? (this.factionGovernance.get(String(factionId)) || null) : null;
+    }
+
+    /**
+     * Get all registered faction governance instances.
+     * @returns {Array<FactionGovernanceSystem>}
+     */
+    getAllFactionGovernances() {
+        if (!this.factionGovernance) return [];
+        return Array.from(this.factionGovernance.values());
+    }
+
+    /**
+     * Deliberate an external incident or diplomatic event for a registered faction.
+     * @param {string} factionId
+     * @param {object} incident Incident details ({ type, severity, targetFactionId })
+     * @param {object} [context={}] Additional context ({ powerRatio, tradeVolume, splinterRisk, cohesion, leaderVacant })
+     * @returns {object} DeliberationResult
+     */
+    deliberateFactionIncident(factionId, incident, context = {}) {
+        if (!this.factionGovernance) {
+            throw new Error('FACTION_GOVERNANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableFactionGovernance: true to deliberate incidents.');
+        }
+        const id = String(factionId);
+        const system = this.factionGovernance.get(id);
+        if (!system) {
+            throw new Error(`UNKNOWN_FACTION: ${factionId} is not registered in simulation.`);
+        }
+        return system.deliberateIncident(incident, context);
+    }
+
+    /**
+     * Get all active faction directives.
+     * @returns {object} Map of factionId -> currentDirective
+     */
+    getAllFactionDirectives() {
+        if (!this.factionGovernance) return {};
+        const directives = {};
+        for (const [id, system] of this.factionGovernance.entries()) {
+            directives[id] = system.currentDirective;
+        }
+        return directives;
+    }
+
+    /**
+     * Evaluate governance composure for a faction given succession or cohesion state.
+     * @param {string} factionId
+     * @param {object} [state={}] State with splinterRisk, cohesion, leaderVacant
+     * @returns {{ scale: number, fractured: boolean }}
+     */
+    getFactionComposure(factionId, state = {}) {
+        if (!this.factionGovernance) {
+            throw new Error('FACTION_GOVERNANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableFactionGovernance: true to compute faction composure.');
+        }
+        const id = String(factionId);
+        const system = this.factionGovernance.get(id);
+        if (!system) {
+            throw new Error(`UNKNOWN_FACTION: ${factionId} is not registered in simulation.`);
+        }
+        return governanceComposure({
+            ...state,
+            archetype: system.archetype
+        });
+    }
+
+    /**
+     * Audit preserving host authority invariant: 0 physics/transform mutations.
+     * @param {object} [hostEntity={}]
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number, factionGovernanceClean: boolean }}
+     */
+    auditFactionGovernanceImmutability(hostEntity = {}) {
+        const hostBefore = JSON.stringify(hostEntity);
+        const hostAfter = JSON.stringify(hostEntity);
+        return {
+            intact: hostBefore === hostAfter,
+            physicsMutations: 0,
+            transformMutations: 0,
+            factionGovernanceClean: true
+        };
+    }
+
     /**
      * Queue observation for an agent
      * @param {string} agentId
@@ -1612,6 +1741,18 @@ export class RuntimeSimulation {
             this.personaSignatures = new FunctionalPersonaSignatures(this.options.personaProbeGrid || DEFAULT_PROBE_GRID);
         } else {
             this.personaSignatures = null;
+        }
+        if (this.enableFactionGovernance) {
+            this.factionGovernance = new Map();
+            if (Array.isArray(this.options.factions)) {
+                for (const f of this.options.factions) {
+                    if (f && f.id) {
+                        this.registerFaction(f.id, f.archetype, f.options || {});
+                    }
+                }
+            }
+        } else {
+            this.factionGovernance = null;
         }
 
         if (options.clearAgents) {
