@@ -19,6 +19,7 @@ import {
     TACTICAL_PHASES,
     ENCIRCLEMENT_PATTERNS
 } from '../../core/src/PackCoordinationEngine.js';
+import { GOVERNANCE_ARCHETYPES } from '../../core/src/FactionGovernanceSystem.js';
 
 const finiteOr = (v, fallback) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 const clamp01Finite = (v, fallback) => {
@@ -201,6 +202,18 @@ export class ProtocolValidator {
                 break;
             case MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_REQUEST:
                 result = ProtocolValidator.validatePersonaCollapseQuery(raw);
+                break;
+            case MESSAGE_TYPES.FACTION_REGISTER_REQUEST:
+                result = ProtocolValidator.validateFactionRegister(raw);
+                break;
+            case MESSAGE_TYPES.FACTION_DELIBERATE_REQUEST:
+                result = ProtocolValidator.validateFactionDeliberate(raw);
+                break;
+            case MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_REQUEST:
+                result = ProtocolValidator.validateFactionDirectivesQuery(raw);
+                break;
+            case MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_REQUEST:
+                result = ProtocolValidator.validateFactionComposureQuery(raw);
                 break;
             default:
                 // Accept unknown messages defensively
@@ -1693,6 +1706,151 @@ export class ProtocolValidator {
                 type: MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_REQUEST,
                 agentId: String(agentId).trim(),
                 populationIds
+            }
+        };
+    }
+
+    /**
+     * Validate FACTION_REGISTER_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateFactionRegister(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const factionId = raw.factionId || raw.faction_id || raw.id;
+        if (!factionId || typeof factionId !== 'string' || !factionId.trim()) {
+            errors.push('Missing or invalid "factionId" string');
+        }
+
+        const rawArchetype = raw.archetype || raw.governanceArchetype || raw.governance_archetype;
+        let archetype = GOVERNANCE_ARCHETYPES.TRIBAL_CONSENSUS;
+        if (rawArchetype !== undefined && rawArchetype !== null) {
+            if (typeof rawArchetype !== 'string' || !Object.values(GOVERNANCE_ARCHETYPES).includes(rawArchetype)) {
+                errors.push(`Invalid "archetype". Expected one of: ${Object.values(GOVERNANCE_ARCHETYPES).join(', ')}`);
+            } else {
+                archetype = rawArchetype;
+            }
+        }
+
+        const options = raw.options && typeof raw.options === 'object' && !Array.isArray(raw.options)
+            ? { ...raw.options }
+            : {};
+
+        if (raw.leader !== undefined && options.leader === undefined) options.leader = raw.leader;
+        if (raw.councilMembers !== undefined && options.councilMembers === undefined) options.councilMembers = raw.councilMembers;
+        if (raw.consensusThreshold !== undefined && options.consensusThreshold === undefined) options.consensusThreshold = raw.consensusThreshold;
+        if (raw.resources !== undefined && options.resources === undefined) options.resources = raw.resources;
+        if (raw.militaryReadiness !== undefined && options.militaryReadiness === undefined) options.militaryReadiness = raw.militaryReadiness;
+        if (raw.tradeDependence !== undefined && options.tradeDependence === undefined) options.tradeDependence = raw.tradeDependence;
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.FACTION_REGISTER_REQUEST,
+                factionId: String(factionId).trim(),
+                archetype,
+                options
+            }
+        };
+    }
+
+    /**
+     * Validate FACTION_DELIBERATE_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateFactionDeliberate(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const factionId = raw.factionId || raw.faction_id || raw.id;
+        if (!factionId || typeof factionId !== 'string' || !factionId.trim()) {
+            errors.push('Missing or invalid "factionId" string');
+        }
+
+        const incident = raw.incident;
+        if (!incident || typeof incident !== 'object' || Array.isArray(incident)) {
+            errors.push('Missing or invalid "incident" object');
+        } else if (!incident.type || typeof incident.type !== 'string' || !incident.type.trim()) {
+            errors.push('Missing or invalid "incident.type" string');
+        }
+
+        const context = raw.context && typeof raw.context === 'object' && !Array.isArray(raw.context)
+            ? raw.context
+            : {};
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.FACTION_DELIBERATE_REQUEST,
+                factionId: String(factionId).trim(),
+                incident: {
+                    type: String(incident.type).trim(),
+                    severity: typeof incident.severity === 'number' && Number.isFinite(incident.severity) ? Math.max(0, Math.min(1, incident.severity)) : 0.5,
+                    targetFactionId: incident.targetFactionId ? String(incident.targetFactionId).trim() : null,
+                    ...(incident.metadata && typeof incident.metadata === 'object' ? { metadata: incident.metadata } : {})
+                },
+                context
+            }
+        };
+    }
+
+    /**
+     * Validate FACTION_DIRECTIVES_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateFactionDirectivesQuery(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const factionId = raw.factionId || raw.faction_id || null;
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_REQUEST,
+                factionId: factionId ? String(factionId).trim() : null
+            }
+        };
+    }
+
+    /**
+     * Validate FACTION_COMPOSURE_QUERY_REQUEST message
+     * @param {object} raw
+     * @returns {{ valid: boolean, errors?: string[], code?: string, value?: object }}
+     */
+    static validateFactionComposureQuery(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+            return { valid: false, errors: ['Request body must be a non-null object'], code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        const errors = [];
+        const factionId = raw.factionId || raw.faction_id || raw.id;
+        if (!factionId || typeof factionId !== 'string' || !factionId.trim()) {
+            errors.push('Missing or invalid "factionId" string');
+        }
+        const state = raw.state && typeof raw.state === 'object' && !Array.isArray(raw.state)
+            ? raw.state
+            : {};
+
+        if (errors.length > 0) {
+            return { valid: false, errors, code: ERROR_CODES.VALIDATION_FAILED };
+        }
+        return {
+            valid: true,
+            value: {
+                type: MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_REQUEST,
+                factionId: String(factionId).trim(),
+                state
             }
         };
     }

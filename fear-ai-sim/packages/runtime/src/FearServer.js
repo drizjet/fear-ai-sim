@@ -369,7 +369,8 @@ export class FearServer {
                     settlement_migration: Boolean(this.simulation.settlementMigration),
                     epistemic_belief: Boolean(this.simulation.enableEpistemicBelief),
                     moral_dissonance: Boolean(this.simulation.enableMoralDissonance),
-                    persona_signatures: Boolean(this.simulation.enablePersonaSignatures)
+                    persona_signatures: Boolean(this.simulation.enablePersonaSignatures),
+                    faction_governance: Boolean(this.simulation.enableFactionGovernance)
                 });
             }
             case '/api/v1/register': {
@@ -1473,6 +1474,116 @@ export class FearServer {
                 }
             }
 
+            case '/api/v1/faction/register': {
+                const val = ProtocolValidator.validateFactionRegister(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableFactionGovernance) {
+                    return this._sendJson(res, 400, {
+                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
+                    });
+                }
+                try {
+                    const system = this.simulation.registerFaction(val.value.factionId, val.value.archetype, val.value.options);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.FACTION_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        factionId: val.value.factionId,
+                        archetype: system.archetype,
+                        currentDirective: system.currentDirective
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/faction/deliberate': {
+                const val = ProtocolValidator.validateFactionDeliberate(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableFactionGovernance) {
+                    return this._sendJson(res, 400, {
+                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
+                    });
+                }
+                try {
+                    const deliberation = this.simulation.deliberateFactionIncident(val.value.factionId, val.value.incident, val.value.context);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.FACTION_DELIBERATE_RESPONSE,
+                        factionId: val.value.factionId,
+                        deliberation
+                    });
+                } catch (err) {
+                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
+                    return this._sendJson(res, isUnknown ? 404 : 400, {
+                        error: err.message,
+                        code: isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR
+                    });
+                }
+            }
+
+            case '/api/v1/faction/directives': {
+                const val = ProtocolValidator.validateFactionDirectivesQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableFactionGovernance) {
+                    return this._sendJson(res, 400, {
+                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
+                    });
+                }
+                try {
+                    if (val.value.factionId) {
+                        const gov = this.simulation.getFactionGovernance(val.value.factionId);
+                        if (!gov) {
+                            return this._sendJson(res, 404, {
+                                error: `UNKNOWN_FACTION: faction ${val.value.factionId} does not exist.`,
+                                code: ERROR_CODES.UNKNOWN_FACTION
+                            });
+                        }
+                        return this._sendJson(res, 200, {
+                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
+                            factionId: val.value.factionId,
+                            directive: gov.currentDirective,
+                            grievanceLevel: gov.grievanceLevel
+                        });
+                    } else {
+                        const directives = this.simulation.getAllFactionDirectives();
+                        return this._sendJson(res, 200, {
+                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
+                            factionId: null,
+                            directives
+                        });
+                    }
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/faction/composure': {
+                const val = ProtocolValidator.validateFactionComposureQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableFactionGovernance) {
+                    return this._sendJson(res, 400, {
+                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
+                    });
+                }
+                try {
+                    const composure = this.simulation.getFactionComposure(val.value.factionId, val.value.state);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_RESPONSE,
+                        factionId: val.value.factionId,
+                        composure
+                    });
+                } catch (err) {
+                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
+                    return this._sendJson(res, isUnknown ? 404 : 400, {
+                        error: err.message,
+                        code: isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR
+                    });
+                }
+            }
+
             default:
                 return this._sendJson(res, 404, { error: `Endpoint ${path} not found` });
         }
@@ -2104,7 +2215,8 @@ export class FearServer {
                     settlement_migration: Boolean(this.simulation.settlementMigration),
                     epistemic_belief: Boolean(this.simulation.enableEpistemicBelief),
                     moral_dissonance: Boolean(this.simulation.enableMoralDissonance),
-                    persona_signatures: Boolean(this.simulation.enablePersonaSignatures)
+                    persona_signatures: Boolean(this.simulation.enablePersonaSignatures),
+                    faction_governance: Boolean(this.simulation.enableFactionGovernance)
                 }, correlationId);
                 break;
             }
@@ -3070,6 +3182,116 @@ export class FearServer {
                     }, correlationId);
                 } catch (err) {
                     this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.FACTION_REGISTER_REQUEST: {
+                if (!this.simulation.enableFactionGovernance) {
+                    this._sendWsError(
+                        ws,
+                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const system = this.simulation.registerFaction(payload.factionId, payload.archetype, payload.options);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.FACTION_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        factionId: payload.factionId,
+                        archetype: system.archetype,
+                        currentDirective: system.currentDirective
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.FACTION_DELIBERATE_REQUEST: {
+                if (!this.simulation.enableFactionGovernance) {
+                    this._sendWsError(
+                        ws,
+                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const deliberation = this.simulation.deliberateFactionIncident(payload.factionId, payload.incident, payload.context);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.FACTION_DELIBERATE_RESPONSE,
+                        factionId: payload.factionId,
+                        deliberation
+                    }, correlationId);
+                } catch (err) {
+                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
+                    this._sendWsError(ws, err.message, isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_REQUEST: {
+                if (!this.simulation.enableFactionGovernance) {
+                    this._sendWsError(
+                        ws,
+                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    if (payload.factionId) {
+                        const gov = this.simulation.getFactionGovernance(payload.factionId);
+                        if (!gov) {
+                            this._sendWsError(ws, `UNKNOWN_FACTION: faction ${payload.factionId} does not exist.`, ERROR_CODES.UNKNOWN_FACTION, correlationId);
+                            break;
+                        }
+                        this._sendWs(ws, {
+                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
+                            factionId: payload.factionId,
+                            directive: gov.currentDirective,
+                            grievanceLevel: gov.grievanceLevel
+                        }, correlationId);
+                    } else {
+                        const directives = this.simulation.getAllFactionDirectives();
+                        this._sendWs(ws, {
+                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
+                            factionId: null,
+                            directives
+                        }, correlationId);
+                    }
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_REQUEST: {
+                if (!this.simulation.enableFactionGovernance) {
+                    this._sendWsError(
+                        ws,
+                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const composure = this.simulation.getFactionComposure(payload.factionId, payload.state);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_RESPONSE,
+                        factionId: payload.factionId,
+                        composure
+                    }, correlationId);
+                } catch (err) {
+                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
+                    this._sendWsError(ws, err.message, isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR, correlationId);
                 }
                 break;
             }
