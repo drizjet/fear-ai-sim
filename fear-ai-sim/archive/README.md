@@ -20,6 +20,9 @@ Early research experiments, toy algorithms, and unintegrated hardware mocks crea
 | `ddasystem.js` | Dynamic Difficulty Adjustment prototype (T3.5) | Superseded in production middleware by `PacingDirector.js` (`packages/core/src/PacingDirector.js`). |
 | `groupbehaviors.js` | Group mourning, search parties, and tribal relations (T3.8) | Superseded in production by `GroupContagionSystem.js` and `PackCoordinationEngine.js`. |
 | `masac_integration_v2.js`, `masac_predator.js`, `masac_prey.js`, `verify_masac.js` | Legacy multi-agent Soft Actor-Critic (MASAC) training wrappers | Obsolete v2 prototypes superseded by v3 (`masac_integration_v3.js`). |
+| `masac.js`, `masac_integration.js`, `working_masac.js` | Early MASAC v1 implementation and integration wrappers | Obsolete v1 prototype superseded by TensorFlow.js-backed v3 architecture. |
+| `sac_agent.js` | Single-agent SAC with twin Q-networks | Handwritten prototype superseded by `tf_network.js` and `masac_trainer.js`. |
+| `neuralnet.js` | Custom vanilla matrix neural network | Handwritten prototype superseded by `@tensorflow/tfjs`. |
 | `abtesting.js` | Simulation configuration A/B comparison harness | Historical test utility for retired test runners. |
 | `agentmemory.js` | Agent memory prototype | Superseded by `LayeredMemorySystem.js` and `MemoryConsolidationEngine.js`. |
 | `causal-ledger.js` | Causal event graph linter | Built for retired test suites; superseded by `CausalEventGraph.js`. |
