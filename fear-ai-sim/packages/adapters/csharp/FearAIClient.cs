@@ -143,7 +143,7 @@ namespace FearAI.Client
 
         private static string? ExtractKeyOutcome(string? body)
         {
-            if (string.IsNullOrEmpty(body)) return null;
+            if (body == null || body.Length == 0) return null;
             const string marker = "\"signing_key\"";
             var at = body.IndexOf(marker, StringComparison.Ordinal);
             if (at < 0) return null;
@@ -157,7 +157,15 @@ namespace FearAI.Client
 
         public FearAIClient(string host = "127.0.0.1", int port = 8765, HttpClient? httpClient = null, string? sessionId = null)
         {
-            _baseUrl = $"http://{host}:{port}";
+            if (host.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || host.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                var uri = new Uri(host);
+                _baseUrl = $"{uri.Scheme}://{uri.Host}:{uri.Port}";
+            }
+            else
+            {
+                _baseUrl = $"http://{host}:{port}";
+            }
             _httpClient = httpClient ?? new HttpClient();
             SessionId = sessionId ?? $"csharp_client_{Guid.NewGuid():N}";
         }

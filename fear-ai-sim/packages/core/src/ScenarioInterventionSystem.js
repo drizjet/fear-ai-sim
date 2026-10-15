@@ -46,6 +46,7 @@ export class ScenarioInterventionSystem {
         this.activeInterventions = [];
         this.historyLog = [];
         this.currentTick = 0;
+        this._interventionSeq = 0;
     }
 
     /**
@@ -59,7 +60,7 @@ export class ScenarioInterventionSystem {
         }
 
         const record = {
-            id: `intv_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            id: intervention.id || `intv_${this.currentTick}_${++this._interventionSeq}`,
             type: intervention.type,
             target: intervention.target || 'WORLD',
             parameters: { ...(intervention.parameters || {}) },

@@ -124,6 +124,33 @@ export class InformationPropagationEngine {
     }
 
     /**
+     * Forget an agent entirely: its outbound edges, its inbound edges, its
+     * credibility, its susceptibility, its inbox, and its membership in every
+     * rumor's recipient set.
+     *
+     * Exists so the RuntimeSimulation opt-in service can track retirements. Without
+     * it a departed agent keeps receiving, keeps being heard, and keeps inflating
+     * `totalReach` — which is the accumulation pattern this repository keeps
+     * finding in long-lived state.
+     *
+     * @returns {boolean} whether the agent was known to this engine
+     */
+    removeAgent(agentId) {
+        const id = String(agentId);
+        const known = this.listenEdges.has(id) || this.inboxes.has(id)
+            || this.credibility.has(id) || this.susceptibility.has(id);
+        this.listenEdges.delete(id);
+        this.inboxes.delete(id);
+        this.credibility.delete(id);
+        this.susceptibility.delete(id);
+        // Strip the id from other listeners so a retired source stops being heard.
+        for (const sources of this.listenEdges.values()) sources.delete(id);
+        // And from rumor reach, so reported reach does not count the departed.
+        for (const rumor of this.rumors.values()) rumor.recipients.delete(id);
+        return known;
+    }
+
+    /**
      * Inject a new rumor at an origin agent.
      * @returns rumor id
      */

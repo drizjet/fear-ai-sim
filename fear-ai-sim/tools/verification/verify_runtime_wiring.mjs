@@ -81,13 +81,13 @@ console.log('  * Core RuntimeSimulation services and live tick path: PASS');
 // source checks are deliberate tripwires: if a future change constructs one
 // here, the ledger and release scope must be revisited rather than silently
 // inheriting a broader "core" claim.
+// InformationPropagationEngine, PackCoordinationEngine, EconomicFeedbackSystem,
+// SettlementMigrationSystem, EpistemicBeliefEngine, MoralDissonanceEngine,
+// FunctionalPersonaSignatures, and FactionGovernanceSystem are deliberately ABSENT from this list.
+// They left the optional surface by the §3 change policy and joined
+// the runtime as opt-in services, which is why the tripwires that guard them now
+// point the other way: see the opt-in assertions below.
 const optionalRuntimeConstructors = [
-    'PackCoordinationEngine',
-    'EconomicFeedbackSystem',
-    'EpistemicBeliefEngine',
-    'InformationPropagationEngine',
-    'MoralDissonanceEngine',
-    'FunctionalPersonaSignatures',
     'WorldCounterfactualEngine',
     'FrontierValleySimulation'
 ];
@@ -96,15 +96,160 @@ for (const name of optionalRuntimeConstructors) {
 }
 console.log(`  * Optional world/research modules absent from RuntimeSimulation constructor (${optionalRuntimeConstructors.length}): PASS`);
 
+// RELEASE-SURFACE §3 condition 4. The information-propagation module is now
+// IN scope, so what must be proven inverts: constructing it is expected, and
+// constructing it UNGATED is the defect. An unconditional `new` here would make a
+// research system part of every session that never asked for it, while every
+// existing test still passed.
+assert(hasConstructor(runtimeSource, 'InformationPropagationEngine'),
+    'InformationPropagationEngine is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableInformationPropagation\s*=\s*options\.enableInformationPropagation\s*\?\?\s*false/.test(runtimeSource),
+    'InformationPropagationEngine no longer defaults to false, so it is not opt-in');
+assert(/this\.informationPropagation\s*=\s*this\.enableInformationPropagation\s*\?\s*new InformationPropagationEngine/.test(runtimeSource),
+    'InformationPropagationEngine is constructed outside its opt-in guard');
+const optOut = new RuntimeSimulation({ seed: 91339 });
+assert(optOut.informationPropagation === null,
+    'A default RuntimeSimulation constructed the optional information-propagation service');
+assert(optOut.enableInformationPropagation === false,
+    'The information-propagation opt-in does not default to false');
+const optIn = new RuntimeSimulation({ seed: 91339, enableInformationPropagation: true });
+assert(optIn.informationPropagation !== null && optOut.informationPropagation !== optIn.informationPropagation,
+    'The opt-in flag did not construct a distinct information-propagation service');
+console.log('  * InformationPropagationEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for PackCoordinationEngine: promoted from §2.
+assert(hasConstructor(runtimeSource, 'PackCoordinationEngine'),
+    'PackCoordinationEngine is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enablePackCoordination\s*=\s*options\.enablePackCoordination\s*\?\?\s*false/.test(runtimeSource),
+    'PackCoordinationEngine no longer defaults to false, so it is not opt-in');
+assert(/this\.packCoordination\s*=\s*this\.enablePackCoordination\s*\?\s*new PackCoordinationEngine/.test(runtimeSource),
+    'PackCoordinationEngine is constructed outside its opt-in guard');
+const packOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(packOptOut.packCoordination === null,
+    'A default RuntimeSimulation constructed the optional pack-coordination service');
+assert(packOptOut.enablePackCoordination === false,
+    'The pack-coordination opt-in does not default to false');
+const packOptIn = new RuntimeSimulation({ seed: 91339, enablePackCoordination: true });
+assert(packOptIn.packCoordination !== null && packOptOut.packCoordination !== packOptIn.packCoordination,
+    'The opt-in flag did not construct a distinct pack-coordination service');
+console.log('  * PackCoordinationEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for EconomicFeedbackSystem: promoted from §2.
+assert(hasConstructor(runtimeSource, 'EconomicFeedbackSystem'),
+    'EconomicFeedbackSystem is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableEconomicFeedback\s*=\s*options\.enableEconomicFeedback\s*\?\?\s*false/.test(runtimeSource),
+    'EconomicFeedbackSystem no longer defaults to false, so it is not opt-in');
+assert(/this\.economicFeedback\s*=\s*this\.enableEconomicFeedback\s*\?\s*new EconomicFeedbackSystem/.test(runtimeSource),
+    'EconomicFeedbackSystem is constructed outside its opt-in guard');
+const econOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(econOptOut.economicFeedback === null,
+    'A default RuntimeSimulation constructed the optional economic-feedback service');
+assert(econOptOut.enableEconomicFeedback === false,
+    'The economic-feedback opt-in does not default to false');
+const econOptIn = new RuntimeSimulation({ seed: 91339, enableEconomicFeedback: true });
+assert(econOptIn.economicFeedback !== null && econOptOut.economicFeedback !== econOptIn.economicFeedback,
+    'The opt-in flag did not construct a distinct economic-feedback service');
+console.log('  * EconomicFeedbackSystem is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for SettlementMigrationSystem: promoted from §2.
+assert(hasConstructor(runtimeSource, 'SettlementMigrationSystem'),
+    'SettlementMigrationSystem is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableSettlementMigration\s*=\s*options\.enableSettlementMigration\s*\?\?\s*false/.test(runtimeSource),
+    'SettlementMigrationSystem no longer defaults to false, so it is not opt-in');
+assert(/this\.settlementMigration\s*=\s*this\.enableSettlementMigration\s*\?\s*new SettlementMigrationSystem/.test(runtimeSource),
+    'SettlementMigrationSystem is constructed outside its opt-in guard');
+const migOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(migOptOut.settlementMigration === null,
+    'A default RuntimeSimulation constructed the optional settlement-migration service');
+assert(migOptOut.enableSettlementMigration === false,
+    'The settlement-migration opt-in does not default to false');
+const migOptIn = new RuntimeSimulation({ seed: 91339, enableSettlementMigration: true });
+assert(migOptIn.settlementMigration !== null && migOptOut.settlementMigration !== migOptIn.settlementMigration,
+    'The opt-in flag did not construct a distinct settlement-migration service');
+console.log('  * SettlementMigrationSystem is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for EpistemicBeliefEngine: promoted from §2.
+assert(hasConstructor(runtimeSource, 'EpistemicBeliefEngine'),
+    'EpistemicBeliefEngine is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableEpistemicBelief\s*=\s*options\.enableEpistemicBelief\s*\?\?\s*false/.test(runtimeSource),
+    'EpistemicBeliefEngine no longer defaults to false, so it is not opt-in');
+assert(/this\.epistemicBelief\s*=\s*this\.enableEpistemicBelief\s*\?\s*new EpistemicBeliefEngine/.test(runtimeSource),
+    'EpistemicBeliefEngine is constructed outside its opt-in guard');
+const epistemicOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(epistemicOptOut.epistemicBelief === null,
+    'A default RuntimeSimulation constructed the optional epistemic-belief service');
+assert(epistemicOptOut.enableEpistemicBelief === false,
+    'The epistemic-belief opt-in does not default to false');
+assert(epistemicOptOut.agentEpistemicEngines === null,
+    'The agent epistemic engines map is not null when disabled');
+const epistemicOptIn = new RuntimeSimulation({ seed: 91339, enableEpistemicBelief: true });
+assert(epistemicOptIn.epistemicBelief !== null && epistemicOptOut.epistemicBelief !== epistemicOptIn.epistemicBelief,
+    'The opt-in flag did not construct a distinct epistemic-belief service');
+assert(epistemicOptIn.agentEpistemicEngines instanceof Map,
+    'The agent epistemic engines map was not constructed when opt-in enabled');
+console.log('  * EpistemicBeliefEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for MoralDissonanceEngine: promoted from §2.
+assert(hasConstructor(runtimeSource, 'MoralDissonanceEngine'),
+    'MoralDissonanceEngine is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableMoralDissonance\s*=\s*options\.enableMoralDissonance\s*\?\?\s*false/.test(runtimeSource),
+    'MoralDissonanceEngine no longer defaults to false, so it is not opt-in');
+assert(/this\.moralDissonance\s*=\s*this\.enableMoralDissonance\s*\?\s*new MoralDissonanceEngine/.test(runtimeSource),
+    'MoralDissonanceEngine is constructed outside its opt-in guard');
+const moralOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(moralOptOut.moralDissonance === null,
+    'A default RuntimeSimulation constructed the optional moral-dissonance service');
+assert(moralOptOut.enableMoralDissonance === false,
+    'The moral-dissonance opt-in does not default to false');
+const moralOptIn = new RuntimeSimulation({ seed: 91339, enableMoralDissonance: true });
+assert(moralOptIn.moralDissonance !== null && moralOptOut.moralDissonance !== moralOptIn.moralDissonance,
+    'The opt-in flag did not construct a distinct moral-dissonance service');
+console.log('  * MoralDissonanceEngine is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for FunctionalPersonaSignatures: promoted from §2.
+assert(hasConstructor(runtimeSource, 'FunctionalPersonaSignatures'),
+    'FunctionalPersonaSignatures is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enablePersonaSignatures\s*=\s*options\.enablePersonaSignatures\s*\?\?\s*false/.test(runtimeSource),
+    'FunctionalPersonaSignatures no longer defaults to false, so it is not opt-in');
+assert(/this\.personaSignatures\s*=\s*this\.enablePersonaSignatures\s*\?\s*new FunctionalPersonaSignatures/.test(runtimeSource),
+    'FunctionalPersonaSignatures is constructed outside its opt-in guard');
+const personaOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(personaOptOut.personaSignatures === null,
+    'A default RuntimeSimulation constructed the optional persona-signatures service');
+assert(personaOptOut.enablePersonaSignatures === false,
+    'The persona-signatures opt-in does not default to false');
+const personaOptIn = new RuntimeSimulation({ seed: 91339, enablePersonaSignatures: true });
+assert(personaOptIn.personaSignatures !== null && personaOptOut.personaSignatures !== personaOptIn.personaSignatures,
+    'The opt-in flag did not construct a distinct persona-signatures service');
+console.log('  * FunctionalPersonaSignatures is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
+// RELEASE-SURFACE §3 condition 4 for FactionGovernanceSystem: promoted from §2.
+assert(hasConstructor(runtimeSource, 'FactionGovernanceSystem'),
+    'FactionGovernanceSystem is declared in scope but is constructed nowhere in RuntimeSimulation');
+assert(/enableFactionGovernance\s*=\s*options\.enableFactionGovernance\s*\?\?\s*false/.test(runtimeSource),
+    'FactionGovernanceSystem no longer defaults to false, so it is not opt-in');
+assert(/this\.factionGovernance\s*=\s*this\.enableFactionGovernance\s*\?\s*new Map/.test(runtimeSource),
+    'FactionGovernanceSystem is constructed outside its opt-in guard');
+const factionOptOut = new RuntimeSimulation({ seed: 91339 });
+assert(factionOptOut.factionGovernance === null,
+    'A default RuntimeSimulation constructed the optional faction-governance service');
+assert(factionOptOut.enableFactionGovernance === false,
+    'The faction-governance opt-in does not default to false');
+const factionOptIn = new RuntimeSimulation({ seed: 91339, enableFactionGovernance: true });
+assert(factionOptIn.factionGovernance instanceof Map && factionOptOut.factionGovernance !== factionOptIn.factionGovernance,
+    'The opt-in flag did not construct a distinct faction-governance map');
+console.log('  * FactionGovernanceSystem is opt-in only: absent by default, present (and distinct) when asked for: PASS');
+
 // Verify that the optional systems have explicit direct entry points rather
 // than being mistaken for implicit runtime services.
 const cliEntryPoints = [
     ['PackCoordinationEngine', /new PackCoordinationEngine\b/],
     ['EconomicFeedbackSystem', /new EconomicFeedbackSystem\b/],
+    ['SettlementMigrationSystem', /new SettlementMigrationSystem\b/],
     ['EpistemicBeliefEngine via MultiObserverEpistemicHarness', /new MultiObserverEpistemicHarness\b/],
-    ['InformationPropagationEngine', /new InformationPropagationEngine\b/],
     ['MoralDissonanceEngine', /new MoralDissonanceEngine\b/],
     ['FunctionalPersonaSignatures', /new FunctionalPersonaSignatures\b/],
+    ['FactionGovernanceSystem', /new FactionGovernanceSystem\b/],
     ['FrontierValleySimulation', /new FrontierValleySimulation\b/],
     ['WorldCounterfactualEngine', /WorldCounterfactualEngine\.runExperiment\b/]
 ];

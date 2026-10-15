@@ -95,6 +95,14 @@ export const POSTURE_CODE_TO_NAME = Object.freeze(
     Object.fromEntries(Object.entries(POSTURE_CODES).map(([k, v]) => [v, k]))
 );
 
+/**
+ * Normalized fear at which the PANIC band is entered: FearCore `enter.PANIC`
+ * (3.8) divided by the canonical normalized-to-core scale (`FEAR_SCALE` = 4.2).
+ * The protocol package must not import core, so this is restated here and
+ * `verify_cross_tree_parity.mjs` fails if it drifts from `panicOnsetRawFear()`.
+ */
+export const WIRE_PANIC_ONSET_NORMALIZED = 3.8 / 4.2;
+
 export const BAND_CODES = Object.freeze({
     CALM: 0,
     ALERT: 1,
@@ -106,6 +114,7 @@ export const BAND_CODES = Object.freeze({
     CRAWLING: 7,
     PRESENCE_BREAK: 8,
     RECOVER: 9,
+    VAULTING: 10,
     UNKNOWN: 255
 });
 
@@ -175,7 +184,10 @@ export class BinaryWireProtocol {
             const bandCode = BAND_CODES[rec.band] ?? BAND_CODES.UNKNOWN;
 
             let flags = 0;
-            if (rec.fear >= 0.70) flags |= 0x01; // isPanicking
+            const isPanicking = typeof rec.isPanicking === 'boolean'
+                ? rec.isPanicking
+                : (rec.band === 'PANIC' || (typeof rec.fear === 'number' && rec.fear >= WIRE_PANIC_ONSET_NORMALIZED));
+            if (isPanicking) flags |= 0x01; // isPanicking
             if (rec.inCombat) flags |= 0x02;     // inCombat
             if (rec.exhausted) flags |= 0x04;    // exhausted
 

@@ -226,6 +226,37 @@ function runCommandsIn(text) {
     return commands;
 }
 
+// The trigger block for one event, from the comment-stripped workflow. This is what
+// decides whether a pull request is checked at all — and unlike every other part of
+// CI, a filter here removes checks rather than failing them, so it has to be read
+// rather than trusted. `bare` records whether the event key carries no inline value:
+// `pull_request:` is the unfiltered form, anything after the colon is a narrowing.
+function eventTriggerKeys(text, event) {
+    const lines = text.split('\n');
+    const onIndex = lines.findIndex(line => /^on:\s*$/.test(line));
+    if (onIndex === -1) return null;
+    let onEnd = lines.length;
+    for (let i = onIndex + 1; i < lines.length; i += 1) {
+        if (/^\S/.test(lines[i])) { onEnd = i; break; }
+    }
+    const block = lines.slice(onIndex + 1, onEnd);
+    const start = block.findIndex(line => line.startsWith(`  ${event}:`));
+    if (start === -1) return null;
+    if (block[start].trim() !== `${event}:`) return { bare: false, keys: [] };
+    let stop = block.length;
+    for (let i = start + 1; i < block.length; i += 1) {
+        if (/^ {2}\S/.test(block[i])) { stop = i; break; }
+    }
+    return {
+        bare: true,
+        keys: block.slice(start + 1, stop)
+            // A list item such as `- cron: '0 4 * * *'` is a value, not a key of this
+            // event, so it is dropped before the keys are read.
+            .filter(line => line.trim() !== '' && !/^\s*-\s/.test(line))
+            .map(line => line.trim().split(':')[0])
+    };
+}
+
 // Every path a CI step names, plus every path inside the npm script that step runs.
 function ciInputPaths(commands, scripts) {
     const paths = new Set();
@@ -522,6 +553,29 @@ function gate() {
             + 'a declared runtime that is not installed fails on the runner for a reason no local run shows'
     );
 
+    // A declaration that a runtime is PROVEN is only as good as its match. The probe
+    // runner promotes a SKIPPED line to a failure when the probe's FILENAME contains a
+    // name from FEAR_AI_EXPECT_PROVEN, so a renamed probe, a typo or a stale entry
+    // silently turns the declaration back into decoration — the gate keeps passing,
+    // and the thing it was declared to prove is no longer checked anywhere. Naming
+    // only probes that exist is the one check that can tell a live expectation from a
+    // dead one, and it is derived rather than written down, so adding a declaration
+    // for a fifth runtime needs no edit here.
+    const declaredRuntimeNames = [...new Set(
+        [...executableCiText.matchAll(/FEAR_AI_EXPECT_PROVEN:([^\n]*)/g)]
+            .flatMap(match => match[1].split(',').map(name => name.trim()).filter(Boolean))
+    )];
+    const probeFilenames = readdirSync(join(repoRoot, 'tools', 'verification')).filter(name => /^verify_.*\.mjs$/.test(name));
+    const deadExpectations = declaredRuntimeNames.filter(name => !probeFilenames.some(probe => probe.includes(name)));
+    record(
+        'expect-proven-names-match-a-real-probe',
+        declaredRuntimeNames.length > 0 && deadExpectations.length === 0,
+        declaredRuntimeNames.length === 0
+            ? 'the workflow declares no FEAR_AI_EXPECT_PROVEN runtimes, so no SKIPPED probe is ever promoted to a failure'
+            : `FEAR_AI_EXPECT_PROVEN names ${deadExpectations.join(', ')}, which match no probe under `
+                + 'tools/verification; a declaration that matches nothing is silently inert'
+    );
+
     // A command in the allowlist can still name a script that does not exist — the
     // allowlist compares command text, so it cannot tell `verify:probes` from a typo
     // of it. That step would then fail at runtime, on the runner, for a reason no
@@ -564,13 +618,153 @@ function gate() {
     const mapStates = [
         'verify:hard-rule-9', 'guardian:check', 'verify:probes', 'verify:probe-stability',
         'verify:unity-editor', 'inert until', 'verify:stability-regression', 'advisory', 'non-zero exit code',
-        'ci/stability-ledger', 'exist in the commit, not only in the working tree', 'cryptography=='
+        'ci/stability-ledger', 'exist in the commit, not only in the working tree', 'cryptography==',
+        'every base branch', 'no run at all', 'audit:remote-state', 'at least one check run',
+        'required status context that no job produces'
     ];
     const mapMissing = mapStates.filter(needle => !systemMap.includes(needle));
     record(
         'system-map-states-the-same-ci-contract',
         mapMissing.length === 0,
         `docs/SYSTEM_MAP.md no longer states: ${mapMissing.join(', ')}`
+    );
+
+    // 9. Every pull request must get a run. This is the one CI defect that cannot
+    //    announce itself: `pull_request.branches` is matched against a pull request's
+    //    BASE branch, so a filter here means a pull request based on another branch
+    //    receives no jobs at all — no failure, no skip, no check run, and a page that
+    //    reads exactly like one whose checks are slow. This workflow declared
+    //    `branches: [main, master]` until 2026-09-21, and it was found by opening a
+    //    pull request on a feature branch and noticing the absence, which is not a
+    //    detection mechanism — the whole reason the check exists rather than the fix
+    //    alone. `paths`, `paths-ignore` and `types` narrow the same way and are
+    //    rejected with it; the push half is asserted too, because the pull request
+    //    half of the fix is only free while a feature-branch push is not also built.
+    //    Every workflow file is inspected, not the first `on:` block that can be found:
+    //    a second file is exactly how this defect would arrive unnoticed, since the run
+    //    for a pull request is the union of what every workflow decides — and the
+    //    mutation matrix caught the first version of this check reading only one.
+    const narrowingKeys = ['branches', 'branches-ignore', 'paths', 'paths-ignore', 'types'];
+    const triggerProblems = [];
+    let declaresPullRequest = false;
+    for (const path of workflows) {
+        const name = relative(gitRoot, path).replace(/\\/g, '/');
+        const text = stripYamlComments(readText(path));
+        const pr = eventTriggerKeys(text, 'pull_request');
+        const push = eventTriggerKeys(text, 'push');
+        if (pr !== null) declaresPullRequest = true;
+        if (pr !== null && !pr.bare) {
+            triggerProblems.push(`${name}: the \`pull_request:\` key carries an inline value; it must be a bare, unfiltered trigger`);
+        } else if (pr !== null) {
+            const narrowing = narrowingKeys.filter(key => pr.keys.includes(key));
+            if (narrowing.length > 0) {
+                triggerProblems.push(`${name}: \`pull_request\` is narrowed by ${narrowing.join(', ')}, so a pull request `
+                    + 'outside it receives NO RUN — not a failure, not a skip, an empty checks list');
+            }
+        }
+        if (push !== null && (!push.bare || !push.keys.includes('branches'))) {
+            triggerProblems.push(`${name}: \`push\` no longer restricts to the default branches, so the unfiltered `
+                + 'pull request trigger would also build every feature-branch push');
+        }
+    }
+    if (!declaresPullRequest) {
+        triggerProblems.push('no workflow declares a `pull_request` trigger, so no pull request is checked at all');
+    }
+    record('every-pull-request-gets-a-run', triggerProblems.length === 0, triggerProblems.join('; ') || 'unreachable');
+
+    // Every check above asks whether a SENTENCE still exists, so not one of them can
+    // see a NUMBER that has drifted — and the numbers do drift: the gate's own total
+    // was written down as 19, then 22, then 24; the probe roster was stated as 24 while
+    // it was 25; and the release surface enumerated five categories that summed to 27
+    // and called the total 24. Each was found by reading, never by a failing check.
+    // So derive the two counts that move — the roster from the files, the gate total
+    // from this run — and require the places that speak about NOW to agree.
+    //
+    // The claim sites are bounded rather than "every number under docs/": the ledger
+    // header is the one place that speaks about the current state and it ends at an
+    // explicit boundary sentence, so history below that line may keep stating the
+    // count that was true of the state it describes. The other two sites are the two
+    // release documents' current-claim lines. A count outside those sites is not
+    // checked — that is the trade, and it is why this check says which sites it reads
+    // instead of implying it polices every number in the repository.
+    const rosterSize = probeFilenames.length;
+    const gateTotal = checks + 1; // this check is recorded last (asserted below)
+    const selfSource = readText(join(__dirname, 'hard-rule-9.mjs'));
+    const ownId = 'documented-counts-match-the-derived-counts';
+    const ownIndex = selfSource.indexOf(ownId);
+    const recordsAfterThisOne = ownIndex === -1
+        ? -1
+        : (selfSource.slice(ownIndex).match(/^\s*record\(/gm) || []).length;
+    const ledgerText = readText(join(repoRoot, 'docs', 'CURRENT_TRUTH_LEDGER.md'));
+    const headerBoundary = 'The earlier anchors below are retained';
+    const headerStart = ledgerText.indexOf('**Current audit state**');
+    const headerEnd = ledgerText.indexOf(headerBoundary);
+    // Emphasis is stripped before the numbers are read, because it was hiding one: the
+    // header said `reports **27** integrity checks` while the run was 28/28, and both
+    // patterns below missed it — the `N/N` form because the number was written bare, and
+    // a bare form because `**` sat between the digits and `integrity checks`. A count this
+    // check cannot see is the exact drift it exists to catch, so the two shapes the
+    // documents actually use are matched on the de-emphasised text.
+    const liveHeaderRaw = headerStart === -1 || headerEnd < headerStart ? '' : ledgerText.slice(headerStart, headerEnd);
+    const liveHeader = liveHeaderRaw.replace(/[*`]/g, '');
+    const liveProbeClaims = [...liveHeader.matchAll(/(\d+)\s+probes\b/g)].map(match => Number(match[1]));
+    const liveGateClaims = [
+        ...[...liveHeader.matchAll(/(\d+)\/(\d+)\b/g)]
+            .map(match => ({ display: match[0], left: Number(match[1]), right: Number(match[2]) })),
+        ...[...liveHeader.matchAll(/(\d+)\s+integrity checks\b/g)]
+            .map(match => ({ display: `${match[1]} integrity checks`, left: Number(match[1]), right: Number(match[1]) }))
+    ];
+    const strayProbeClaims = liveProbeClaims.filter(value => value !== rosterSize);
+    const strayGateClaims = liveGateClaims.filter(claim => claim.left !== gateTotal || claim.right !== gateTotal);
+
+    // The two enumerations must also ADD UP, which is a different failure from quoting
+    // the wrong total: a list that sums to 24 beside a claim of 25 is self-contradictory
+    // rather than merely stale, and that is the version that actually shipped.
+    const enumerationProblems = [];
+    for (const [file, pattern] of [
+        ['docs/RELEASE_SURFACE.md', /^\| Verification \|.*$/m],
+        ['docs/RELEASE_CANDIDATE_CERTIFICATION.md', /^Current JS evidence:.*$/m]
+    ]) {
+        const line = (readText(join(repoRoot, file)).match(pattern) || [''])[0];
+        const claim = line.match(/(\d+)\s+(?:`verify_\*\.mjs`|standalone verification)?\s*probes\b/);
+        if (!claim) {
+            enumerationProblems.push(`${file}: no roster claim found, so its enumeration is unchecked`);
+            continue;
+        }
+        if (Number(claim[1]) !== rosterSize) {
+            enumerationProblems.push(`${file}: claims ${claim[1]} probes, the roster is ${rosterSize}`);
+        }
+        const rest = line.slice(claim.index + claim[0].length);
+        const firstDash = rest.indexOf(' — ');
+        const secondDash = rest.indexOf(' — ', firstDash + 3);
+        const parts = (rest.slice(firstDash + 3, secondDash).match(/\b\d+\b/g)) || [];
+        if (firstDash === -1 || secondDash === -1 || parts.length < 2) {
+            enumerationProblems.push(`${file}: its roster claim is not followed by a bounded list of counts, so it cannot be summed`);
+            continue;
+        }
+        const sum = parts.reduce((total, value) => total + Number(value), 0);
+        if (sum !== rosterSize) {
+            enumerationProblems.push(`${file}: its categories sum to ${sum}, the roster is ${rosterSize}`);
+        }
+    }
+
+    record(
+        ownId,
+        headerStart !== -1
+            && headerEnd !== -1
+            && recordsAfterThisOne === 1
+            && strayProbeClaims.length === 0
+            && strayGateClaims.length === 0
+            && enumerationProblems.length === 0,
+        [
+            headerStart === -1 ? 'docs/CURRENT_TRUTH_LEDGER.md no longer carries the **Current audit state** marker' : null,
+            headerEnd === -1 ? `docs/CURRENT_TRUTH_LEDGER.md no longer carries the boundary sentence "${headerBoundary}"` : null,
+            recordsAfterThisOne === -1 ? 'this check cannot find its own id in its own source, so it cannot tell whether it is last' : null,
+            recordsAfterThisOne > 1 ? `${recordsAfterThisOne} record() calls follow this one; move it back to last so its derived total is the final total` : null,
+            strayProbeClaims.length > 0 ? `the ledger header claims ${strayProbeClaims.join(', ')} probes and the roster is ${rosterSize}` : null,
+            strayGateClaims.length > 0 ? `the ledger header claims ${strayGateClaims.map(claim => claim.display).join(', ')} and this run has ${gateTotal}` : null,
+            ...enumerationProblems
+        ].filter(Boolean).join('; ')
     );
 
     console.log('');

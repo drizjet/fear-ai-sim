@@ -1,33 +1,40 @@
 // tools/verification/unity/NUnitShim.cs
 //
 // The slice of NUnit the Unity EditMode tests use, so those tests can be
-// COMPILED on a machine with no Unity Editor.
+// COMPILED AND EXECUTED on a machine with no Unity Editor.
 //
 // WHY A SHIM AND NOT THE REAL NUNIT
 // Unity ships its own `nunit.framework.dll` and pulls it in through the test
 // framework package. There is no copy of it on a machine without the Editor, so a
 // compile gate cannot reference it. This file supplies exactly the members the
-// tests use, which is what lets `verify_dotnet_adapters_compile.mjs` answer "do
-// the EditMode tests type-check" even when `verify_unity_editor_tests.mjs` has to
-// skip.
+// tests use, which is what lets `verify_dotnet_adapters_compile.mjs` answer both
+// "do the EditMode tests type-check" and "does each fixture body actually pass"
+// even when `verify_unity_editor_tests.mjs` has to skip.
 //
 // THE ASSERTIONS ARE REAL IMPLEMENTATIONS, NOT NO-OPS
 // Deliberately. A stub `Assert.IsTrue` that returns without checking anything is
 // the defect this repository already found once in the UnityEngine shim: the
 // compile gate was satisfied by code that could not work, and a passing check
-// meant nothing. These throw. That does not make them equivalent to NUnit - the
-// message formats, the comparer semantics and the constraint syntax all differ -
-// and nothing here is ever REPORTED as a test result. Its only job is to make the
-// test code compile, and to fail loudly if someone later wires it into a run and
-// expects it to behave exactly like NUnit.
+// meant nothing. These throw.
+//
+// AND THEY ARE NOW ACTUALLY RUN - by `NUnitTestRunner.cs`, over the fixtures
+// themselves, which is why this file is no longer "compile only". That does NOT
+// make this NUnit: the message formats, the comparer semantics, `Assert.Throws`'
+// return value and every constraint form differ, and Unity's own nunit.framework
+// remains the only authority on whether these tests pass INSIDE the Editor. What
+// running them here buys is the one defect no compile can see - a fixture body
+// that can never pass on any machine (a wrong constant, an inverted assertion, a
+// field whose semantics changed under it) - which would otherwise be discovered
+// the day someone finally provisions an Editor, or never.
 //
 // WHAT IS DELIBERATELY ABSENT
 // Constraints (`Is.EqualTo(...)`), `TestCase`, `TestCaseSource`, `Values`,
 // `Assert.Multiple`, `Assert.Ignore`, `Assert.Pass`, `Assume`, `TestCaseData`.
 // None appear in the EditMode tests, and adding them "just in case" would grow a
 // second framework to maintain that nothing depends on. If a test needs one of
-// them, this file must grow with it - and the Editor gate is what runs them for
-// real, so the shim never becomes the authority on whether they pass.
+// them, this file must grow with it - and the Editor gate stays the authority on
+// whether these tests pass in Unity, so nothing here is ever reported as an
+// Editor result. `NUnitTestRunner.cs` says the same thing from the other side.
 
 using System;
 using System.Collections;
@@ -71,7 +78,15 @@ namespace NUnit.Framework
     [AttributeUsage(AttributeTargets.Method)]
     public class IgnoreAttribute : Attribute
     {
-        public IgnoreAttribute(string reason) { }
+        /// <summary>
+        /// The reason is STORED, unlike in the first version of this file, because
+        /// the runner now reports it. A skipped test whose reason cannot be read is
+        /// indistinguishable from one someone forgot to finish, and the point of
+        /// running these fixtures outside the Editor is that nothing in them stays
+        /// invisible.
+        /// </summary>
+        public string Reason { get; }
+        public IgnoreAttribute(string reason) { Reason = reason; }
     }
 
     /// <summary>NUnit's `TestDelegate`, which `Assert.Throws` takes.</summary>

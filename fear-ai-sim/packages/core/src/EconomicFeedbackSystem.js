@@ -77,22 +77,22 @@ export class EconomicFeedbackSystem {
         };
 
         const currentStockpiles = {
-            [COMMODITY_TYPES.FOOD]: options.initialStockpiles?.food ?? targetStockpiles[COMMODITY_TYPES.FOOD],
-            [COMMODITY_TYPES.TIMBER]: options.initialStockpiles?.timber ?? targetStockpiles[COMMODITY_TYPES.TIMBER],
-            [COMMODITY_TYPES.ORE]: options.initialStockpiles?.ore ?? targetStockpiles[COMMODITY_TYPES.ORE],
-            [COMMODITY_TYPES.MEDICINE]: options.initialStockpiles?.medicine ?? targetStockpiles[COMMODITY_TYPES.MEDICINE],
-            [COMMODITY_TYPES.LUXURY]: options.initialStockpiles?.luxury ?? targetStockpiles[COMMODITY_TYPES.LUXURY]
+            [COMMODITY_TYPES.FOOD]: options.initialStockpiles?.[COMMODITY_TYPES.FOOD] ?? options.initialStockpiles?.food ?? targetStockpiles[COMMODITY_TYPES.FOOD],
+            [COMMODITY_TYPES.TIMBER]: options.initialStockpiles?.[COMMODITY_TYPES.TIMBER] ?? options.initialStockpiles?.timber ?? targetStockpiles[COMMODITY_TYPES.TIMBER],
+            [COMMODITY_TYPES.ORE]: options.initialStockpiles?.[COMMODITY_TYPES.ORE] ?? options.initialStockpiles?.ore ?? targetStockpiles[COMMODITY_TYPES.ORE],
+            [COMMODITY_TYPES.MEDICINE]: options.initialStockpiles?.[COMMODITY_TYPES.MEDICINE] ?? options.initialStockpiles?.medicine ?? targetStockpiles[COMMODITY_TYPES.MEDICINE],
+            [COMMODITY_TYPES.LUXURY]: options.initialStockpiles?.[COMMODITY_TYPES.LUXURY] ?? options.initialStockpiles?.luxury ?? targetStockpiles[COMMODITY_TYPES.LUXURY]
         };
 
         const productionRates = {
-            [COMMODITY_TYPES.FOOD]: options.production?.food ?? 2.0,
-            [COMMODITY_TYPES.TIMBER]: options.production?.timber ?? 1.0,
-            [COMMODITY_TYPES.ORE]: options.production?.ore ?? 0.5,
-            [COMMODITY_TYPES.MEDICINE]: options.production?.medicine ?? 0.2,
-            [COMMODITY_TYPES.LUXURY]: options.production?.luxury ?? 0.1
+            [COMMODITY_TYPES.FOOD]: options.production?.[COMMODITY_TYPES.FOOD] ?? options.production?.food ?? 2.0,
+            [COMMODITY_TYPES.TIMBER]: options.production?.[COMMODITY_TYPES.TIMBER] ?? options.production?.timber ?? 1.0,
+            [COMMODITY_TYPES.ORE]: options.production?.[COMMODITY_TYPES.ORE] ?? options.production?.ore ?? 0.5,
+            [COMMODITY_TYPES.MEDICINE]: options.production?.[COMMODITY_TYPES.MEDICINE] ?? options.production?.medicine ?? 0.2,
+            [COMMODITY_TYPES.LUXURY]: options.production?.[COMMODITY_TYPES.LUXURY] ?? options.production?.luxury ?? 0.1
         };
 
-        this.settlementMarkets.set(id, {
+        const market = {
             id,
             population,
             garrison: options.garrison ?? 0.5,
@@ -104,7 +104,9 @@ export class EconomicFeedbackSystem {
             famineTicks: 0,
             desperationFearModifier: 0.0,
             escortReadiness: 0.0
-        });
+        };
+        this.settlementMarkets.set(id, market);
+        return market;
     }
 
     /**

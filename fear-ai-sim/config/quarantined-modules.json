@@ -29,6 +29,20 @@
       "owner": "masac_worker.js (orphan)",
       "reviewDate": "2026-08-27",
       "verdict": "RETAIN_OPTIONAL"
+    },
+    {
+      "module": "masac_worker.js",
+      "reason": "Web Worker for optional MASAC training. No production caller imports it.",
+      "owner": "optional MASAC training worker",
+      "reviewDate": "2026-10-12",
+      "verdict": "RETAIN_OPTIONAL"
+    },
+    {
+      "module": "featureengineer.js",
+      "reason": "Feature extraction for neural systems. Imported by feardatagen.js test fixture only.",
+      "owner": "neural feature extraction fixture",
+      "reviewDate": "2026-10-12",
+      "verdict": "RETAIN_OPTIONAL"
     }
   ]
 }

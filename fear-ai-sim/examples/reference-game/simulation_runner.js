@@ -61,6 +61,13 @@ export function runDungeonSimulation() {
 
     const turnLatencies = [];
     const eventLog = [];
+    // This runner used to write `status: 'SUCCESS'` into its report as a literal,
+    // so it reported the same thing whether or not it had actually worked. The
+    // checks below are what that field now means.
+    const failures = [];
+    let livingEntityTurns = 0;
+    let advisoriesReturned = 0;
+    let silentLivingEntityTurns = 0;
 
     // 3. Execute 50-Turn Simulation
     for (let turn = 0; turn < 50; turn++) {
@@ -84,6 +91,15 @@ export function runDungeonSimulation() {
         const minerStep = adapter.stepEntity('miner_01');
         const guardStep = adapter.stepEntity('guard_01');
         const scoutStep = adapter.stepEntity('scout_01');
+
+        // A living NPC that produces no advisory is a real defect: the middleware
+        // silently dropped it, and the host would have no idea.
+        for (const [entity, step] of [[miner, minerStep], [guard, guardStep], [scout, scoutStep]]) {
+            if (!entity || !entity.alive) continue;
+            livingEntityTurns += 1;
+            if (step) advisoriesReturned += 1;
+            else silentLivingEntityTurns += 1;
+        }
 
         const elapsed = performance.now() - tStart;
         turnLatencies.push(elapsed);
@@ -110,19 +126,47 @@ export function runDungeonSimulation() {
     console.log(`- Miner Final Health:        ${miner.health} / ${miner.maxHealth}`);
     console.log(`- Miner Position:            (${miner.x}, ${miner.y})`);
 
+    if (livingEntityTurns === 0) {
+        failures.push('no living NPC was ever stepped, so this run demonstrates nothing');
+    }
+    if (silentLivingEntityTurns > 0) {
+        failures.push(`${silentLivingEntityTurns} living-NPC turn(s) produced no advisory at all`);
+    }
+    if (advisoriesReturned !== livingEntityTurns) {
+        failures.push(`returned ${advisoriesReturned} advisories for ${livingEntityTurns} living-NPC turns`);
+    }
+    if (turnLatencies.length !== 50) {
+        failures.push(`executed ${turnLatencies.length} turns, not the declared 50`);
+    }
+    if (turnLatencies.some(value => !Number.isFinite(value) || value < 0)) {
+        failures.push('a turn produced a non-finite or negative latency');
+    }
+
     const report = {
         name: 'Reference Game Integration: 2D Dungeon Crawler',
-        turns_executed: 50,
+        turns_executed: turnLatencies.length,
         average_latency_ms: avgLatency,
         max_latency_ms: maxLatency,
+        living_entity_turns: livingEntityTurns,
+        advisories_returned: advisoriesReturned,
         authoritative_combat_log: sim.combatLog,
         milestone_snapshots: eventLog,
-        status: 'SUCCESS'
+        // Derived, never asserted: the checks above are what this field means.
+        status: failures.length === 0 ? 'SUCCESS' : 'FAILED',
+        failures
     };
+
+    if (failures.length > 0) {
+        console.log('');
+        console.log(`FAILED — ${failures.length} check(s) broke:`);
+        for (const failure of failures) console.log(`  - ${failure}`);
+    }
 
     return report;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-    runDungeonSimulation();
+    const report = runDungeonSimulation();
+    // Exit non-zero on failure, so a script or a probe that runs this can tell.
+    if (report.failures.length > 0) process.exitCode = 1;
 }

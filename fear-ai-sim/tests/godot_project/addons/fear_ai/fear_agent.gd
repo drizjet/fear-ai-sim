@@ -50,6 +50,20 @@ enum AppraisalSource { LOCAL_FALLBACK, LIVE_SERVER }
 ## Auditory curiosity axis (IntentResolver openness). Neutral 0.5.
 @export_range(0.0, 1.0) var openness: float = 0.5
 
+@export_group("Sensor Quality (opt-in, R4)")
+## Visual channel intensity. Negative = channel absent (legacy shape).
+@export var visual_intensity: float = -1.0
+## Audio channel loudness. Negative = channel absent (legacy shape).
+@export var audio_loudness: float = -1.0
+## Per-source reliability in [0,1]. Negative = absent (fully trusted).
+@export_range(-1.0, 1.0) var sensor_reliability: float = -1.0
+## Observation age in ticks. Negative = absent (fresh).
+@export var observation_age_ticks: int = -1
+
+@export_group("Social Awareness (opt-in, R38)")
+## List of visible peer agent IDs.
+@export var peer_ids: Array[String] = []
+
 # --- Canonical vocabulary and math (GENERATED from packages/core) -----------
 # Every constant and formula the offline fallback needs is derived from the
 # canonical JavaScript core by tools/codegen/generate_godot_fallback.mjs, so
@@ -63,6 +77,8 @@ var current_intent: String = "IDLE_VIGILANT"
 var current_urgency: float = 0.0
 var current_heartbeat_bpm: int = 60
 var recommended_vector: Vector3 = Vector3.ZERO
+var capability_downgrade: Dictionary = {}
+var affordance_downgrade: Dictionary = {}
 
 var _parent_body: Node
 var _client: Node
@@ -132,6 +148,28 @@ func _physics_process(_delta: float) -> void:
 		"z": pos.z,
 		"threats": _scan_threats()
 	}
+	# R4: opt-in perception channels. Absent by default so legacy hosts
+	# emit byte-identical observations; configured sensors ride through
+	# the JSON protocol to the validator's visual/audio sanitizers.
+	if visual_intensity >= 0.0:
+		var visual = { "intensity": visual_intensity }
+		if sensor_reliability >= 0.0:
+			visual["reliability"] = sensor_reliability
+		if observation_age_ticks >= 0:
+			visual["ageTicks"] = observation_age_ticks
+		obs["visual"] = visual
+	if audio_loudness >= 0.0:
+		var audio = { "loudness": audio_loudness }
+		if sensor_reliability >= 0.0:
+			audio["reliability"] = sensor_reliability
+		if observation_age_ticks >= 0:
+			audio["ageTicks"] = observation_age_ticks
+		obs["audio"] = audio
+	if peer_ids.size() > 0:
+		var peers_arr: Array[Dictionary] = []
+		for pid in peer_ids:
+			peers_arr.append({ "id": pid })
+		obs["peers"] = peers_arr
 	client.queue_observation(obs)
 
 func _scan_threats() -> Array[Dictionary]:
@@ -193,11 +231,17 @@ func _on_state_received(id: String, state: Dictionary) -> void:
 	
 	var vec = intent.get("vector_hint", {})
 	recommended_vector = Vector3(vec.get("x", 0.0), vec.get("y", 0.0), vec.get("z", 0.0))
+	capability_downgrade = state.get("capability_downgrade", {})
+	affordance_downgrade = state.get("affordance_downgrade", {})
 	
 	if prev_band != current_fear_band:
 		fear_band_changed.emit(current_fear_band)
 	intent_changed.emit(intent)
 	audio_hints_received.emit(audio)
+
+func report_outcome(outcome: String, reason: String = "", tick: int = 0) -> void:
+	if _client and _client.has_method("report_outcome"):
+		_client.report_outcome(agent_id, current_intent, outcome, reason, tick)
 
 # ==============================================================================
 # APPRAISAL ROUTER
@@ -222,6 +266,7 @@ func _trait_payload() -> Dictionary:
 		"resilience": resilience,
 		"fear": fear_baseline,
 		"leadership": leadership,
+		"openness": openness,
 		"extraversion": openness
 	}
 

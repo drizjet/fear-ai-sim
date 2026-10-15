@@ -1,7 +1,7 @@
 ---
 title: "True External Host Integration Record: Pixel Pets (Rust RTS Engine)"
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-10-13
 type: specification
 status: verified
 ---
@@ -98,3 +98,11 @@ The integration test suite (`tests/fear_ai_external_host_integration.rs`) valida
    - Fear AI's layered group contagion and individual affective states map directly to this multi-tier scoping model.
 3. **Decoupled Durations**:
    - Host actions enforce bounded duration limits ($\le 60\text{s}$). Stale advisories automatically expire, preventing permanent panic locks.
+
+---
+
+## 6. Host Commit Provenance
+
+- **Host Repository**: `C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets`
+- **Clean Verified Commit**: `6867da9f4` on `codex/canonical-consolidation-2026-08-12`.
+- **Reconciliation Record**: Named commit `f3f5e8d25` previously declared `pub(crate) mod persistence_restore;` in `pixel-pets/src/overlay/mod.rs` while the module file was committed on a separate unmerged branch lacking `formation_geometry.rs`. Landed clean host commit `6867da9f4` unifies both safeguards, building and passing all 8 diagnostic sections of `tests/fear_ai_external_host_integration.rs` with exit code 0, zero host mutation, and strict advisory biasing compliance.

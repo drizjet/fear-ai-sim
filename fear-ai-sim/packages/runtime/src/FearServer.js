@@ -92,6 +92,14 @@ export class FearServer {
         this.chainScenario = new ValleyChainScenario();
         this.maxPayloadBytes = options.maxPayloadBytes || (50 * 1024 * 1024);
 
+        this.heartbeatIntervalMs = Number.isFinite(Number(options.heartbeatIntervalMs))
+            ? Number(options.heartbeatIntervalMs)
+            : 30000;
+        this.autoCleanupAbandonedAgents = Boolean(options.autoCleanupAbandonedAgents);
+        this.heartbeatTimer = null;
+        this.heartbeatsSent = 0;
+        this.heartbeatFailures = 0;
+
         this.httpServer = null;
         this.wss = null;
         this.isRunning = false;
@@ -136,6 +144,9 @@ export class FearServer {
                 // listening port (mirrors DesignerDashboardServer).
                 const bound = this.httpServer.address();
                 if (bound && typeof bound.port === 'number') this.port = bound.port;
+                if (this.heartbeatIntervalMs > 0) {
+                    this._startHeartbeat();
+                }
                 resolve({ host: this.host, port: this.port });
             });
         });
@@ -148,6 +159,11 @@ export class FearServer {
     stop() {
         if (!this.isRunning) {
             return Promise.resolve();
+        }
+
+        if (this.heartbeatTimer) {
+            clearInterval(this.heartbeatTimer);
+            this.heartbeatTimer = null;
         }
 
         return new Promise((resolve) => {
@@ -192,7 +208,7 @@ export class FearServer {
         // Universal CORS headers for WebGL / browser engine integrations
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Fear-Signature, X-Fear-Signature-Issued-At, X-Fear-Signature-Nonce, X-Fear-Signature-Key-Id, *');
 
         if (req.method === 'OPTIONS') {
             res.writeHead(204);
@@ -347,7 +363,14 @@ export class FearServer {
                     // Advertised so a host can discover that this server expects
                     // signatures, and how many of its requests have been refused
                     // for what reason, before it starts guessing.
-                    signing: this.signing.summary()
+                    signing: this.signing.summary(),
+                    pack_coordination: Boolean(this.simulation.packCoordination),
+                    economic_feedback: Boolean(this.simulation.economicFeedback),
+                    settlement_migration: Boolean(this.simulation.settlementMigration),
+                    epistemic_belief: Boolean(this.simulation.enableEpistemicBelief),
+                    moral_dissonance: Boolean(this.simulation.enableMoralDissonance),
+                    persona_signatures: Boolean(this.simulation.enablePersonaSignatures),
+                    faction_governance: Boolean(this.simulation.enableFactionGovernance)
                 });
             }
             case '/api/v1/register': {
@@ -825,6 +848,742 @@ export class FearServer {
                 });
             }
 
+            case '/api/v1/pack/create': {
+                const val = ProtocolValidator.validatePackCreate(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    const pack = this.simulation.createPack(val.value.packId, val.value.options);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PACK_CREATE_RESPONSE,
+                        status: 'CREATED',
+                        packId: pack.id,
+                        phase: pack.phase,
+                        pattern: pack.pattern
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/pack/assign': {
+                const val = ProtocolValidator.validatePackAssignMember(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    const member = this.simulation.registerPackMember(
+                        val.value.packId,
+                        val.value.agentId,
+                        val.value.traits,
+                        val.value.position,
+                        val.value.role
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_RESPONSE,
+                        status: 'ASSIGNED',
+                        packId: val.value.packId,
+                        agentId: val.value.agentId,
+                        role: member.role
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/pack/remove': {
+                const val = ProtocolValidator.validatePackRemoveMember(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    const ok = this.simulation.removePackMember(val.value.packId, val.value.agentId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_RESPONSE,
+                        status: ok ? 'REMOVED' : 'NOT_FOUND',
+                        packId: val.value.packId,
+                        agentId: val.value.agentId
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/pack/update': {
+                const val = ProtocolValidator.validatePackUpdate(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    if (val.value.phase) this.simulation.setPackPhase(val.value.packId, val.value.phase);
+                    if (val.value.pattern) this.simulation.setPackPattern(val.value.packId, val.value.pattern);
+                    if (val.value.targetThreat) this.simulation.setPackTargetThreat(val.value.packId, val.value.targetThreat);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PACK_UPDATE_RESPONSE,
+                        status: 'UPDATED',
+                        packId: val.value.packId
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/pack/query': {
+                const val = ProtocolValidator.validatePackQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.packCoordination) {
+                    return this._sendJson(res, 400, {
+                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
+                    });
+                }
+                try {
+                    if (val.value.packId) {
+                        const advisories = this.simulation.getPackAdvisories(val.value.packId);
+                        if (!advisories) {
+                            return this._sendJson(res, 404, {
+                                error: `UNKNOWN_PACK: pack ${val.value.packId} does not exist.`,
+                                code: ERROR_CODES.UNKNOWN_PACK
+                            });
+                        }
+                        return this._sendJson(res, 200, {
+                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
+                            packId: val.value.packId,
+                            advisories
+                        });
+                    } else {
+                        const allAdvisories = this.simulation.getAllPackAdvisories();
+                        return this._sendJson(res, 200, {
+                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
+                            packId: null,
+                            packs: allAdvisories
+                        });
+                    }
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/economy/market/register': {
+                const val = ProtocolValidator.validateEconomyRegisterMarket(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.economicFeedback) {
+                    return this._sendJson(res, 400, {
+                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
+                    });
+                }
+                try {
+                    const market = this.simulation.registerSettlementMarket(val.value.settlementId, val.value.options);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_RESPONSE,
+                        status: 'REGISTERED',
+                        settlementId: val.value.settlementId,
+                        market
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/economy/trade': {
+                const val = ProtocolValidator.validateEconomyTrade(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.economicFeedback) {
+                    return this._sendJson(res, 400, {
+                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
+                    });
+                }
+                try {
+                    const success = this.simulation.recordTradeTransaction(
+                        val.value.sourceId,
+                        val.value.destId,
+                        val.value.commodity,
+                        val.value.amount
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.ECONOMY_TRADE_RESPONSE,
+                        status: success ? 'RECORDED' : 'FAILED',
+                        sourceId: val.value.sourceId,
+                        destId: val.value.destId,
+                        commodity: val.value.commodity,
+                        amount: val.value.amount,
+                        success
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/economy/raid/query': {
+                const val = ProtocolValidator.validateEconomyRaidQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.economicFeedback) {
+                    return this._sendJson(res, 400, {
+                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
+                    });
+                }
+                try {
+                    const raidDesirability = this.simulation.calculateRaidDesirability(val.value.settlementId);
+                    const marketSummary = this.simulation.getMarketSummary(val.value.settlementId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.ECONOMY_RAID_QUERY_RESPONSE,
+                        settlementId: val.value.settlementId,
+                        raidDesirability,
+                        marketSummary
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/settlement/register': {
+                const val = ProtocolValidator.validateSettlementRegister(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.settlementMigration) {
+                    return this._sendJson(res, 400, {
+                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
+                    });
+                }
+                try {
+                    const settlement = this.simulation.registerSettlement(val.value.settlementId, val.value.data);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.SETTLEMENT_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        settlementId: val.value.settlementId,
+                        settlement
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/settlement/pressure/query': {
+                const val = ProtocolValidator.validateSettlementPressureQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.settlementMigration) {
+                    return this._sendJson(res, 400, {
+                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
+                    });
+                }
+                try {
+                    const state = this.simulation.getSettlementMigrationState(val.value.settlementId);
+                    if (!state) {
+                        return this._sendJson(res, 404, {
+                            error: `UNKNOWN_SETTLEMENT: settlement ${val.value.settlementId} does not exist.`,
+                            code: ERROR_CODES.UNKNOWN_SETTLEMENT
+                        });
+                    }
+                    const pushPressure = this.simulation.evaluatePushPressure(val.value.settlementId);
+                    const pullAttraction = this.simulation.evaluatePullAttraction(val.value.settlementId, val.value.corridorDanger);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_RESPONSE,
+                        settlementId: val.value.settlementId,
+                        pushPressure,
+                        pullAttraction,
+                        state
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/settlement/migration/wave': {
+                const val = ProtocolValidator.validateSettlementMigrationWave(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.settlementMigration) {
+                    return this._sendJson(res, 400, {
+                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
+                    });
+                }
+                try {
+                    const party = this.simulation.triggerMigrationWave(
+                        val.value.sourceId,
+                        val.value.destId,
+                        val.value.corridorDanger
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_RESPONSE,
+                        status: party ? 'DISPATCHED' : 'NO_MIGRATION',
+                        sourceId: val.value.sourceId,
+                        destId: val.value.destId,
+                        party
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/epistemic/observe': {
+                const val = ProtocolValidator.validateEpistemicObserve(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableEpistemicBelief) {
+                    return this._sendJson(res, 400, {
+                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
+                    });
+                }
+                try {
+                    const engine = this.simulation.recordEpistemicObservation(val.value.agentId, val.value.observations);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.EPISTEMIC_OBSERVE_RESPONSE,
+                        status: 'OBSERVED',
+                        agentId: val.value.agentId,
+                        believedThreatsCount: engine.threatBeliefs.size,
+                        contradictionsCount: engine.contradictionLog.length
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/epistemic/rumor': {
+                const val = ProtocolValidator.validateEpistemicRumor(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableEpistemicBelief) {
+                    return this._sendJson(res, 400, {
+                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
+                    });
+                }
+                try {
+                    const engine = this.simulation.recordEpistemicRumor(val.value.agentId, val.value.message, val.value.senderTrust);
+                    const belief = engine.threatBeliefs.get(val.value.message.id)
+                        || engine.routeBeliefs.get(val.value.message.id)
+                        || engine.factionBeliefs.get(val.value.message.id)
+                        || engine.sanctuaryBeliefs.get(val.value.message.id)
+                        || null;
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.EPISTEMIC_RUMOR_RESPONSE,
+                        status: 'INGESTED',
+                        agentId: val.value.agentId,
+                        messageId: val.value.message.id,
+                        belief
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/epistemic/discrepancy/query': {
+                const val = ProtocolValidator.validateEpistemicDiscrepancyQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableEpistemicBelief) {
+                    return this._sendJson(res, 400, {
+                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
+                    });
+                }
+                try {
+                    const report = this.simulation.evaluateEpistemicDiscrepancy(val.value.agentId, val.value.worldGroundTruth);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_RESPONSE,
+                        agentId: val.value.agentId,
+                        discrepancy: report
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/epistemic/subjective/query': {
+                const val = ProtocolValidator.validateEpistemicSubjectiveQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableEpistemicBelief) {
+                    return this._sendJson(res, 400, {
+                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
+                    });
+                }
+                try {
+                    const subjective = this.simulation.getSubjectiveObservations(val.value.agentId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_RESPONSE,
+                        agentId: val.value.agentId,
+                        subjectiveObservations: subjective
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/profile/register': {
+                const val = ProtocolValidator.validateMoralProfileRegister(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const profile = this.simulation.registerAgentMoralProfile(val.value.agentId, val.value.profile);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_PROFILE_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        agentId: val.value.agentId,
+                        profile
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/dissonance/query': {
+                const val = ProtocolValidator.validateMoralDissonanceQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const evaluation = this.simulation.computeMoralDissonance(
+                        val.value.agentId,
+                        val.value.transgressionType,
+                        val.value.context
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_RESPONSE,
+                        agentId: val.value.agentId,
+                        dissonance: evaluation
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/transgression': {
+                const val = ProtocolValidator.validateMoralTransgression(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const report = this.simulation.recordMoralTransgression(
+                        val.value.agentId,
+                        val.value.transgressionType,
+                        val.value.context
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_TRANSGRESSION_RESPONSE,
+                        status: 'RECORDED',
+                        agentId: val.value.agentId,
+                        transgression: report
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/atonement': {
+                const val = ProtocolValidator.validateMoralAtonement(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const report = this.simulation.recordMoralAtonement(
+                        val.value.agentId,
+                        val.value.atonementType,
+                        val.value.context
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_ATONEMENT_RESPONSE,
+                        status: 'RECORDED',
+                        agentId: val.value.agentId,
+                        atonement: report
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/order/compliance': {
+                const val = ProtocolValidator.validateMoralOrderCompliance(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const compliance = this.simulation.evaluateMoralOrderCompliance(
+                        val.value.agentId,
+                        val.value.proposedTransgression,
+                        val.value.context
+                    );
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_RESPONSE,
+                        agentId: val.value.agentId,
+                        compliance
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/moral/state/query': {
+                const val = ProtocolValidator.validateMoralStateQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableMoralDissonance) {
+                    return this._sendJson(res, 400, {
+                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
+                    });
+                }
+                try {
+                    const state = this.simulation.getAgentMoralState(val.value.agentId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.MORAL_STATE_QUERY_RESPONSE,
+                        agentId: val.value.agentId,
+                        moralState: state
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/signature/query': {
+                const val = ProtocolValidator.validatePersonaSignatureQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.computeAgentPersonaSignature(val.value.agentId);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/reaction/query': {
+                const val = ProtocolValidator.validatePersonaReactionQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.evaluateAgentReaction(val.value.agentId, val.value.probeValue);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_REACTION_QUERY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/distance/query': {
+                const val = ProtocolValidator.validatePersonaDistanceQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.computeAgentPersonaDistance(val.value.agentIdA, val.value.agentIdB);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/identify': {
+                const val = ProtocolValidator.validatePersonaIdentify(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.identifyAgentPersona(val.value.agentId, val.value.candidateIds);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_IDENTIFY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/persona/collapse/query': {
+                const val = ProtocolValidator.validatePersonaCollapseQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enablePersonaSignatures) {
+                    return this._sendJson(res, 400, {
+                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
+                    });
+                }
+                try {
+                    const result = this.simulation.evaluateAgentPersonaCollapse(val.value.agentId, val.value.populationIds);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_RESPONSE,
+                        ...result
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/faction/register': {
+                const val = ProtocolValidator.validateFactionRegister(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableFactionGovernance) {
+                    return this._sendJson(res, 400, {
+                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
+                    });
+                }
+                try {
+                    const system = this.simulation.registerFaction(val.value.factionId, val.value.archetype, val.value.options);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.FACTION_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        factionId: val.value.factionId,
+                        archetype: system.archetype,
+                        currentDirective: system.currentDirective
+                    });
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/faction/deliberate': {
+                const val = ProtocolValidator.validateFactionDeliberate(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableFactionGovernance) {
+                    return this._sendJson(res, 400, {
+                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
+                    });
+                }
+                try {
+                    const deliberation = this.simulation.deliberateFactionIncident(val.value.factionId, val.value.incident, val.value.context);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.FACTION_DELIBERATE_RESPONSE,
+                        factionId: val.value.factionId,
+                        deliberation
+                    });
+                } catch (err) {
+                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
+                    return this._sendJson(res, isUnknown ? 404 : 400, {
+                        error: err.message,
+                        code: isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR
+                    });
+                }
+            }
+
+            case '/api/v1/faction/directives': {
+                const val = ProtocolValidator.validateFactionDirectivesQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableFactionGovernance) {
+                    return this._sendJson(res, 400, {
+                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
+                    });
+                }
+                try {
+                    if (val.value.factionId) {
+                        const gov = this.simulation.getFactionGovernance(val.value.factionId);
+                        if (!gov) {
+                            return this._sendJson(res, 404, {
+                                error: `UNKNOWN_FACTION: faction ${val.value.factionId} does not exist.`,
+                                code: ERROR_CODES.UNKNOWN_FACTION
+                            });
+                        }
+                        return this._sendJson(res, 200, {
+                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
+                            factionId: val.value.factionId,
+                            directive: gov.currentDirective,
+                            grievanceLevel: gov.grievanceLevel
+                        });
+                    } else {
+                        const directives = this.simulation.getAllFactionDirectives();
+                        return this._sendJson(res, 200, {
+                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
+                            factionId: null,
+                            directives
+                        });
+                    }
+                } catch (err) {
+                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
+                }
+            }
+
+            case '/api/v1/faction/composure': {
+                const val = ProtocolValidator.validateFactionComposureQuery(body || {});
+                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
+                if (!this.simulation.enableFactionGovernance) {
+                    return this._sendJson(res, 400, {
+                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
+                    });
+                }
+                try {
+                    const composure = this.simulation.getFactionComposure(val.value.factionId, val.value.state);
+                    return this._sendJson(res, 200, {
+                        type: MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_RESPONSE,
+                        factionId: val.value.factionId,
+                        composure
+                    });
+                } catch (err) {
+                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
+                    return this._sendJson(res, isUnknown ? 404 : 400, {
+                        error: err.message,
+                        code: isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR
+                    });
+                }
+            }
+
             default:
                 return this._sendJson(res, 404, { error: `Endpoint ${path} not found` });
         }
@@ -1084,6 +1843,11 @@ export class FearServer {
 
     _handleWsConnection(ws, req) {
         this.connectedClients.add(ws);
+        ws.isAlive = true;
+        ws.on('pong', () => {
+            ws.isAlive = true;
+        });
+
         // A socket starts unauthenticated. `fearAuthenticatedSession` is set only
         // by a valid signature over a challenge THIS server generated for THIS
         // connection, which is what makes it unreplayable: there is nothing on
@@ -1124,19 +1888,77 @@ export class FearServer {
             }
         });
 
-        // A dropped socket detaches the session but does NOT retire its agents.
-        // A lost connection is not a host decision, and the state is exactly
-        // what a reconnect needs. Detaching only makes the session adoptable by
-        // a DIFFERENT host once it has aged out of the liveness window.
+        // A dropped socket detaches the session. By default agent state is
+        // preserved so a reconnect can recover its crowd. If configured with
+        // autoCleanupAbandonedAgents=true, detached agents are retired immediately.
         ws.on('close', () => {
             this.connectedClients.delete(ws);
-            this.claims.detach(ws);
+            const detached = this.claims.detach(ws);
+            if (this.autoCleanupAbandonedAgents) {
+                this._cleanupAbandonedSessions(detached);
+            }
         });
 
         ws.on('error', () => {
             this.connectedClients.delete(ws);
-            this.claims.detach(ws);
+            const detached = this.claims.detach(ws);
+            if (this.autoCleanupAbandonedAgents) {
+                this._cleanupAbandonedSessions(detached);
+            }
         });
+    }
+
+    _startHeartbeat() {
+        if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
+        this.heartbeatTimer = setInterval(() => {
+            if (!this.isRunning || !this.wss) return;
+            for (const ws of this.connectedClients) {
+                if (ws.isAlive === false) {
+                    this.heartbeatFailures++;
+                    this.connectedClients.delete(ws);
+                    const detached = this.claims.detach(ws);
+                    if (this.autoCleanupAbandonedAgents) {
+                        this._cleanupAbandonedSessions(detached);
+                    }
+                    try {
+                        ws.terminate();
+                    } catch { /* ignore */ }
+                    continue;
+                }
+                ws.isAlive = false;
+                try {
+                    ws.ping();
+                    this.heartbeatsSent++;
+                } catch {
+                    // ignore send error
+                }
+            }
+        }, this.heartbeatIntervalMs);
+        if (this.heartbeatTimer && this.heartbeatTimer.unref) {
+            this.heartbeatTimer.unref();
+        }
+    }
+
+    _cleanupAbandonedSessions(sessionNames) {
+        if (!sessionNames || !sessionNames.length) return;
+        for (const name of sessionNames) {
+            const session = this.claims.sessions.get(String(name));
+            if (!session) continue;
+            const agentIds = Array.from(session.agentIds || []);
+            for (const agentId of agentIds) {
+                this.simulation.unregisterAgent(agentId);
+                this.claims.release(agentId);
+            }
+        }
+        this.claims.prune();
+    }
+
+    cleanupAbandonedAgents(sessionNames = null) {
+        const targets = sessionNames
+            ? (Array.isArray(sessionNames) ? sessionNames : [sessionNames])
+            : Array.from(this.claims.sessions.keys()).filter((name) => !this.claims.isLive(name));
+        this._cleanupAbandonedSessions(targets);
+        return targets;
     }
 
     _handleBinaryMessage(ws, buf) {
@@ -1158,8 +1980,19 @@ export class FearServer {
             const decoded = BinaryWireProtocol.decodeObservationBatch(arrayBuf);
             const batchObservations = [];
 
+            const activeSession = ws.fearAuthenticatedSession ||
+                Array.from(this.claims.sessions.values()).find((s) => s.connection === ws)?.name;
+
             for (const rec of decoded.records) {
                 const agentId = rec.agent_id;
+                const owner = this.claims.ownerOf(agentId);
+
+                // Binary frame session integrity:
+                // An agent owned by another live session cannot be observed or mutated by an unauthorized socket
+                if (owner && this.claims.isLive(owner) && owner !== activeSession) {
+                    continue;
+                }
+
                 if (!this.simulation.agents.has(agentId)) {
                     this.simulation.registerAgent(agentId, {
                         neuroticism: 0.60,
@@ -1168,6 +2001,9 @@ export class FearServer {
                     }, {
                         initial_position: rec.position
                     });
+                    if (activeSession) {
+                        this.claims.claimUnder(agentId, activeSession);
+                    }
                 }
                 const agent = this.simulation.agents.get(agentId);
                 if (agent) {
@@ -1373,7 +2209,14 @@ export class FearServer {
                     supported_pacing_metrics: SUPPORTED_PACING_METRICS,
                     host_capabilities: Object.values(HOST_CAPABILITIES),
                     capability_requirements: { ...INTENT_CAPABILITY_REQUIREMENTS },
-                    signing: this.signing.summary()
+                    signing: this.signing.summary(),
+                    pack_coordination: Boolean(this.simulation.packCoordination),
+                    economic_feedback: Boolean(this.simulation.economicFeedback),
+                    settlement_migration: Boolean(this.simulation.settlementMigration),
+                    epistemic_belief: Boolean(this.simulation.enableEpistemicBelief),
+                    moral_dissonance: Boolean(this.simulation.enableMoralDissonance),
+                    persona_signatures: Boolean(this.simulation.enablePersonaSignatures),
+                    faction_governance: Boolean(this.simulation.enableFactionGovernance)
                 }, correlationId);
                 break;
             }
@@ -1661,6 +2504,795 @@ export class FearServer {
                     type: 'SET_PACING_OVERRIDE_ACK',
                     pacing: this.simulation.pacing.getState()
                 }, correlationId);
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_CREATE_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const pack = this.simulation.createPack(payload.packId, payload.options);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PACK_CREATE_RESPONSE,
+                        status: 'CREATED',
+                        packId: pack.id,
+                        phase: pack.phase,
+                        pattern: pack.pattern
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_ASSIGN_MEMBER_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const member = this.simulation.registerPackMember(
+                        payload.packId,
+                        payload.agentId,
+                        payload.traits,
+                        payload.position,
+                        payload.role
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_RESPONSE,
+                        status: 'ASSIGNED',
+                        packId: payload.packId,
+                        agentId: payload.agentId,
+                        role: member.role
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_REMOVE_MEMBER_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const ok = this.simulation.removePackMember(payload.packId, payload.agentId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_RESPONSE,
+                        status: ok ? 'REMOVED' : 'NOT_FOUND',
+                        packId: payload.packId,
+                        agentId: payload.agentId
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_UPDATE_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    if (payload.phase) this.simulation.setPackPhase(payload.packId, payload.phase);
+                    if (payload.pattern) this.simulation.setPackPattern(payload.packId, payload.pattern);
+                    if (payload.targetThreat) this.simulation.setPackTargetThreat(payload.packId, payload.targetThreat);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PACK_UPDATE_RESPONSE,
+                        status: 'UPDATED',
+                        packId: payload.packId
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PACK_QUERY_REQUEST: {
+                if (!this.simulation.packCoordination) {
+                    this._sendWsError(
+                        ws,
+                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
+                        ERROR_CODES.PACK_COORDINATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    if (payload.packId) {
+                        const advisories = this.simulation.getPackAdvisories(payload.packId);
+                        if (!advisories) {
+                            this._sendWsError(ws, `UNKNOWN_PACK: pack ${payload.packId} does not exist.`, ERROR_CODES.UNKNOWN_PACK, correlationId);
+                            break;
+                        }
+                        this._sendWs(ws, {
+                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
+                            packId: payload.packId,
+                            advisories
+                        }, correlationId);
+                    } else {
+                        const allAdvisories = this.simulation.getAllPackAdvisories();
+                        this._sendWs(ws, {
+                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
+                            packId: null,
+                            packs: allAdvisories
+                        }, correlationId);
+                    }
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_REQUEST: {
+                if (!this.simulation.economicFeedback) {
+                    this._sendWsError(
+                        ws,
+                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const market = this.simulation.registerSettlementMarket(payload.settlementId, payload.options);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_RESPONSE,
+                        status: 'REGISTERED',
+                        settlementId: payload.settlementId,
+                        market
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.ECONOMY_TRADE_REQUEST: {
+                if (!this.simulation.economicFeedback) {
+                    this._sendWsError(
+                        ws,
+                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const success = this.simulation.recordTradeTransaction(
+                        payload.sourceId,
+                        payload.destId,
+                        payload.commodity,
+                        payload.amount
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.ECONOMY_TRADE_RESPONSE,
+                        status: success ? 'RECORDED' : 'FAILED',
+                        sourceId: payload.sourceId,
+                        destId: payload.destId,
+                        commodity: payload.commodity,
+                        amount: payload.amount,
+                        success
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.ECONOMY_RAID_QUERY_REQUEST: {
+                if (!this.simulation.economicFeedback) {
+                    this._sendWsError(
+                        ws,
+                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
+                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const raidDesirability = this.simulation.calculateRaidDesirability(payload.settlementId);
+                    const marketSummary = this.simulation.getMarketSummary(payload.settlementId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.ECONOMY_RAID_QUERY_RESPONSE,
+                        settlementId: payload.settlementId,
+                        raidDesirability,
+                        marketSummary
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.SETTLEMENT_REGISTER_REQUEST: {
+                if (!this.simulation.settlementMigration) {
+                    this._sendWsError(
+                        ws,
+                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const settlement = this.simulation.registerSettlement(payload.settlementId, payload.data);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.SETTLEMENT_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        settlementId: payload.settlementId,
+                        settlement
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_REQUEST: {
+                if (!this.simulation.settlementMigration) {
+                    this._sendWsError(
+                        ws,
+                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const state = this.simulation.getSettlementMigrationState(payload.settlementId);
+                    if (!state) {
+                        this._sendWsError(
+                            ws,
+                            `UNKNOWN_SETTLEMENT: settlement ${payload.settlementId} does not exist.`,
+                            ERROR_CODES.UNKNOWN_SETTLEMENT,
+                            correlationId
+                        );
+                        break;
+                    }
+                    const pushPressure = this.simulation.evaluatePushPressure(payload.settlementId);
+                    const pullAttraction = this.simulation.evaluatePullAttraction(payload.settlementId, payload.corridorDanger);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_RESPONSE,
+                        settlementId: payload.settlementId,
+                        pushPressure,
+                        pullAttraction,
+                        state
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_REQUEST: {
+                if (!this.simulation.settlementMigration) {
+                    this._sendWsError(
+                        ws,
+                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
+                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const party = this.simulation.triggerMigrationWave(
+                        payload.sourceId,
+                        payload.destId,
+                        payload.corridorDanger
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_RESPONSE,
+                        status: party ? 'DISPATCHED' : 'NO_MIGRATION',
+                        sourceId: payload.sourceId,
+                        destId: payload.destId,
+                        party
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.EPISTEMIC_OBSERVE_REQUEST: {
+                if (!this.simulation.enableEpistemicBelief) {
+                    this._sendWsError(
+                        ws,
+                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const engine = this.simulation.recordEpistemicObservation(payload.agentId, payload.observations);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.EPISTEMIC_OBSERVE_RESPONSE,
+                        status: 'OBSERVED',
+                        agentId: payload.agentId,
+                        believedThreatsCount: engine.threatBeliefs.size,
+                        contradictionsCount: engine.contradictionLog.length
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.EPISTEMIC_RUMOR_REQUEST: {
+                if (!this.simulation.enableEpistemicBelief) {
+                    this._sendWsError(
+                        ws,
+                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const engine = this.simulation.recordEpistemicRumor(payload.agentId, payload.message, payload.senderTrust);
+                    const belief = engine.threatBeliefs.get(payload.message.id)
+                        || engine.routeBeliefs.get(payload.message.id)
+                        || engine.factionBeliefs.get(payload.message.id)
+                        || engine.sanctuaryBeliefs.get(payload.message.id)
+                        || null;
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.EPISTEMIC_RUMOR_RESPONSE,
+                        status: 'INGESTED',
+                        agentId: payload.agentId,
+                        messageId: payload.message.id,
+                        belief
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_REQUEST: {
+                if (!this.simulation.enableEpistemicBelief) {
+                    this._sendWsError(
+                        ws,
+                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const report = this.simulation.evaluateEpistemicDiscrepancy(payload.agentId, payload.worldGroundTruth);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_RESPONSE,
+                        agentId: payload.agentId,
+                        discrepancy: report
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_REQUEST: {
+                if (!this.simulation.enableEpistemicBelief) {
+                    this._sendWsError(
+                        ws,
+                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
+                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const subjective = this.simulation.getSubjectiveObservations(payload.agentId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_RESPONSE,
+                        agentId: payload.agentId,
+                        subjectiveObservations: subjective
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_PROFILE_REGISTER_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const profile = this.simulation.registerAgentMoralProfile(payload.agentId, payload.profile);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_PROFILE_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        agentId: payload.agentId,
+                        profile
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const evaluation = this.simulation.computeMoralDissonance(
+                        payload.agentId,
+                        payload.transgressionType,
+                        payload.context
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_RESPONSE,
+                        agentId: payload.agentId,
+                        dissonance: evaluation
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_TRANSGRESSION_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const report = this.simulation.recordMoralTransgression(
+                        payload.agentId,
+                        payload.transgressionType,
+                        payload.context
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_TRANSGRESSION_RESPONSE,
+                        status: 'RECORDED',
+                        agentId: payload.agentId,
+                        transgression: report
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_ATONEMENT_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const report = this.simulation.recordMoralAtonement(
+                        payload.agentId,
+                        payload.atonementType,
+                        payload.context
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_ATONEMENT_RESPONSE,
+                        status: 'RECORDED',
+                        agentId: payload.agentId,
+                        atonement: report
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const compliance = this.simulation.evaluateMoralOrderCompliance(
+                        payload.agentId,
+                        payload.proposedTransgression,
+                        payload.context
+                    );
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_RESPONSE,
+                        agentId: payload.agentId,
+                        compliance
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.MORAL_STATE_QUERY_REQUEST: {
+                if (!this.simulation.enableMoralDissonance) {
+                    this._sendWsError(
+                        ws,
+                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
+                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const state = this.simulation.getAgentMoralState(payload.agentId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.MORAL_STATE_QUERY_RESPONSE,
+                        agentId: payload.agentId,
+                        moralState: state
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.computeAgentPersonaSignature(payload.agentId);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_REACTION_QUERY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.evaluateAgentReaction(payload.agentId, payload.probeValue);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_REACTION_QUERY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.computeAgentPersonaDistance(payload.agentIdA, payload.agentIdB);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_IDENTIFY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.identifyAgentPersona(payload.agentId, payload.candidateIds);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_IDENTIFY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_REQUEST: {
+                if (!this.simulation.enablePersonaSignatures) {
+                    this._sendWsError(
+                        ws,
+                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
+                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const result = this.simulation.evaluateAgentPersonaCollapse(payload.agentId, payload.populationIds);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_RESPONSE,
+                        ...result
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.FACTION_REGISTER_REQUEST: {
+                if (!this.simulation.enableFactionGovernance) {
+                    this._sendWsError(
+                        ws,
+                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const system = this.simulation.registerFaction(payload.factionId, payload.archetype, payload.options);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.FACTION_REGISTER_RESPONSE,
+                        status: 'REGISTERED',
+                        factionId: payload.factionId,
+                        archetype: system.archetype,
+                        currentDirective: system.currentDirective
+                    }, correlationId);
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.FACTION_DELIBERATE_REQUEST: {
+                if (!this.simulation.enableFactionGovernance) {
+                    this._sendWsError(
+                        ws,
+                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const deliberation = this.simulation.deliberateFactionIncident(payload.factionId, payload.incident, payload.context);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.FACTION_DELIBERATE_RESPONSE,
+                        factionId: payload.factionId,
+                        deliberation
+                    }, correlationId);
+                } catch (err) {
+                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
+                    this._sendWsError(ws, err.message, isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_REQUEST: {
+                if (!this.simulation.enableFactionGovernance) {
+                    this._sendWsError(
+                        ws,
+                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    if (payload.factionId) {
+                        const gov = this.simulation.getFactionGovernance(payload.factionId);
+                        if (!gov) {
+                            this._sendWsError(ws, `UNKNOWN_FACTION: faction ${payload.factionId} does not exist.`, ERROR_CODES.UNKNOWN_FACTION, correlationId);
+                            break;
+                        }
+                        this._sendWs(ws, {
+                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
+                            factionId: payload.factionId,
+                            directive: gov.currentDirective,
+                            grievanceLevel: gov.grievanceLevel
+                        }, correlationId);
+                    } else {
+                        const directives = this.simulation.getAllFactionDirectives();
+                        this._sendWs(ws, {
+                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
+                            factionId: null,
+                            directives
+                        }, correlationId);
+                    }
+                } catch (err) {
+                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
+                break;
+            }
+
+            case MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_REQUEST: {
+                if (!this.simulation.enableFactionGovernance) {
+                    this._sendWsError(
+                        ws,
+                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
+                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
+                        correlationId
+                    );
+                    break;
+                }
+                try {
+                    const composure = this.simulation.getFactionComposure(payload.factionId, payload.state);
+                    this._sendWs(ws, {
+                        type: MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_RESPONSE,
+                        factionId: payload.factionId,
+                        composure
+                    }, correlationId);
+                } catch (err) {
+                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
+                    this._sendWsError(ws, err.message, isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR, correlationId);
+                }
                 break;
             }
 

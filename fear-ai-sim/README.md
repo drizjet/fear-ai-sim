@@ -36,6 +36,18 @@ npm run cli -- verify
 
 Adapters live in `packages/adapters/`. Unreal is **kept so Unreal games can connect later**; it is not current work and is not required to use Unity.
 
+### See it work, in one command
+
+```bash
+node examples/cli/neutral-horror-demo.mjs
+```
+
+Two NPCs, one predator reported to only one of them, and fear crossing between
+them by contagion alone — printed tick by tick, with the veteran recovering fast
+and the novice still fleeing. It is **self-asserting**: every claim it narrates is
+checked, and it exits non-zero naming the claim that broke rather than printing a
+success banner over states that contradict it.
+
 **Host game stays in charge** of movement and combat. Fear AI returns affective state and semantic intents.
 
 ### Verification honesty
@@ -43,7 +55,7 @@ Adapters live in `packages/adapters/`. Unreal is **kept so Unreal games can conn
 - Node: current standalone probes exercise the local HTTP/WebSocket server and JavaScript middleware/protocol paths; they do not certify an arbitrary game runtime.
 - Python / C#: recorded fixture or build evidence exists, but this audit does not treat it as live external-engine adoption or a fresh current client run.
 - Godot 4.6: headless execution on this machine (not a shipped Godot game)
-- Unity: **not verified** (Editor not installed). Adapter kept for when a Unity host exists.
+- Unity: **partially verified outside the Editor.** The control plane is executed against a live `FearServer` through a shared UnityEngine shim, the 41 EditMode fixtures compile **and run** against that shim, and the lifecycle bodies are driven in Unity's order. No **Unity Editor** has executed them (`npm run verify:unity-editor` reports a skip here), so the row keeps `IMPLEMENTED_NOT_EDITOR_VERIFIED`: when Unity calls the lifecycle, frame scheduling, the player scripting profile and anything rendered remain unverified.
 - Unreal: **deferred, adapter kept.** Plugin source is how an Unreal game would connect. Do not install UE5 unless that host exists. You do not need Unreal to use Unity.
 
 For the current release boundary, use `docs/CURRENT_TRUTH_LEDGER.md` and `docs/RELEASE_CANDIDATE_CERTIFICATION.md`. The repository contains additional standalone world-simulation and research modules; their presence or CLI demos does not make them automatic `RuntimeSimulation` services.

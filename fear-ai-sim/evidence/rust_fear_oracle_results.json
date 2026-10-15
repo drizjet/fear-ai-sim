@@ -1,0 +1,202 @@
+{
+  "schema": "fear-ai.rust-fear-oracle-results.v1",
+  "description": "Output of the REAL host fear.rs executed on the rust_scenario records of rust_js_parity_vectors.json. Do not edit by hand; regenerate with `npm run codegen:rust-fear-oracle`.",
+  "provenance": {
+    "host_repo_head": "d25ac16252d8940fe2815c7ec5862e268c211c37",
+    "fear_rs_path": "pixel-pets/src/engine/ai/fear.rs",
+    "fear_rs_sha256": "9e7657812ee1e4d65df7dcfa2d8d3ffcf3ee1c22ebc8b7bc28978b4610e4a856",
+    "fear_rs_last_commit": "b31c968b1b41e43265babc7d1a037e289c65e997",
+    "fear_rs_matches_head": true,
+    "scenarios_sha256": "e1c5d9a9c2db9b3bc2f08890acb9ddb1b3a4c731beb7dbe85a06a93e4b40683c",
+    "oracle_source_sha256": "3970f602e541aae2e3a709903117b9eda9488613f2e295c1735e859fcac77e13",
+    "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+    "generated_utc": "2026-10-12T21:01:14.348Z"
+  },
+  "results": [
+    {
+      "final_band": "Calm",
+      "final_score": "0",
+      "id": "VEC-01-CALM-BASELINE",
+      "initial_band": "Calm",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Calm",
+      "final_score": "0.79",
+      "id": "VEC-02-ALERT-SUB-THRESHOLD",
+      "initial_band": "Calm",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Alert",
+      "final_score": "0.8",
+      "id": "VEC-03-ALERT-EXACT-THRESHOLD",
+      "initial_band": "Calm",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Alert",
+      "final_score": "0.55",
+      "id": "VEC-04-ALERT-HYSTERESIS-HOLD",
+      "initial_band": "Alert",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Calm",
+      "final_score": "0.54",
+      "id": "VEC-05-ALERT-EXIT-TO-CALM",
+      "initial_band": "Alert",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Alert",
+      "final_score": "1.39",
+      "id": "VEC-06-AFRAID-SUB-THRESHOLD",
+      "initial_band": "Alert",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Afraid",
+      "final_score": "1.4",
+      "id": "VEC-07-AFRAID-EXACT-THRESHOLD",
+      "initial_band": "Alert",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Afraid",
+      "final_score": "0.8",
+      "id": "VEC-08-AFRAID-HYSTERESIS-HOLD",
+      "initial_band": "Afraid",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Alert",
+      "final_score": "0.79",
+      "id": "VEC-09-AFRAID-EXIT-TO-ALERT",
+      "initial_band": "Afraid",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Afraid",
+      "final_score": "3.79",
+      "id": "VEC-10-PANIC-SUB-THRESHOLD",
+      "initial_band": "Afraid",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Panicked",
+      "final_score": "3.8",
+      "id": "VEC-11-PANIC-EXACT-THRESHOLD",
+      "initial_band": "Afraid",
+      "recovery_lock_until": 15
+    },
+    {
+      "final_band": "Calm",
+      "final_score": "0",
+      "id": "VEC-12-PANIC-LOCK-ACTIVE-ENFORCEMENT",
+      "initial_band": "Panicked",
+      "recovery_lock_until": 20
+    },
+    {
+      "final_band": "Alert",
+      "final_score": "0.79",
+      "id": "VEC-12b-PANIC-LOCK-ACTIVE-JUST-BELOW-HOLD",
+      "initial_band": "Panicked",
+      "recovery_lock_until": 20
+    },
+    {
+      "final_band": "Panicked",
+      "final_score": "0.8",
+      "id": "VEC-12c-PANIC-LOCK-ACTIVE-AT-HOLD-SCORE",
+      "initial_band": "Panicked",
+      "recovery_lock_until": 20
+    },
+    {
+      "final_band": "Panicked",
+      "final_score": "1.2",
+      "id": "VEC-13-PANIC-POST-LOCK-HYSTERESIS-HOLD",
+      "initial_band": "Panicked",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Afraid",
+      "final_score": "1.19",
+      "id": "VEC-14-PANIC-POST-LOCK-EXIT-TO-AFRAID",
+      "initial_band": "Panicked",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Routed",
+      "final_score": "5",
+      "id": "VEC-15A-EXTREME-INPUT-FROM-ANXIOUS",
+      "initial_band": "Afraid",
+      "recovery_lock_until": 15
+    },
+    {
+      "final_band": "Routed",
+      "final_score": "5",
+      "id": "VEC-15B-EXTREME-INPUT-STEPPED-LADDER",
+      "initial_band": "Calm",
+      "recovery_lock_until": 15
+    },
+    {
+      "final_band": "Calm",
+      "final_score": "0",
+      "id": "VEC-16-NAN-DEFENSIVE-SANITIZATION",
+      "initial_band": "Calm",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Calm",
+      "final_score": "0.3",
+      "id": "VEC-17-PANIC-UNLOCKED-DEEP-EXIT",
+      "initial_band": "Panicked",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Calm",
+      "final_score": "0.3",
+      "id": "VEC-18-AFRAID-DEEP-EXIT",
+      "initial_band": "Afraid",
+      "recovery_lock_until": 0
+    },
+    {
+      "final_band": "Panicked",
+      "final_score": "3.9",
+      "id": "VEC-19-ALERT-HIGH-JUMP",
+      "initial_band": "Alert",
+      "recovery_lock_until": 15
+    }
+  ],
+  "observations": {
+    "berserk_override": {
+      "after_score_0": "BerserkOverride",
+      "after_score_5": "BerserkOverride"
+    },
+    "clamp_999": {
+      "final_score": "5"
+    },
+    "consecutive_hold_at_score_1_0": {
+      "entered_at_tick": 10,
+      "further_evaluations_held": 9
+    },
+    "lock_armed_with_eval_tick": {
+      "entered_at_tick": 10,
+      "recovery_lock_until": 20
+    },
+    "lock_armed_without_eval_tick": {
+      "recovery_lock_until": 0
+    },
+    "panicked_to_routed_lock": {
+      "band": "Routed",
+      "lock_until_after": 20,
+      "lock_until_before": 20
+    },
+    "sparse_host_tick_release": {
+      "band": "Afraid",
+      "entered_at_tick": 10,
+      "next_eval_tick": 25,
+      "score": "1.0"
+    }
+  }
+}

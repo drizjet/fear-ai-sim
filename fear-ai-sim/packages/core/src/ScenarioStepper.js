@@ -44,6 +44,7 @@ export class ScenarioStepper {
         this.liveInterventions = [];
         this.timelineLog = [];
         this.maxExploredTick = 0;
+        this._liveInterventionSeq = 0;
 
         this._resetToInitialState();
     }
@@ -130,7 +131,7 @@ export class ScenarioStepper {
 
         return {
             tick: this.instance.currentTick,
-            timestamp: Date.now(),
+            timestamp: this.instance.currentTick * 1000,
             agents,
             settlements,
             routes,
@@ -317,7 +318,7 @@ export class ScenarioStepper {
      */
     injectLiveIntervention(intervention) {
         const liveRecord = {
-            id: `live_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            id: intervention.id || `live_${this.instance.currentTick}_${++this._liveInterventionSeq}`,
             tick: this.instance.currentTick,
             ...intervention
         };

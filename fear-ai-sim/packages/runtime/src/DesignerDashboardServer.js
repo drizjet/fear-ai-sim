@@ -138,7 +138,7 @@ export class DesignerDashboardServer {
         // CORS headers for local tooling
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Fear-Signature, X-Fear-Signature-Issued-At, X-Fear-Signature-Nonce, X-Fear-Signature-Key-Id, *');
 
         if (req.method === 'OPTIONS') {
             res.writeHead(204);

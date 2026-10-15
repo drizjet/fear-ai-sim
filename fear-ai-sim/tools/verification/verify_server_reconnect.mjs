@@ -31,7 +31,7 @@
 
 import { WebSocket } from 'ws';
 import { FearServer } from '../../packages/runtime/src/FearServer.js';
-import { ERROR_CODES, MESSAGE_TYPES } from '../../packages/protocol/index.js';
+import { ERROR_CODES, MESSAGE_TYPES, BinaryWireProtocol } from '../../packages/protocol/index.js';
 
 function assert(condition, message) {
     if (!condition) throw new Error(message);
@@ -427,6 +427,118 @@ async function main() {
         await closeSocket(firstSocket);
         await closeSocket(reconnectSocket);
         await server.stop();
+    }
+
+    // --- Section: Active WebSocket ping/pong heartbeat tracking ---
+    console.log('--- active WebSocket heartbeat tracking: start');
+    const heartbeatServer = new FearServer({
+        host: '127.0.0.1',
+        port: 0,
+        heartbeatIntervalMs: 50
+    });
+    const hbBound = await heartbeatServer.start();
+    const hbSocket = await connect(`ws://127.0.0.1:${hbBound.port}`);
+    try {
+        await waitFor(() => heartbeatServer.heartbeatsSent >= 1, 'heartbeat ping dispatch');
+        assert(heartbeatServer.heartbeatsSent >= 1, 'server must dispatch heartbeat pings');
+        assert(heartbeatServer.connectedClients.size === 1, 'responsive client must remain connected');
+
+        // Test dead/unresponsive client handling
+        const unresponsiveWs = Array.from(heartbeatServer.connectedClients)[0];
+        unresponsiveWs.removeAllListeners('pong');
+        unresponsiveWs.isAlive = false; // simulate missing pong response
+        await waitFor(() => heartbeatServer.heartbeatFailures >= 1, 'heartbeat dead client termination');
+        assert(heartbeatServer.heartbeatFailures >= 1, 'server must record heartbeat failure for unresponsive client');
+        assert(heartbeatServer.connectedClients.size === 0, 'server must terminate and remove unresponsive client');
+        console.log('--- active WebSocket heartbeat tracking: PASS');
+    } finally {
+        await closeSocket(hbSocket);
+        await heartbeatServer.stop();
+    }
+
+    // --- Section: Automatic session detachment and abandoned agent cleanup ---
+    console.log('--- abandoned agent auto-cleanup on disconnect: start');
+    const cleanupServer = new FearServer({
+        host: '127.0.0.1',
+        port: 0,
+        autoCleanupAbandonedAgents: true
+    });
+    const cleanupBound = await cleanupServer.start();
+    const cleanupSocket = await connect(`ws://127.0.0.1:${cleanupBound.port}`);
+    try {
+        await request(cleanupSocket, {
+            type: MESSAGE_TYPES.HANDSHAKE_REQUEST,
+            protocol_version: '1.0.0',
+            client_id: 'cleanup-client',
+            session_id: 'abandoned-session'
+        }, (m) => m.type === MESSAGE_TYPES.HANDSHAKE_RESPONSE, 'cleanup handshake');
+
+        await request(cleanupSocket, {
+            type: MESSAGE_TYPES.REGISTER_AGENT,
+            session_id: 'abandoned-session',
+            agent_id: 'abandoned-agent-1'
+        }, (m) => m.type === 'REGISTER_AGENT_ACK', 'register agent');
+
+        assert(cleanupServer.simulation.agents.has('abandoned-agent-1'), 'agent must be registered initially');
+        assert(cleanupServer.claims.ownerOf('abandoned-agent-1') === 'abandoned-session', 'agent must be owned by session');
+
+        // Abrupt socket disconnect
+        await closeSocket(cleanupSocket);
+
+        await waitFor(() => !cleanupServer.simulation.agents.has('abandoned-agent-1'), 'abandoned agent cleanup');
+        assert(!cleanupServer.simulation.agents.has('abandoned-agent-1'), 'abandoned agent must be automatically unregistered');
+        assert(cleanupServer.claims.ownerOf('abandoned-agent-1') === null, 'abandoned agent ownership must be released');
+        console.log('--- abandoned agent auto-cleanup on disconnect: PASS');
+    } finally {
+        await cleanupServer.stop();
+    }
+
+    // --- Section: Binary wire frame session integrity verification ---
+    console.log('--- binary wire frame session integrity: start');
+    const binaryServer = new FearServer({ host: '127.0.0.1', port: 0 });
+    const binBound = await binaryServer.start();
+    const legitSocket = await connect(`ws://127.0.0.1:${binBound.port}`);
+    const spoofSocket = await connect(`ws://127.0.0.1:${binBound.port}`);
+    try {
+        // Legitimate host claims agent_100
+        await request(legitSocket, {
+            type: MESSAGE_TYPES.HANDSHAKE_REQUEST,
+            protocol_version: '1.0.0',
+            client_id: 'legit-host',
+            session_id: 'legit-session'
+        }, (m) => m.type === MESSAGE_TYPES.HANDSHAKE_RESPONSE, 'legit handshake');
+
+        await request(legitSocket, {
+            type: MESSAGE_TYPES.REGISTER_AGENT,
+            session_id: 'legit-session',
+            agent_id: 'agent_100',
+            initial_position: { x: 10, y: 0, z: 20 }
+        }, (m) => m.type === 'REGISTER_AGENT_ACK', 'register agent_100');
+
+        const originalAgent = binaryServer.simulation.agents.get('agent_100');
+        assert(originalAgent.x === 10 && originalAgent.z === 20, 'original position must be set');
+
+        // Spoof socket (unauthorized) sends binary observation batch attempting to mutate agent_100 to (999, 0, 999)
+        const spoofBatch = BinaryWireProtocol.encodeObservationBatch(1, [{
+            entityId: 100,
+            position: { x: 999, y: 0, z: 999 },
+            threatDistance: 5.0,
+            threatIntensity: 1.0
+        }]);
+        spoofSocket.send(Buffer.from(spoofBatch), { binary: true });
+
+        // Give server time to process frame
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        // Assert that agent_100 position and state were NOT mutated by unauthorized binary frame
+        const protectedAgent = binaryServer.simulation.agents.get('agent_100');
+        assert(protectedAgent.x === 10 && protectedAgent.z === 20,
+            'unauthorized binary frame must not mutate agent owned by another live session');
+        console.log('--- binary wire frame session integrity: PASS');
+    } finally {
+        await closeSocket(legitSocket);
+        await closeSocket(spoofSocket);
+        await binaryServer.stop();
     }
 
     console.log('\n============================================================');

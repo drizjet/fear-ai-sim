@@ -17,8 +17,13 @@
 //     GRANTED its crowd instead of being refused or forced to adopt
 //
 // WHAT THIS DOES NOT PROVE (and the ledger says so)
-//   * MonoBehaviour lifecycle: `Awake` is invoked here by reflection, so "does
-//     Unity call it when I expect" remains an Editor question
+//   * WHEN Unity calls the lifecycle. The six bodies are now DRIVEN rather than
+//     declared untestable - `UnityLifecycle` runs Awake then OnEnable, Start once
+//     then Update, and OnDisable then OnDestroy on destruction - but construction
+//     and waking are separate phases here, `FixedUpdate` (the async control-plane
+//     tick) is deliberately not invoked from the frame pump, and an `async void`
+//     body is invoked without being awaited. Whether Unity calls these at that
+//     point remains an Editor question.
 //   * frame scheduling: this shim runs coroutines to completion synchronously
 //   * that the shim's UnityWebRequest/JsonUtility behave exactly like Unity's -
 //     see the divergences listed in UnityEngineShim.cs
@@ -31,6 +36,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using FearAI;
+using FearAI.Unity;
+using UnityEngine;
 
 internal static class Harness
 {
@@ -39,6 +46,16 @@ internal static class Harness
     private static int _phase;
     private static string _storePath = "";
     private static string _keyringPath = "";
+
+    /// <summary>
+    /// Executes posted synchronization tasks immediately on the calling thread,
+    /// matching Unity's main thread dispatcher behavior in single-threaded harnesses.
+    /// </summary>
+    private sealed class ImmediateSyncContext : System.Threading.SynchronizationContext
+    {
+        public override void Post(System.Threading.SendOrPostCallback d, object state) => d(state);
+        public override void Send(System.Threading.SendOrPostCallback d, object state) => d(state);
+    }
 
     /// <summary>A fixed credential for phase 4, so the probe can search the file for
     /// it. It cannot be an issued one: phase 4 talks to no server on purpose.</summary>
@@ -64,11 +81,18 @@ internal static class Harness
         field.SetValue(target, value);
     }
 
-    private static void Invoke(object target, string methodName)
+    private static object GetField(object target, string fieldName)
+    {
+        var field = target.GetType().GetField(fieldName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+        if (field == null) throw new InvalidOperationException($"adapter field '{fieldName}' not found; the harness needs updating");
+        return field.GetValue(target);
+    }
+
+    private static object Invoke(object target, string methodName, params object[] args)
     {
         var method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
         if (method == null) throw new InvalidOperationException($"adapter method '{methodName}' not found; the harness needs updating");
-        method.Invoke(target, null);
+        return method.Invoke(target, args.Length == 0 ? null : args);
     }
 
     /// <summary>
@@ -87,8 +111,16 @@ internal static class Harness
 
     private static FearAIClient BuildClient(string sessionId, bool persist, ISessionStore store, int port)
     {
+        System.Threading.SynchronizationContext.SetSynchronizationContext(new ImmediateSyncContext());
         ClearSingleton();
-        var client = new FearAIClient();
+        // Constructed through the shim's GameObject rather than `new FearAIClient()`, so
+        // the component is attached to a real GameObject before it is woken - which is
+        // the shape `Awake` is written against (DontDestroyOnLoad, the singleton guard).
+        var client = new GameObject($"fear_ai_harness_{sessionId}").AddComponent<FearAIClient>();
+        // Serialized values FIRST, then wake. That is the scene/prefab case, which is the
+        // one the adapter is written for, and it is the order `UnityLifecycle.Wake` says
+        // it models; `Awake` reads `persistSession` and nothing happens between here and
+        // the wake that the adapter can observe as a frame.
         SetField(client, "serverHost", "127.0.0.1");
         SetField(client, "serverPort", port);
         // The data plane is not under test: the control plane is HTTP either way,
@@ -98,8 +130,66 @@ internal static class Harness
         SetField(client, "claimMode", "join");
         SetField(client, "persistSession", persist);
         client.SessionStore = store;
-        Invoke(client, "Awake");
+        UnityLifecycle.Wake(client);
         return client;
+    }
+
+    /// <summary>
+    /// Records the lifecycle order it is driven in.
+    ///
+    /// This exists so the assertions about "the engine's order" are about something the
+    /// shim is OBSERVED to do rather than about a comment, and so the once-only rule for
+    /// `Start` is checked on a component that can actually be asked. It records the six
+    /// bodies in the order Unity documents them, and nothing else.
+    /// </summary>
+    private sealed class LifecycleOrderProbe : MonoBehaviour
+    {
+        internal static readonly List<string> Observed = new List<string>();
+        private void Awake() => Observed.Add("Awake");
+        private void OnEnable() => Observed.Add("OnEnable");
+        private void Start() => Observed.Add("Start");
+        private void Update() => Observed.Add("Update");
+        private void OnDisable() => Observed.Add("OnDisable");
+        private void OnDestroy() => Observed.Add("OnDestroy");
+    }
+
+    /// <summary>
+    /// The shim's lifecycle model, asserted rather than assumed. Every claim below is
+    /// about a component this harness can interrogate, so the model cannot be quietly
+    /// changed into something that would make the adapter's lifecycle assertions vacuous.
+    /// </summary>
+    private static void CheckLifecycleModel()
+    {
+        Console.WriteLine("\n[phase 1] the shim runs the lifecycle in Unity's order");
+        LifecycleOrderProbe.Observed.Clear();
+        var host = new GameObject("lifecycle_probe");
+        var probe = host.AddComponent<LifecycleOrderProbe>();
+        Check("AddComponent attaches without waking, so a component can arrive with its values",
+            string.Join(",", LifecycleOrderProbe.Observed) == "",
+            string.Join(",", LifecycleOrderProbe.Observed));
+
+        UnityLifecycle.Wake(probe);
+        Check("waking runs Awake then OnEnable, in that order",
+            string.Join(",", LifecycleOrderProbe.Observed) == "Awake,OnEnable",
+            string.Join(",", LifecycleOrderProbe.Observed));
+
+        UnityLifecycle.Frame(probe);
+        Check("the first frame runs Start then Update",
+            string.Join(",", LifecycleOrderProbe.Observed) == "Awake,OnEnable,Start,Update",
+            string.Join(",", LifecycleOrderProbe.Observed));
+
+        UnityLifecycle.Frame(probe);
+        Check("Start runs ONCE while Update runs every frame",
+            string.Join(",", LifecycleOrderProbe.Observed) == "Awake,OnEnable,Start,Update,Update",
+            string.Join(",", LifecycleOrderProbe.Observed));
+
+        UnityEngine.Object.DestroyImmediate(host);
+        Check("destroying the GameObject runs OnDisable then OnDestroy on its components",
+            string.Join(",", LifecycleOrderProbe.Observed)
+                == "Awake,OnEnable,Start,Update,Update,OnDisable,OnDestroy",
+            string.Join(",", LifecycleOrderProbe.Observed));
+        Check("and the GameObject no longer holds it", host.Attached.Count == 0,
+            $"{host.Attached.Count} component(s) still attached");
     }
 
     /// <summary>Drain the adapter's control queue by pumping it, exactly as its
@@ -190,8 +280,18 @@ internal static class Harness
     private static void PhaseOne(int port)
     {
         Console.WriteLine("\n[phase 1] a fresh Unity host establishes a crowd");
+        // Before anything uses the lifecycle, establish that the model does what it says.
+        // If this ever drifts, the adapter assertions below would still pass while proving
+        // nothing about the order they claim to.
+        CheckLifecycleModel();
         var store = new FileSessionStore(_storePath);
         var owner = BuildClient(OwnerSessionId, true, store, port);
+        // Asserted HERE rather than at the end of the phase, because a rival client is
+        // built later in this phase and it takes the singleton for itself. `Awake` is the
+        // only thing that sets it, so `Instance` being this client is the observable
+        // proof that the body ran - and the shim's wake is the only thing that ran it.
+        Check("the shim's wake ran the adapter's Awake (it set the singleton)",
+            ReferenceEquals(FearAIClient.Instance, owner));
         Check("a fresh store loads nothing", owner.SessionLoaded == false);
 
         owner.RegisterAgents(Registrations(Crowd));
@@ -209,6 +309,90 @@ internal static class Harness
         Check("the adapter persisted the credential", owner.SessionPersisted);
         Check("the credential is on disk", File.Exists(_storePath), _storePath);
         Console.WriteLine($"    [unity.log] credential written to {_storePath}");
+
+        // ------------------------------------------------------------------
+        // FearAgent and FearAgentHUD behavioral execution
+        // ------------------------------------------------------------------
+        Console.WriteLine("\n[phase 1] FearAgent and FearAgentHUD behavioral execution");
+        var agentHost = new GameObject("agent_host");
+        var audio = agentHost.AddComponent<AudioSource>();
+        var agent = agentHost.AddComponent<FearAgent>();
+        var hud = agentHost.AddComponent<FearAgentHUD>();
+
+        SetField(agent, "agentId", Crowd[0]);
+
+        // Provide a mock collider in front of the agent to verify threat scanning
+        var threatObj = new GameObject("predator_wolf");
+        threatObj.transform.position = new Vector3(0, 0, 5);
+        var threatCol = threatObj.AddComponent<Collider>();
+        Physics.OverlapSphereHandler = (pos, r, mask) => new Collider[] { threatCol };
+
+        UnityLifecycle.Wake(agent);
+        UnityLifecycle.Wake(hud);
+
+        Check("FearAgent and HUD woke and wired components",
+            agent.CurrentFearBand == "CALM" && Math.Abs(agent.SuggestedSpeed() - 3.5f) < 0.001f);
+
+        UnityLifecycle.Frame(agent);
+        Physics.OverlapSphereHandler = null;
+
+        var observationsList = GetField(owner, "pendingObservations") as List<AgentObservation>;
+        Check("agent frame queued sensory observation with detected threat",
+            observationsList != null && observationsList.Count > 0
+            && observationsList[0].agent_id == Crowd[0]
+            && observationsList[0].threats != null
+            && observationsList[0].threats.Count == 1
+            && observationsList[0].threats[0].id == "predator_wolf");
+
+        // Dispatch ANXIOUS state update to client
+        string anxiousTickJson = "{\"type\":\"BATCH_TICK_RESPONSE\",\"tick\":1,\"results\":[{\"agent_id\":\""
+            + Crowd[0]
+            + "\",\"tick\":1,\"fear_band\":\"ANXIOUS\",\"affective_state\":{\"raw_fear\":0.55,\"arousal\":0.6,\"valence\":0.4},\"action_intent\":{\"type\":\"FLEE_FROM\",\"urgency\":0.7,\"vector_hint\":{\"x\":-1.0,\"y\":0.0,\"z\":0.5}},\"audio_hints\":{\"heartbeat_bpm\":90}}]}";
+        Invoke(owner, "ProcessServerMessage", anxiousTickJson);
+
+        Check("agent unpacked ANXIOUS band and intent",
+            agent.CurrentFearBand == "ANXIOUS" && agent.CurrentIntent == "FLEE_FROM");
+        Check("agent calculated anxious suggested speed multiplier (3.5 * 1.1 = 3.85)",
+            Math.Abs(agent.SuggestedSpeed() - 3.85f) < 0.001f,
+            $"speed={agent.SuggestedSpeed()}");
+        Check("agent updated heartbeat and audio pitch (90 bpm -> 1.5 pitch)",
+            agent.HeartbeatBpm == 90 && Math.Abs(audio.pitch - 1.5f) < 0.001f,
+            $"bpm={agent.HeartbeatBpm} pitch={audio.pitch}");
+        Check("agent unpacked recommended direction vector",
+            Math.Abs(agent.RecommendedVector.x - (-1.0f)) < 0.001f && Math.Abs(agent.RecommendedVector.z - 0.5f) < 0.001f);
+
+        // Dispatch PANIC state update to client
+        string panicTickJson = "{\"type\":\"BATCH_TICK_RESPONSE\",\"tick\":2,\"results\":[{\"agent_id\":\""
+            + Crowd[0]
+            + "\",\"tick\":2,\"fear_band\":\"PANIC\",\"affective_state\":{\"raw_fear\":0.95,\"arousal\":0.9,\"valence\":0.1},\"action_intent\":{\"type\":\"PANIC_BOLT\",\"urgency\":1.0,\"vector_hint\":{\"x\":0.0,\"y\":0.0,\"z\":1.0}},\"audio_hints\":{\"heartbeat_bpm\":150}}]}";
+        Invoke(owner, "ProcessServerMessage", panicTickJson);
+
+        Check("agent unpacked PANIC band and panic speed multiplier (3.5 * 1.6 = 5.60)",
+            agent.CurrentFearBand == "PANIC" && Math.Abs(agent.SuggestedSpeed() - 5.60f) < 0.001f,
+            $"band={agent.CurrentFearBand} speed={agent.SuggestedSpeed()}");
+        Check("agent clamped high heartbeat audio pitch (max 2.2)",
+            agent.HeartbeatBpm == 150 && Math.Abs(audio.pitch - 2.2f) < 0.001f,
+            $"pitch={audio.pitch}");
+
+        // Execute FearAgentHUD rendering
+        var hudError = "";
+        try { Invoke(hud, "OnGUI"); }
+        catch (Exception ex) { hudError = $"{ex.GetType().Name}: {ex.Message}"; }
+        Check("FearAgentHUD OnGUI executed cleanly without throwing", hudError == "", hudError);
+
+        // Report execution outcome over live HTTP
+        OutcomeReceipt outcomeReceipt = null;
+        agent.ReportExecutionOutcome("GOAL_COMPLETED", "reached_safe_zone", 2, r => outcomeReceipt = r);
+        Check("agent reported execution outcome to live server (status=RECORDED)",
+            outcomeReceipt != null && outcomeReceipt.status == "RECORDED",
+            outcomeReceipt != null ? outcomeReceipt.status : "null");
+
+        // Teardown agent GameObject and verify callback deregistration
+        UnityEngine.Object.DestroyImmediate(agentHost);
+        var callbacksField = typeof(FearAIClient).GetField("agentCallbacks", BindingFlags.Instance | BindingFlags.NonPublic);
+        var callbacksDict = callbacksField?.GetValue(owner) as System.Collections.IDictionary;
+        Check("destroying agent host unregistered callback from client",
+            callbacksDict != null && !callbacksDict.Contains(Crowd[0]));
 
         // The other half of the contract: a credential that trusts everyone would
         // be worse than none.
@@ -242,6 +426,30 @@ internal static class Harness
             owner.TraumaZonesRejected == 0, $"rejected={owner.TraumaZonesRejected}");
         Check("nothing was counted as a registration failure on the way",
             owner.RegistrationFailures == 0, $"failures={owner.RegistrationFailures}");
+
+        // ------------------------------------------------------------------
+        // The adapter's OWN lifecycle bodies, driven by the shim rather than invoked
+        // by hand. Before `UnityLifecycle` existed, `Awake` was called by reflection
+        // here and `Start` and `OnDestroy` were called by nothing at all: two of the
+        // four bodies this adapter has had never been executed anywhere. Placed last
+        // so that none of it can perturb the control-plane assertions above, and
+        // destroying the client is the point of the last two.
+        // ------------------------------------------------------------------
+        Console.WriteLine("\n[phase 1] the adapter's own lifecycle bodies");
+
+        var frameError = "";
+        try { UnityLifecycle.Frame(owner); }
+        catch (Exception ex) { frameError = $"{ex.GetType().Name}: {ex.Message}"; }
+        Check("a frame runs the adapter's async Start without throwing", frameError == "", frameError);
+
+        var destroyError = "";
+        try { UnityEngine.Object.DestroyImmediate(owner); }
+        catch (Exception ex) { destroyError = $"{ex.GetType().Name}: {ex.Message}"; }
+        Check("destroying the host runs the adapter's OnDestroy without throwing",
+            destroyError == "", destroyError);
+        Check("teardown did NOT take the persisted credential with it",
+            File.Exists(_storePath),
+            "clearing memory is not a revocation, and the file is what the next process proves itself with");
     }
 
     // -------------------------------------------------------------------------

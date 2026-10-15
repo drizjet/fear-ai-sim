@@ -41,10 +41,12 @@ import net from 'node:net';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { declaredFixtures, declaredTestCount, editModeTestSources } from './helpers/editmode_fixtures.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO = path.resolve(__dirname, '../..');
 const PACKAGE_DIR = path.join(REPO, 'packages', 'adapters', 'unity');
+const TEST_DIR = path.join(PACKAGE_DIR, 'Tests', 'EditMode');
 const REQUIRED = process.env.FEAR_AI_UNITY_REQUIRED === '1';
 
 function findUnity() {
@@ -168,11 +170,19 @@ async function main() {
         console.log('SKIPPED: no Unity Editor found on this machine.');
         console.log('');
         console.log('  WHAT THIS MEANS, stated rather than implied:');
-        console.log('    * the EditMode tests in packages/adapters/unity/Tests/EditMode were NOT compiled or run;');
-        console.log('    * the adapter\'s behaviour is still covered, without an engine, by');
-        console.log('      `npm run verify:unity-behavior` (executed against a live FearServer through a');
+        console.log(`    * the ${declaredTestCount(REPO)} EditMode test(s) in packages/adapters/unity/Tests/EditMode`);
+        console.log('      were NOT executed by Unity, so nothing here says whether Unity\'s own');
+        console.log('      nunit.framework and API behave as the shims do;');
+        console.log('    * they ARE compiled AND executed WITHOUT an Editor by `npm run verify:dotnet-adapters`');
+        console.log('      (Section C), which runs every fixture against the shared UnityEngine shim plus a');
+        console.log('      minimal NUnit surface and compares the number of cases it ran against the number the');
+        console.log('      sources declare — so a fixture body that could never pass on any machine is caught');
+        console.log('      here rather than the day someone first installs an Editor, or never;');
+        console.log('    * the adapter\'s behaviour is also covered, without an engine, by');
+        console.log('      `npm run verify:unity-behavior` (executed against a live FearServer through the same');
         console.log('      UnityEngine shim) and `npm run verify:dotnet` (compiled against the shim);');
-        console.log('    * the Unity row therefore stays IMPLEMENTED_NOT_EDITOR_VERIFIED in the ledger.');
+        console.log('    * the Unity row therefore stays IMPLEMENTED_NOT_EDITOR_VERIFIED in the ledger: a shim');
+        console.log('      run is not an Editor result.');
         console.log('');
         console.log('  To run it: set FEAR_AI_UNITY to the Editor binary, or set');
         console.log('  FEAR_AI_UNITY_REQUIRED=1 to make this probe FAIL instead of skipping.');
@@ -188,11 +198,17 @@ async function main() {
     }
     console.log(`Editor version: ${version}`);
 
+    // Derived, not listed here. The list that used to be here named four of the five
+    // fixtures and omitted `FearEncryptedStoreEditModeTests`, so every assertion that
+    // fixture makes could have gone uncompiled in the Editor and this probe would
+    // still have passed — a check satisfied by the absence of the thing it checks.
+    // Both gates read the roster from one place now
+    // (`tools/verification/helpers/editmode_fixtures.mjs`), so they cannot disagree.
+    const fixtureRoster = declaredFixtures(REPO);
+    const declaredTests = declaredTestCount(REPO);
     for (const required of [
-        path.join(PACKAGE_DIR, 'Tests', 'EditMode', 'FearAI.EditModeTests.asmdef'),
-        path.join(PACKAGE_DIR, 'Tests', 'EditMode', 'FearSignerEditModeTests.cs'),
-        path.join(PACKAGE_DIR, 'Tests', 'EditMode', 'FearSessionStoreEditModeTests.cs'),
-        path.join(PACKAGE_DIR, 'Tests', 'EditMode', 'FearAIClientEditModeTests.cs')
+        path.join(TEST_DIR, 'FearAI.EditModeTests.asmdef'),
+        ...editModeTestSources(REPO).map((name) => path.join(TEST_DIR, name))
     ]) {
         if (!fs.existsSync(required)) {
             console.error(`FAIL: the test project is incomplete, missing ${path.relative(REPO, required)}`);
@@ -263,15 +279,28 @@ async function main() {
         process.exit(1);
     }
 
-    const EXPECTED_FIXTURES = [
-        'FearRequestSignerEditModeTests',
-        'FearSessionStoreEditModeTests',
-        'FearAIClientEditModeTests',
-        'JsonHelperEditModeTests'
-    ];
-    const missing = EXPECTED_FIXTURES.filter((name) => !log.includes(name) && !fs.readFileSync(resultsPath, 'utf8').includes(name));
+    // Derived from the sources, for the same reason the required-file list above is:
+    // the hand-written list here named the fixtures that existed when it was written,
+    // and a fifth was added without it. A fixture the Editor never compiled is a
+    // fixture whose assertions were never executed, which is exactly what this probe
+    // exists to prevent — so the roster is compared in full, not sampled.
+    const resultsText = fs.readFileSync(resultsPath, 'utf8');
+    const expectedFixtures = fixtureRoster.map((fixture) => fixture.name);
+    const missing = expectedFixtures.filter((name) => !log.includes(name) && !resultsText.includes(name));
     if (missing.length > 0) {
         console.error(`FAIL: the results do not mention these fixtures, so they were not compiled: ${missing.join(', ')}`);
+        process.exit(1);
+    }
+
+    // Same intent one level down: the Editor must have run at least as many cases as
+    // the sources declare. Fewer means a fixture compiled but its tests did not run,
+    // which a green `failed 0` would otherwise hide. `>=` rather than `==` because
+    // Unity is free to count in ways this probe does not model; the roster check
+    // above is what pins membership.
+    console.log(`Fixtures: ${expectedFixtures.length} declared, all present in the results`);
+    if (results.total < declaredTests) {
+        console.error(`FAIL: the Editor ran ${results.total} test(s) but the sources declare ${declaredTests}.`);
+        console.error('  A green run of fewer tests than exist is not a pass.');
         process.exit(1);
     }
 

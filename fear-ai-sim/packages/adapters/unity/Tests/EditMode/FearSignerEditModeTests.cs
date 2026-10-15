@@ -137,8 +137,17 @@ namespace FearAI.EditorTests
             var algorithmReader = new DerReader(algorithm);
             CollectionAssert.AreEqual(RsaEncryptionOid, algorithmReader.Tagged(0x06),
                 "the algorithm OID is not rsaEncryption, so the server cannot fingerprint this key");
-            CollectionAssert.AreEqual(new byte[] { 0x05, 0x00 }, algorithmReader.Tagged(0x05),
-                "the algorithm parameters must be an explicit NULL for rsaEncryption");
+            // An explicit NULL is the two bytes 05 00 on the wire, but `Tagged` returns
+            // the TLV's CONTENT: the tag is already asserted by the call, and a zero
+            // length is what leaves the content empty. Comparing that empty content
+            // against the full two-byte encoding is an assertion that could not pass on
+            // any machine -- and it survived review, a compile and every gate this
+            // repository had, because nothing ever RAN the fixture. It was found the
+            // first time the fixtures were executed outside the Editor, by the same
+            // shim runner that keeps them honest now (see
+            // `tools/verification/verify_dotnet_adapters_compile.mjs` Section C).
+            Assert.AreEqual(0, algorithmReader.Tagged(0x05).Length,
+                "the algorithm parameters must be an explicit NULL (05 00), whose content is empty");
             Assert.AreEqual(0, algorithmReader.Remaining, "trailing bytes in the algorithm identifier");
 
             // BIT STRING, zero unused bits, wrapping RSAPublicKey

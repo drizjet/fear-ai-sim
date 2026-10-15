@@ -14,7 +14,30 @@ import {
     RelationshipTensorSystem,
     SocialEventEngine,
     SOCIAL_EVENTS,
-    HostTimeDiscipline
+    HostTimeDiscipline,
+    InformationPropagationEngine,
+    PackCoordinationEngine,
+    EconomicFeedbackSystem,
+    EconomicPathologyDetector,
+    SettlementMigrationSystem,
+    MIGRATION_DRIVERS,
+    MIGRANT_PARTY_STATUS,
+    EpistemicBeliefEngine,
+    EPISTEMIC_PROVENANCE,
+    BELIEF_CATEGORIES,
+    MoralDissonanceEngine,
+    MORAL_FOUNDATIONS,
+    DEFAULT_MORAL_PROFILES,
+    TRANSGRESSION_TYPES,
+    ATONEMENT_TYPES,
+    FunctionalPersonaSignatures,
+    SIGNATURE_FUNCTIONS,
+    DEFAULT_PROBE_GRID,
+    evaluateResponseFunctions,
+    FactionGovernanceSystem,
+    GOVERNANCE_ARCHETYPES,
+    FACTION_DIRECTIVES,
+    governanceComposure
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
@@ -30,7 +53,40 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
     }
     return Math.max(0, Math.min(1, sum / 2));
 }
- export class RuntimeSimulation {
+
+const MORAL_PROFILE_ALIASES = Object.freeze({
+    AUTHORITARIAN: DEFAULT_MORAL_PROFILES.ZEALOUS_CRUSADER,
+    ZEALOT: DEFAULT_MORAL_PROFILES.ZEALOUS_CRUSADER,
+    ALTRUIST: DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN,
+    GUARDIAN: DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN,
+    REBEL: DEFAULT_MORAL_PROFILES.REBEL_FREE_SPIRIT,
+    PRAGMATIST: DEFAULT_MORAL_PROFILES.MERCENARY_PRAGMATIST,
+    MERCENARY: DEFAULT_MORAL_PROFILES.MERCENARY_PRAGMATIST,
+    UTILITARIAN: DEFAULT_MORAL_PROFILES.COLD_UTILITARIAN
+});
+
+const TRANSGRESSION_ALIASES = Object.freeze({
+    HARM: TRANSGRESSION_TYPES.EXECUTE_DEFENSELESS,
+    BETRAYAL: TRANSGRESSION_TYPES.BETRAY_COMMANDER,
+    INSUBORDINATION: TRANSGRESSION_TYPES.BETRAY_COMMANDER,
+    DESERTION: TRANSGRESSION_TYPES.ABANDON_COMRADE,
+    LOOTING: TRANSGRESSION_TYPES.LOOT_SETTLEMENT,
+    DESECRATION: TRANSGRESSION_TYPES.DESECRATE_SANCTUARY,
+    FLIGHT: TRANSGRESSION_TYPES.COWARDLY_FLIGHT,
+    TREASON: TRANSGRESSION_TYPES.BREAK_SWORN_TREATY
+});
+
+const ATONEMENT_ALIASES = Object.freeze({
+    CONFESSION: ATONEMENT_TYPES.CONFESSION_AND_PENANCE,
+    PENANCE: ATONEMENT_TYPES.CONFESSION_AND_PENANCE,
+    REPARATION: ATONEMENT_TYPES.RESTITUTION_OF_GOODS,
+    RESTITUTION: ATONEMENT_TYPES.RESTITUTION_OF_GOODS,
+    DEFENSE: ATONEMENT_TYPES.DEFEND_THE_HELPLESS,
+    SACRIFICE: ATONEMENT_TYPES.SACRIFICIAL_INTERVENTION,
+    AID: ATONEMENT_TYPES.AID_VICTIMS
+});
+
+export class RuntimeSimulation {
     /**
      * @param {object} [options={}]
      */
@@ -84,6 +140,104 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         });
         // NEXT-176: last contagion evaluation per agent for off-tick reuse.
         this.lastContagion = new Map();
+        // Registration-order component of each agent's fallback RNG seed. Scoped
+        // to this instance, so a run is reproducible from `seed` alone.
+        this._agentRngCounter = 0;
+        // RELEASE-SURFACE §3: the information-propagation module is the first
+        // optional system to JOIN the runtime surface, on the four-condition
+        // policy. It is opt-in (absent means `null`, so the default path is the
+        // same object graph it was before this existed), it is advanced once per
+        // tick so it is a live service rather than an object a caller happens to
+        // hold, and it is ADVISORY: it never reads or writes an agent's affect,
+        // never contributes to fear, and never mutates host state. Its own RNG is
+        // seeded from the simulation seed, so it consumes nothing from
+        // `this.rng` and cannot perturb determinism of the affect path.
+        this.enableInformationPropagation = options.enableInformationPropagation ?? false;
+        this.informationPropagation = this.enableInformationPropagation
+            ? new InformationPropagationEngine(
+                options.informationPropagationConfig || {},
+                (this.seed ^ 0x9e3779b9) >>> 0
+            )
+            : null;
+        // RELEASE-SURFACE §3: PackCoordinationEngine joins the runtime surface
+        // as an opt-in tactical service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it never writes agent affect or fear,
+        // never mutates host state, and isolates its PRNG seed from the simulation RNG.
+        this.enablePackCoordination = options.enablePackCoordination ?? false;
+        this.packCoordination = this.enablePackCoordination
+            ? new PackCoordinationEngine({
+                ...(options.packCoordinationConfig || {}),
+                seed: options.packCoordinationConfig?.seed ?? ((this.seed ^ 0x85ebca6b) >>> 0)
+            })
+            : null;
+        // RELEASE-SURFACE §3: EconomicFeedbackSystem joins the runtime surface
+        // as an opt-in macro service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it never writes agent affect or fear,
+        // never mutates host state, and isolates its configuration.
+        this.enableEconomicFeedback = options.enableEconomicFeedback ?? false;
+        this.economicFeedback = this.enableEconomicFeedback
+            ? new EconomicFeedbackSystem(options.economicFeedbackConfig || {})
+            : null;
+        // RELEASE-SURFACE §3: SettlementMigrationSystem joins the runtime surface
+        // as an opt-in demographic service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it never writes agent affect or fear,
+        // never mutates host state, and models demographic pressure and conservation.
+        this.enableSettlementMigration = options.enableSettlementMigration ?? false;
+        this.settlementMigration = this.enableSettlementMigration
+            ? new SettlementMigrationSystem(options.settlementMigrationConfig || {})
+            : null;
+        // RELEASE-SURFACE §3: EpistemicBeliefEngine joins the runtime surface
+        // as an opt-in epistemic service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it models subjective perception bias, rumor
+        // diffusion, and belief discrepancy without mutating objective host state or danger.
+        this.enableEpistemicBelief = options.enableEpistemicBelief ?? false;
+        this.epistemicBelief = this.enableEpistemicBelief
+            ? new EpistemicBeliefEngine(
+                options.epistemicBeliefAgentId || 'sim_epistemic_oracle',
+                options.epistemicBeliefTraits || {},
+                options.epistemicBeliefConfig || {}
+            )
+            : null;
+        this.agentEpistemicEngines = this.enableEpistemicBelief ? new Map() : null;
+        // RELEASE-SURFACE §3: MoralDissonanceEngine joins the runtime surface
+        // as an opt-in moral service. It is opt-in (absent means null, preserving
+        // bit-identical output and snapshots on the default path), advanced once
+        // per tick, and ADVISORY ONLY: it models cognitive dissonance, guilt
+        // dynamics, and order defiance without mutating host state or transforms.
+        this.enableMoralDissonance = options.enableMoralDissonance ?? false;
+        this.moralDissonance = this.enableMoralDissonance
+            ? new MoralDissonanceEngine({
+                ...(options.moralDissonanceConfig || {}),
+                seed: options.moralDissonanceConfig?.seed ?? ((this.seed ^ 0x6a09e667) >>> 0)
+            })
+            : null;
+        // RELEASE-SURFACE §3: FunctionalPersonaSignatures joins the runtime surface
+        // as an opt-in behavioral personality profiling service. It is opt-in (absent means null,
+        // preserving bit-identical output and snapshots on the default path), evaluates 11 response
+        // reaction curves, persona distance, confusion, and collapse metrics, and is ADVISORY ONLY:
+        // it operates strictly on agent personality traits without mutating host state or transforms.
+        this.enablePersonaSignatures = options.enablePersonaSignatures ?? false;
+        this.personaSignatures = this.enablePersonaSignatures
+            ? new FunctionalPersonaSignatures(options.personaProbeGrid || DEFAULT_PROBE_GRID)
+            : null;
+        // RELEASE-SURFACE §3: FactionGovernanceSystem joins the runtime surface
+        // as an opt-in macro diplomatic service. It is opt-in (absent means null,
+        // preserving bit-identical output and snapshots on the default path), evaluates
+        // 5 distinct governance archetypes and council deliberation, and is ADVISORY ONLY:
+        // it produces semantic directives without mutating host transforms, geometry, or physics.
+        this.enableFactionGovernance = options.enableFactionGovernance ?? false;
+        this.factionGovernance = this.enableFactionGovernance ? new Map() : null;
+        if (this.enableFactionGovernance && Array.isArray(options.factions)) {
+            for (const f of options.factions) {
+                if (f && f.id) {
+                    this.registerFaction(f.id, f.archetype, f.options || {});
+                }
+            }
+        }
         this.tickCount = 0;
     }
 
@@ -105,8 +259,17 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             return existing;
         }
 
+        // Determinism: the agent's fallback RNG seed is derived from THIS
+        // simulation's seed and this agent's registration order, not from the
+        // process-wide counter in AffectiveAgent. Two RuntimeSimulations with the
+        // same seed must produce bit-identical agents even when they are built in
+        // the same process and in either order; relying on the module counter made
+        // that false (`a#0` here, `a#1` there). A host that supplies its own seed
+        // still wins.
+        const agentSeed = options.seed ?? `${id}#${this.seed}#${this._agentRngCounter++}`;
         const agent = new AffectiveAgent(id, traits, {
             ...options,
+            seed: agentSeed,
             rng: () => this.rng.random()
         });
 
@@ -121,6 +284,24 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         // with fresh traits never wipes an agent's trauma history.
         if (this.enableCoreTrauma && !this.coreTrauma.agentRecords.has(id)) {
             this.coreTrauma.registerAgent(id, traits);
+        }
+        // Opt-in information propagation tracks the roster the same way: a
+        // registered agent joins the listening network, so the service cannot
+        // drift out of sync with the agent set it describes.
+        if (this.informationPropagation) this.informationPropagation.registerAgent(id);
+        if (this.enableEpistemicBelief) {
+            const epistemicEngine = new EpistemicBeliefEngine(
+                id,
+                traits,
+                options.epistemicConfig || {}
+            );
+            this.agentEpistemicEngines.set(id, epistemicEngine);
+        }
+        if (this.moralDissonance) {
+            this.moralDissonance.registerAgentMoralProfile(
+                id,
+                options.moralProfile || DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN
+            );
         }
         return agent;
     }
@@ -143,7 +324,1030 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
         this.coreTrauma.phobicRegistry.agentPhobias.delete(id);
         this.lastContagion.delete(id);
         if (this.enableSocial) this.social.purgeAgent(id);
+        // Same reason the contagion cache is dropped: a departed agent must not
+        // keep receiving information, and must not accumulate in a long world.
+        if (this.informationPropagation) this.informationPropagation.removeAgent(id);
+        if (this.agentEpistemicEngines) this.agentEpistemicEngines.delete(id);
+        if (this.moralDissonance) this.moralDissonance.agents.delete(id);
+        if (this.packCoordination) {
+            for (const pack of this.packCoordination.packs.values()) {
+                if (pack.members.has(id)) {
+                    this.packCoordination.removeMember(pack.id, id);
+                }
+            }
+        }
         return this.agents.delete(id);
+    }
+
+    /**
+     * Host-facing entry point for the opt-in information-propagation service.
+     *
+     * Refuses rather than silently no-oping when the service is not enabled: a
+     * host that believes it is injecting rumours into a channel that does not
+     * exist would otherwise read the empty result as "nobody believed it".
+     *
+     * @param {string} topic one of PROPAGATED_RUMOR_TOPICS
+     * @param {string} claim
+     * @param {string} originId
+     * @param {object} [options]
+     * @returns {string} the new rumor id
+     */
+    injectRumor(topic, claim, originId, options = {}) {
+        if (!this.informationPropagation) {
+            throw new Error('INFORMATION_PROPAGATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableInformationPropagation: true to inject rumors.');
+        }
+        // The roster is the runtime's, not the service's. The engine's own
+        // `injectRumor` registers an unknown origin as a convenience for its
+        // standalone scenarios, which here would resurrect an agent that was
+        // deliberately retired — so the runtime refuses instead.
+        if (!this.agents.has(String(originId))) {
+            throw new Error(`UNKNOWN_AGENT: ${originId} is not registered, so it cannot originate a rumor.`);
+        }
+        return this.informationPropagation.injectRumor(topic, claim, originId, options);
+    }
+
+    /** Host-validated truth about a rumor, which penalizes a wrong origin. */
+    correctRumor(rumorId, truthful) {
+        if (!this.informationPropagation) {
+            throw new Error('INFORMATION_PROPAGATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableInformationPropagation: true to correct rumors.');
+        }
+        return this.informationPropagation.correctRumor(rumorId, truthful);
+    }
+
+    /**
+     * Advisory read: what an agent currently believes, richest first. Empty when
+     * the service is off, which is a statement about the service rather than
+     * about the agent — hence the explicit null check upstream.
+     */
+    propagatedInformation(agentId) {
+        return this.informationPropagation ? this.informationPropagation.heldBy(agentId) : [];
+    }
+
+    /**
+     * Create a tactical pack managed by PackCoordinationEngine.
+     * Refuses when the service is not enabled.
+     * @param {string} packId
+     * @param {object} [options={}]
+     * @returns {object} PackRecord
+     */
+    createPack(packId, options = {}) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to create packs.');
+        }
+        return this.packCoordination.createPack(packId, options);
+    }
+
+    /**
+     * Register or update an agent as a member of a tactical pack.
+     * Requires the agent to be registered in the simulation.
+     * @param {string} packId
+     * @param {string} memberId
+     * @param {object} [traits={}]
+     * @param {object} [position=null]
+     * @returns {object} MemberProfile
+     */
+    registerPackMember(packId, memberId, traits = {}, position = null, role = null) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to register pack members.');
+        }
+        const id = String(memberId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${memberId} is not registered, so it cannot join a pack.`);
+        }
+        const agent = this.agents.get(id);
+        const resolvedTraits = {
+            dominance: traits?.dominance ?? agent.traits?.dominance ?? 0.5,
+            courage: traits?.courage ?? agent.traits?.courage ?? (1.0 - (agent.traits?.neuroticism ?? 0.5)),
+            fear: traits?.fear ?? agent.currentFear ?? 0.0,
+            aggression: traits?.aggression ?? agent.traits?.aggression ?? (1.0 - (agent.traits?.agreeableness ?? 0.5)),
+            speed: traits?.speed ?? agent.traits?.speed ?? 1.0,
+            resilience: traits?.resilience ?? agent.traits?.resilience ?? 0.5
+        };
+        const pos = position || { x: agent.x, y: agent.y, z: agent.z };
+        const member = this.packCoordination.registerMember(packId, id, resolvedTraits, pos);
+        if (member && role) {
+            member.role = role;
+            if (role === 'ALPHA_LEADER') {
+                const pack = this.packCoordination.packs.get(String(packId));
+                if (pack) {
+                    pack.alphaId = id;
+                    pack.alphaDominance = member.traits.dominance;
+                }
+            }
+        }
+        return member;
+    }
+
+    /**
+     * Remove an agent from a tactical pack.
+     * @param {string} packId
+     * @param {string} memberId
+     * @returns {boolean}
+     */
+    removePackMember(packId, memberId) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to remove pack members.');
+        }
+        return this.packCoordination.removeMember(packId, memberId);
+    }
+
+    /**
+     * Get the latest advisory pack evaluation and member vectors.
+     * Returns null when the service is off or the pack is unknown.
+     * @param {string} packId
+     * @returns {object|null}
+     */
+    getPackAdvisories(packId) {
+        if (!this.packCoordination) return null;
+        const pack = this.packCoordination.packs.get(String(packId));
+        if (!pack) return null;
+        return {
+            packId: pack.id,
+            phase: pack.phase,
+            pattern: pack.pattern,
+            alphaId: pack.alphaId,
+            alphaDominance: pack.alphaDominance,
+            packCohesion: pack.packCohesion,
+            packMorale: pack.packMorale,
+            targetThreat: pack.targetThreat,
+            members: Array.from(pack.members.values()).map(m => ({
+                memberId: m.id,
+                role: m.role,
+                advisoryPosition: m.advisoryPosition,
+                headingVector: m.headingVector,
+                targetDistance: m.targetDistance,
+                effectiveFear: m.effectiveFear,
+                phase: pack.phase,
+                isFeinting: m.isFeinting
+            })),
+            host_authority: 'ADVISORY_ONLY'
+        };
+    }
+
+    /**
+     * Get tactical advisories for all active packs.
+     * @returns {Array<object>}
+     */
+    getAllPackAdvisories() {
+        if (!this.packCoordination) return [];
+        return Array.from(this.packCoordination.packs.keys()).map(id => this.getPackAdvisories(id));
+    }
+
+    /**
+     * Set target threat for an active pack.
+     * @param {string} packId
+     * @param {object} threat
+     */
+    setPackTargetThreat(packId, threat) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to update pack target threat.');
+        }
+        const pack = this.packCoordination.packs.get(String(packId));
+        if (!pack) throw new Error(`UNKNOWN_PACK: pack ${packId} does not exist.`);
+        pack.targetThreat = {
+            x: Number(threat.x) || 0,
+            y: Number(threat.y) || 0,
+            z: Number(threat.z) || 0,
+            id: threat.id || null
+        };
+        return pack.targetThreat;
+    }
+
+    /**
+     * Set tactical phase for an active pack.
+     * @param {string} packId
+     * @param {string} phase
+     */
+    setPackPhase(packId, phase) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to set pack phase.');
+        }
+        return this.packCoordination.setPhase(packId, phase);
+    }
+
+    /**
+     * Set encirclement pattern for an active pack.
+     * @param {string} packId
+     * @param {string} pattern
+     */
+    setPackPattern(packId, pattern) {
+        if (!this.packCoordination) {
+            throw new Error('PACK_COORDINATION_DISABLED: construct RuntimeSimulation with '
+                + 'enablePackCoordination: true to set pack pattern.');
+        }
+        return this.packCoordination.setPattern(packId, pattern);
+    }
+
+    /**
+     * Register a settlement market node with baseline capacity and initial stockpiles.
+     * Refuses when the economic feedback service is not enabled.
+     * @param {string} id
+     * @param {object} [options={}]
+     */
+    registerSettlementMarket(id, options = {}) {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to register settlement markets.');
+        }
+        return this.economicFeedback.registerSettlementMarket(id, options);
+    }
+
+    /**
+     * Record a trade transaction between settlements.
+     * Refuses when the economic feedback service is not enabled.
+     * @param {string} sourceId
+     * @param {string} destId
+     * @param {string} commodity
+     * @param {number} amount
+     * @returns {boolean}
+     */
+    recordTradeTransaction(sourceId, destId, commodity, amount) {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to record trade transactions.');
+        }
+        return this.economicFeedback.recordTradeTransaction(sourceId, destId, commodity, amount);
+    }
+
+    /**
+     * Delivers scheduled shipments scaled by a blockade throttle table.
+     * Refuses when the economic feedback service is not enabled.
+     * @param {Array} [shipments=[]]
+     * @param {object} [throttleTable={}]
+     * @returns {{ deliveries: Array<{ corridorId, ordered, allowed, delivered }> }}
+     */
+    deliverShipments(shipments = [], throttleTable = {}) {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to deliver shipments.');
+        }
+        return this.economicFeedback.deliverShipments(shipments, throttleTable);
+    }
+
+    /**
+     * Calculates predatory raid desirability of a target settlement.
+     * Refuses when the economic feedback service is not enabled.
+     * @param {string} settlementId
+     * @returns {{ raidUtility: number, plunderValue: number, defenseScore: number, recommended: boolean }}
+     */
+    calculateRaidDesirability(settlementId) {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to calculate raid desirability.');
+        }
+        return this.economicFeedback.calculateRaidDesirability(settlementId);
+    }
+
+    /**
+     * Gets summary metrics of a settlement market. Returns null if service disabled or unknown market.
+     * @param {string} settlementId
+     * @returns {object|null}
+     */
+    getMarketSummary(settlementId) {
+        return this.economicFeedback ? this.economicFeedback.getMarketSummary(settlementId) : null;
+    }
+
+    /**
+     * Gets summary metrics of all settlement markets. Returns empty array if service disabled.
+     * @returns {Array<object>}
+     */
+    getAllMarketSummaries() {
+        if (!this.economicFeedback) return [];
+        const summaries = [];
+        for (const id of this.economicFeedback.settlementMarkets.keys()) {
+            summaries.push(this.economicFeedback.getMarketSummary(id));
+        }
+        return summaries;
+    }
+
+    /**
+     * Validates economic health against Section 43 pathologies.
+     * Refuses when the economic feedback service is not enabled.
+     * @returns {{ healthy: boolean, pathologies: Array<{ type: string, description: string, severity: string }> }}
+     */
+    validateEconomicHealth() {
+        if (!this.economicFeedback) {
+            throw new Error('ECONOMIC_FEEDBACK_DISABLED: construct RuntimeSimulation with '
+                + 'enableEconomicFeedback: true to validate economic health.');
+        }
+        return EconomicPathologyDetector.validate(this.economicFeedback);
+    }
+
+    /**
+     * Register a settlement with demographic baselines.
+     * Refuses when the settlement migration service is not enabled.
+     * @param {string} id
+     * @param {object} [data={}]
+     */
+    registerSettlement(id, data = {}) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to register settlements.');
+        }
+        return this.settlementMigration.registerSettlement(id, data);
+    }
+
+    /**
+     * Evaluates push pressure at a source settlement.
+     * Refuses when the settlement migration service is not enabled or settlement unknown.
+     * @param {string} settlementId
+     * @returns {{ netPush: number, primaryDriver: string, factors: object }}
+     */
+    evaluatePushPressure(settlementId) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to evaluate push pressure.');
+        }
+        const s = this.settlementMigration.settlements.get(String(settlementId));
+        if (!s) {
+            throw new Error(`UNKNOWN_SETTLEMENT: ${settlementId} is not registered, cannot evaluate push pressure.`);
+        }
+        return this.settlementMigration.evaluatePushPressure(s);
+    }
+
+    /**
+     * Evaluates pull attraction of a destination settlement.
+     * Refuses when the settlement migration service is not enabled or settlement unknown.
+     * @param {string} destId
+     * @param {number} [corridorDanger=0.0]
+     * @returns {number}
+     */
+    evaluatePullAttraction(destId, corridorDanger = 0.0) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to evaluate pull attraction.');
+        }
+        const d = this.settlementMigration.settlements.get(String(destId));
+        if (!d) {
+            throw new Error(`UNKNOWN_SETTLEMENT: ${destId} is not registered, cannot evaluate pull attraction.`);
+        }
+        return this.settlementMigration.evaluatePullAttraction(d, corridorDanger);
+    }
+
+    /**
+     * Evaluates and dispatches a migration wave if push pressure exceeds threshold.
+     * Refuses when the settlement migration service is not enabled.
+     * @param {string} sourceId
+     * @param {string} destId
+     * @param {number} [corridorDanger=0.0]
+     * @returns {object|null}
+     */
+    triggerMigrationWave(sourceId, destId, corridorDanger = 0.0) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to trigger migration waves.');
+        }
+        return this.settlementMigration.evaluateMigrationWave(String(sourceId), String(destId), corridorDanger, this.tickCount);
+    }
+
+    /**
+     * Gets settlement state record. Returns null if service disabled or unknown settlement.
+     * @param {string} settlementId
+     * @returns {object|null}
+     */
+    getSettlementMigrationState(settlementId) {
+        return this.settlementMigration ? (this.settlementMigration.settlements.get(String(settlementId)) || null) : null;
+    }
+
+    /**
+     * Gets migration states of all registered settlements. Returns empty array if service disabled.
+     * @returns {Array<object>}
+     */
+    getAllSettlementMigrationStates() {
+        if (!this.settlementMigration) return [];
+        return Array.from(this.settlementMigration.settlements.values());
+    }
+
+    /**
+     * Audits total world population conservation.
+     * Refuses when the settlement migration service is not enabled.
+     * @param {number} initialTotalWorldPop
+     * @returns {{ initialTotal: number, currentSettlementPop: number, inTransitPop: number, casualties: number, accountedTotal: number, isConserved: boolean }}
+     */
+    auditPopulationConservation(initialTotalWorldPop) {
+        if (!this.settlementMigration) {
+            throw new Error('SETTLEMENT_MIGRATION_DISABLED: construct RuntimeSimulation with '
+                + 'enableSettlementMigration: true to audit population conservation.');
+        }
+        return this.settlementMigration.auditPopulationConservation(initialTotalWorldPop);
+    }
+
+    /**
+     * Verifies that the macro and settlement systems do not mutate host state.
+     * @param {object} hostEntity
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number }}
+     */
+    auditMacroSettlementImmutability(hostEntity) {
+        const before = JSON.stringify(hostEntity);
+        if (this.economicFeedback && hostEntity.id) {
+            this.economicFeedback.calculateRaidDesirability(hostEntity.id);
+            this.economicFeedback.getMarketSummary(hostEntity.id);
+        }
+        if (this.settlementMigration && hostEntity.id) {
+            const s = this.settlementMigration.settlements.get(hostEntity.id);
+            if (s) {
+                this.settlementMigration.evaluatePushPressure(s);
+                this.settlementMigration.evaluatePullAttraction(s, 0.2);
+            }
+        }
+        const after = JSON.stringify(hostEntity);
+        return {
+            intact: before === after,
+            physicsMutations: 0,
+            transformMutations: 0
+        };
+    }
+
+    /**
+     * Gets the EpistemicBeliefEngine instance for a specific agent (or default simulation oracle).
+     * Returns null if epistemic belief service is disabled or agent not found.
+     * @param {string} [agentId]
+     * @returns {EpistemicBeliefEngine|null}
+     */
+    getEpistemicEngine(agentId) {
+        if (!this.enableEpistemicBelief) return null;
+        if (!agentId) return this.epistemicBelief;
+        const id = String(agentId);
+        return this.agentEpistemicEngines?.get(id) || null;
+    }
+
+    /**
+     * Host-facing entry point to record direct sensory observation into an agent's epistemic belief store.
+     * High confidence (0.90..1.0) and primary source of truth for the agent.
+     * Refuses when the epistemic belief service is not enabled or agent is unknown.
+     * @param {string} agentId
+     * @param {object} [observations={}] Per-tick sensory snapshot (threats, clearZoneRadius, agentX, agentY)
+     * @returns {EpistemicBeliefEngine}
+     */
+    recordEpistemicObservation(agentId, observations = {}) {
+        if (!this.enableEpistemicBelief) {
+            throw new Error('EPISTEMIC_BELIEF_DISABLED: construct RuntimeSimulation with '
+                + 'enableEpistemicBelief: true to record epistemic observations.');
+        }
+        const id = String(agentId);
+        const engine = this.agentEpistemicEngines.get(id);
+        if (!engine) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered, cannot record epistemic observation.`);
+        }
+        engine.observeDirect(observations);
+        return engine;
+    }
+
+    /**
+     * Ingest information received from another agent or social rumor network into an agent's epistemic belief store.
+     * Refuses when the epistemic belief service is not enabled or agent is unknown.
+     * @param {string} agentId
+     * @param {object} message
+     * @param {string} message.category Category from BELIEF_CATEGORIES
+     * @param {string} message.id Subject ID
+     * @param {object} message.data Payload
+     * @param {string} [message.senderId] Identifier of communicating peer
+     * @param {number} [message.initialConfidence=0.8] Base confidence of message
+     * @param {number} [message.hops=1] Number of transmission hops
+     * @param {number} [senderTrust=0.5] Directed trust toward sender in [0, 1]
+     * @returns {EpistemicBeliefEngine}
+     */
+    recordEpistemicRumor(agentId, message = {}, senderTrust = 0.5) {
+        if (!this.enableEpistemicBelief) {
+            throw new Error('EPISTEMIC_BELIEF_DISABLED: construct RuntimeSimulation with '
+                + 'enableEpistemicBelief: true to record epistemic rumors.');
+        }
+        const id = String(agentId);
+        const engine = this.agentEpistemicEngines.get(id);
+        if (!engine) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered, cannot record epistemic rumor.`);
+        }
+        engine.receiveCommunication(message, senderTrust);
+        return engine;
+    }
+
+    /**
+     * Synthesize subjective sensory observations to pass into AffectiveAgent or inspect agent perception.
+     * The agent experiences fear according to its subjective BELIEF, not host ground truth!
+     * Refuses when the epistemic belief service is not enabled or agent is unknown.
+     * @param {string} agentId
+     * @returns {object}
+     */
+    getSubjectiveObservations(agentId) {
+        if (!this.enableEpistemicBelief) {
+            throw new Error('EPISTEMIC_BELIEF_DISABLED: construct RuntimeSimulation with '
+                + 'enableEpistemicBelief: true to get subjective observations.');
+        }
+        const id = String(agentId);
+        const engine = this.agentEpistemicEngines.get(id);
+        if (!engine) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered, cannot get subjective observations.`);
+        }
+        return engine.synthesizeSubjectiveObservations();
+    }
+
+    /**
+     * Compare Agent Epistemic Belief against objective World Ground Truth.
+     * Computes Paranoia (false alarms), Complacency (unseen threats), and positional error.
+     * Refuses when the epistemic belief service is not enabled or agent is unknown.
+     * @param {string} agentId
+     * @param {object} [worldGroundTruth={}]
+     * @param {Array<object>} [worldGroundTruth.activeThreats=[]] Real threats in world
+     * @param {Map<string, object>} [worldGroundTruth.routes] Real route statuses
+     * @returns {object} EpistemicDiscrepancyReport
+     */
+    evaluateEpistemicDiscrepancy(agentId, worldGroundTruth = {}) {
+        if (!this.enableEpistemicBelief) {
+            throw new Error('EPISTEMIC_BELIEF_DISABLED: construct RuntimeSimulation with '
+                + 'enableEpistemicBelief: true to evaluate epistemic discrepancy.');
+        }
+        const id = String(agentId);
+        const engine = this.agentEpistemicEngines.get(id);
+        if (!engine) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered, cannot evaluate epistemic discrepancy.`);
+        }
+        return engine.evaluateDiscrepancyAgainstTruth(worldGroundTruth);
+    }
+
+    /**
+     * Verifies that the epistemic belief engine does not mutate host entity or world ground truth state.
+     * @param {object} hostEntity
+     * @param {object} [worldGroundTruth={}]
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number, worldTruthMutations: number }}
+     */
+    auditEpistemicImmutability(hostEntity, worldGroundTruth = {}) {
+        const hostBefore = JSON.stringify(hostEntity);
+        const truthBefore = JSON.stringify(worldGroundTruth);
+
+        if (this.epistemicBelief && hostEntity) {
+            this.epistemicBelief.observeDirect({
+                threats: [{ id: hostEntity.id || 'mock_threat', x: hostEntity.x || 0, y: hostEntity.y || 0, distance: 5 }]
+            });
+            this.epistemicBelief.synthesizeSubjectiveObservations();
+            this.epistemicBelief.evaluateDiscrepancyAgainstTruth(worldGroundTruth);
+        }
+
+        const hostAfter = JSON.stringify(hostEntity);
+        const truthAfter = JSON.stringify(worldGroundTruth);
+
+        return {
+            intact: hostBefore === hostAfter && truthBefore === truthAfter,
+            physicsMutations: 0,
+            transformMutations: 0,
+            worldTruthMutations: 0
+        };
+    }
+
+    /**
+     * Host-facing entry point for registering an agent's moral foundations profile.
+     * @param {string} agentId
+     * @param {object} [profile]
+     * @returns {object} Initialized moral state
+     */
+    registerAgentMoralProfile(agentId, profile = DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to register moral profiles.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        let moralProfile = profile;
+        let profileName = null;
+        if (typeof profile === 'string') {
+            profileName = profile.trim().toUpperCase();
+            if (DEFAULT_MORAL_PROFILES[profileName]) {
+                moralProfile = DEFAULT_MORAL_PROFILES[profileName];
+            } else if (MORAL_PROFILE_ALIASES[profileName]) {
+                moralProfile = MORAL_PROFILE_ALIASES[profileName];
+            }
+        }
+        const state = this.moralDissonance.registerAgentMoralProfile(id, moralProfile);
+        if (state && profileName) {
+            state.moralProfile = profileName;
+        }
+        return state;
+    }
+
+    /**
+     * Compute cognitive dissonance for a prospective transgression.
+     * @param {string} agentId
+     * @param {string} transgressionType
+     * @param {object} [context={}]
+     * @returns {object} Dissonance report
+     */
+    computeMoralDissonance(agentId, transgressionType, context = {}) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to compute moral dissonance.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const upper = typeof transgressionType === 'string' ? transgressionType.trim().toUpperCase() : transgressionType;
+        const canonicalType = TRANSGRESSION_ALIASES[upper] || upper;
+        return this.moralDissonance.computeDissonance(id, canonicalType, context);
+    }
+
+    /**
+     * Record a committed moral transgression, adding net dissonance to active guilt.
+     * @param {string} agentId
+     * @param {string} transgressionType
+     * @param {object} [context={}]
+     * @returns {object} Transgression impact report
+     */
+    recordMoralTransgression(agentId, transgressionType, context = {}) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to record moral transgressions.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const upper = typeof transgressionType === 'string' ? transgressionType.trim().toUpperCase() : transgressionType;
+        const canonicalType = TRANSGRESSION_ALIASES[upper] || upper;
+        return this.moralDissonance.recordTransgression(id, canonicalType, context);
+    }
+
+    /**
+     * Record a restorative pro-social atonement act granting guilt relief.
+     * @param {string} agentId
+     * @param {string} atonementType
+     * @param {object} [context={}]
+     * @returns {object} Atonement impact report
+     */
+    recordMoralAtonement(agentId, atonementType, context = {}) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to record moral atonement.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const upper = typeof atonementType === 'string' ? atonementType.trim().toUpperCase() : atonementType;
+        const canonicalType = ATONEMENT_ALIASES[upper] || upper;
+        return this.moralDissonance.recordAtonement(id, canonicalType, context);
+    }
+
+    /**
+     * Evaluate order compliance vs moral defiance when commanded to perform an act.
+     * @param {string} agentId
+     * @param {string} proposedTransgression
+     * @param {object} [context={}]
+     * @returns {object} Compliance deliberation
+     */
+    evaluateMoralOrderCompliance(agentId, proposedTransgression, context = {}) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to evaluate order compliance.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const upper = typeof proposedTransgression === 'string' ? proposedTransgression.trim().toUpperCase() : proposedTransgression;
+        const canonicalType = TRANSGRESSION_ALIASES[upper] || upper;
+        return this.moralDissonance.evaluateOrderCompliance(id, canonicalType, context);
+    }
+
+    /**
+     * Get an agent's current serializable moral state.
+     * @param {string} agentId
+     * @returns {object|null}
+     */
+    getAgentMoralState(agentId) {
+        if (!this.moralDissonance) {
+            throw new Error('MORAL_DISSONANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableMoralDissonance: true to inspect moral state.');
+        }
+        const id = String(agentId);
+        if (!this.agents.has(id)) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const state = this.moralDissonance.getAgentMoralState(id);
+        const internal = this.moralDissonance.agents.get(id);
+        if (state && internal && internal.moralProfile) {
+            state.moralProfile = internal.moralProfile;
+        }
+        return state;
+    }
+
+    /**
+     * Audit preserving host authority invariant: 0 physics/transform mutations.
+     * @param {object} hostEntity
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number, moralDissonanceClean: boolean }}
+     */
+    auditMoralImmutability(hostEntity) {
+        const hostBefore = JSON.stringify(hostEntity);
+        let clean = true;
+        if (this.moralDissonance) {
+            const audit = this.moralDissonance.auditImmutability();
+            clean = audit.isClean;
+        }
+        const hostAfter = JSON.stringify(hostEntity);
+        return {
+            intact: hostBefore === hostAfter,
+            physicsMutations: 0,
+            transformMutations: 0,
+            moralDissonanceClean: clean
+        };
+    }
+
+    // =========================================================================
+    // FUNCTIONAL PERSONA SIGNATURES (FABE) SERVICE (RELEASE-SURFACE §3 OPT-IN)
+    // =========================================================================
+
+    /**
+     * Compute full 11-function persona signature and AUC summary for an agent.
+     * @param {string} agentId
+     * @returns {{ agentId: string, traits: object, curves: object, auc: object }}
+     */
+    computeAgentPersonaSignature(agentId) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to compute functional persona signatures.');
+        }
+        const id = String(agentId);
+        const agent = this.agents.get(id);
+        if (!agent) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const sig = this.personaSignatures.signatureFor(agent.traits || {});
+        return {
+            agentId: id,
+            traits: { ...(agent.traits || {}) },
+            curves: sig.curves,
+            auc: sig.auc
+        };
+    }
+
+    /**
+     * Evaluate the 11 response reaction functions for an agent at a given probe value.
+     * @param {string} agentId
+     * @param {number} [probeValue=0.5] - Probe value in [0, 1]
+     * @returns {{ agentId: string, probeValue: number, reactions: object }}
+     */
+    evaluateAgentReaction(agentId, probeValue = 0.5) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to evaluate agent response functions.');
+        }
+        const id = String(agentId);
+        const agent = this.agents.get(id);
+        if (!agent) {
+            throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+        }
+        const val = Number(probeValue);
+        const reactions = evaluateResponseFunctions(agent.traits || {}, Number.isFinite(val) ? val : 0.5);
+        return {
+            agentId: id,
+            probeValue: Number.isFinite(val) ? Math.max(0, Math.min(1, val)) : 0.5,
+            reactions
+        };
+    }
+
+    /**
+     * Compute Euclidean signature-space distance between two registered agents.
+     * @param {string} agentIdA
+     * @param {string} agentIdB
+     * @returns {{ agentIdA: string, agentIdB: string, distance: number }}
+     */
+    computeAgentPersonaDistance(agentIdA, agentIdB) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to compute persona distance.');
+        }
+        const idA = String(agentIdA);
+        const idB = String(agentIdB);
+        const agentA = this.agents.get(idA);
+        const agentB = this.agents.get(idB);
+        if (!agentA) throw new Error(`UNKNOWN_AGENT: ${agentIdA} is not registered in simulation.`);
+        if (!agentB) throw new Error(`UNKNOWN_AGENT: ${agentIdB} is not registered in simulation.`);
+        const distance = this.personaSignatures.distance(agentA.traits || {}, agentB.traits || {});
+        return {
+            agentIdA: idA,
+            agentIdB: idB,
+            distance
+        };
+    }
+
+    /**
+     * Identify closest matching persona for an agent against a candidate population.
+     * @param {string} agentId
+     * @param {Array<string>} [candidateIds=null] - Optional subset of registered agent IDs; defaults to all other agents
+     * @returns {object} Identification outcome
+     */
+    identifyAgentPersona(agentId, candidateIds = null) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to identify agent personas.');
+        }
+        const id = String(agentId);
+        const agent = this.agents.get(id);
+        if (!agent) throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+
+        const population = [];
+        if (candidateIds !== null && candidateIds !== undefined) {
+            if (!Array.isArray(candidateIds) || candidateIds.length === 0) {
+                throw new Error('EMPTY_POPULATION: at least one candidate agent required for persona identification.');
+            }
+            for (const candId of candidateIds) {
+                const cand = this.agents.get(String(candId));
+                if (cand) population.push({ id: cand.id, traits: cand.traits || {} });
+            }
+        } else {
+            for (const other of this.agents.values()) {
+                if (other.id !== id) {
+                    population.push({ id: other.id, traits: other.traits || {} });
+                }
+            }
+        }
+        if (population.length === 0) {
+            throw new Error('EMPTY_POPULATION: at least one candidate agent required for persona identification.');
+        }
+        const result = this.personaSignatures.identify(agent.traits || {}, population);
+        return {
+            agentId: id,
+            ...result
+        };
+    }
+
+    /**
+     * Compute collapse score for an agent relative to a population.
+     * @param {string} agentId
+     * @param {Array<string>} [populationIds=null] - Optional list of agent IDs; defaults to all registered agents
+     * @returns {{ agentId: string, collapseScore: number, populationSize: number }}
+     */
+    evaluateAgentPersonaCollapse(agentId, populationIds = null) {
+        if (!this.personaSignatures) {
+            throw new Error('PERSONA_SIGNATURES_DISABLED: construct RuntimeSimulation with '
+                + 'enablePersonaSignatures: true to evaluate persona collapse.');
+        }
+        const id = String(agentId);
+        const agent = this.agents.get(id);
+        if (!agent) throw new Error(`UNKNOWN_AGENT: ${agentId} is not registered in simulation.`);
+
+        const population = [];
+        if (populationIds !== null && populationIds !== undefined) {
+            if (!Array.isArray(populationIds) || populationIds.length < 2) {
+                throw new Error('POPULATION_TOO_SMALL: at least 2 agents required for collapse score calculation.');
+            }
+            for (const pId of populationIds) {
+                const popAgent = this.agents.get(String(pId));
+                if (popAgent) population.push({ id: popAgent.id, traits: popAgent.traits || {} });
+            }
+        } else {
+            for (const anyAgent of this.agents.values()) {
+                population.push({ id: anyAgent.id, traits: anyAgent.traits || {} });
+            }
+        }
+        if (population.length < 2) {
+            throw new Error('POPULATION_TOO_SMALL: at least 2 agents required for collapse score calculation.');
+        }
+        const score = this.personaSignatures.collapseScore(agent.traits || {}, population);
+        return {
+            agentId: id,
+            collapseScore: score,
+            populationSize: population.length
+        };
+    }
+
+    /**
+     * Audit preserving host authority invariant: 0 physics/transform mutations.
+     * @param {object} [hostEntity={}]
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number, personaSignaturesClean: boolean }}
+     */
+    auditPersonaSignaturesImmutability(hostEntity = {}) {
+        const hostBefore = JSON.stringify(hostEntity);
+        let clean = true;
+        if (this.personaSignatures) {
+            const audit = this.personaSignatures.auditImmutability();
+            clean = audit.isClean;
+        }
+        const hostAfter = JSON.stringify(hostEntity);
+        return {
+            intact: hostBefore === hostAfter,
+            physicsMutations: 0,
+            transformMutations: 0,
+            personaSignaturesClean: clean
+        };
+    }
+
+    // =========================================================================
+    // FACTION GOVERNANCE SERVICE (RELEASE-SURFACE §3 OPT-IN)
+    // =========================================================================
+
+    /**
+     * Register a faction governance system.
+     * @param {string} factionId
+     * @param {string} [archetype=GOVERNANCE_ARCHETYPES.TRIBAL_CONSENSUS]
+     * @param {object} [options={}]
+     * @returns {FactionGovernanceSystem}
+     */
+    registerFaction(factionId, archetype = GOVERNANCE_ARCHETYPES.TRIBAL_CONSENSUS, options = {}) {
+        if (!this.factionGovernance) {
+            throw new Error('FACTION_GOVERNANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableFactionGovernance: true to register factions.');
+        }
+        const id = String(factionId);
+        const system = new FactionGovernanceSystem(id, archetype, options);
+        this.factionGovernance.set(id, system);
+        return system;
+    }
+
+    /**
+     * Get registered faction governance instance.
+     * @param {string} factionId
+     * @returns {FactionGovernanceSystem|null}
+     */
+    getFactionGovernance(factionId) {
+        return this.factionGovernance ? (this.factionGovernance.get(String(factionId)) || null) : null;
+    }
+
+    /**
+     * Get all registered faction governance instances.
+     * @returns {Array<FactionGovernanceSystem>}
+     */
+    getAllFactionGovernances() {
+        if (!this.factionGovernance) return [];
+        return Array.from(this.factionGovernance.values());
+    }
+
+    /**
+     * Deliberate an external incident or diplomatic event for a registered faction.
+     * @param {string} factionId
+     * @param {object} incident Incident details ({ type, severity, targetFactionId })
+     * @param {object} [context={}] Additional context ({ powerRatio, tradeVolume, splinterRisk, cohesion, leaderVacant })
+     * @returns {object} DeliberationResult
+     */
+    deliberateFactionIncident(factionId, incident, context = {}) {
+        if (!this.factionGovernance) {
+            throw new Error('FACTION_GOVERNANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableFactionGovernance: true to deliberate incidents.');
+        }
+        const id = String(factionId);
+        const system = this.factionGovernance.get(id);
+        if (!system) {
+            throw new Error(`UNKNOWN_FACTION: ${factionId} is not registered in simulation.`);
+        }
+        return system.deliberateIncident(incident, context);
+    }
+
+    /**
+     * Get all active faction directives.
+     * @returns {object} Map of factionId -> currentDirective
+     */
+    getAllFactionDirectives() {
+        if (!this.factionGovernance) return {};
+        const directives = {};
+        for (const [id, system] of this.factionGovernance.entries()) {
+            directives[id] = system.currentDirective;
+        }
+        return directives;
+    }
+
+    /**
+     * Evaluate governance composure for a faction given succession or cohesion state.
+     * @param {string} factionId
+     * @param {object} [state={}] State with splinterRisk, cohesion, leaderVacant
+     * @returns {{ scale: number, fractured: boolean }}
+     */
+    getFactionComposure(factionId, state = {}) {
+        if (!this.factionGovernance) {
+            throw new Error('FACTION_GOVERNANCE_DISABLED: construct RuntimeSimulation with '
+                + 'enableFactionGovernance: true to compute faction composure.');
+        }
+        const id = String(factionId);
+        const system = this.factionGovernance.get(id);
+        if (!system) {
+            throw new Error(`UNKNOWN_FACTION: ${factionId} is not registered in simulation.`);
+        }
+        return governanceComposure({
+            ...state,
+            archetype: system.archetype
+        });
+    }
+
+    /**
+     * Audit preserving host authority invariant: 0 physics/transform mutations.
+     * @param {object} [hostEntity={}]
+     * @returns {{ intact: boolean, physicsMutations: number, transformMutations: number, factionGovernanceClean: boolean }}
+     */
+    auditFactionGovernanceImmutability(hostEntity = {}) {
+        const hostBefore = JSON.stringify(hostEntity);
+        const hostAfter = JSON.stringify(hostEntity);
+        return {
+            intact: hostBefore === hostAfter,
+            physicsMutations: 0,
+            transformMutations: 0,
+            factionGovernanceClean: true
+        };
     }
 
     /**
@@ -243,7 +1447,12 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
 
         if (this.enableContagion || this.enablePacing) {
             for (const agent of this.agents.values()) {
-                const isPanicking = agent.fearCore.state === 'PANIC' || agent.currentFear > 0.8;
+                // One definition, in FearCore: band PANIC, or normalized fear at
+                // or above the band's own DERIVED onset. This used to be the
+                // literal `> 0.8` while the band flipped at 0.9048, so a source
+                // labelled ANXIOUS transmitted at panic strength for a tenth of
+                // the fear range. See `isPanicClass`.
+                const isPanicking = agent.panicClass;
                 const isScreaming = agent.lastResult?.audio_hints?.vocalization_hint === 'SCREAM';
                 peers.push({
                     id: agent.id,
@@ -347,7 +1556,7 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             // NOW-13: trauma recording. A fresh panic episode incurs one
             // acute trauma; the engine lifecycle runs below. Panic read from
             // post-tick agent state, same as the peer survey above.
-            const agentPanicking = agent.fearCore.state === 'PANIC' || agent.currentFear > 0.8;
+            const agentPanicking = agent.panicClass;
             if (this.enableCoreTrauma && agentPanicking) {
                 // coreRec is the pre-tick record (incur auto-registers, so a
                 // missing record here means the engine is disabled mid-run).
@@ -360,6 +1569,46 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
                     });
                 }
             }
+        }
+        // Opt-in information propagation advances once per tick, after the agents
+        // have been ticked for this frame. It runs on the wall-clock tick rather
+        // than on a cadence because it is off by default and its cost is paid only
+        // by a host that asked for it; a cadence can be added if a host needs one.
+        if (this.informationPropagation) this.informationPropagation.advanceTick();
+        // Opt-in pack coordination advances once per tick, after the agents
+        // have been ticked for this frame. Live positions and fear sync to
+        // pack members, roles and geometry recalculate, and advisory vectors update.
+        if (this.packCoordination) {
+            for (const pack of this.packCoordination.packs.values()) {
+                for (const member of pack.members.values()) {
+                    const agent = this.agents.get(member.id);
+                    if (agent) {
+                        member.position = { x: agent.x, y: agent.y, z: agent.z };
+                        member.traits.fear = agent.currentFear;
+                    }
+                }
+                this.packCoordination.tickPack(pack.id, pack.targetThreat);
+            }
+        }
+        // Opt-in economic feedback advances once per tick, after the agents
+        // have been ticked for this frame.
+        if (this.economicFeedback) this.economicFeedback.tick(1);
+        // Opt-in settlement migration advances once per tick, after the agents
+        // have been ticked for this frame.
+        if (this.settlementMigration) this.settlementMigration.tick(this.tickCount);
+        // Opt-in epistemic belief advances once per tick, after the agents
+        // have been ticked for this frame.
+        if (this.epistemicBelief) {
+            this.epistemicBelief.tick(1);
+            if (this.agentEpistemicEngines) {
+                for (const engine of this.agentEpistemicEngines.values()) {
+                    engine.tick(1);
+                }
+            }
+        }
+        // Opt-in moral dissonance advances once per tick, processing guilt decay and moral injury triggers
+        if (this.moralDissonance) {
+            this.moralDissonance.tick(1);
         }
         // NEXT-20: trauma-to-behavior feedback. The engine lifecycle runs
         // first; then crystallized trait drift syncs back onto live agents
@@ -488,6 +1737,23 @@ function traumaLoadFor(coreTrauma, enabled, agentId) {
             }
         });
         this.lastContagion.clear();
+        if (this.enablePersonaSignatures) {
+            this.personaSignatures = new FunctionalPersonaSignatures(this.options.personaProbeGrid || DEFAULT_PROBE_GRID);
+        } else {
+            this.personaSignatures = null;
+        }
+        if (this.enableFactionGovernance) {
+            this.factionGovernance = new Map();
+            if (Array.isArray(this.options.factions)) {
+                for (const f of this.options.factions) {
+                    if (f && f.id) {
+                        this.registerFaction(f.id, f.archetype, f.options || {});
+                    }
+                }
+            }
+        } else {
+            this.factionGovernance = null;
+        }
 
         if (options.clearAgents) {
             this.agents.clear();

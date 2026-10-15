@@ -1,15 +1,17 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Rust-JS FearCore Cross-Tree Parity Vectors",
-  "version": "1.0.0",
-  "date": "2026-09-17",
+  "version": "1.2.0",
+  "date": "2026-10-13",
+  "revision_note": "1.2.0 (2026-10-13): B1 RESOLVED. FearCore's panic lock now holds only while fear >= exit.ALERT (0.8), matching real Rust fear.rs (`panic_locked && score >= exit.afraid`); VEC-12/12b now expect JS to release to ANXIOUS and carry the already-declared B3 (stepped ladder) instead of B1, and B1 is removed from declared_divergences. 1.1.0 (2026-10-12): the Rust column is now MEASURED. Every vector carries a rust_scenario that tools/codegen/generate_rust_fear_oracle.mjs executes against the real fear.rs (results: evidence/rust_fear_oracle_results.json). VEC-12 expected_rust_band corrected Panicked -> Calm (1.0.0 asserted the JS behaviour for Rust). Added VEC-12b/12c and exit-side/skip-side vectors 17-19. Divergences are now declared per vector and the probe fails if a declared divergence does not occur or an undeclared one does.",
   "provenance": {
     "rust_canonical_source": "pixel-pets/src/engine/ai/fear.rs",
     "rust_host_bridge": "pixel-pets/src/engine/ai/fear_ai_bridge.rs",
     "rust_audit_bin": "pixel-pets/src/bin/audit_fear_ai_connection.rs",
     "sibling_repo_commit": "db19d1fb6",
     "js_canonical_source": "packages/core/src/FearCore.js",
-    "js_affective_agent": "packages/core/src/AffectiveAgent.js"
+    "js_affective_agent": "packages/core/src/AffectiveAgent.js",
+    "rust_results": "evidence/rust_fear_oracle_results.json"
   },
   "nomenclature_mapping": {
     "Calm": "CALM",
@@ -18,6 +20,13 @@
     "Panicked": "PANIC",
     "Routed": "ROUTED (Rust Core / JS Extended via IntentResolver)",
     "BerserkOverride": "BERSERK (Rust State / JS Extended Band)"
+  },
+  "declared_divergences": {
+    "B3": "Exit side, Panicked: Rust cascades Panicked -> Calm/Alert/Afraid in one evaluation by score; JS steps PANIC -> ANXIOUS only.",
+    "B4": "Exit side, Afraid: Rust Afraid below exit.alert goes straight to Calm; JS ANXIOUS goes to ALERT first.",
+    "B5": "Entry side, Alert: Rust Alert can jump to Panicked/Routed in one evaluation; JS ALERT goes to ANXIOUS first.",
+    "B6": "Entry side, Calm: Rust Calm can jump to Routed/Panicked in one evaluation; JS CALM goes to ALERT only (one band per update).",
+    "B11": "Routed (enter 4.6 / exit 3.0) is a Rust core band with no JS core band; JS handles >= 4.6 through IntentResolver and panic bias."
   },
   "threshold_parity_matrix": [
     {
@@ -50,92 +59,204 @@
       "parity_match": "ADVISORY_PARITY (Rust 5th core band; JS handles 4.6+ via IntentResolver FLEE_FROM/PANIC and panic bias)"
     }
   ],
+  "boundary_scale_conversion": {
+    "policy": "DEC-0001 Option C: Canonical Rust scale (0.0–5.0+) is authoritative internally; adapters accept/emit normalized [0, 1] at host boundaries.",
+    "conversion_formula": "core_score = clamp(normalized_fear * 5.0, 0.0, 5.0)",
+    "inverse_formula": "normalized_fear = clamp(core_score / 5.0, 0.0, 1.0)",
+    "threshold_mapping": [
+      {
+        "boundary_normalized": 0.0,
+        "core_score": 0.0,
+        "expected_band": "Calm",
+        "description": "Baseline calm"
+      },
+      {
+        "boundary_normalized": 0.16,
+        "core_score": 0.80,
+        "expected_band": "Alert",
+        "description": "Alert enter threshold (0.8 / 5.0 = 0.16)"
+      },
+      {
+        "boundary_normalized": 0.28,
+        "core_score": 1.40,
+        "expected_band": "Afraid",
+        "description": "Afraid / Anxious enter threshold (1.4 / 5.0 = 0.28)"
+      },
+      {
+        "boundary_normalized": 0.76,
+        "core_score": 3.80,
+        "expected_band": "Panicked",
+        "description": "Panicked enter threshold (3.8 / 5.0 = 0.76)"
+      },
+      {
+        "boundary_normalized": 0.92,
+        "core_score": 4.60,
+        "expected_band": "Routed",
+        "description": "Routed enter threshold (4.6 / 5.0 = 0.92)"
+      },
+      {
+        "boundary_normalized": 1.0,
+        "core_score": 5.0,
+        "expected_band": "Routed",
+        "description": "Maximum normal input (5.0 / 5.0 = 1.0)"
+      }
+    ],
+    "legacy_js_4_2_scale_note": "JS AffectiveAgent historically multiplied normalized fear by FEAR_SCALE = 4.2, leaving Routed (4.6) unreachable without external panic bias. Under DEC-0001, canonical mapping reaches full 5.0 scale."
+  },
+  "observation_expectations": {
+    "consecutive_lock_hold": {
+      "description": "After entering panic, how many further consecutive evaluations at score 1.0 (>= 0.8) stay in panic. Equal on both sides when evaluations are consecutive.",
+      "rust_further_evaluations_held": 9,
+      "js_further_updates_held": 9
+    },
+    "sparse_host_tick_release": {
+      "description": "B7. Rust's lock clock is the host eval_tick; JS counts update() calls. Entered at host tick 10, next evaluation at host tick 25 with score 1.0: Rust has released, JS (one update later) is still locked.",
+      "rust_band": "Afraid",
+      "js_state_after_one_update": "PANIC"
+    },
+    "lock_without_eval_tick": {
+      "description": "B7. Rust arms no lock when eval_tick is None. JS has no tick parameter and always arms one.",
+      "rust_recovery_lock_until": 0,
+      "js_lock_armed": true
+    },
+    "lock_rearm": {
+      "description": "B8. Rust Panicked -> Routed keeps the existing lock (no re-arm). JS re-arms a fresh lock on every re-entry to PANIC from an extended band. These are different transitions (JS has no Routed), so this records behaviour, not a like-for-like comparison.",
+      "rust_lock_until_before": 20,
+      "rust_lock_until_after": 20,
+      "js_rearmed_on_reentry_from_extended_band": true
+    },
+    "score_clamp": {
+      "description": "B9. Rust clamps the score to [0, 5]; JS floors at 0 only and records the raw value. Band outcomes are unaffected.",
+      "rust_final_score": "5",
+      "js_recorded_fear": 999
+    },
+    "berserk_vs_aggressive": {
+      "description": "B10. Rust BerserkOverride is absorbing; JS AGGRESSIVE exits when anger falls below its exit threshold.",
+      "rust_after_score_0": "BerserkOverride",
+      "rust_after_score_5": "BerserkOverride",
+      "js_state_after_anger_drop": "CALM"
+    }
+  },
   "boundary_test_vectors": [
     {
       "id": "VEC-01-CALM-BASELINE",
       "initial_state": "CALM",
       "stimulus_score": 0.0,
       "expected_rust_band": "Calm",
-      "expected_js_state": "CALM"
+      "expected_js_state": "CALM",
+      "rust_scenario": { "initial_band": "Calm", "recovery_lock_until": 0, "eval_tick": 5, "score": 0.0 }
     },
     {
       "id": "VEC-02-ALERT-SUB-THRESHOLD",
       "initial_state": "CALM",
       "stimulus_score": 0.79,
       "expected_rust_band": "Calm",
-      "expected_js_state": "CALM"
+      "expected_js_state": "CALM",
+      "rust_scenario": { "initial_band": "Calm", "recovery_lock_until": 0, "eval_tick": 5, "score": 0.79 }
     },
     {
       "id": "VEC-03-ALERT-EXACT-THRESHOLD",
       "initial_state": "CALM",
       "stimulus_score": 0.80,
       "expected_rust_band": "Alert",
-      "expected_js_state": "ALERT"
+      "expected_js_state": "ALERT",
+      "rust_scenario": { "initial_band": "Calm", "recovery_lock_until": 0, "eval_tick": 5, "score": 0.80 }
     },
     {
       "id": "VEC-04-ALERT-HYSTERESIS-HOLD",
       "initial_state": "ALERT",
       "stimulus_score": 0.55,
       "expected_rust_band": "Alert",
-      "expected_js_state": "ALERT"
+      "expected_js_state": "ALERT",
+      "rust_scenario": { "initial_band": "Alert", "recovery_lock_until": 0, "eval_tick": 5, "score": 0.55 }
     },
     {
       "id": "VEC-05-ALERT-EXIT-TO-CALM",
       "initial_state": "ALERT",
       "stimulus_score": 0.54,
       "expected_rust_band": "Calm",
-      "expected_js_state": "CALM"
+      "expected_js_state": "CALM",
+      "rust_scenario": { "initial_band": "Alert", "recovery_lock_until": 0, "eval_tick": 5, "score": 0.54 }
     },
     {
       "id": "VEC-06-AFRAID-SUB-THRESHOLD",
       "initial_state": "ALERT",
       "stimulus_score": 1.39,
       "expected_rust_band": "Alert",
-      "expected_js_state": "ALERT"
+      "expected_js_state": "ALERT",
+      "rust_scenario": { "initial_band": "Alert", "recovery_lock_until": 0, "eval_tick": 5, "score": 1.39 }
     },
     {
       "id": "VEC-07-AFRAID-EXACT-THRESHOLD",
       "initial_state": "ALERT",
       "stimulus_score": 1.40,
       "expected_rust_band": "Afraid",
-      "expected_js_state": "ANXIOUS"
+      "expected_js_state": "ANXIOUS",
+      "rust_scenario": { "initial_band": "Alert", "recovery_lock_until": 0, "eval_tick": 5, "score": 1.40 }
     },
     {
       "id": "VEC-08-AFRAID-HYSTERESIS-HOLD",
       "initial_state": "ANXIOUS",
       "stimulus_score": 0.80,
       "expected_rust_band": "Afraid",
-      "expected_js_state": "ANXIOUS"
+      "expected_js_state": "ANXIOUS",
+      "rust_scenario": { "initial_band": "Afraid", "recovery_lock_until": 0, "eval_tick": 5, "score": 0.80 }
     },
     {
       "id": "VEC-09-AFRAID-EXIT-TO-ALERT",
       "initial_state": "ANXIOUS",
       "stimulus_score": 0.79,
       "expected_rust_band": "Alert",
-      "expected_js_state": "ALERT"
+      "expected_js_state": "ALERT",
+      "rust_scenario": { "initial_band": "Afraid", "recovery_lock_until": 0, "eval_tick": 5, "score": 0.79 }
     },
     {
       "id": "VEC-10-PANIC-SUB-THRESHOLD",
       "initial_state": "ANXIOUS",
       "stimulus_score": 3.79,
       "expected_rust_band": "Afraid",
-      "expected_js_state": "ANXIOUS"
+      "expected_js_state": "ANXIOUS",
+      "rust_scenario": { "initial_band": "Afraid", "recovery_lock_until": 0, "eval_tick": 5, "score": 3.79 }
     },
     {
       "id": "VEC-11-PANIC-EXACT-THRESHOLD",
       "initial_state": "ANXIOUS",
       "stimulus_score": 3.80,
       "expected_rust_band": "Panicked",
-      "expected_js_state": "PANIC"
+      "expected_js_state": "PANIC",
+      "rust_scenario": { "initial_band": "Afraid", "recovery_lock_until": 0, "eval_tick": 5, "score": 3.80 }
     },
     {
       "id": "VEC-12-PANIC-LOCK-ACTIVE-ENFORCEMENT",
       "initial_state": "PANIC",
       "panic_locked": true,
       "stimulus_score": 0.0,
+      "expected_rust_band": "Calm",
+      "expected_js_state": "ANXIOUS",
+      "divergence": ["B3"],
+      "note": "CORRECTED 2026-10-12; JS lock aligned 2026-10-13. 1.0.0 recorded expected_rust_band=Panicked with the note 'score 0.0 cannot break panic'; that described the old JS hard lock, not Rust. Real Rust only holds a locked Panicked band while score >= exit.afraid (0.8), so at 0.0 it falls through to Calm. JS now follows the same release rule (B1 resolved) but steps PANIC -> ANXIOUS rather than cascading to Calm: the declared B3 stepped ladder.",
+      "rust_scenario": { "initial_band": "Panicked", "recovery_lock_until": 20, "eval_tick": 15, "score": 0.0 }
+    },
+    {
+      "id": "VEC-12b-PANIC-LOCK-ACTIVE-JUST-BELOW-HOLD",
+      "initial_state": "PANIC",
+      "panic_locked": true,
+      "stimulus_score": 0.79,
+      "expected_rust_band": "Alert",
+      "expected_js_state": "ANXIOUS",
+      "divergence": ["B3"],
+      "note": "Just below the lock-hold score (0.8): both engines now RELEASE the lock (B1 resolved 2026-10-13). Rust cascades Panicked -> Alert in one evaluation (0.79 >= exit.alert 0.55); JS steps PANIC -> ANXIOUS only, the declared B3 stepped ladder.",
+      "rust_scenario": { "initial_band": "Panicked", "recovery_lock_until": 20, "eval_tick": 15, "score": 0.79 }
+    },
+    {
+      "id": "VEC-12c-PANIC-LOCK-ACTIVE-AT-HOLD-SCORE",
+      "initial_state": "PANIC",
+      "panic_locked": true,
+      "stimulus_score": 0.80,
       "expected_rust_band": "Panicked",
       "expected_js_state": "PANIC",
-      "note": "While panic lock is active (< 10 ticks), score 0.0 cannot break panic"
+      "note": "At exactly Rust's lock-hold score (0.8) both engines hold: the one lock-active score region where they agree besides >= 1.2.",
+      "rust_scenario": { "initial_band": "Panicked", "recovery_lock_until": 20, "eval_tick": 15, "score": 0.80 }
     },
     {
       "id": "VEC-13-PANIC-POST-LOCK-HYSTERESIS-HOLD",
@@ -143,7 +264,8 @@
       "panic_locked": false,
       "stimulus_score": 1.20,
       "expected_rust_band": "Panicked",
-      "expected_js_state": "PANIC"
+      "expected_js_state": "PANIC",
+      "rust_scenario": { "initial_band": "Panicked", "recovery_lock_until": 0, "eval_tick": 25, "score": 1.20 }
     },
     {
       "id": "VEC-14-PANIC-POST-LOCK-EXIT-TO-AFRAID",
@@ -151,7 +273,8 @@
       "panic_locked": false,
       "stimulus_score": 1.19,
       "expected_rust_band": "Afraid",
-      "expected_js_state": "ANXIOUS"
+      "expected_js_state": "ANXIOUS",
+      "rust_scenario": { "initial_band": "Panicked", "recovery_lock_until": 0, "eval_tick": 25, "score": 1.19 }
     },
     {
       "id": "VEC-15A-EXTREME-INPUT-FROM-ANXIOUS",
@@ -160,7 +283,9 @@
       "expected_clamped_score": 5.0,
       "expected_rust_band": "Routed",
       "expected_js_state": "PANIC",
-      "note": "From ANXIOUS, extreme input immediately enters PANIC in both engines"
+      "divergence": ["B11"],
+      "note": "From ANXIOUS, extreme input enters the top core band in both engines: Rust's top band is Routed, JS's is PANIC (JS has no Routed core band).",
+      "rust_scenario": { "initial_band": "Afraid", "recovery_lock_until": 0, "eval_tick": 5, "score": 999.0 }
     },
     {
       "id": "VEC-15B-EXTREME-INPUT-STEPPED-LADDER",
@@ -168,9 +293,12 @@
       "stimulus_score": 999.0,
       "expected_clamped_score": 5.0,
       "expected_rust_band": "Routed",
+      "expected_js_state": "ALERT",
       "expected_js_state_tick1": "ALERT",
       "expected_js_state_tick3": "PANIC",
-      "architectural_distinction": "Rust resolve_band evaluates multi-tier thresholds in a single tick (Calm -> Routed/Panicked), whereas JS FearCore enforces a 1-band-per-tick hysteresis ladder (Calm -> Alert -> Anxious -> Panic) unless an extended band override is triggered."
+      "divergence": ["B6", "B11"],
+      "architectural_distinction": "Rust resolve_band evaluates multi-tier thresholds in a single tick (Calm -> Routed/Panicked), whereas JS FearCore enforces a 1-band-per-tick hysteresis ladder (Calm -> Alert -> Anxious -> Panic) unless an extended band override is triggered.",
+      "rust_scenario": { "initial_band": "Calm", "recovery_lock_until": 0, "eval_tick": 5, "score": 999.0 }
     },
     {
       "id": "VEC-16-NAN-DEFENSIVE-SANITIZATION",
@@ -179,7 +307,39 @@
       "is_nan": true,
       "expected_clamped_score": 0.0,
       "expected_rust_band": "Calm",
-      "expected_js_state": "CALM"
+      "expected_js_state": "CALM",
+      "rust_scenario": { "initial_band": "Calm", "recovery_lock_until": 0, "eval_tick": 5, "score": null }
+    },
+    {
+      "id": "VEC-17-PANIC-UNLOCKED-DEEP-EXIT",
+      "initial_state": "PANIC",
+      "panic_locked": false,
+      "stimulus_score": 0.30,
+      "expected_rust_band": "Calm",
+      "expected_js_state": "ANXIOUS",
+      "divergence": ["B3"],
+      "note": "Exit side. Rust resolves the whole cascade by score in one evaluation; JS steps down one band per update.",
+      "rust_scenario": { "initial_band": "Panicked", "recovery_lock_until": 0, "eval_tick": 25, "score": 0.30 }
+    },
+    {
+      "id": "VEC-18-AFRAID-DEEP-EXIT",
+      "initial_state": "ANXIOUS",
+      "stimulus_score": 0.30,
+      "expected_rust_band": "Calm",
+      "expected_js_state": "ALERT",
+      "divergence": ["B4"],
+      "note": "Exit side. Rust Afraid below exit.alert (0.55) goes straight to Calm; JS ANXIOUS goes to ALERT first.",
+      "rust_scenario": { "initial_band": "Afraid", "recovery_lock_until": 0, "eval_tick": 5, "score": 0.30 }
+    },
+    {
+      "id": "VEC-19-ALERT-HIGH-JUMP",
+      "initial_state": "ALERT",
+      "stimulus_score": 3.90,
+      "expected_rust_band": "Panicked",
+      "expected_js_state": "ANXIOUS",
+      "divergence": ["B5"],
+      "note": "Entry side. Rust Alert jumps to Panicked in one evaluation; JS ALERT goes to ANXIOUS first.",
+      "rust_scenario": { "initial_band": "Alert", "recovery_lock_until": 0, "eval_tick": 5, "score": 3.90 }
     }
   ]
 }

@@ -333,7 +333,7 @@ export class TradeCaravanSupplyChainSystem {
             // If not routed, advance travel progress
             if (caravan.status === CARAVAN_STATUS.IN_TRANSIT) {
                 const distanceMoved = caravan.speedKmPerTick * deltaTicks;
-                caravan.progress += distanceMoved / corridor.distanceKm;
+                caravan.progress += distanceMoved / Math.max(0.001, corridor.distanceKm || 1.0);
 
                 // Calming in transit
                 caravan.fearLevel = Math.max(0.05, caravan.fearLevel * 0.95);

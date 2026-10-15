@@ -21,11 +21,17 @@ Assets/
       ├── FearAIClient.cs
       ├── FearAgent.cs
       ├── FearAgentHUD.cs
+      ├── FearSessionStore.cs
+      ├── FearSigning.cs
+      ├── FearEncryptedStore.cs
       └── README.md
 ```
 
 ### 1.1 (Optional) Instant Floating HUD
 Attach `FearAgentHUD` to any GameObject that has `FearAgent` to render floating fear meters, action intent labels, and heartbeat BPM in OnGUI / Screen-space with zero texture dependencies.
+
+### 1.2 (Optional) Session Persistence & Encrypted Credentials at Rest
+`FearSessionStore.cs`, `FearSigning.cs`, and `FearEncryptedStore.cs` provide seamless reconnect continuity (`ISessionStore`), private-key transport signing (`FEAR-AI-SIGN-V1`), and authenticated encryption at rest (`FEAR-AI-STORE-V1`) without external dependencies.
 
 ### 2. Add `FearAIClient` to Your Scene
 1. Create an empty GameObject in your initial scene named `FearAI_Manager`.

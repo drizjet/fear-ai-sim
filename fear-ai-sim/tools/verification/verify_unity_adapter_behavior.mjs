@@ -29,6 +29,10 @@
  *   * the server runs with `--signature-policy=required`, which constrains only
  *     sessions that have registered a key: phases 1-2 are the control that this
  *     policy does not lock anyone else out, and phase 3 is the point of it.
+ *   * the adapter's lifecycle bodies are executed by the shim's `UnityLifecycle`, so
+ *     `OnEnable`, `Start`, `Update`, `OnDisable` and `OnDestroy` are no longer shipped
+ *     unexecuted: before it, only `Awake` was ever invoked and only by this harness
+ *     calling it by hand.
  *
  * Two phases in two processes, because "the host restarted" has to be true rather
  * than simulated in a variable. Phase 2 asserting GRANTED (with zero refusals)
@@ -37,12 +41,18 @@
  * from disk is what proved the identity.
  *
  * WHAT IT STILL DOES NOT PROVE - reported as limits, not buried
- *   * MonoBehaviour lifecycle: the harness invokes `Awake` by reflection, so
- *     whether the engine calls it at the expected time is an Editor question.
+ *   * WHEN Unity calls the lifecycle. The six bodies are now DRIVEN, not declared
+ *     untestable: `UnityLifecycle` runs Awake then OnEnable, Start once then Update,
+ *     and OnDisable then OnDestroy on destruction, and phase 1 asserts that order on
+ *     an instrumented component before it asserts anything about the adapter. What is
+ *     not modelled is the timing - construction and waking are separate phases here,
+ *     `FixedUpdate` (the async control-plane tick) is deliberately not invoked from
+ *     the frame pump, and an `async void` body is invoked without being awaited - so
+ *     whether Unity calls these at that point remains an Editor question.
  *   * Frame scheduling: the shim runs coroutines to completion synchronously.
  *   * API fidelity: the shim's UnityWebRequest/JsonUtility are implementations,
  *     not Unity's. A stub-vs-real mismatch would compile and pass here.
- *   * Anything visual: `FearAgent.cs` and `FearAgentHUD.cs` are not covered.
+ *   * Real display buffer: `FearAgentHUD.cs` renders IMGUI elements headlessly against shimmed GUI/Texture2D without a physical GPU display.
  *
  * Hard Rule 9 note: standalone deterministic probe; not an automated test runner.
  */
@@ -70,7 +80,11 @@ const ADAPTER_FILES = [
     // itself - `verify_store_encryption.mjs` compiles it and runs it against the
     // Node and Godot writers - but `FearSessionStore.cs` implements the store half
     // against it, so it has to be present for either file to build at all.
-    'packages/adapters/unity/Runtime/FearEncryptedStore.cs'
+    'packages/adapters/unity/Runtime/FearEncryptedStore.cs',
+    // Agent sensory perception, intent/speed translation, and IMGUI HUD rendering
+    // are compiled and executed in Phase 1 against a live server.
+    'packages/adapters/unity/Runtime/FearAgent.cs',
+    'packages/adapters/unity/Runtime/FearAgentHUD.cs'
 ];
 
 const OWNER_SESSION = 'unity_host';
@@ -405,8 +419,12 @@ async function main() {
         console.log(`Server policy for this run: ${SIGNATURE_POLICY} (phases 1-2 never register a key, so they are the control).`);
         console.log('Phase 4 needs no server, and its store file is read back by BOTH the adapter and');
 console.log('the Node reference, so the container is not checked only by its own author.');
-console.log('Limits NOT covered here: MonoBehaviour lifecycle and frame scheduling (Editor only),');
-        console.log('shim-vs-real API fidelity, and the non-control-plane files (FearAgent/_HUD).');
+        console.log('The lifecycle bodies are DRIVEN here (Awake/OnEnable/Start/Update/OnDisable/OnDestroy, in');
+        console.log('Unity\'s order, asserted on an instrumented component first), so a body that can never');
+        console.log('work is caught without an Editor. FearAgent and FearAgentHUD are compiled and executed');
+        console.log('in Phase 1 (sensory threat scan, fear band unpacking, speed scaling, audio pitch clamping,');
+        console.log('HUD OnGUI, outcome reporting, and callback teardown). Remaining limits: WHEN Unity calls them,');
+        console.log('frame scheduling, and shim-vs-real API fidelity.');
         console.log('============================================================');
     } finally {
         if (server.exitCode === null) server.kill('SIGKILL');

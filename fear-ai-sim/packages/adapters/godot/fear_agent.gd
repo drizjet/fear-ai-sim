@@ -23,6 +23,8 @@ signal audio_hints_received(hints: Dictionary)
 @export_range(0.0, 1.0) var leadership: float = 0.5
 @export_range(0.0, 1.0) var fear_baseline: float = 0.5
 @export_range(0.0, 1.0) var resilience: float = 0.5
+## Auditory curiosity axis (IntentResolver openness). Neutral 0.5.
+@export_range(0.0, 1.0) var openness: float = 0.5
 
 @export_group("Sensor Quality (opt-in, R4)")
 ## Visual channel intensity. Negative = channel absent (legacy shape).
@@ -38,6 +40,7 @@ signal audio_hints_received(hints: Dictionary)
 ## List of visible peer agent IDs.
 @export var peer_ids: Array[String] = []
 
+var current_raw_fear: float = 0.0
 var current_fear_band: String = "CALM"
 var current_intent: String = "IDLE_VIGILANT"
 var current_urgency: float = 0.0
@@ -80,7 +83,8 @@ func _trait_payload() -> Dictionary:
 		"neuroticism": neuroticism,
 		"resilience": resilience,
 		"fear": fear_baseline,
-		"leadership": leadership
+		"leadership": leadership,
+		"openness": openness
 	}
 
 func _physics_process(_delta: float) -> void:
@@ -139,6 +143,18 @@ func _scan_threats() -> Array[Dictionary]:
 					"z": node.global_position.z,
 					"intensity": 1.0
 				})
+		elif node is Node2D and _parent_body is Node2D:
+			var d = _parent_body.global_position.distance_to(node.global_position)
+			if d < sight_range:
+				threats.append({
+					"id": node.name,
+					"type": "PREDATOR",
+					"distance": d,
+					"x": node.global_position.x,
+					"y": node.global_position.y,
+					"z": 0.0,
+					"intensity": 1.0
+				})
 	return threats
 
 func _on_state_received(id: String, state: Dictionary) -> void:
@@ -146,6 +162,9 @@ func _on_state_received(id: String, state: Dictionary) -> void:
 		return
 		
 	var prev_band = current_fear_band
+	var aff = state.get("affective_state", {})
+	if aff.has("raw_fear"):
+		current_raw_fear = float(aff.get("raw_fear"))
 	current_fear_band = state.get("fear_band", "CALM")
 	var intent = state.get("action_intent", {})
 	current_intent = intent.get("type", "IDLE_VIGILANT")
@@ -181,6 +200,7 @@ func get_movement_hint() -> Dictionary:
 		"intent": current_intent,
 		"urgency": current_urgency,
 		"fear_band": current_fear_band,
+		"raw_fear": current_raw_fear,
 		"vector": recommended_vector,
 		"base_speed": base_speed,
 		"speed_mult": speed_mult

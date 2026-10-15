@@ -26,6 +26,7 @@ namespace FearAI
         [SerializeField] private float valence = 0.5f;
         [SerializeField] private string currentIntent = "IDLE_VIGILANT";
         [SerializeField] private float intentUrgency = 0.0f;
+        [SerializeField] private int heartbeatBpm = 60;
 
         [Header("Advisory Speed Hints (host applies)")]
         [SerializeField] private float panicSpeedMultiplier = 1.6f;
@@ -37,6 +38,10 @@ namespace FearAI
         public string CurrentIntent => currentIntent;
         public string CurrentFearBand => currentFearBand;
         public float IntentUrgency => intentUrgency;
+        public float RawFear => rawFear;
+        public float CurrentFear => rawFear;
+        public int HeartbeatBpm => heartbeatBpm;
+        public int CurrentHeartbeatBpm => heartbeatBpm;
         public CapabilityDowngrade CurrentCapabilityDowngrade { get; private set; }
         public AffordanceDowngrade CurrentAffordanceDowngrade { get; private set; }
 
@@ -135,9 +140,13 @@ namespace FearAI
             CurrentAffordanceDowngrade = state.affordance_downgrade;
 
             // Host game applies NavMesh / character movement from CurrentIntent + RecommendedVector.
-            if (heartbeatAudio != null && state.audio_hints != null)
+            if (state.audio_hints != null)
             {
-                heartbeatAudio.pitch = Mathf.Clamp(state.audio_hints.heartbeat_bpm / 60.0f, 0.8f, 2.2f);
+                heartbeatBpm = state.audio_hints.heartbeat_bpm;
+                if (heartbeatAudio != null)
+                {
+                    heartbeatAudio.pitch = Mathf.Clamp(heartbeatBpm / 60.0f, 0.8f, 2.2f);
+                }
             }
         }
 
