@@ -2007,9 +2007,16 @@ export class FearServer {
                 }
                 const agent = this.simulation.agents.get(agentId);
                 if (agent) {
-                    agent.x = rec.position.x;
-                    agent.y = rec.position.y;
-                    agent.z = rec.position.z;
+                    // This branch assigns straight from a decoded binary frame,
+                    // which is raw float32 off the wire and has never been
+                    // through `ProtocolValidator`. A float32 carries NaN and
+                    // ±Infinity as ordinary bit patterns, so this is the
+                    // easiest way for a non-finite coordinate to reach stored
+                    // agent state — and `AffectiveAgent.tick` only overwrites a
+                    // coordinate when it is finite, so it would never recover.
+                    agent.x = Number.isFinite(rec.position?.x) ? rec.position.x : agent.x;
+                    agent.y = Number.isFinite(rec.position?.y) ? rec.position.y : agent.y;
+                    agent.z = Number.isFinite(rec.position?.z) ? rec.position.z : agent.z;
                 }
 
                 batchObservations.push({

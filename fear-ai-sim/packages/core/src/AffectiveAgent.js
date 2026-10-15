@@ -89,16 +89,22 @@ export class AffectiveAgent {
             curiosity: sanitizeTrait(traits?.curiosity ?? traits?.openness, DEFAULT_TRAITS.curiosity)
         };
 
-        // Spatial state (reported by host game)
-        this.x = options.x ?? 0;
-        this.y = options.y ?? 0;
-        this.z = options.z ?? 0;
+        // Spatial state (reported by host game). `?? 0` would let a NaN or an
+        // Infinity through, and because `tick()` only overwrites a coordinate
+        // when it is finite, once one of these is non-finite it stays
+        // non-finite for the life of the agent: a permanent, silently
+        // unrecoverable position. Same rule as the context reads below.
+        this.x = finiteOr(options.x, 0);
+        this.y = finiteOr(options.y, 0);
+        this.z = finiteOr(options.z, 0);
         this.lastVelocity = { x: 0, y: 0, z: 0 };
 
-        // Physiological & Psychological status
-        this.energy = options.energy ?? 1.0;
-        this.health = options.health ?? 1.0;
-        this.morale = options.morale ?? 1.0;
+        // Physiological & Psychological status. `energy`, `health` and `morale`
+        // feed dominance, arousal and valence directly, so a non-finite value
+        // here reached the advisory payload as well as the stored state.
+        this.energy = finiteOr(options.energy, 1.0);
+        this.health = finiteOr(options.health, 1.0);
+        this.morale = finiteOr(options.morale, 1.0);
         this.adrenaline = 0.0;
         this.uncertainty = 0.5;
 
