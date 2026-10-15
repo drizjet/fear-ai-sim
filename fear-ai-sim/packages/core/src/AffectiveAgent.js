@@ -10,6 +10,24 @@ import { IntentResolver } from './IntentResolver.js';
 import { PsychoacousticSynthesizer } from './PsychoacousticSynthesizer.js';
 import { DeterministicRng } from './DeterministicRng.js';
 
+/**
+ * The one shape for "this numeric input might not be a number".
+ *
+ * `value ?? fallback` rejects only null/undefined, so a NaN or ±Infinity from
+ * the host passes through and — because `Math.max`/`Math.min`/`Math.pow` all
+ * propagate NaN, and every clamp downstream is built from them — no clamp in
+ * the affective pipeline catches it either. This drops a non-finite value to
+ * its fallback and leaves a finite one untouched, which is the same rule
+ * `ProtocolValidator.clamp01Finite` applies on the control-plane path. Kept at
+ * module scope so the agent and any future caller share one definition rather
+ * than one per read.
+ *
+ * @param {*} value
+ * @param {number} fallback
+ * @returns {number}
+ */
+const finiteOr = (value, fallback) => (Number.isFinite(value) ? value : fallback);
+
 // Last-resort fallback only. Anything that constructs agents on behalf of a
 // seeded owner (see RuntimeSimulation.registerAgent) passes an explicit `seed`,
 // because this module-global counter is PROCESS-wide: two simulations built with
@@ -244,13 +262,30 @@ export class AffectiveAgent {
     tick(dt = 0.016, observations = {}, context = {}) {
         this.tickCount++;
         const safeDt = (typeof dt === 'number' && Number.isFinite(dt) && dt >= 0) ? Math.min(dt, 1.0) : 0.016;
-        let traumaDread = context.traumaDread ?? 0.0;
+
+        // World-context inputs. `?? 0.0` only rejects null/undefined, so it lets
+        // NaN and ±Infinity straight into the fear math below — and the damage
+        // is not confined to this tick: `totalPerceivedThreat` feeds
+        // `currentDominance`, which is STORED on the agent and rides the
+        // snapshot, so one non-finite context value poisons the agent
+        // permanently. NaN is also not equal to itself, so a poisoned agent no
+        // longer compares equal to its own restored twin and the determinism
+        // invariant is lost, not merely the number.
+        //
+        // These four follow the same rule `safeDt`, `reportedDanger` and the
+        // energy/health reads already use: a non-finite context value is UNKNOWN
+        // and is dropped to its neutral default. Finite values pass through
+        // unchanged.
+        // `traumaDread` is a `let` because the trauma-engine and trauma-zone
+        // readbacks below fold into it by max(); the initial host/context
+        // value still has to arrive finite for that merge to mean anything.
+        let traumaDread = finiteOr(context.traumaDread, 0.0);
         let traumaEngineState = null;
         let zoneDread = 0;
         const rng = typeof context.rng === 'function' ? context.rng : this._defaultRngFn;
-        const pacingIntensity = context.pacingIntensity ?? 1.0;
-        const contagionFear = context.contagionFear ?? 0.0;
-        const leaderCalm = context.leaderCalm ?? 0.0;
+        const pacingIntensity = finiteOr(context.pacingIntensity, 1.0);
+        const contagionFear = finiteOr(context.contagionFear, 0.0);
+        const leaderCalm = finiteOr(context.leaderCalm, 0.0);
 
         // 1. Update Spatial Coordinates if supplied by host
         if (typeof observations.x === 'number' && Number.isFinite(observations.x)) this.x = observations.x;
