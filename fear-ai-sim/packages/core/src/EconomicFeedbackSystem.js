@@ -160,8 +160,17 @@ export class EconomicFeedbackSystem {
      */
     _updateMarketPrices(market) {
         for (const [comm, basePrice] of Object.entries(BASE_COMMODITY_PRICES)) {
-            const stock = market.stockpiles[comm] || 0.0;
-            const target = market.targetStockpiles[comm] || 1.0;
+            const stock = market.stockpiles[comm] ?? 0.0;
+            // A `|| 1.0` fallback conflated "no target recorded" with
+            // "target is zero". For a commodity the settlement deliberately
+            // does not want (target 0), the 1.0 fabricated a supply DEFICIT
+            // whenever stock was below one unit and pushed that commodity's
+            // price UP — price signals for goods nobody wants. An explicit 0
+            // target now falls through to the surplus branch, where the divisor
+            // is checked so a zero target rests on the documented 0.2x price
+            // floor: no NaN, no fabricated premium. See the surplus branch
+            // below for why `0 / 0` has to be guarded explicitly.
+            const target = market.targetStockpiles[comm] ?? 1.0;
 
             let multiplier = 1.0;
             if (stock < target) {
@@ -169,9 +178,18 @@ export class EconomicFeedbackSystem {
                 const deficit = target - stock;
                 multiplier = 1.0 + (deficit / Math.max(1.0, stock + 10.0));
             } else {
-                // Surplus -> price decreases
+                // Surplus -> price decreases. A zero target is permanent
+                // surplus, so the price rests on the documented 0.2x floor.
+                // The divisor must be checked rather than relied on to be
+                // `Infinity`: with stock == target == 0 the ratio is `0 / 0`,
+                // which is NaN, and `Math.max(0.2, NaN)` is NaN — a zero-target
+                // commodity would have priced itself to NaN and poisoned every
+                // downstream quote.
                 const surplus = stock - target;
-                multiplier = Math.max(0.2, 1.0 - (surplus / (target * 2.0)));
+                const surplusDivisor = target * 2.0;
+                multiplier = surplusDivisor > 0
+                    ? Math.max(0.2, 1.0 - (surplus / surplusDivisor))
+                    : 0.2;
             }
 
             market.prices[comm] = Math.min(
@@ -192,7 +210,7 @@ export class EconomicFeedbackSystem {
 
         let totalPlunderValue = market.wealth;
         for (const [comm, stock] of Object.entries(market.stockpiles)) {
-            totalPlunderValue += stock * (market.prices[comm] || 10.0);
+            totalPlunderValue += stock * (market.prices[comm] ?? 10.0);
         }
 
         const defenseScore = (market.garrison * 100.0) + (market.escortReadiness * 50.0);
@@ -323,7 +341,11 @@ export class EconomicPathologyDetector {
         for (const [id, market] of econSystem.settlementMarkets.entries()) {
             // 1. Infinite Wealth / Unbounded Stockpile Accumulation
             for (const [comm, stock] of Object.entries(market.stockpiles)) {
-                const target = market.targetStockpiles[comm] || 100.0;
+                // `|| 100.0` conflated "no target recorded" with "target is
+                // zero". A zero target is now honoured, and the ratio is kept
+                // non-vacuous with a floor of 1.0 so `stock > target * 20`
+                // cannot silently become `stock > 0` for every commodity.
+                const target = Math.max(1.0, market.targetStockpiles[comm] ?? 100.0);
                 if (stock > target * 20.0) {
                     pathologies.push({
                         type: ECONOMIC_PATHOLOGIES.INFINITE_WEALTH_EXPLOIT,
@@ -344,7 +366,10 @@ export class EconomicPathologyDetector {
 
             // 3. Price Runaway Explosion
             for (const [comm, price] of Object.entries(market.prices)) {
-                const base = BASE_COMMODITY_PRICES[comm] || 10.0;
+                // Same falsy-zero conflation: an absent base falls back to 10,
+                // while an explicit 0 is floored so `price >= base * 10` stays
+                // a real runaway test instead of firing on every quote.
+                const base = Math.max(0.01, BASE_COMMODITY_PRICES[comm] ?? 10.0);
                 if (price >= base * 10.0) {
                     pathologies.push({
                         type: ECONOMIC_PATHOLOGIES.PRICE_RUNAWAY_EXPLOSION,

@@ -337,7 +337,9 @@ export class SituationStrengthProfiler {
                         id: 'threat_primary',
                         distance: situationConfig.threatDistance,
                         intensity: situationConfig.threatIntensity,
-                        x: agent.x + (situationConfig.threatDistance || 10),
+                        // `|| 10` swallowed an explicit 0, which here means
+                        // "the threat stands on the agent". Absent falls back.
+                        x: agent.x + (situationConfig.threatDistance ?? 10),
                         y: agent.y,
                         z: agent.z,
                         inCombat: situationConfig.threatDistance <= 3.0
