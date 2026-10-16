@@ -271,6 +271,11 @@ jobs:
     # refuses to build on a commit this run did not start from.
     - name: Propose tonight's night as a reviewed pull request
       if: github.event_name == 'schedule' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      env:
+        # `gh` reads GH_TOKEN; without it the fold pushes the branch and then cannot
+        # open the pull request, leaving the night on a branch nobody is told about.
+        # The job's `pull-requests: write` permission arrives as this same token.
+        GH_TOKEN: ${{ github.token }}
       run: pwsh -File tools/ci/open_ledger_night_pr.ps1 -Execute
       working-directory: fear-ai-sim
 
