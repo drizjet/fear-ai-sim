@@ -2656,6 +2656,7 @@ function handleBudget(options) {
     console.log(`  • Current Mode:            ${report.mode}\n`);
     console.log(`Execution Performance:`);
     console.log(`  • Processed Agents:        ${report.processedCount} / ${numAgents}`);
+    console.log(`  • Failed Agent Updates:    ${report.failedCount}`);
     console.log(`  • Remaining Backlog:       ${report.remainingQueueDepth}`);
     console.log(`  • Elapsed CPU Time:        ${report.elapsedMs.toFixed(3)} ms`);
     console.log(`  • Budget Exceeded:         ${report.budgetExceeded ? 'YES (Backpressure engaged)' : 'NO (Fully completed)'}`);

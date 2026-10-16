@@ -36,6 +36,7 @@ export class AdaptiveBudgetBackpressureController {
         this.metrics = {
             totalSubmitted: 0,
             totalProcessed: 0,
+            totalTickFailures: 0,
             totalCoalesced: 0,
             totalDropped: 0,
             frameHistory: []
@@ -102,6 +103,11 @@ export class AdaptiveBudgetBackpressureController {
     /**
      * Executes queued agent updates within the allotted time budget (milliseconds).
      * Stops execution immediately when time budget is exhausted, carrying forward remaining work.
+     * Failure isolation: a `tickRunner` that throws for one agent does not stop the
+     * batch and does not crash the frame — its queue entry is cleared like any other's,
+     * but it is counted in `failedCount` / `totalTickFailures`, never in
+     * `processedCount` / `totalProcessed`, so a failing update is visible instead of
+     * vanishing into a success count.
      */
     processBatch(tickRunner, currentTick = 0, customBudgetMs = null) {
         const budgetMs = customBudgetMs ?? this.config.maxFrameTimeMs;
@@ -110,6 +116,7 @@ export class AdaptiveBudgetBackpressureController {
         if (this.queue.size === 0) {
             return {
                 processedCount: 0,
+                failedCount: 0,
                 remainingQueueDepth: 0,
                 elapsedMs: 0,
                 budgetExceeded: false,
@@ -127,6 +134,7 @@ export class AdaptiveBudgetBackpressureController {
         items.sort((a, b) => b.priorityScore - a.priorityScore);
 
         let processedCount = 0;
+        let failedCount = 0;
         let budgetExceeded = false;
         const maxBatch = this.config.maxAgentsPerBatch;
 
@@ -145,13 +153,18 @@ export class AdaptiveBudgetBackpressureController {
             // Execute the agent tick function
             try {
                 tickRunner(item.agentId, item.telemetry);
+                processedCount++;
+                this.metrics.totalProcessed++;
             } catch (err) {
-                // Defensive isolation: error in one agent does not crash batch
+                // Defensive isolation: error in one agent does not crash batch —
+                // but it must not be counted as processed either: the queue entry
+                // is still cleared and the failure is surfaced in the frame report
+                // and cumulative telemetry instead of vanishing into a success count.
+                failedCount++;
+                this.metrics.totalTickFailures++;
             }
 
             this.queue.delete(item.agentId);
-            processedCount++;
-            this.metrics.totalProcessed++;
         }
 
         const totalElapsedMs = performance.now() - startTime;
@@ -168,6 +181,7 @@ export class AdaptiveBudgetBackpressureController {
         const frameReport = {
             tick: currentTick,
             processedCount,
+            failedCount,
             remainingQueueDepth: this.queue.size,
             elapsedMs: Number(totalElapsedMs.toFixed(3)),
             budgetExceeded,
@@ -191,6 +205,7 @@ export class AdaptiveBudgetBackpressureController {
             currentMode: this.currentMode,
             totalSubmitted: this.metrics.totalSubmitted,
             totalProcessed: this.metrics.totalProcessed,
+            totalTickFailures: this.metrics.totalTickFailures,
             totalCoalesced: this.metrics.totalCoalesced,
             totalDropped: this.metrics.totalDropped,
             coalesceRatio: this.metrics.totalSubmitted > 0
