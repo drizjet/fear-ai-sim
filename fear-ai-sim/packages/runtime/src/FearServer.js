@@ -594,7 +594,17 @@ export class FearServer {
                 if (!val.valid) {
                     return this._sendJson(res, 400, { errors: val.errors, code: val.code });
                 }
-                this.simulation.queueObservation(val.value.agent_id, val.value);
+                // The receipt is the honesty of this route: an observation for
+                // an agent that is not registered is refused with 404, not
+                // answered "QUEUED" for something that was discarded.
+                const receipt = this.simulation.queueObservation(val.value.agent_id, val.value);
+                if (!receipt.queued) {
+                    return this._sendJson(res, 404, {
+                        error: `Unknown agent: ${val.value.agent_id}`,
+                        code: ERROR_CODES.AGENT_NOT_FOUND,
+                        agent_id: val.value.agent_id
+                    });
+                }
                 return this._sendJson(res, 200, { status: 'QUEUED', agent_id: val.value.agent_id });
             }
 
@@ -2414,7 +2424,15 @@ export class FearServer {
             }
 
             case MESSAGE_TYPES.OBSERVATION_DISPATCH: {
-                this.simulation.queueObservation(payload.agent_id, payload);
+                // Fire-and-forget for a registered agent (no ack by design);
+                // a dispatch naming an unknown agent is answered with an
+                // ERROR_RESPONSE instead of vanishing — the socket learns
+                // its agent_id is stale rather than assuming the observation
+                // landed.
+                const receipt = this.simulation.queueObservation(payload.agent_id, payload);
+                if (!receipt.queued) {
+                    this._sendWsError(ws, `Unknown agent: ${payload.agent_id}`, ERROR_CODES.AGENT_NOT_FOUND, correlationId);
+                }
                 break;
             }
 
