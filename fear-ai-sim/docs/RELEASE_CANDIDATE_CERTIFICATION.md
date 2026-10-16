@@ -102,7 +102,7 @@ Elixir + Rust NIF tree. Presence in this repository is not a release claim.
 | Host provenance reconciliation | `node tools/verification/verify_host_provenance.mjs` | PASS (re-derives the divergent-lineage root cause read-only; gracefully records a skip when the sibling checkout is unavailable) |
 | C# adapter build | `dotnet build packages/adapters/csharp/FearAI.Client.csproj` | Recorded 0 warnings, 0 errors in the Phase 1 evidence; not rerun in this audit |
 
-Current JS evidence: **46 standalone verification probes — 38 runtime/behaviour Node harnesses (including the multi-process probes `verify_unity_adapter_behavior.mjs` and `verify_host_token_persistence.mjs`, `verify_transport_signing.mjs`, `verify_fuzz_arbitration.mjs`, the host-provenance reconciliation probe `verify_host_provenance.mjs`, the opt-in service promotion probes `verify_information_propagation_optin.mjs`, `verify_pack_coordination_optin.mjs`, `verify_macro_settlement_optin.mjs`, `verify_epistemic_belief_optin.mjs`, `verify_server_epistemic_belief.mjs`, `verify_moral_dissonance_optin.mjs`, `verify_server_moral_dissonance.mjs`, `verify_persona_signatures_optin.mjs`, `verify_server_persona_signatures.mjs`, `verify_faction_governance_optin.mjs`, and `verify_server_faction_governance.mjs` which prove release-surface promotions both ways, `verify_contagion_transmission.mjs`, `verify_advisory_numeric_hygiene.mjs` which pins that the advisory numeric surfaces never hand a host a value meaning something other than what it says, `verify_nonfinite_context_hygiene.mjs` which pins that a non-finite world-context value is dropped to its neutral default instead of entering the affective math or persisting on the agent, `verify_nonfinite_position_hygiene.mjs` which pins that a non-finite agent position reported over JSON, batched registration or the binary wire is treated as unknown rather than written into stored agent state, and `verify_wire_numeric_boundary.mjs` which pins that the binary V2 wire never carries a non-finite number across an engine boundary in either direction), without asserting host-authority or performance claims), 3 Godot source probes (`verify_godot_stations.mjs`, `verify_godot_fallback_parity.mjs`, `verify_godot_live_pipeline.mjs`), 1 .NET compile-and-run check (`verify_dotnet_adapters_compile.mjs`, which also executes the package's EditMode fixtures), 1 Unity behaviour harness (`verify_unity_adapter_behavior.mjs`), 1 release-claim document tripwire, 1 examples-inventory gate (`verify_examples_inventory.mjs`, which refuses a success verdict from any example nothing runs), and 1 Unity Editor gate — with zero failures in this audit.** One of them, `verify_unity_editor_tests.mjs`, reports `SKIPPED` rather than `PASS` because no Unity Editor is installed here; its exit code stays 0 by design, and it is not counted as a pass anywhere. The metadata-only performance measurement (`measure_runtime_performance.mjs`) is counted separately, because it is not a pass/fail gate. The Godot **live in-engine** evidence is separate from all of these: it requires the external Godot binary and is captured by `run-godot-inengine-evidence.mjs`, which runs four suites including the live-session showcase. Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
+Current JS evidence: **47 standalone verification probes — 39 runtime/behaviour Node harnesses (including the multi-process probes `verify_unity_adapter_behavior.mjs` and `verify_host_token_persistence.mjs`, `verify_transport_signing.mjs`, `verify_fuzz_arbitration.mjs`, the host-provenance reconciliation probe `verify_host_provenance.mjs`, the opt-in service promotion probes `verify_information_propagation_optin.mjs`, `verify_pack_coordination_optin.mjs`, `verify_macro_settlement_optin.mjs`, `verify_epistemic_belief_optin.mjs`, `verify_server_epistemic_belief.mjs`, `verify_moral_dissonance_optin.mjs`, `verify_server_moral_dissonance.mjs`, `verify_persona_signatures_optin.mjs`, `verify_server_persona_signatures.mjs`, `verify_faction_governance_optin.mjs`, and `verify_server_faction_governance.mjs` which prove release-surface promotions both ways, `verify_contagion_transmission.mjs`, `verify_advisory_numeric_hygiene.mjs` which pins that the advisory numeric surfaces never hand a host a value meaning something other than what it says, `verify_nonfinite_context_hygiene.mjs` which pins that a non-finite world-context value is dropped to its neutral default instead of entering the affective math or persisting on the agent, `verify_nonfinite_position_hygiene.mjs` which pins that a non-finite agent position reported over JSON, batched registration or the binary wire is treated as unknown rather than written into stored agent state, and `verify_wire_numeric_boundary.mjs` which pins that the binary V2 wire never carries a non-finite number across an engine boundary in either direction), without asserting host-authority or performance claims), 3 Godot source probes (`verify_godot_stations.mjs`, `verify_godot_fallback_parity.mjs`, `verify_godot_live_pipeline.mjs`), 1 .NET compile-and-run check (`verify_dotnet_adapters_compile.mjs`, which also executes the package's EditMode fixtures), 1 Unity behaviour harness (`verify_unity_adapter_behavior.mjs`), 1 release-claim document tripwire, 1 examples-inventory gate (`verify_examples_inventory.mjs`, which refuses a success verdict from any example nothing runs), and 1 Unity Editor gate — with zero failures in this audit.** One of them, `verify_unity_editor_tests.mjs`, reports `SKIPPED` rather than `PASS` because no Unity Editor is installed here; its exit code stays 0 by design, and it is not counted as a pass anywhere. The metadata-only performance measurement (`measure_runtime_performance.mjs`) is counted separately, because it is not a pass/fail gate. The Godot **live in-engine** evidence is separate from all of these: it requires the external Godot binary and is captured by `run-godot-inengine-evidence.mjs`, which runs four suites including the live-session showcase. Host diagnostic and C# build results remain recorded external evidence, not fresh clean-worktree results here.
 
 ---
 
@@ -203,7 +203,7 @@ All twenty-five JS verification probes in `tools/verification/` were rerun in th
 
 ### Probe roster (recorded run, generated)
 
-**Recorded 2026-10-16T01:47:41.690Z — 46 probes, 45 passed, 1 passed with declared skips, 0 failed, on Node v24.20.0 / win32.**
+**Recorded 2026-10-16T14:01:36.446Z — 47 probes, 46 passed, 1 passed with declared skips, 0 failed, on Node v24.20.0 / win32.**
 This is a **recorded** run of the same suite CI re-runs (`npm run verify:probes`, the `probes`
 job, `windows-latest`), taken from `evidence/probe_suite_report.json`. A row marked
 **PASSED WITH DECLARED SKIPS** is *not* a pass: it is a probe that reported, in its own words,
@@ -219,6 +219,7 @@ here too — the roster renders whatever happened rather than only what succeede
 | `verify_counterfactual_world.mjs` | PASSED | — | SUCCESS: WorldCounterfactualEngine verification passed. |
 | `verify_cross_tree_parity.mjs` | PASSED | — | SUCCESS: 22 cross-tree vectors verified against the EXECUTED Rust oracle: 15 agree, 7 declared divergences (each reproduced on both sides); lock/clamp/berserk observations B7-B10 hold; DEC-0001 boundary scale table verified. |
 | `verify_dashboard_endpoints.mjs` | PASSED | — | Server stopped cleanly. |
+| `verify_determinism_contract.mjs` | PASSED | 55 | SUCCESS: All 55 determinism contract assertions passed. |
 | `verify_dotnet_adapters_compile.mjs` | PASSED | — | SUCCESS: both .NET adapters compile and the Unity EditMode fixtures RUN (27 checks). |
 | `verify_epistemic_belief_optin.mjs` | PASSED | 46 | SUCCESS: All 46 Epistemic Belief opt-in assertions passed. |
 | `verify_examples_inventory.mjs` | PASSED | 23 | SUCCESS: every example is classified, and every stated verdict is earned or absent. |
@@ -316,10 +317,11 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 
 **No probe disagreed with itself across the recorded runs.** That is a statement about these 25 probes on this machine over up to 3 attempts each, not about determinism in general, and not about any machine but the recorded one.
 
-**Never repeated at all (21) — in the recorded single run, absent from the repeated one, so nothing is known about whether they are deterministic:**
+**Never repeated at all (22) — in the recorded single run, absent from the repeated one, so nothing is known about whether they are deterministic:**
 
 - `verify_advisory_numeric_hygiene.mjs`
 - `verify_contagion_transmission.mjs`
+- `verify_determinism_contract.mjs`
 - `verify_epistemic_belief_optin.mjs`
 - `verify_examples_inventory.mjs`
 - `verify_faction_governance_optin.mjs`
@@ -348,9 +350,10 @@ No probe has ever disagreed with itself in the ledger. That is a statement about
 
 **Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 0 of 1 do; 1 predates per-run duration recording and is excluded rather than treated as zero. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
 
-**Never recorded in the ledger (21)** — nothing is known about whether these are deterministic:
+**Never recorded in the ledger (22)** — nothing is known about whether these are deterministic:
 - `verify_advisory_numeric_hygiene.mjs`
 - `verify_contagion_transmission.mjs`
+- `verify_determinism_contract.mjs`
 - `verify_epistemic_belief_optin.mjs`
 - `verify_examples_inventory.mjs`
 - `verify_faction_governance_optin.mjs`
