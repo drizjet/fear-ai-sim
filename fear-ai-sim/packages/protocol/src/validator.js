@@ -281,7 +281,7 @@ export class ProtocolValidator {
                 agent_id: String(raw.agent_id).trim().slice(0, 256),
                 name: raw.name ? String(raw.name).slice(0, 256) : String(raw.agent_id).trim().slice(0, 256),
                 traits: sanitizedTraits,
-                initial_position: raw.initial_position || { x: 0, y: 0, z: 0 },
+                initial_position: ProtocolValidator._sanitizePosition(raw.initial_position),
                 ...ProtocolValidator.sanitizeClaim(raw)
             }
         };
@@ -840,6 +840,34 @@ export class ProtocolValidator {
                 dt,
                 observations
             }
+        };
+    }
+
+    /**
+     * Sanitize a host-reported position into three finite numbers.
+     *
+     * `raw.initial_position || { x: 0, y: 0, z: 0 }` used to pass the object
+     * through untouched, which meant a coordinate the host reported as
+     * non-finite reached stored agent state as-is. JSON carries it as an
+     * out-of-range magnitude (`JSON.parse('1e400')` is `Infinity`), and the
+     * binary wire carries it as an ordinary float32 bit pattern. Because
+     * `AffectiveAgent.tick` only overwrites a coordinate when it is finite,
+     * such a coordinate never recovers — and `getState()`/`setState()` then
+     * turn it into `null` on the wire, silently discarding the position.
+     *
+     * A non-finite coordinate is UNKNOWN, so it falls back to the origin rather
+     * than poisoning the agent. Absent/non-object input falls back too, exactly
+     * as before.
+     *
+     * @param {*} raw
+     * @returns {{ x: number, y: number, z: number }}
+     */
+    static _sanitizePosition(raw) {
+        const p = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+        return {
+            x: finiteOr(Number(p.x), 0) || 0,
+            y: finiteOr(Number(p.y), 0) || 0,
+            z: finiteOr(Number(p.z), 0) || 0
         };
     }
 

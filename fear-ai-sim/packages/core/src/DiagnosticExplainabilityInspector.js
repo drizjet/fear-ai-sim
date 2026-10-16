@@ -64,12 +64,19 @@ export class DiagnosticExplainabilityInspector {
         } else {
             let rawThreatComponent = 0;
             for (const t of threats) {
-                const dist = t.distance || 10.0;
+                // A `|| 10.0` fallback conflated "no distance reported" with
+                // "distance is zero", so a threat standing ON the agent — the
+                // maximum-weight case the server can legitimately send, since
+                // the stimulus sanitiser allows `Math.max(0, distance)` — was
+                // explained as if it were 10 units away, understating its
+                // sensory weight from 1.0000 to 0.6667. Absent/null falls
+                // back; an explicit 0 is honoured as adjacent.
+                const dist = t.distance ?? 10.0;
                 const intensity = t.intensity ?? 1.0;
                 rawThreatComponent += intensity * (1.0 / (1.0 + dist * 0.05));
             }
             for (const s of sounds) {
-                const dist = s.distance || 10.0;
+                const dist = s.distance ?? 10.0;
                 const intensity = s.intensity ?? 0.5;
                 rawThreatComponent += intensity * (1.0 / (1.0 + dist * 0.08)) * 0.6;
             }

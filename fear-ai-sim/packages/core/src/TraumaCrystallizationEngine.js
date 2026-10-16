@@ -220,7 +220,10 @@ export class TraumaCrystallizationEngine {
      * @param {number} [options.extinctionRate=0.005] Asymptotic trait restoration rate during sanctuary
      */
     constructor(options = {}) {
-        this.sensitizationWindowTicks = options.sensitizationWindowTicks || 100;
+        // `|| 100` swallowed a host's explicit 0, which is a legal value:
+        // "no vulnerable consolidation window at all". `??` falls back for
+        // absent/null and honours 0.
+        this.sensitizationWindowTicks = options.sensitizationWindowTicks ?? 100;
         this.solaceThreshold = options.solaceThreshold || 0.65;
         this.extinctionRate = options.extinctionRate || 0.005;
 
@@ -648,7 +651,7 @@ export class TraumaCrystallizationEngine {
     setState(state) {
         if (!state) return;
         this.currentTick = state.currentTick || 0;
-        this.sensitizationWindowTicks = state.sensitizationWindowTicks || 100;
+        this.sensitizationWindowTicks = state.sensitizationWindowTicks ?? 100;
         this.solaceThreshold = state.solaceThreshold || 0.65;
         this.extinctionRate = state.extinctionRate || 0.005;
 

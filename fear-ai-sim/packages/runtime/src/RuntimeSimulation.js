@@ -274,9 +274,16 @@ export class RuntimeSimulation {
         });
 
         if (options.initial_position) {
-            agent.x = options.initial_position.x ?? agent.x;
-            agent.y = options.initial_position.y ?? agent.y;
-            agent.z = options.initial_position.z ?? agent.z;
+            // `?? agent.x` let a non-finite coordinate through, and
+            // `AffectiveAgent.tick` only overwrites a coordinate when it is
+            // finite, so the agent would keep Infinity for the rest of its
+            // life — including into `getState()`, where JSON turns it into
+            // `null` and `setState`'s own `??` then discards the position.
+            // Keep the existing coordinate when the reported one is not a
+            // number: an unknown position is not an infinite one.
+            agent.x = Number.isFinite(options.initial_position.x) ? options.initial_position.x : agent.x;
+            agent.y = Number.isFinite(options.initial_position.y) ? options.initial_position.y : agent.y;
+            agent.z = Number.isFinite(options.initial_position.z) ? options.initial_position.z : agent.z;
         }
 
         this.agents.set(id, agent);

@@ -51,8 +51,12 @@ export class PsychoacousticSynthesizer {
             shepardMix = Math.max(0, fear * 0.3);
         }
 
-        // 3. Low-Pass Muffle Cutoff: 20,000 Hz down to 1,800 Hz under terror
-        // Simulates auditory exclusion / sensory deprivation during acute panic
+        // 3. Low-Pass Muffle Cutoff: 20,000 Hz open-air down to the 1,200 Hz
+        // floor below, simulating auditory exclusion / sensory deprivation
+        // during acute panic. (This is the lean per-tick hint; the deeper
+        // `PsychoacousticEngine` behind `fear-ai audio` models a 250 Hz floor
+        // with wall occlusion and enclosure, so the two are deliberately
+        // different surfaces rather than two readings of one number.)
         const lowpassCutoffHz = Math.round(20000 - (fear * 17500) - (adrenaline * 1500));
 
         // 4. Infrasound Resonant Dread (18.9 Hz): Peak in ANXIOUS / PRESENCE_BREAK

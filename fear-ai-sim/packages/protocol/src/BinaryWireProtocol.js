@@ -128,6 +128,29 @@ export const RECORD_SIZE_BYTES = 32;
 /**
  * Normalizes float in [0.0, 1.0] to uint16 [0, 65535].
  */
+/**
+ * The one shape for "this wire field might not be a number".
+ *
+ * The fixed 32-byte records carry raw float32 values, and float32 represents
+ * NaN and ±Infinity as ordinary bit patterns. `?? 0.0` rejects only
+ * null/undefined, so a non-finite value reached `setFloat32` unchanged and a
+ * decoding host read it back as NaN or Infinity — the very thing this protocol
+ * exists to avoid handing across an engine boundary. A non-finite field is
+ * UNKNOWN and falls back to the same sentinel the field already uses for an
+ * absent value, so the wire can never carry one.
+ *
+ * Note that `floatToUint16` (health, energy, fear, anger, dominance, urgency)
+ * is already safe: it maps NaN to 0 and clamps ±Infinity into [0, 1]. Only the
+ * raw float32 slots needed this.
+ *
+ * @param {*} value
+ * @param {number} fallback
+ * @returns {number}
+ */
+function wireFiniteOr(value, fallback) {
+    return Number.isFinite(value) ? value : fallback;
+}
+
 function floatToUint16(val) {
     if (typeof val !== 'number' || Number.isNaN(val)) return 0;
     const clamped = Math.max(0, Math.min(1, val));
@@ -196,9 +219,13 @@ export class BinaryWireProtocol {
             view.setUint8(offset + 14, bandCode);
             view.setUint8(offset + 15, flags);
 
-            const vx = rec.vectorHint?.x ?? 0.0;
-            const vy = rec.vectorHint?.y ?? 0.0;
-            const vz = rec.vectorHint?.z ?? 0.0;
+            // This is Fear AI's OUTPUT to the host, so a non-finite component
+            // here would hand a host a direction it cannot use. A non-finite
+            // component is unknown and contributes nothing, matching the zero
+            // vector `IntentResolver._normalizeVector` emits for the same input.
+            const vx = wireFiniteOr(rec.vectorHint?.x, 0.0);
+            const vy = wireFiniteOr(rec.vectorHint?.y, 0.0);
+            const vz = wireFiniteOr(rec.vectorHint?.z, 0.0);
 
             view.setFloat32(offset + 16, vx, true);
             view.setFloat32(offset + 20, vy, true);
@@ -318,11 +345,13 @@ export class BinaryWireProtocol {
             const entityId = typeof obs.entityId === 'number' ? obs.entityId : (parseInt(obs.entityId || obs.agent_id, 10) || i);
 
             view.setUint32(offset, entityId, true);
-            view.setFloat32(offset + 4, obs.position?.x ?? obs.x ?? 0.0, true);
-            view.setFloat32(offset + 8, obs.position?.y ?? obs.y ?? 0.0, true);
-            view.setFloat32(offset + 12, obs.position?.z ?? obs.z ?? 0.0, true);
-            view.setFloat32(offset + 16, obs.threatDistance ?? obs.threat_distance ?? 999.0, true);
-            view.setFloat32(offset + 20, obs.threatIntensity ?? obs.threat_intensity ?? 0.0, true);
+            view.setFloat32(offset + 4, wireFiniteOr(obs.position?.x ?? obs.x, 0.0), true);
+            view.setFloat32(offset + 8, wireFiniteOr(obs.position?.y ?? obs.y, 0.0), true);
+            view.setFloat32(offset + 12, wireFiniteOr(obs.position?.z ?? obs.z, 0.0), true);
+            // 999.0 is this field's existing "no threat reported" sentinel, and a
+            // non-finite distance is exactly as informative as an absent one.
+            view.setFloat32(offset + 16, wireFiniteOr(obs.threatDistance ?? obs.threat_distance, 999.0), true);
+            view.setFloat32(offset + 20, wireFiniteOr(obs.threatIntensity ?? obs.threat_intensity, 0.0), true);
             view.setUint16(offset + 24, floatToUint16(obs.health ?? 1.0), true);
             view.setUint16(offset + 26, floatToUint16(obs.energy ?? 1.0), true);
 

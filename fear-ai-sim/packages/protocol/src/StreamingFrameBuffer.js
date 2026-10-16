@@ -337,8 +337,14 @@ export class ChunkAssembler {
      * @param {number} [options.staleSequenceThreshold] Sequence lag after which incomplete frames are purged
      */
     constructor(options = {}) {
-        this.maxPendingFrames = options.maxPendingFrames || 32;
-        this.staleSequenceThreshold = options.staleSequenceThreshold || 60;
+        // `|| 32` swallowed an explicit 0, which here means "buffer no
+        // incomplete frames" — the strictest reordering policy. `??` falls
+        // back for absent/null and honours 0.
+        this.maxPendingFrames = options.maxPendingFrames ?? 32;
+        // `|| 60` swallowed a host's explicit 0, which is a legal and
+        // meaningful value here: "purge only frames strictly behind the latest
+        // completed sequence". `??` falls back for absent/null and honours 0.
+        this.staleSequenceThreshold = options.staleSequenceThreshold ?? 60;
 
         /** @type {Map<number, { totalChunks: number, receivedCount: number, chunks: Array<Uint8Array|null>, isKeyframe: boolean, isDeltaFrame: boolean, totalPayloadBytes: number }>} */
         this.pendingFrames = new Map();
@@ -733,8 +739,12 @@ export class JitterPlaybackBuffer {
      * @param {number} [options.maxBufferSize=30] Maximum queued frames before forcing advancement
      */
     constructor(options = {}) {
-        this.targetDelayTicks = options.targetDelayTicks || 2;
-        this.maxBufferSize = options.maxBufferSize || 30;
+        // `|| 2` / `|| 30` swallowed explicit values of 0, which are legal
+        // host policies here: a zero playback delay (pass frames straight
+        // through) and a zero-size buffer (never hold a frame). `??` falls
+        // back for absent/null and honours 0.
+        this.targetDelayTicks = options.targetDelayTicks ?? 2;
+        this.maxBufferSize = options.maxBufferSize ?? 30;
 
         /** @type {Array<{ tick: number, entities: Array<object>, receivedTime: number }>} */
         this.buffer = [];

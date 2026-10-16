@@ -53,6 +53,26 @@ export function pickTrustedPeer(peers = [], peerTrust = null) {
     return best;
 }
 
+/**
+ * The ONE definition of "this threat is adjacent" for the PANIC escape branch.
+ *
+ * It used to read `threat.distance !== undefined && threat.distance < 1.5`,
+ * which lets a `null` distance satisfy the first clause and then coerce to
+ * `0 < 1.5` — so a threat whose distance the host did NOT compute was treated
+ * as EXTREMELY CLOSE, and every panicking agent collapsed into
+ * DESPERATE_FLAIL or CONFRONT_THREAT instead of fleeing. The same `null` is
+ * read as "absent, default 10" by `AffectiveAgent`'s acute-pacing gate and
+ * coerced to `10` by the protocol validator's stimulus sanitiser, so three
+ * implementations disagreed about one number. A distance that is not a
+ * finite number is UNKNOWN, and an unknown distance is not an adjacent one.
+ * Exported so the rule has a name and a probe rather than a second literal.
+ */
+export const ADJACENT_THREAT_DISTANCE = 1.5;
+export function isThreatAdjacent(threat) {
+    const distance = threat?.distance;
+    return Number.isFinite(distance) && distance < ADJACENT_THREAT_DISTANCE;
+}
+
 export class IntentResolver {
     /**
      * Resolve semantic intent from affective state and sensory observations
@@ -180,9 +200,12 @@ export class IntentResolver {
                     : { x: 1, y: 0, z: 0 };
             }
 
-            // Check if trapped: if threat is extremely close (< 2 units) and health is critical, flail
+            // Check if trapped: if the threat's KNOWN distance is extremely
+            // close (under ADJACENT_THREAT_DISTANCE units), abandon flight and
+            // fight or flail. An unknown (null/undefined/NaN/Infinity) distance
+            // is NOT adjacent — see isThreatAdjacent.
             const conscientiousness = agent.traits?.conscientiousness ?? 0.5;
-            if (threats[0]?.distance !== undefined && threats[0].distance < 1.5) {
+            if (isThreatAdjacent(threats[0])) {
                 // Highly conscientious agents maintain tactical discipline instead of blind desperate flailing
                 if (conscientiousness > 0.65) {
                     return {
@@ -348,9 +371,21 @@ export class IntentResolver {
     }
 
     static _normalizeVector(v) {
-        const x = Number(v.x) || 0;
-        const y = Number(v.y) || 0;
-        const z = Number(v.z) || 0;
+        // `Number(val) || 0` used to sit here, and it does not reject
+        // +/-Infinity: `Infinity || 0` is Infinity, the magnitude becomes
+        // Infinity, and `Infinity / Infinity` is NaN — which `toFixed(4)`
+        // preserves and JSON.stringify then writes as `null`. A host that
+        // reported one non-finite coordinate (a physics glitch, a
+        // deserialized sentinel) received an advisory vector of `null`s
+        // instead of a usable direction. A non-finite component is unknown,
+        // so it contributes nothing and the vector stays a real number.
+        const finiteOr0 = (val) => {
+            const n = Number(val);
+            return Number.isFinite(n) ? n : 0;
+        };
+        const x = finiteOr0(v?.x);
+        const y = finiteOr0(v?.y);
+        const z = finiteOr0(v?.z);
         const mag = Math.hypot(x, y, z);
         if (mag < 0.0001) {
             return { x: 0, y: 0, z: 0 };

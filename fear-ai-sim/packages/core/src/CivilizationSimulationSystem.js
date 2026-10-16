@@ -133,7 +133,9 @@ export class CivilizationSimulationSystem {
             id: String(id),
             fromNodeId: String(fromNodeId),
             toNodeId: String(toNodeId),
-            distance: Math.max(1, Number(distance) || 100),
+            // `|| 100` swallowed an explicit 0. Absent/non-finite falls back;
+            // an explicit 0 reaches the Math.max(1, ...) floor intact.
+            distance: Math.max(1, Number.isFinite(Number(distance)) ? Number(distance) : 100),
             baseSecurity: clamp01(baseSecurity),
             toll: Math.max(0, Number(toll) || 0),
             waypoints: Array.isArray(waypoints) ? [...waypoints] : [],
