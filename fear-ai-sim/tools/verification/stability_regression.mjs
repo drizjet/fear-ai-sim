@@ -218,7 +218,11 @@ function readLedger(path) {
 export function ledgerEntry(report) {
     const probes = {};
     for (const probe of report.probes) {
-        probes[probe.name] = { verdicts: verdictsOf(probe), durationMs: probe.durationMs };
+        probes[probe.name] = {
+            verdicts: verdictsOf(probe),
+            durationMs: probe.durationMs,
+            ...(Array.isArray(probe.durationsMs) ? { durationsMs: probe.durationsMs } : {})
+        };
     }
     return {
         recordedAt: report.recordedAt,
@@ -385,9 +389,9 @@ export function timingComparison(current, baselineEntries, recording = null) {
  * only question the ledger can answer that a single night's ratio cannot — a probe
  * that creeps 10% a night never trips a 3x step gate and is obvious here.
  *
- * Nights recorded before the runner emitted per-run durations are excluded, and the
- * count of them is returned rather than hidden: a sample that quietly shrank is the
- * kind of silence this ledger exists to break.
+ * Nights whose entries carry no per-run durations are excluded, and the count of them
+ * is returned rather than hidden: a sample that quietly shrank is the kind of silence
+ * this ledger exists to break.
  */
 export function durationDrift(reference, entries) {
     const now = Array.isArray(reference.probes) ? reference : asReport(reference);
@@ -555,7 +559,7 @@ function main() {
     if (drift.status === 'INSUFFICIENT') {
         console.log(`    not yet measurable: ${drift.nightsWithPerRunDurations} comparable night(s) carry per-run durations, `
             + `${MIN_NIGHTS_FOR_DRIFT_GATE} needed`);
-        console.log(`    (${drift.excludedNightsWithoutPerRunDurations} night(s) predate per-run duration recording)`);
+        console.log(`    (${drift.excludedNightsWithoutPerRunDurations} night(s) carry no per-run durations)`);
     } else if (drift.drifted.length > 0) {
         for (const row of drift.drifted) console.log(`    DRIFT   ${row.name.padEnd(44)} ${row.detail} — GATED`);
     } else {
@@ -568,7 +572,7 @@ function main() {
     // what a clean drift result is worth needs to know how many nights it covers.
     if (drift.status === 'MEASURED' && drift.excludedNightsWithoutPerRunDurations > 0) {
         console.log(`    note: ${drift.excludedNightsWithoutPerRunDurations} of ${drift.comparableNights} comparable `
-            + 'night(s) predate per-run duration recording and are excluded from the pooled sample');
+            + 'night(s) carry no per-run durations and are excluded from the pooled sample');
     }
 
     console.log('');
