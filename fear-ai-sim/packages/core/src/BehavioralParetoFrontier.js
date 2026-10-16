@@ -191,8 +191,7 @@ export class BehavioralParetoFrontier {
         agent.energy = 1.0;
         agent.health = 1.0;
         agent.tickCount = 0;
-        agent.fearCore.currentBand = 'CALM';
-        agent.fearCore.panicLockCounter = 0;
+        agent.fearCore.reset('CALM');
         if (agent.habituation?.records) {
             agent.habituation.records.clear();
         }
