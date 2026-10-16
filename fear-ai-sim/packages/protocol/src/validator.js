@@ -99,6 +99,19 @@ export class ProtocolValidator {
                 break;
             case MESSAGE_TYPES.OBSERVATION_DISPATCH:
                 result = ProtocolValidator.validateObservation(raw);
+                // The dispatch is the one message whose validator output is
+                // ALSO consumed as a plain observation (the HTTP body path),
+                // so validateObservation's value carries no `type` — and the
+                // runtime dispatcher switches on `value.type`, which made
+                // this verb unreachable over JSON WebSocket (every dispatch
+                // answered "Unhandled message type: undefined"): observations
+                // sent by WS were never queued. Injecting the canonical
+                // constant here restores the house pattern (every other
+                // branch's value carries its own type) without changing the
+                // shared observation shape the HTTP path stores.
+                if (result.valid) {
+                    result = { valid: true, value: { ...result.value, type: MESSAGE_TYPES.OBSERVATION_DISPATCH } };
+                }
                 break;
             case MESSAGE_TYPES.BATCH_TICK_REQUEST:
                 result = ProtocolValidator.validateBatchTick(raw);

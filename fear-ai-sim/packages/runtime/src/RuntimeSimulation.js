@@ -1382,14 +1382,27 @@ export class RuntimeSimulation {
 
     /**
      * Queue observation for an agent
+     *
+     * Returns a receipt. An observation for an agent that is not registered
+     * cannot be queued — nothing exists to observe — and the refusal is
+     * REPORTED (`UNKNOWN_AGENT`) instead of silently discarded: the wire
+     * routes translate the receipt into a 404 / error frame so a host
+     * streaming observations at a typo'd or removed agent_id is told, not
+     * left believing. Internal bulk paths (batchTick) call this per
+     * observation and keep their best-effort advisory semantics; the receipt
+     * is what makes the drop observable, not a throw.
+     *
      * @param {string} agentId
      * @param {object} observation
+     * @returns {{ queued: boolean, reason?: string }}
      */
     queueObservation(agentId, observation) {
         const id = String(agentId);
-        if (this.agents.has(id)) {
-            this.pendingObservations.set(id, observation);
+        if (!this.agents.has(id)) {
+            return { queued: false, reason: 'UNKNOWN_AGENT' };
         }
+        this.pendingObservations.set(id, observation);
+        return { queued: true };
     }
 
     /**
