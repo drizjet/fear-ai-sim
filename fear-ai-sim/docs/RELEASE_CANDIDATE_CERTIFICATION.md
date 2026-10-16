@@ -352,9 +352,9 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 - `verify_server_persona_signatures.mjs`
 - `verify_wire_numeric_boundary.mjs`
 
-**Across the ledger of recorded repeated runs (2 night(s), 150 probe attempts):**
+**Across the ledger of recorded repeated runs (4 night(s), 300 probe attempts):**
 
-No probe has ever disagreed with itself in the ledger. That is a statement about 150 recorded attempts across 2 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **65.8%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
+No probe has ever disagreed with itself in the ledger. That is a statement about 300 recorded attempts across 4 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **49.0%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
 **Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform and Node major).
 
