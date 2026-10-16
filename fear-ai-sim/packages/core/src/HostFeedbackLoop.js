@@ -64,6 +64,8 @@ const UNIVERSAL_SAFE_INTENT = 'IDLE_VIGILANT';
 const UNAVAILABLE_AFTER_CONSECUTIVE = 3;
 const MAX_AGENTS_TRACKED = 5000;
 const MAX_HISTORY_PER_AGENT = 64;
+const MAX_INTENT_TYPES_PER_AGENT = 64;
+const MAX_GLOBAL_INTENT_TYPES = 512;
 
 function round4(n) {
     return Number(Number(n).toFixed(4));
@@ -89,6 +91,11 @@ function ensureAgentRecord(map, agentId) {
 function ensureIntentStats(rec, intentType) {
     let st = rec.perIntent.get(intentType);
     if (!st) {
+        if (rec.perIntent.size >= MAX_INTENT_TYPES_PER_AGENT) {
+            const oldest = rec.perIntent.keys().next().value;
+            rec.perIntent.delete(oldest);
+            rec.unavailable.delete(oldest);
+        }
         st = { attempts: 0, completions: 0, rejections: 0, failures: 0, interruptions: 0, consecutiveStructuralFailures: 0 };
         rec.perIntent.set(intentType, st);
     }
@@ -127,6 +134,10 @@ export class HostFeedbackLoop {
         const st = ensureIntentStats(rec, type);
         let g = this.globalPerIntent.get(type);
         if (!g) {
+            if (this.globalPerIntent.size >= MAX_GLOBAL_INTENT_TYPES) {
+                const oldest = this.globalPerIntent.keys().next().value;
+                this.globalPerIntent.delete(oldest);
+            }
             g = { attempts: 0, completions: 0 };
             this.globalPerIntent.set(type, g);
         }
