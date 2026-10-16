@@ -226,10 +226,14 @@ export class FearCore {
 
         // Phase 2.5: if we are currently in an extended band and
         // the evaluator returned null (no transition), the
-        // §260 contract says we STAY in the extended band. The
-        // core 4-band transitions and the force-fallback below
-        // apply only when the state is a core band.
-        if (EXTENDED_BANDS.includes(this.state)) {
+        // §260 contract says we STAY in the extended band — except
+        // RECOVER. RECOVER is transitional and is owned by its own
+        // progress branch below (RECOVER -> CALM once recovery
+        // completes), matching the packages/core port and the
+        // documented recovery contract in docs/PROVENANCE.md. The
+        // core-band transitions apply only when the state is a core
+        // band or RECOVER.
+        if (this.state !== 'RECOVER' && EXTENDED_BANDS.includes(this.state)) {
             return this._result(previous, fear, {
                 from: previous, to: previous, reason: 'EXTENDED_BAND_STAY',
                 threshold: null
@@ -285,28 +289,6 @@ export class FearCore {
                     threshold: this.config.extended.RECOVER.exitFear,
                     recoveryProgress: this.recoveryProgress
                 });
-            }
-        } else if (EXTENDED_BANDS.includes(this.state)) {
-            // We were in an extended state but the extended
-            // evaluator decided not to keep us there. Fall back
-            // to a core band based on raw fear.
-            if (fear >= this.config.enter.PANIC) {
-                this.state = 'PANIC';
-                this.panicLockedUntil = this.tick + this.config.panicLockTicks;
-                reason = 'FORCE_PANIC';
-                threshold = this.config.enter.PANIC;
-            } else if (fear >= this.config.enter.ANXIOUS) {
-                this.state = 'ANXIOUS';
-                reason = 'FORCE_ANXIOUS';
-                threshold = this.config.enter.ANXIOUS;
-            } else if (fear >= this.config.enter.ALERT) {
-                this.state = 'ALERT';
-                reason = 'FORCE_ALERT';
-                threshold = this.config.enter.ALERT;
-            } else {
-                this.state = 'CALM';
-                reason = 'FORCE_CALM';
-                threshold = this.config.exit.CALM;
             }
         }
 
