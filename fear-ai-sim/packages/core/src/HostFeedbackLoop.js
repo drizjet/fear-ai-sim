@@ -210,8 +210,11 @@ export class HostFeedbackLoop {
         return rec.unavailable.delete(String(intentType));
     }
 
+    // Unknown and unmapped types (the host vocabulary is open by design)
+    // resolve to the universal safe intent — the same answer rankIntents()
+    // gives when nothing is viable — rather than a specific action type.
     fallbackFor(intentType) {
-        return DEFAULT_EXECUTION_FALLBACKS[String(intentType)] || 'FLEE_FROM';
+        return DEFAULT_EXECUTION_FALLBACKS[String(intentType)] || UNIVERSAL_SAFE_INTENT;
     }
 
     rankIntents(agentId, candidates = []) {
