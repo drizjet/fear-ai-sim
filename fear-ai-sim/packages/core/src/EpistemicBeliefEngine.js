@@ -42,7 +42,8 @@ export const DEFAULT_EPISTEMIC_CONFIG = Object.freeze({
     rumorHopDecayFactor: 0.85,      // Multiplier per rumor transmission hop
     minBeliefConfidence: 0.05,      // Below this, beliefs are pruned / forgotten
     directObservationWeight: 0.90,  // Weight for direct observation when resolving contradiction
-    staleHorizonTicks: 40           // Ticks before unrefreshed observation becomes OUTDATED
+    staleHorizonTicks: 40,          // Ticks before unrefreshed observation becomes OUTDATED
+    maxContradictionLogEntries: 250 // Newest-first cap; oldest contradiction records are trimmed
 });
 
 export class EpistemicBeliefEngine {
@@ -71,6 +72,20 @@ export class EpistemicBeliefEngine {
 
         this.currentTick = 0;
         this.contradictionLog = [];
+    }
+
+    /**
+     * Append a contradiction record, trimming the oldest entries beyond
+     * `maxContradictionLogEntries` so a long-lived oracle cannot accumulate
+     * an unbounded log of every rumor its beliefs ever resolved.
+     * @param {object} entry
+     */
+    _recordContradiction(entry) {
+        this.contradictionLog.push(entry);
+        const cap = this.config.maxContradictionLogEntries;
+        if (this.contradictionLog.length > cap) {
+            this.contradictionLog.splice(0, this.contradictionLog.length - cap);
+        }
     }
 
     /**
@@ -117,7 +132,7 @@ export class EpistemicBeliefEngine {
             const existing = this.threatBeliefs.get(threatId);
             if (existing && existing.provenance === EPISTEMIC_PROVENANCE.RUMOR) {
                 // Verified rumor by direct observation
-                this.contradictionLog.push({
+                this._recordContradiction({
                     tick: this.currentTick,
                     type: 'RUMOR_VERIFIED_BY_OBSERVATION',
                     threatId,
@@ -157,7 +172,7 @@ export class EpistemicBeliefEngine {
                         const disconfirmRate = this.config.directObservationWeight * (1.2 - this.traits.neuroticism * 0.5);
                         belief.confidence = Math.max(0.0, belief.confidence * (1.0 - disconfirmRate));
 
-                        this.contradictionLog.push({
+                        this._recordContradiction({
                             tick: this.currentTick,
                             type: 'BELIEF_DISCONFIRMED_BY_CLEAR_SIGHT',
                             threatId,
