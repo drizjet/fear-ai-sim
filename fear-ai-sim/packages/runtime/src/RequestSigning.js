@@ -272,7 +272,11 @@ export class RequestSigning {
         this._random = randomBytes || null;
         /** @type {Map<string, number>} "session:nonce" -> accepted-at, insertion ordered */
         this._nonces = new Map();
-        /** @type {Map<string, {challenge: string, sessionId: string|null, issuedAt: number}>} response nonce -> challenge */
+        /** @type {Map<string, {challenge: string, issuedAt: number}>} response nonce -> challenge */
+        // (A vestigial `sessionId` field lived here until the 2026-10-15
+        // dead-branch sweep: it was written at issue time and read by nothing —
+        // verification resolves the session from the responder's own record,
+        // never from the stored field.)
         this._challenges = new Map();
         // Counted separately on purpose. Deriving "rejected" as
         // verifications-minus-accepted looked right and was wrong: a request that
@@ -338,12 +342,11 @@ export class RequestSigning {
      * retires it on use, a captured response is worthless: it answers a question
      * that has already been asked and thrown away.
      */
-    issueChallenge(sessionId = null) {
+    issueChallenge() {
         this._sweepChallenges();
         const challenge = this._randomBytes(24).toString('hex');
         this._challenges.set(challenge, {
             challenge,
-            sessionId: sessionId ? String(sessionId) : null,
             issuedAt: this._now()
         });
         return { challenge, alg: SIGNATURE_ALGORITHM, issued_at: this._now() };

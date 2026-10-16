@@ -301,9 +301,11 @@ export class FearCore {
             this.state = 'ANXIOUS';
             this.panicLockedUntil = null;
         } else if (this.state === 'RECOVER') {
-            // NOW-20: renewed lethal threat overrides convalescence (mirrors
-            // the FORCE_PANIC sibling pattern below; previously RECOVER was
-            // the only extended band with no escalation path at all).
+            // NOW-20: renewed lethal threat overrides convalescence; previously
+            // RECOVER was the only extended band with no escalation path at
+            // all. The FORCE_* chain this once mirrored sat unreachable behind
+            // the Phase-2.5 hold above (every other extended band returns
+            // there) and was removed in the 2026-10-15 dead-branch sweep.
             if (fear >= this.config.enter.PANIC) {
                 this.state = 'PANIC';
                 this.panicLockedUntil = this.tickCount + this.config.panicLockTicks;
@@ -329,25 +331,6 @@ export class FearCore {
                         recoveryProgress: this.recoveryProgress
                     });
                 }
-            }
-        } else if (EXTENDED_BANDS.includes(this.state)) {
-            if (fear >= this.config.enter.PANIC) {
-                this.state = 'PANIC';
-                this.panicLockedUntil = this.tickCount + this.config.panicLockTicks;
-                reason = 'FORCE_PANIC';
-                threshold = this.config.enter.PANIC;
-            } else if (fear >= this.config.enter.ANXIOUS) {
-                this.state = 'ANXIOUS';
-                reason = 'FORCE_ANXIOUS';
-                threshold = this.config.enter.ANXIOUS;
-            } else if (fear >= this.config.enter.ALERT) {
-                this.state = 'ALERT';
-                reason = 'FORCE_ALERT';
-                threshold = this.config.enter.ALERT;
-            } else {
-                this.state = 'CALM';
-                reason = 'FORCE_CALM';
-                threshold = this.config.exit.CALM;
             }
         }
 
@@ -384,10 +367,9 @@ export class FearCore {
             return { from: 'AGGRESSIVE', to: 'CALM', reason: 'EXIT_AGGRESSIVE_TO_CALM', threshold: this.config.exit.CALM };
         }
 
-        // PRESENCE_BREAK
-        if (this.state === 'PANIC' && normalizedFear >= ext.PRESENCE_BREAK.enterFear && this.stateTimer >= ext.PRESENCE_BREAK.enterStateTimer) {
-            return { from: 'PANIC', to: 'PRESENCE_BREAK', reason: 'EXTREME_FEAR_LOCK', threshold: ext.PRESENCE_BREAK.enterFear };
-        }
+        // PRESENCE_BREAK (the PANIC entry compare lives in update()'s Phase 0;
+        // a duplicate here was unreachable behind it and was removed in the
+        // 2026-10-15 dead-branch sweep)
         if (this.state === 'PRESENCE_BREAK' && normalizedFear < ext.PRESENCE_BREAK.exitFear) {
             return { from: 'PRESENCE_BREAK', to: 'RECOVER', reason: 'EXIT_PRESENCE_BREAK', threshold: ext.PRESENCE_BREAK.exitFear };
         }
@@ -418,11 +400,14 @@ export class FearCore {
             return { from: 'VAULTING', to: 'ALERT', reason: 'EXIT_VAULTING', threshold: 0 };
         }
 
-        // CRAWLING
-        if (this.state === 'HIDE' && obstaclePresent && this.state !== 'CRAWLING') {
+        // CRAWLING (simplified in the 2026-10-15 dead-branch sweep: the entry
+        // guard's `!== 'CRAWLING'` clause was redundant under `=== 'HIDE'`,
+        // and the exit guard's `|| === 'HIDE'` clause was provably false
+        // under `=== 'CRAWLING'`)
+        if (this.state === 'HIDE' && obstaclePresent) {
             return { from: 'HIDE', to: 'CRAWLING', reason: 'CRAWL_UNDER_OBSTACLE', threshold: 0 };
         }
-        if (this.state === 'CRAWLING' && (!obstaclePresent || this.state === 'HIDE')) {
+        if (this.state === 'CRAWLING' && !obstaclePresent) {
             return { from: 'CRAWLING', to: 'HIDE', reason: 'EXIT_CRAWLING', threshold: 0 };
         }
 

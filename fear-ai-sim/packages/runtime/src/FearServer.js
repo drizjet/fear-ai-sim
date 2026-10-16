@@ -1864,7 +1864,7 @@ export class FearServer {
         // the wire worth capturing, because the question is fresh and single-use.
         ws.fearAuthenticatedSession = null;
         if (this.signing.enabled) {
-            const challenge = this.signing.issueChallenge(null);
+            const challenge = this.signing.issueChallenge();
             this._sendWs(ws, {
                 type: MESSAGE_TYPES.AUTH_CHALLENGE,
                 challenge: challenge.challenge,
@@ -2155,7 +2155,7 @@ export class FearServer {
             // answer failed can retry without reconnecting. The old question is
             // already retired, which is why a new one is issued rather than the
             // failed one being reused.
-            const fresh = this.signing.issueChallenge(sessionId);
+            const fresh = this.signing.issueChallenge();
             return this._sendWsError(ws, 'Signature refused', ERROR_CODES.VALIDATION_FAILED, correlationId, {
                 code: verdict.reason,
                 session_id: sessionId,

@@ -211,23 +211,24 @@ const firstSigning = new RequestSigning({
     now: () => fakeNow,
     randomBytes: makeInjector()
 });
-const firstChallenge = firstSigning.issueChallenge('sess_a');
+const firstChallenge = firstSigning.issueChallenge();
 assert(firstChallenge.challenge === '01'.repeat(24),
     `Injected randomness was not honoured: ${firstChallenge.challenge}`);
 assert(firstChallenge.issued_at === fakeNow,
     `Injected clock was not honoured: ${firstChallenge.issued_at} !== ${fakeNow}`);
-assert(firstSigning._challenges.get(firstChallenge.challenge).sessionId === 'sess_a',
-    'The challenge record did not carry the session it was issued for');
+const firstRecord = firstSigning._challenges.get(firstChallenge.challenge);
+assert(firstRecord && !('sessionId' in firstRecord) && firstRecord.issuedAt === fakeNow,
+    'The challenge record shape drifted (challenge + issuedAt only)');
 const twinSigning = new RequestSigning({
     challengeTtlMs: FIXED_TTL,
     now: () => fakeNow,
     randomBytes: makeInjector()
 });
-assert(twinSigning.issueChallenge('sess_a').challenge === firstChallenge.challenge,
+assert(twinSigning.issueChallenge().challenge === firstChallenge.challenge,
     'Two instances with identical injection produced different challenges');
 
 fakeNow += FIXED_TTL + 1;
-const secondChallenge = firstSigning.issueChallenge('sess_a');
+const secondChallenge = firstSigning.issueChallenge();
 assert(secondChallenge.challenge === '02'.repeat(24),
     `The injector's second call was not honoured: ${secondChallenge.challenge}`);
 assert(!firstSigning._challenges.has(firstChallenge.challenge),
