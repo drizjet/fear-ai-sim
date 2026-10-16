@@ -215,6 +215,12 @@ export class RuntimeSimulation {
                 seed: options.moralDissonanceConfig?.seed ?? ((this.seed ^ 0x6a09e667) >>> 0)
             })
             : null;
+        // Per-agent construction inputs for the opt-in services registered
+        // alongside each agent (epistemic config, moral profile). Runtime-side
+        // only: never serialized, deleted with the agent, and consulted by
+        // reset() so a soft reset can rebuild each survivor's services in the
+        // shape they were registered with instead of silently defaulting them.
+        this._agentOptInConfig = new Map();
         // RELEASE-SURFACE §3: FunctionalPersonaSignatures joins the runtime surface
         // as an opt-in behavioral personality profiling service. It is opt-in (absent means null,
         // preserving bit-identical output and snapshots on the default path), evaluates 11 response
@@ -305,11 +311,24 @@ export class RuntimeSimulation {
             this.agentEpistemicEngines.set(id, epistemicEngine);
         }
         if (this.moralDissonance) {
-            this.moralDissonance.registerAgentMoralProfile(
+            // Route through the public resolver so a named profile means the
+            // same thing here as it does on the registerAgentMoralProfile
+            // endpoint, and the state records which name was chosen. The raw
+            // string used to go to the engine, which read weights off it and
+            // silently fell back to a uniform profile.
+            this.registerAgentMoralProfile(
                 id,
                 options.moralProfile || DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN
             );
         }
+        // Remember what this agent's opt-in services were built from so a soft
+        // reset can recreate them exactly. The raw (unresolved) moral profile
+        // is stored so rebuilds keep a single resolution path through
+        // registerAgentMoralProfile.
+        this._agentOptInConfig.set(id, {
+            epistemicConfig: options.epistemicConfig || null,
+            moralProfile: options.moralProfile || null
+        });
         return agent;
     }
 
@@ -336,6 +355,7 @@ export class RuntimeSimulation {
         if (this.informationPropagation) this.informationPropagation.removeAgent(id);
         if (this.agentEpistemicEngines) this.agentEpistemicEngines.delete(id);
         if (this.moralDissonance) this.moralDissonance.agents.delete(id);
+        this._agentOptInConfig.delete(id);
         if (this.packCoordination) {
             for (const pack of this.packCoordination.packs.values()) {
                 if (pack.members.has(id)) {
@@ -936,6 +956,9 @@ export class RuntimeSimulation {
         if (state && profileName) {
             state.moralProfile = profileName;
         }
+        const entry = this._agentOptInConfig.get(id) || { epistemicConfig: null, moralProfile: null };
+        entry.moralProfile = profile;
+        this._agentOptInConfig.set(id, entry);
         return state;
     }
 
@@ -1761,15 +1784,66 @@ export class RuntimeSimulation {
         } else {
             this.factionGovernance = null;
         }
+        // The opt-in services hold per-agent state exactly like coreTrauma and
+        // social do, and a reset must not leave that state describing agents or
+        // worlds that no longer exist. Rebuild them from construction options
+        // the same way, so a load inherits a clean slate instead of the
+        // previous world's memories.
+        if (this.enableInformationPropagation) {
+            this.informationPropagation = new InformationPropagationEngine(
+                this.options.informationPropagationConfig || {},
+                (this.seed ^ 0x9e3779b9) >>> 0
+            );
+        }
+        if (this.enableEpistemicBelief) {
+            this.epistemicBelief = new EpistemicBeliefEngine(
+                this.options.epistemicBeliefAgentId || 'sim_epistemic_oracle',
+                this.options.epistemicBeliefTraits || {},
+                this.options.epistemicBeliefConfig || {}
+            );
+            this.agentEpistemicEngines = new Map();
+        }
+        if (this.enableMoralDissonance) {
+            this.moralDissonance = new MoralDissonanceEngine({
+                ...(this.options.moralDissonanceConfig || {}),
+                seed: this.options.moralDissonanceConfig?.seed ?? ((this.seed ^ 0x6a09e667) >>> 0)
+            });
+        }
+        if (this.enablePackCoordination && options.clearAgents) {
+            // Packs are host-created structure bound to live members: a soft
+            // reset keeps them attached to the crowd it is resetting, but a
+            // hard reset would leave every pack a roster of ghosts.
+            this.packCoordination = new PackCoordinationEngine({
+                ...(this.options.packCoordinationConfig || {}),
+                seed: this.options.packCoordinationConfig?.seed ?? ((this.seed ^ 0x85ebca6b) >>> 0)
+            });
+        }
 
         if (options.clearAgents) {
             this.agents.clear();
+            this._agentOptInConfig.clear();
             return;
         }
         for (const agent of this.agents.values()) {
             agent.reset();
             if (this.enableCoreTrauma) {
                 this.coreTrauma.registerAgent(agent.id, agent.traits);
+            }
+            if (this.informationPropagation) this.informationPropagation.registerAgent(agent.id);
+            if (this.enableEpistemicBelief) {
+                const registered = this._agentOptInConfig.get(agent.id);
+                this.agentEpistemicEngines.set(agent.id, new EpistemicBeliefEngine(
+                    agent.id,
+                    agent.traits,
+                    registered?.epistemicConfig ?? this.options.epistemicConfig ?? {}
+                ));
+            }
+            if (this.moralDissonance) {
+                const registered = this._agentOptInConfig.get(agent.id);
+                this.registerAgentMoralProfile(
+                    agent.id,
+                    registered?.moralProfile ?? DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN
+                );
             }
         }
     }
@@ -1929,6 +2003,31 @@ export class RuntimeSimulation {
                 if (this.enableCoreTrauma && !this.coreTrauma.agentRecords.has(agent.id)) {
                     this.coreTrauma.registerAgent(agent.id, agent.traits);
                 }
+                // Opt-in services are not serialized, so a restored agent gets
+                // a fresh, empty service built from construction options —
+                // never the previous world's beliefs. Per-agent epistemic
+                // config and moral profile are not in the snapshot either;
+                // construction-level defaults apply, mirroring a registration
+                // that supplied none.
+                if (this.informationPropagation) this.informationPropagation.registerAgent(agent.id);
+                if (this.enableEpistemicBelief) {
+                    this.agentEpistemicEngines.set(agent.id, new EpistemicBeliefEngine(
+                        agent.id,
+                        agent.traits,
+                        this.options.epistemicConfig || {}
+                    ));
+                }
+                if (this.moralDissonance) {
+                    this.registerAgentMoralProfile(agent.id, DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN);
+                }
+                // Record the shape the restored services were actually built
+                // with, so a later soft reset rebuilds exactly these — the
+                // registry describes the living services, per-agent inputs
+                // (epistemic config, moral profile) are not serialized.
+                this._agentOptInConfig.set(agent.id, {
+                    epistemicConfig: this.options.epistemicConfig || null,
+                    moralProfile: DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN
+                });
             }
         }
 

@@ -173,10 +173,26 @@ export class MoralDissonanceEngine {
     /**
      * Registers an agent with a specific moral foundations profile.
      * @param {string} agentId Unique agent identifier
-     * @param {Object} [profile=DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN] Moral weights
+     * @param {Object|string} [profile=DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN] Moral weights, or the name of a default profile
      * @returns {Object} Initialized state
+     * @throws {Error} MORAL_PROFILE_UNKNOWN when a named profile does not exist, MORAL_PROFILE_INVALID for non-objects
      */
     registerAgentMoralProfile(agentId, profile = DEFAULT_MORAL_PROFILES.HONORABLE_GUARDIAN) {
+        // Accept a named default profile or a custom weights object. A string
+        // used to fall straight into the per-key `?? 0.2` fallback below,
+        // silently giving the agent a uniform profile that is none of the
+        // five — a host that misspelled a profile name never saw an error.
+        if (typeof profile === 'string') {
+            const name = profile.trim().toUpperCase();
+            const named = DEFAULT_MORAL_PROFILES[name];
+            if (!named) {
+                throw new Error(`MORAL_PROFILE_UNKNOWN: '${profile}' names no default moral profile.`);
+            }
+            profile = named;
+        }
+        if (!profile || typeof profile !== 'object') {
+            throw new Error('MORAL_PROFILE_INVALID: profile must be a named default profile or a weights object.');
+        }
         // Normalize weights so sum is 1.0
         const rawWeights = {
             [MORAL_FOUNDATIONS.CARE]: profile[MORAL_FOUNDATIONS.CARE] ?? 0.2,
