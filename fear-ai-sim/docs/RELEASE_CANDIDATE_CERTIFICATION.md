@@ -281,116 +281,89 @@ rather than invented, and each probe's own last line is quoted beside it.
 
 ### Determinism (recorded repeated run, generated)
 
-**Recorded 2026-09-21T04:11:51.206Z — up to 3× per probe, on Node v24.19.0 / win32.**
-Engine: FEAR_AI_GODOT not set — in-engine probes fall back to their own engine discovery
+**Recorded 2026-10-16T22:20:15.513Z — up to 3× per probe, on Node v20.20.2 / win32.**
+Engine: FEAR_AI_GODOT=D:\a\_temp\godot-4.6-stable\Godot_v4.6-stable_win64_console.exe
 
 This is **repeatability on that machine at that date, not determinism in general**. `--repeat 3` bounds the observation: a defect that fires once in ten will usually survive three runs, so the value here is catching the expensive kind — intermittency frequent enough to be seen, which is exactly the kind that teaches a reader to re-run until green. A probe that repeated cleanly is still only a probe that repeated cleanly; repetition does not create evidence it did not have.
 
-**Repeatable on the recorded machine: 25 of 25 repeated probes gave the same verdict on every run** — 24 of them proving their claim, and 1 reporting a declared skip on every run. Both are repeatable; only the first is proof, because repeating a skip does not turn it into a pass. The probes in the second group are named under *Repeatable but still not proven* below.
+**Repeatable on the recorded machine: 52 of 52 repeated probes gave the same verdict on every run** — 50 of them proving their claim, and 2 reporting a declared skip on every run. Both are repeatable; only the first is proof, because repeating a skip does not turn it into a pass. The probes in the second group are named under *Repeatable but still not proven* below.
 
-> **Machine note:** the repeated run and the recorded single run above were taken on different environments (Node v24.19.0 / win32 versus Node v24.20.0 / win32), so the two are not directly comparable row for row.
+> **Machine note:** the repeated run and the recorded single run above were taken on different environments (Node v20.20.2 / win32 versus Node v24.20.0 / win32), so the two are not directly comparable row for row.
 
 | Probe | Runs | Verdicts | Assertions | Total time |
 |---|---|---|---|---|
-| `verify_adapter_conformance.mjs` | 3 | 3× PASSED | 210 | 0.2s |
-| `verify_compound_collisions.mjs` | 3 | 3× PASSED | — | 0.2s |
-| `verify_counterfactual_world.mjs` | 3 | 3× PASSED | — | 0.4s |
-| `verify_cross_tree_parity.mjs` | 3 | 3× PASSED | — | 0.1s |
-| `verify_dashboard_endpoints.mjs` | 3 | 3× PASSED | — | 0.6s |
-| `verify_dotnet_adapters_compile.mjs` | 3 | 3× PASSED | — | 9.0s |
-| `verify_fabe_personas.mjs` | 3 | 3× PASSED | 53 | 0.2s |
-| `verify_fuzz_arbitration.mjs` | 3 | 3× PASSED | 16 | 34.3s |
-| `verify_godot_fallback_parity.mjs` | 3 | 3× PASSED | 37 | 0.2s |
+| `verify_adapter_conformance.mjs` | 3 | 3× PASSED | 230 | 59.4s |
+| `verify_advisory_numeric_hygiene.mjs` | 3 | 3× PASSED | 128 | 0.3s |
+| `verify_backpressure_failure_telemetry.mjs` | 3 | 3× PASSED | 25 | 0.2s |
+| `verify_compound_collisions.mjs` | 3 | 3× PASSED | — | 0.6s |
+| `verify_contagion_transmission.mjs` | 3 | 3× PASSED | 57 | 3.7s |
+| `verify_counterfactual_world.mjs` | 3 | 3× PASSED | — | 0.8s |
+| `verify_cross_tree_parity.mjs` | 3 | 3× PARTIAL | — | 0.3s |
+| `verify_dashboard_endpoints.mjs` | 3 | 3× PASSED | — | 1.0s |
+| `verify_dead_code_sweep.mjs` | 3 | 3× PASSED | 52 | 0.2s |
+| `verify_determinism_contract.mjs` | 3 | 3× PASSED | 55 | 0.6s |
+| `verify_dotnet_adapters_compile.mjs` | 3 | 3× PASSED | — | 30.6s |
+| `verify_epistemic_belief_optin.mjs` | 3 | 3× PASSED | 46 | 0.6s |
+| `verify_examples_inventory.mjs` | 3 | 3× PASSED | 23 | 3.4s |
+| `verify_fabe_personas.mjs` | 3 | 3× PASSED | 53 | 0.5s |
+| `verify_faction_governance_optin.mjs` | 3 | 3× PASSED | 94 | 0.6s |
+| `verify_fearcore_extended_scale.mjs` | 3 | 3× PASSED | 57 | 0.3s |
+| `verify_fuzz_arbitration.mjs` | 3 | 3× PASSED | 16 | 5.6s |
+| `verify_godot_fallback_parity.mjs` | 3 | 3× PASSED | 37 | 0.3s |
 | `verify_godot_live_pipeline.mjs` | 3 | 3× PASSED | 128 | 0.2s |
-| `verify_godot_stations.mjs` | 3 | 3× PASSED | 169 | 0.5s |
-| `verify_host_provenance.mjs` | 3 | 3× PASSED | — | 2.5s |
-| `verify_host_token_persistence.mjs` | 3 | 3× PASSED | 44 | 16.6s |
-| `verify_long_horizon_lifecycle.mjs` | 3 | 3× PASSED | — | 0.8s |
-| `verify_moral_dissonance.mjs` | 3 | 3× PASSED | 110 | 0.1s |
-| `verify_persistence_roundtrip.mjs` | 3 | 3× PASSED | — | 0.4s |
-| `verify_protocol_abuse.mjs` | 3 | 3× PASSED | — | 0.9s |
-| `verify_release_claim_boundaries.mjs` | 3 | 3× PASSED | — | 1.3s |
-| `verify_runtime_wiring.mjs` | 3 | 3× PASSED | — | 0.5s |
-| `verify_server_lifecycle.mjs` | 3 | 3× PASSED | — | 0.9s |
-| `verify_server_reconnect.mjs` | 3 | 3× PASSED | — | 0.6s |
-| `verify_store_encryption.mjs` | 3 | 3× PASSED | 46 | 4.6s |
-| `verify_transport_signing.mjs` | 3 | 3× PASSED | 61 | 4.9s |
-| `verify_unity_adapter_behavior.mjs` | 3 | 3× PASSED | 37 | 6.0s |
-| `verify_unity_editor_tests.mjs` | 3 | 3× PARTIAL | — | 0.1s |
+| `verify_godot_stations.mjs` | 3 | 3× PASSED | 169 | 0.8s |
+| `verify_host_feedback_bounds.mjs` | 3 | 3× PASSED | 38 | 0.2s |
+| `verify_host_provenance.mjs` | 3 | 3× PASSED | — | 0.2s |
+| `verify_host_token_persistence.mjs` | 3 | 3× PASSED | 44 | 23.9s |
+| `verify_information_propagation_optin.mjs` | 3 | 3× PASSED | 41 | 0.6s |
+| `verify_long_horizon_lifecycle.mjs` | 3 | 3× PASSED | — | 1.9s |
+| `verify_macro_settlement_optin.mjs` | 3 | 3× PASSED | 54 | 0.6s |
+| `verify_moral_dissonance.mjs` | 3 | 3× PASSED | 110 | 0.2s |
+| `verify_moral_dissonance_optin.mjs` | 3 | 3× PASSED | 48 | 0.6s |
+| `verify_night_fold_rehearsal.mjs` | 3 | 3× PASSED | 29 | 37.1s |
+| `verify_nonfinite_context_hygiene.mjs` | 3 | 3× PASSED | 218 | 0.3s |
+| `verify_nonfinite_position_hygiene.mjs` | 3 | 3× PASSED | 113 | 0.6s |
+| `verify_observation_acceptance.mjs` | 3 | 3× PASSED | 29 | 0.7s |
+| `verify_optin_engine_lifecycle.mjs` | 3 | 3× PASSED | 85 | 0.6s |
+| `verify_pack_coordination_optin.mjs` | 3 | 3× PASSED | 38 | 0.6s |
+| `verify_persistence_roundtrip.mjs` | 3 | 3× PASSED | — | 0.7s |
+| `verify_persona_signatures_optin.mjs` | 3 | 3× PASSED | 233 | 0.6s |
+| `verify_protocol_abuse.mjs` | 3 | 3× PASSED | — | 1.2s |
+| `verify_release_claim_boundaries.mjs` | 3 | 3× PASSED | — | 2.4s |
+| `verify_runtime_wiring.mjs` | 3 | 3× PASSED | — | 0.8s |
+| `verify_server_epistemic_belief.mjs` | 3 | 3× PASSED | — | 0.7s |
+| `verify_server_faction_governance.mjs` | 3 | 3× PASSED | 101 | 0.8s |
+| `verify_server_lifecycle.mjs` | 3 | 3× PASSED | — | 1.3s |
+| `verify_server_macro_settlement.mjs` | 3 | 3× PASSED | — | 0.7s |
+| `verify_server_moral_dissonance.mjs` | 3 | 3× PASSED | — | 0.7s |
+| `verify_server_pack_coordination.mjs` | 3 | 3× PASSED | — | 0.8s |
+| `verify_server_persona_signatures.mjs` | 3 | 3× PASSED | — | 0.7s |
+| `verify_server_reconnect.mjs` | 3 | 3× PASSED | — | 1.5s |
+| `verify_store_encryption.mjs` | 3 | 3× PASSED | 46 | 10.8s |
+| `verify_transport_signing.mjs` | 3 | 3× PASSED | 61 | 12.4s |
+| `verify_unity_adapter_behavior.mjs` | 3 | 3× PASSED | 37 | 11.4s |
+| `verify_unity_editor_tests.mjs` | 3 | 3× PARTIAL | — | 0.2s |
+| `verify_wire_numeric_boundary.mjs` | 3 | 3× PASSED | 81 | 0.2s |
 
 The `Runs` column can be lower than the repeat count: a disagreement ends that probe early, because a verdict that already differs needs no further samples.
 
-**No probe disagreed with itself across the recorded runs.** That is a statement about these 25 probes on this machine over up to 3 attempts each, not about determinism in general, and not about any machine but the recorded one.
+**No probe disagreed with itself across the recorded runs.** That is a statement about these 52 probes on this machine over up to 3 attempts each, not about determinism in general, and not about any machine but the recorded one.
 
-**Never repeated at all (27) — in the recorded single run, absent from the repeated one, so nothing is known about whether they are deterministic:**
+**Every probe in the recorded single run also appears in the repeated run**, so no probe in the roster above is left without a repetition result.
 
-- `verify_advisory_numeric_hygiene.mjs`
-- `verify_backpressure_failure_telemetry.mjs`
-- `verify_contagion_transmission.mjs`
-- `verify_dead_code_sweep.mjs`
-- `verify_determinism_contract.mjs`
-- `verify_epistemic_belief_optin.mjs`
-- `verify_examples_inventory.mjs`
-- `verify_faction_governance_optin.mjs`
-- `verify_fearcore_extended_scale.mjs`
-- `verify_host_feedback_bounds.mjs`
-- `verify_information_propagation_optin.mjs`
-- `verify_macro_settlement_optin.mjs`
-- `verify_moral_dissonance_optin.mjs`
-- `verify_night_fold_rehearsal.mjs`
-- `verify_nonfinite_context_hygiene.mjs`
-- `verify_nonfinite_position_hygiene.mjs`
-- `verify_observation_acceptance.mjs`
-- `verify_optin_engine_lifecycle.mjs`
-- `verify_pack_coordination_optin.mjs`
-- `verify_persona_signatures_optin.mjs`
-- `verify_server_epistemic_belief.mjs`
-- `verify_server_faction_governance.mjs`
-- `verify_server_macro_settlement.mjs`
-- `verify_server_moral_dissonance.mjs`
-- `verify_server_pack_coordination.mjs`
-- `verify_server_persona_signatures.mjs`
-- `verify_wire_numeric_boundary.mjs`
+**Across the ledger of recorded repeated runs (5 night(s), 456 probe attempts):**
 
-**Across the ledger of recorded repeated runs (4 night(s), 300 probe attempts):**
+No probe has ever disagreed with itself in the ledger. That is a statement about 456 recorded attempts across 5 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **43.4%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
-No probe has ever disagreed with itself in the ledger. That is a statement about 300 recorded attempts across 4 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **49.0%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
+**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform and Node major; 27 probe(s) had no comparable baseline, because a ratio across two machines measures the machines).
 
-**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform and Node major).
+**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 0 of 2 do; 2 carry no per-run durations and are excluded rather than treated as zero. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
 
-**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 0 of 1 do; 1 predates per-run duration recording and is excluded rather than treated as zero. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
-
-**Never recorded in the ledger (27)** — nothing is known about whether these are deterministic:
-- `verify_advisory_numeric_hygiene.mjs`
-- `verify_backpressure_failure_telemetry.mjs`
-- `verify_contagion_transmission.mjs`
-- `verify_dead_code_sweep.mjs`
-- `verify_determinism_contract.mjs`
-- `verify_epistemic_belief_optin.mjs`
-- `verify_examples_inventory.mjs`
-- `verify_faction_governance_optin.mjs`
-- `verify_fearcore_extended_scale.mjs`
-- `verify_host_feedback_bounds.mjs`
-- `verify_information_propagation_optin.mjs`
-- `verify_macro_settlement_optin.mjs`
-- `verify_moral_dissonance_optin.mjs`
-- `verify_night_fold_rehearsal.mjs`
-- `verify_nonfinite_context_hygiene.mjs`
-- `verify_nonfinite_position_hygiene.mjs`
-- `verify_observation_acceptance.mjs`
-- `verify_optin_engine_lifecycle.mjs`
-- `verify_pack_coordination_optin.mjs`
-- `verify_persona_signatures_optin.mjs`
-- `verify_server_epistemic_belief.mjs`
-- `verify_server_faction_governance.mjs`
-- `verify_server_macro_settlement.mjs`
-- `verify_server_moral_dissonance.mjs`
-- `verify_server_pack_coordination.mjs`
-- `verify_server_persona_signatures.mjs`
-- `verify_wire_numeric_boundary.mjs`
+**Every probe in the roster appears in the ledger**, so no probe is left without a cross-night result.
 
 **Repeatable but still not proven** — these probes gave the same answer every time, and that answer was that part of their claim had no evidence on this machine:
 
+- `verify_cross_tree_parity.mjs` — * SKIPPED: host fear.rs not reachable at C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets\src\engine\ai\fear.rs; the Rust results are recorded, not re-tied to the current source here.
 - `verify_unity_editor_tests.mjs` — SKIPPED: no Unity Editor found on this machine.
 <!-- GENERATED:PROBE-DETERMINISM:END -->
 

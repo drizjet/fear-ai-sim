@@ -335,8 +335,8 @@ export function renderDeterminism(rosterReport = loadReport()) {
         if (drift.status === 'INSUFFICIENT') {
             const excluded = drift.excludedNightsWithoutPerRunDurations > 0
                 ? `; ${drift.excludedNightsWithoutPerRunDurations} `
-                    + `${drift.excludedNightsWithoutPerRunDurations === 1 ? 'predates' : 'predate'} per-run duration `
-                    + `recording and ${drift.excludedNightsWithoutPerRunDurations === 1 ? 'is' : 'are'} excluded `
+                    + `${drift.excludedNightsWithoutPerRunDurations === 1 ? 'carries' : 'carry'} no per-run durations `
+                    + `and ${drift.excludedNightsWithoutPerRunDurations === 1 ? 'is' : 'are'} excluded `
                     + 'rather than treated as zero'
                 : '';
             lines.push(`**Timing drift — not yet measurable:** a drift needs ${drift.neededNights} comparable nights that `
@@ -365,7 +365,7 @@ export function renderDeterminism(rosterReport = loadReport()) {
         if (drift.status === 'MEASURED' && drift.excludedNightsWithoutPerRunDurations > 0) {
             lines.push('');
             lines.push(`The pooled sample excludes ${drift.excludedNightsWithoutPerRunDurations} of `
-                + `${drift.comparableNights} comparable night(s) that predate per-run duration recording — stated `
+                + `${drift.comparableNights} comparable night(s) that carry no per-run durations — stated `
                 + 'rather than left as a sample that quietly shrank.');
         }
         if (drift.rising && drift.rising.length > 0) {
