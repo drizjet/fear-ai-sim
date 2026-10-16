@@ -186,6 +186,15 @@ function Invoke-FoldTool {
     return Read-Json $reportPath
 }
 
+# The prefix git prints before every path in `git status --porcelain`, `git show
+# --name-only` and `<rev>:<path>` object specs: empty when the project directory IS the
+# repository root, `fear-ai-sim/` when it sits one level below it. On 2026-09-22 and
+# 2026-09-23 the script compared repository-root-relative paths against project-relative
+# ones, listed the ledger itself as a foreign change, and refused both folds; git's own
+# answer for the gap is `rev-parse --show-prefix`, and it is computed once here, before
+# the first place that needs it.
+$rootPrefix = (Invoke-Git @('rev-parse', '--show-prefix')).Trim()
+
 # ---------------------------------------------------------------------------
 # 0. Preconditions.
 # ---------------------------------------------------------------------------
@@ -197,7 +206,7 @@ if (-not (Test-Path $FoldTool)) { Stop-Refused "the fold tool is missing at $Fol
 
 $headSha = @(Get-Lines (Invoke-Git @('rev-parse', '--short', 'HEAD')))[0]
 $headBranch = (& git -C $RepoRoot rev-parse --abbrev-ref HEAD 2>$null)
-$ledgerInHead = (Test-Git @('cat-file', '-e', ("HEAD:" + $Ledger))) -eq 0
+$ledgerInHead = (Test-Git @('cat-file', '-e', ("HEAD:" + $rootPrefix + $Ledger))) -eq 0
 
 Write-Host '============================================================'
 Write-Host 'NIGHTLY STABILITY LEDGER — PUT TONIGHT ON A REVIEW BRANCH'
@@ -380,9 +389,12 @@ if (-not $Execute) {
 # ---------------------------------------------------------------------------
 
 # 3a. A commit must contain exactly the record and the document that quotes it.
+#     `git status` prints repository-root-relative paths and the two expected paths are
+#     project-relative, so both sides go through $rootPrefix; without it the ledger and
+#     the dossier themselves are listed as foreign whenever the project is nested.
 $statusLines = Get-Lines (Invoke-Git @('status', '--porcelain'))
 $foreign = @($statusLines | Where-Object { $_ -notmatch '^\?\?' } | ForEach-Object { ($_ -replace '^...', '').Trim().Trim('"') } |
-    Where-Object { $_ -ne $Ledger -and $_ -ne $Dossier })
+    Where-Object { $_ -ne ($rootPrefix + $Ledger) -and $_ -ne ($rootPrefix + $Dossier) })
 if ($foreign.Count -gt 0) {
     Stop-Refused "this checkout has other modified tracked files, so a fold commit would sweep them up: $($foreign -join ', ')."
 }
@@ -470,9 +482,10 @@ if ($LASTEXITCODE -ne 0) { Stop-Refused "the commit failed with exit code $LASTE
 $commitSha = @(Get-Lines (Invoke-Git @('rev-parse', '--short', 'HEAD')))[0]
 
 # 3h. Verify the commit really is only the record and the document, then push. The lease
-#     is the guard described at the top of this file.
+#     is the guard described at the top of this file. Same coordinate fix as 3a: `git
+#     show --name-only` is repository-root-relative, the expected paths are not.
 $committed = @(Get-Lines (Invoke-Git @('show', '--name-only', '--format=', 'HEAD')))
-$unexpected = @($committed | Where-Object { $_ -ne $Ledger -and $_ -ne $Dossier })
+$unexpected = @($committed | Where-Object { $_ -ne ($rootPrefix + $Ledger) -and $_ -ne ($rootPrefix + $Dossier) })
 if ($unexpected.Count -gt 0) {
     Stop-Refused "the new commit contains files beyond the record and the dossier ($($unexpected -join ', ')), so it was not pushed."
 }
