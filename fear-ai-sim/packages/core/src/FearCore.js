@@ -55,10 +55,18 @@ export const DEFAULT_FEARCORE_CONFIG = Object.freeze({
             enterSkill: 0.6,
             enterMinThreats: 1,
             exitThreats: 0,
-            exitPanicFear: 0.85
+            // Normalized scale. Re-derived: the authored 0.85 sat +0.05 above
+            // the 0.8-era panic onset; with the modern onset at
+            // `panicOnsetRawFear` (0.9048) the escape is lifted to the adjacent
+            // extreme literal so the hold window (0.9048, 0.95] stays non-empty.
+            exitPanicFear: 0.95
         },
         FREEZE: {
             enterMorale: 0.4,
+            // The authored inline rate was 0.05 at every PANIC tick (see the
+            // hysteresis determinism record); the port multiplied the exit
+            // rate by ten, a silent 4x change. Restored as its own key.
+            enterProbability: 0.05,
             exitProbability: 0.02
         },
         VAULTING: {
@@ -80,7 +88,10 @@ export const DEFAULT_FEARCORE_CONFIG = Object.freeze({
  * everything a host sees — and every contagion source tier — is in normalized
  * [0, 1] terms. Exported so the two representations cannot drift: the normalized
  * onset of PANIC is DERIVED from `enter.PANIC` below rather than restated as a
- * literal somewhere else.
+ * literal somewhere else. The extended-band FEAR literals (`PRESENCE_BREAK.
+ * enterFear`/`exitFear`, `RECOVER.exitFear`, `HIDE.exitPanicFear`) are authored
+ * on this same normalized scale and are compared as `rawFear / FEAR_SCALE` in
+ * `update()` and `_evaluateExtendedBands()`.
  */
 export const FEAR_SCALE = 4.2;
 
@@ -195,11 +206,14 @@ export class FearCore {
         this.stateTimer++;
 
         const rng = typeof context.rng === 'function' ? context.rng : this._defaultRngFn;
+        // Extended-band fear literals are normalized; the core enter/exit
+        // thresholds are not.
+        const normalizedFear = fear / FEAR_SCALE;
 
         // Phase 0: PRESENCE_BREAK bypass
         if (
             this.state === 'PANIC' &&
-            fear >= this.config.extended.PRESENCE_BREAK.enterFear &&
+            normalizedFear >= this.config.extended.PRESENCE_BREAK.enterFear &&
             this.stateTimer >= this.config.extended.PRESENCE_BREAK.enterStateTimer
         ) {
             this.state = 'PRESENCE_BREAK';
@@ -299,7 +313,7 @@ export class FearCore {
             } else {
                 this.recoveryProgress = Math.min(1, this.recoveryProgress + 0.1);
                 if (
-                    fear < this.config.extended.RECOVER.exitFear &&
+                    normalizedFear < this.config.extended.RECOVER.exitFear &&
                     this.recoveryProgress >= this.config.extended.RECOVER.exitRecovery
                 ) {
                     reason = 'RECOVER_COMPLETE';
@@ -355,6 +369,9 @@ export class FearCore {
             obstaclePresent = false
         } = context;
         const ext = this.config.extended;
+        // Same normalized scale as update(): the extended fear literals are
+        // normalized, the core thresholds below are not.
+        const normalizedFear = fear / FEAR_SCALE;
 
         // AGGRESSIVE
         if (this.state !== 'AGGRESSIVE' && currentAnger > ext.AGGRESSIVE.enterAnger) {
@@ -368,10 +385,10 @@ export class FearCore {
         }
 
         // PRESENCE_BREAK
-        if (this.state === 'PANIC' && fear >= ext.PRESENCE_BREAK.enterFear && this.stateTimer >= ext.PRESENCE_BREAK.enterStateTimer) {
+        if (this.state === 'PANIC' && normalizedFear >= ext.PRESENCE_BREAK.enterFear && this.stateTimer >= ext.PRESENCE_BREAK.enterStateTimer) {
             return { from: 'PANIC', to: 'PRESENCE_BREAK', reason: 'EXTREME_FEAR_LOCK', threshold: ext.PRESENCE_BREAK.enterFear };
         }
-        if (this.state === 'PRESENCE_BREAK' && fear < ext.PRESENCE_BREAK.exitFear) {
+        if (this.state === 'PRESENCE_BREAK' && normalizedFear < ext.PRESENCE_BREAK.exitFear) {
             return { from: 'PRESENCE_BREAK', to: 'RECOVER', reason: 'EXIT_PRESENCE_BREAK', threshold: ext.PRESENCE_BREAK.exitFear };
         }
 
@@ -381,11 +398,11 @@ export class FearCore {
         }
         if (this.state === 'HIDE') {
             if (threats === 0) return { from: 'HIDE', to: 'RECOVER', reason: 'EXIT_HIDE_NO_THREATS', threshold: 0 };
-            if (fear > ext.HIDE.exitPanicFear) return { from: 'HIDE', to: 'PANIC', reason: 'EXIT_HIDE_PANIC_ESCAPE', threshold: ext.HIDE.exitPanicFear };
+            if (normalizedFear > ext.HIDE.exitPanicFear) return { from: 'HIDE', to: 'PANIC', reason: 'EXIT_HIDE_PANIC_ESCAPE', threshold: ext.HIDE.exitPanicFear };
         }
 
         // FREEZE
-        if (this.state === 'PANIC' && morale < ext.FREEZE.enterMorale && rng() < ext.FREEZE.exitProbability * 10) {
+        if (this.state === 'PANIC' && morale < ext.FREEZE.enterMorale && rng() < ext.FREEZE.enterProbability) {
             return { from: 'PANIC', to: 'FREEZE', reason: 'FREEZE_UNDER_PANIC', threshold: ext.FREEZE.enterMorale };
         }
         if (this.state === 'FREEZE' && rng() < ext.FREEZE.exitProbability) {
