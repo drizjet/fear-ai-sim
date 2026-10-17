@@ -231,8 +231,10 @@ const autonomousDeploy = () => {
 // suite. The document agreement and the re-open procedure's own designed tripwire are enforced: the
 // manifest's rows and the ledger's `SOURCE_ABSENT` rows must name the same set in both directions,
 // and no manifest source may appear in this checkout — extraction is an explicit, owned act that
-// updates both in the same change. Only the blob+sha256 re-resolution is left out: it needs a fetched
-// `origin/master`, so those rows are re-opened by hand, not on every gate run.
+// updates both in the same change. The path cell names the source's location in the monorepo (both
+// survivors moved under `fear-ai-sim/archive/legacy-research-prototypes/` upstream on 2026-10-13),
+// so the extraction tripwire keys on the source's basename. Only the blob+sha256 re-resolution is
+// left out: it needs a fetched `origin/master`, so those rows are re-opened by hand, not on every gate run.
 const sourceAbsentRows = () => {
     const manifestSection = read('docs/SOURCE_ABSENT_RECONCILIATION.md').split('## Manifest')[1]?.split('##')[0] ?? '';
     const manifestEntries = manifestSection.split('\n').filter(line => line.startsWith('|'))
@@ -248,7 +250,7 @@ const sourceAbsentRows = () => {
     return [
         ...[...ledgerRows].filter(row => !manifestRows.has(row)).map(row => `docs/SOURCE_ABSENT_RECONCILIATION.md does not cover the SOURCE_ABSENT row "${row}"`),
         ...[...manifestRows].filter(row => !ledgerRows.has(row)).map(row => `docs/SOURCE_ABSENT_RECONCILIATION.md covers "${row}", which is not a SOURCE_ABSENT row in completion-ledger.md`),
-        ...manifestEntries.filter(cells => fs.existsSync(path.join(ROOT, cells[1])))
+        ...manifestEntries.filter(cells => fs.existsSync(path.join(ROOT, path.basename(cells[1]))))
             .map(cells => `${cells[1]}: a manifest source exists in this checkout — extraction must update the manifest and ledger in the same change`),
         ...(upstreamAvailable() ? manifestEntries.filter(cells => cells[4] === 'PRESENT').flatMap(cells => {
             const [, file, blob, sha256] = cells;

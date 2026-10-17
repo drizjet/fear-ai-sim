@@ -13,7 +13,10 @@ then `Hysteresis`, then `Neural fear`, then `FearCore live transitions` + `Brain
 (both cite `brain.js`), then `Simulation/agents/combat` — all left `SOURCE_ABSENT` through that
 procedure (byte-exact extraction + V8 integration); the manifest below covers the one remaining
 row's sources (`VR/biofeedback`), whose disposition is a product-scope decision rather than a
-missing artefact.
+missing artefact. **Re-pinned 2026-10-17:** the monorepo archived both remaining sources on
+2026-10-13 (`6bbe247`) under `fear-ai-sim/archive/legacy-research-prototypes/`; both blobs
+re-resolve byte-identical at the new path (re-verified at `origin/master` head `ea706b6`), so only
+the manifest's path column changed.
 
 Method (head of `origin/master` at time of verification: `1e72d61`):
 
@@ -27,8 +30,8 @@ git ls-tree -r origin/master --name-only | grep -i fearband   # 0 matches
 
 | file | upstream blob | sha256 | presence | rows |
 | --- | --- | --- | --- | --- |
-| vrsystem.js | ac84c092aa94b5a32ed1bd2511974c7856e5f375 | d2a9c628874785178fe16b776dbd94fc2344ec29871151773de94bf7a8b4f4cd | PRESENT | VR/biofeedback |
-| biofeedback.js | 050b8c4c8f72fe0c2d21919f73ab92e45c3fc4f4 | f39f795564d83a0039fb4b7b7fe1429daf5fa167ef5ce4ea066a9dafb63ab23a | PRESENT | VR/biofeedback |
+| archive/legacy-research-prototypes/vrsystem.js | ac84c092aa94b5a32ed1bd2511974c7856e5f375 | d2a9c628874785178fe16b776dbd94fc2344ec29871151773de94bf7a8b4f4cd | PRESENT | VR/biofeedback |
+| archive/legacy-research-prototypes/biofeedback.js | 050b8c4c8f72fe0c2d21919f73ab92e45c3fc4f4 | f39f795564d83a0039fb4b7b7fe1429daf5fa167ef5ce4ea066a9dafb63ab23a | PRESENT | VR/biofeedback |
 
 - `upstream blob` = `git rev-parse origin/master:fear-ai-sim/<file>`; `sha256` = digest of
   `git cat-file blob <blob>`. The document agreement is re-verified on every gate run by
@@ -37,8 +40,9 @@ git ls-tree -r origin/master --name-only | grep -i fearband   # 0 matches
 - `ABSENT_BOTH` = the path exists in neither tree. No entry needs it any more: the legacy fearcore test was never committed, and its row closed 2026-09-23 with that absence recorded as a limitation rather than a pending citation.
 - **FearBand (Rust)**: `git ls-tree -r origin/master --name-only` has 0 paths matching
   `fearband|fear_band|fear-band` — absent workspace-wide *and* upstream.
-- **No remaining manifest entry has been extracted into this checkout** — the guard asserts every
-  manifest file still does not exist locally (`vrsystem.js`, `biofeedback.js`). An extracted row
+- **No remaining manifest entry has been extracted into this checkout** — the guard asserts each
+  source's name is still absent at this checkout's root (`vrsystem.js`, `biofeedback.js`; the path
+  column names the monorepo archive, so the tripwire keys on the basename). An extracted row
   leaves the manifest entirely and gains a `legacy/` extraction + provenance row: that is what all
   five same-day re-opens did, most recently `simulation.js`, `agent.js` and `learningagent.js`
   (manifest 5 → 2 entries, both guards' row sets 2 → 1 in the same change).
