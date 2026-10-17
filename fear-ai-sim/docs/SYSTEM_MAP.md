@@ -488,7 +488,7 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 | `FILE_STRUCTURE.md` | FearDataGen only |
 | `docs/ARCHITECTURE.md` | 2026-08-26 sim grounding (`63d76f9`) |
 | `docs/REMAINING_WORK.md` | Marked historical (24-suite world) |
-| `docs/RUST_PARITY.md` (pre-2026-09-07) | Claimed “no Rust fear model exists”; the model lives in Pixel Pets |
+| `docs/RUST_PARITY.md` (pre-2026-09-07 revision only) | That revision claimed “no Rust fear model exists”; the model lives in Pixel Pets. The current revision is a living parity record — read it as current parity evidence, not through this entry |
 | `docs/PART_0_GROUNDING.md`, `docs/PART_1_EXECUTION_PROMPT.md`, `docs/BASELINE.md` | Frozen at commit `63d76f9` / 514 tests |
 | `docs/BADAI_MASTER_PLAN.md`, `docs/BADAI_MASTER_SPEC.md`, `docs/mvp-plan.md` | BadAI world-sim plan, not the plug-in SDK |
 | `docs/MODULE_AUDIT.md`, `SUBAGENT_REPAIR_PLAYBOOK.md` | Closed-world / sim wiring history |

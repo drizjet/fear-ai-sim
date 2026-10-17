@@ -1,7 +1,7 @@
 ---
 title: "Fear AI — Authoritative Current Truth Ledger"
 created: 2026-09-17
-updated: 2026-10-13
+updated: 2026-10-17
 type: specification
 status: active
 ---

@@ -1,12 +1,22 @@
 ---
 title: "Fear AI — Claim-to-Code Audit"
 created: 2026-09-19
-updated: 2026-09-19
+updated: 2026-10-17
 type: audit
 status: provisional
 ---
 
 # Claim-to-Code Audit — 2026-09-19
+
+> **Superseded for current counts (banner added 2026-10-17):** this is a dated
+> 2026-09-19 audit. Its counts — the probe roster and the cross-tree
+> "17 vectors" figures below — describe that date, not today. Current counts
+> are derived from the files in `docs/CURRENT_TRUTH_LEDGER.md` (probe roster
+> and integrity-gate totals) and the recorded roster in
+> `docs/RELEASE_CANDIDATE_CERTIFICATION.md`; the current cross-tree parity
+> record is `docs/RUST_PARITY.md`. The status findings below remain the
+> claim-to-code trace they are; nothing here certifies the whole repository
+> as RC1, and nothing here overrides the ledger.
 
 This is a bounded claim-to-code trace for the current truth ledger. It records
 what each status row actually proves; it is not a universal integration claim

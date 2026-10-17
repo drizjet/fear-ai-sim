@@ -1,14 +1,14 @@
 ---
 title: "Fear AI — Release Candidate Certification Dossier"
 created: 2026-09-19
-updated: 2026-10-13
+updated: 2026-10-17
 type: certification
 status: active
 ---
 
 # Fear AI — Release Candidate Certification Dossier
 
-**Version**: 1.1.2-PROVISIONAL (ledger `1.3.2-PROVISIONAL`)
+**Version**: 1.1.2-PROVISIONAL (ledger `1.3.5-PROVISIONAL`)
 **Date**: September 19, 2026
 **Campaign**: Continuous Closure Phases 1–4 (Muse Spark / OpenCode)
 **Repositories**:
@@ -22,6 +22,8 @@ status: active
 ## 1. Verdict
 
 **RELEASE CANDIDATE: PROVISIONAL / NOT CERTIFIED** — the named JavaScript harnesses pass in the current checkout, but the claim-to-code audit found scope mismatches that prevent final RC1 certification. Passing a bounded harness is evidence for that scenario; it is not proof that every repository subsystem is live-integrated or universally safe.
+
+**Scope note — the frozen root-sim twin.** The root-level `fearcore.js` is a **frozen pre-fix research twin**, not part of this release surface: the certified affective core is `packages/core/src/FearCore.js`, and no release claim in this dossier rests on the twin. The twin's known divergences from the package (raw-scale extended-band literals, an uninjectable `Math.random()` entry roll, an unreachable `RECOVER` completion, and a `tick`-versus-`tickCount` field) and the deferred ownership reconciliation are recorded in `docs/DECISIONS.md` DEC-0002 and `evidence/fearcore_extended_scale_2026-10-15.md` §7; `brain.js` consumes the twin without a probe, so no dossier claim is made about that consumer.
 
 ---
 
@@ -126,7 +128,7 @@ Current JS evidence: **53 standalone verification probes — 43 runtime/behaviou
 - Proof recorded: `evidence/audit_fear_ai_connection_extended_2026-09-19.md` (supersedes `evidence/audit_fear_ai_connection_500tick_2026-09-19.md`).
 
 ### Phase 4 — Truth Ledger Reconciliation (reopened)
-- Ledger moved to `1.3.2-PROVISIONAL` and now records the JS/host repository boundary, bounded evidence language, the expanded persistence contract, explicit claim-to-code traces, and a distinct standalone-scenario status in `docs/CLAIM_TO_CODE_AUDIT_2026-09-19.md`.
+- Ledger moved to `1.3.2-PROVISIONAL` (since advanced to `1.3.5-PROVISIONAL`) and records the JS/host repository boundary, bounded evidence language, the expanded persistence contract, explicit claim-to-code traces, and a distinct standalone-scenario status in `docs/CLAIM_TO_CODE_AUDIT_2026-09-19.md`.
 - `WorldCounterfactualEngine` is now `SCENARIO_VERIFIED` for the bounded `FrontierValleySimulation` and direct CLI/engine path after `51b6268` added world-summary divergence detection, explicit input/target guards, and `verify_counterfactual_world.mjs`; it is not an automatic `RuntimeSimulation` service or dashboard wrapper.
 - Runtime transport/lifecycle is now `VERIFIED_CURRENT` for the bounded HTTP/WS dispatcher and explicit unregister path after `88cf80b` added finite pacing validation, truthful WebSocket snapshot errors, validation-error correlation IDs, and stale-state cleanup.
 - A real-listener probe at `2a5e4e6` verifies the intended reconnect contract: socket close removes the transport connection but preserves server-scoped agent state, which a reconnect can continue ticking; explicit unregister retires it.
@@ -195,7 +197,7 @@ node tools/verification/measure_runtime_performance.mjs
 cargo run --bin audit_fear_ai_connection
 ```
 
-All twenty-five JS verification probes in `tools/verification/` were rerun in this audit through `npm run verify:probes` (`tools/verification/run_probe_suite.mjs`); the roster below is **generated from that run's own JSON summary**, so it cannot describe a run it did not have. The runner quotes each skip as NOT PROVEN rather than counting it as a pass. That suite is now the `probes` CI job (`windows-latest`, `npm run verify:probes`). CI also runs a nightly `probe-stability` job (`npm run verify:probe-stability`, every probe repeated up to three times, `FLAKY` counted as a failure) and a `unity-editmode` job (`npm run verify:unity-editor`) that is **inert until a runner is provisioned with an Editor** (`UNITY_EDITOR_AVAILABLE`), and that sets `FEAR_AI_UNITY_REQUIRED=1` so a missing Editor is a failure there rather than a skip. While that variable is unset the Unity row below stands exactly as reported: **no Editor has executed those tests.** 
+The twenty-five JS verification probes then present in `tools/verification/` were rerun in this audit through `npm run verify:probes` (`tools/verification/run_probe_suite.mjs`); the roster below is **generated from the latest recorded run's own JSON summary**, so it cannot describe a run it did not have. The runner quotes each skip as NOT PROVEN rather than counting it as a pass. That suite is now the `probes` CI job (`windows-latest`, `npm run verify:probes`). CI also runs a nightly `probe-stability` job (`npm run verify:probe-stability`, every probe repeated up to three times, `FLAKY` counted as a failure) and a `unity-editmode` job (`npm run verify:unity-editor`) that is **inert until a runner is provisioned with an Editor** (`UNITY_EDITOR_AVAILABLE`), and that sets `FEAR_AI_UNITY_REQUIRED=1` so a missing Editor is a failure there rather than a skip. While that variable is unset the Unity row below stands exactly as reported: **no Editor has executed those tests.** 
 <!-- GENERATED:PROBE-ROSTER:BEGIN -->
 <!-- Generated by tools/codegen/generate_release_dossier.mjs from
      evidence/probe_suite_report.json. Do not edit by hand: run the generator,
@@ -203,7 +205,7 @@ All twenty-five JS verification probes in `tools/verification/` were rerun in th
 
 ### Probe roster (recorded run, generated)
 
-**Recorded 2026-10-16T20:50:42.078Z — 52 probes, 51 passed, 1 passed with declared skips, 0 failed, on Node v24.20.0 / win32.**
+**Recorded 2026-10-17T16:00:18.504Z — 53 probes, 52 passed, 1 passed with declared skips, 0 failed, on Node v24.20.0 / win32.**
 This is a **recorded** run of the same suite CI re-runs (`npm run verify:probes`, the `probes`
 job, `windows-latest`), taken from `evidence/probe_suite_report.json`. A row marked
 **PASSED WITH DECLARED SKIPS** is *not* a pass: it is a probe that reported, in its own words,
@@ -249,6 +251,7 @@ here too — the roster renders whatever happened rather than only what succeede
 | `verify_persistence_roundtrip.mjs` | PASSED | — | SUCCESS: All persistence, migration, and reset tests PASSED! |
 | `verify_persona_signatures_optin.mjs` | PASSED | 233 | ALL FUNCTIONAL PERSONA SIGNATURES (FABE) CHECKS PASSED (233 assertions) |
 | `verify_protocol_abuse.mjs` | PASSED | — | SUCCESS: Protocol abuse verification passed. |
+| `verify_quarantine_reach.mjs` | PASSED | 28 | SUCCESS: All 28 quarantine-reach assertions passed. |
 | `verify_release_claim_boundaries.mjs` | PASSED | — | SUCCESS: Release-claim document boundaries are explicit. |
 | `verify_runtime_wiring.mjs` | PASSED | — | SUCCESS: Runtime wiring boundary verification passed. |
 | `verify_server_epistemic_belief.mjs` | PASSED | — | ALL FEAR SERVER EPISTEMIC BELIEF CHECKS PASSED |
@@ -349,7 +352,9 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 
 **No probe disagreed with itself across the recorded runs.** That is a statement about these 52 probes on this machine over up to 3 attempts each, not about determinism in general, and not about any machine but the recorded one.
 
-**Every probe in the recorded single run also appears in the repeated run**, so no probe in the roster above is left without a repetition result.
+**Never repeated at all (1) — in the recorded single run, absent from the repeated one, so nothing is known about whether they are deterministic:**
+
+- `verify_quarantine_reach.mjs`
 
 **Across the ledger of recorded repeated runs (6 night(s), 612 probe attempts):**
 
@@ -359,7 +364,8 @@ No probe has ever disagreed with itself in the ledger. That is a statement about
 
 **Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 0 of 3 do; 3 carry no per-run durations and are excluded rather than treated as zero. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
 
-**Every probe in the roster appears in the ledger**, so no probe is left without a cross-night result.
+**Never recorded in the ledger (1)** — nothing is known about whether these are deterministic:
+- `verify_quarantine_reach.mjs`
 
 **Repeatable but still not proven** — these probes gave the same answer every time, and that answer was that part of their claim had no evidence on this machine:
 
@@ -372,8 +378,8 @@ The four in-engine Godot suites were also rerun via `npm run godot:evidence`; th
 ---
 
 ## 5. Authority & provenance
-- Ledger: `docs/CURRENT_TRUTH_LEDGER.md` v1.3.3-PROVISIONAL (authoritative row-level mapping).
+- Ledger: `docs/CURRENT_TRUTH_LEDGER.md` v1.3.5-PROVISIONAL (authoritative row-level mapping).
 - Evidence: `evidence/audit_fear_ai_connection_extended_2026-09-19.md`, `evidence/host_sim_tick_profiling_2026-09-19.md`, `evidence/host_rebuild_attempt_2026-09-19.md`, `evidence/host_provenance_reconciliation_2026-09-20.md`, `evidence/host_union_reproduction_2026-09-20.md`, `evidence/host_union_change_2026-09-20.patch`, `evidence/host_clean_commit_reproduction_2026-09-20.md`, `evidence/js_runtime_performance_2026-09-19.md`, `evidence/rust_js_parity_vectors.json`.
-- Harness sources: `tools/verification/*.mjs` (15 current runtime/behaviour proofs, the release-claim document tripwire, the host-provenance reconciliation probe, and the metadata-only performance measurement named above), plus the shared Unity engine shim and its harness in `tools/verification/unity/` and the phase-driven in-engine scenario `tests/godot_project/run_session_persistence.gd`.
+- Harness sources: `tools/verification/*.mjs` (the runtime/behaviour harnesses and the release-claim document tripwire, as enumerated in the recorded roster above, plus the metadata-only performance measurement named above), plus the shared Unity engine shim and its harness in `tools/verification/unity/` and the phase-driven in-engine scenario `tests/godot_project/run_session_persistence.gd`.
 - Host fixes: `pixel-pets/src/bin/audit_fear_ai_connection.rs`, `pixel-pets/src/engine/formation_geometry.rs`, `pixel-pets/src/overlay_audio.rs` (commit `91af8f957`); audit extended to the faction matrix + 2,000-tick + formation-stress pass in `e2090880a`; latency gate + live squad-path stress + tick scaling probe in `f3f5e8d25`; missing persistence module landed to make a clean checkout build in `6867da9f4`.
 - Superseded records: `docs/CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `docs/NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md`, `docs/NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md`, `docs/NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md`, `docs/FAILURE_AND_LIFECYCLE_MATRIX.md`, and `evidence/manual-source-code-audit-dossier.md` are historical and must not be used to promote the current provisional verdict. `evidence/middleware-progress-evidence.json` is a dated progress ledger, not a current release authority.
