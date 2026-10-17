@@ -373,6 +373,7 @@ if (-not $Execute) {
     Write-Host '    - if the branch already carries unmerged nights, keep those too (read at push time)'
     Write-Host "    - regenerate $Dossier, then require verify_release_claim_boundaries.mjs to exit 0"
     Write-Host '    - commit exactly those two files, push with --force-with-lease, open or update the pull request'
+    Write-Host '    - put CI onto that commit: approve the held pull_request run when one appears, else dispatch test.yml on the branch'
     Write-Host ''
     Write-Host "  The pull request body that would be used was written to $bodyPath"
     Write-Host ''
@@ -541,17 +542,51 @@ if ($prNumber) {
     Add-Summary "### Stability ledger night — pull request opened: $prUrl"
 }
 
-# 3j. A token push does not trigger workflows, so the new or updated pull request would
-#     otherwise show no checks at all. Dispatch the same workflow on the branch so the run
-#     is visible where a reviewer looks for it. That run cannot fold a night — the fold
-#     step requires `schedule` on the default branch — so this cannot feed itself.
-& gh workflow run test.yml --ref $Branch
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning "the branch and pull request are in place, but dispatching CI on $Branch failed (exit $LASTEXITCODE). The pull request will show no checks; the verification above still holds."
-    Add-Summary ''
-    Add-Summary "> CI could not be dispatched on ``$Branch`` (``gh workflow run`` exited $LASTEXITCODE), so the pull request will show no checks. The verification above still holds."
-} else {
-    Write-Host "  ci:            test.yml dispatched on $Branch"
+# 3j. Get CI onto the commit a reviewer will look at. A token push triggers no `push`
+#     run, and the `pull_request` run GitHub does create for a pull request this token
+#     opens arrives *held* (`action_required`) because its author is the workflow's own
+#     bot: it must be approved before it runs, and only that run's own checks appear on the
+#     pull request. So the first move is to approve the held run for this commit. That
+#     call uses the job's `actions: write` token and is best-effort by design: approving
+#     by hand worked on 2026-10-17, but this token in this position has never been
+#     exercised, so a refusal falls through to the dispatch instead of failing the fold.
+#     When the pull request was *updated* rather than opened, a token push raises no
+#     fresh pull_request event and no held run will ever appear; about half a minute of
+#     polling is the budget before taking that answer. The dispatched run cannot fold a
+#     night — the fold step requires `schedule` on the default branch — so neither path
+#     can feed itself. A dispatched run's checks do not attach to the pull request, but
+#     the verification above and the run itself still hold.
+$commitFull = @(Get-Lines (Invoke-Git @('rev-parse', 'HEAD')))[0]
+$heldRunId = ''
+for ($attempt = 1; $attempt -le 6 -and -not $heldRunId; $attempt++) {
+    $runsText = (& gh api ("repos/{owner}/{repo}/actions/runs?event=pull_request&head_sha=$commitFull&per_page=10") 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -and $runsText.Trim()) {
+        $held = @(($runsText | ConvertFrom-Json).workflow_runs | Where-Object { $_.conclusion -eq 'action_required' })
+        if ($held.Count -gt 0) { $heldRunId = [string]$held[0].id }
+    }
+    if (-not $heldRunId -and $attempt -lt 6) { Start-Sleep -Seconds 5 }
+}
+$approved = $false
+if ($heldRunId) {
+    $approveText = (& gh api -X POST ("repos/{owner}/{repo}/actions/runs/$heldRunId/approve") 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0) {
+        $approved = $true
+        Write-Host "  ci:            held pull_request run $heldRunId approved; its checks will run on the pull request"
+        Add-Summary ''
+        Add-Summary "> The pull request's own CI run was held for approval and has been approved (run $heldRunId); its checks run on the pull request."
+    } else {
+        Write-Warning "a held pull_request run ($heldRunId) was found on $commitFull, but approving it failed (exit $LASTEXITCODE): $($approveText.Trim())"
+    }
+}
+if (-not $approved) {
+    & gh workflow run test.yml --ref $Branch
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "the branch and pull request are in place, but dispatching CI on $Branch failed (exit $LASTEXITCODE). The pull request will show no checks; the verification above still holds."
+        Add-Summary ''
+        Add-Summary "> CI could not be dispatched on ``$Branch`` (``gh workflow run`` exited $LASTEXITCODE), so the pull request will show no checks. The verification above still holds."
+    } else {
+        Write-Host "  ci:            test.yml dispatched on $Branch (a dispatched run's checks do not attach to the pull request)"
+    }
 }
 
 Write-Host ''
