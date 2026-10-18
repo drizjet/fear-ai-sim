@@ -1,0 +1,689 @@
+{
+  "kind": "recorded-probe-suite-run",
+  "note": "A RECORDED run of the deterministic probe suite. Verdicts, durations and skip lines are properties of THIS machine on THIS date. CI re-runs the suite and uploads its own summary; a PARTIAL here means the claim had no evidence on this machine, not that it failed.",
+  "recordedAt": "2026-10-18T04:58:38.991Z",
+  "node": "v24.20.0",
+  "platform": "win32",
+  "repeat": 1,
+  "engine": "FEAR_AI_GODOT not set — in-engine probes fall back to their own engine discovery",
+  "expectedToBeProven": [],
+  "totals": {
+    "probes": 60,
+    "passed": 58,
+    "passedWithSkips": 1,
+    "failed": 1
+  },
+  "notProven": [
+    {
+      "name": "verify_unity_editor_tests.mjs",
+      "reason": "SKIPPED: no Unity Editor found on this machine."
+    }
+  ],
+  "failures": [
+    "verify_trade_runtime_contracts.mjs"
+  ],
+  "probes": [
+    {
+      "name": "verify_adapter_conformance.mjs",
+      "verdict": "PASSED",
+      "assertions": 230,
+      "durationsMs": [
+        3328
+      ],
+      "durationMs": 3328,
+      "summaryLine": "SUCCESS: All 230 adapter conformance assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_advisory_numeric_hygiene.mjs",
+      "verdict": "PASSED",
+      "assertions": 128,
+      "durationsMs": [
+        52
+      ],
+      "durationMs": 52,
+      "summaryLine": "128 assertions passed, 0 failed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_all_systems_runtime.mjs",
+      "verdict": "PASSED",
+      "assertions": 266,
+      "durationsMs": [
+        107
+      ],
+      "durationMs": 107,
+      "summaryLine": "All 266 all-systems runtime assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_backpressure_failure_telemetry.mjs",
+      "verdict": "PASSED",
+      "assertions": 25,
+      "durationsMs": [
+        47
+      ],
+      "durationMs": 47,
+      "summaryLine": "SUCCESS: All 25 backpressure failure-telemetry assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_compound_collisions.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        81
+      ],
+      "durationMs": 81,
+      "summaryLine": "ALL CROSS-SYSTEM COMPOUND COLLISION TESTS PASSED CLEANLY.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_contagion_transmission.mjs",
+      "verdict": "PASSED",
+      "assertions": 57,
+      "durationsMs": [
+        729
+      ],
+      "durationMs": 729,
+      "summaryLine": "SUCCESS: contagion transmission is real, bounded, opt-outable, deterministic, and gated.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_counterfactual_world.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        123
+      ],
+      "durationMs": 123,
+      "summaryLine": "SUCCESS: WorldCounterfactualEngine verification passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_cross_tree_parity.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        54
+      ],
+      "durationMs": 54,
+      "summaryLine": "SUCCESS: 22 cross-tree vectors verified against the EXECUTED Rust oracle: 15 agree, 7 declared divergences (each reproduced on both sides); lock/clamp/berserk observations B7-B10 hold; DEC-0001 boundary scale table verified.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_dashboard_endpoints.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        204
+      ],
+      "durationMs": 204,
+      "summaryLine": "Server stopped cleanly.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_dead_code_sweep.mjs",
+      "verdict": "PASSED",
+      "assertions": 52,
+      "durationsMs": [
+        53
+      ],
+      "durationMs": 53,
+      "summaryLine": "SUCCESS: All 52 dead-code-sweep assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_determinism_contract.mjs",
+      "verdict": "PASSED",
+      "assertions": 55,
+      "durationsMs": [
+        110
+      ],
+      "durationMs": 110,
+      "summaryLine": "SUCCESS: All 55 determinism contract assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_dotnet_adapters_compile.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        3405
+      ],
+      "durationMs": 3405,
+      "summaryLine": "SUCCESS: both .NET adapters compile and the Unity EditMode fixtures RUN (27 checks).",
+      "skipLines": []
+    },
+    {
+      "name": "verify_epistemic_belief_optin.mjs",
+      "verdict": "PASSED",
+      "assertions": 46,
+      "durationsMs": [
+        109
+      ],
+      "durationMs": 109,
+      "summaryLine": "SUCCESS: All 46 Epistemic Belief opt-in assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_evidence_seed_idempotency.mjs",
+      "verdict": "PASSED",
+      "assertions": 18,
+      "durationsMs": [
+        954
+      ],
+      "durationMs": 954,
+      "summaryLine": "All 18 evidence-seed idempotency assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_examples_inventory.mjs",
+      "verdict": "PASSED",
+      "assertions": 23,
+      "durationsMs": [
+        1000
+      ],
+      "durationMs": 1000,
+      "summaryLine": "SUCCESS: every example is classified, and every stated verdict is earned or absent.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_fabe_personas.mjs",
+      "verdict": "PASSED",
+      "assertions": 53,
+      "durationsMs": [
+        68
+      ],
+      "durationMs": 68,
+      "summaryLine": "SUCCESS: All 53 FABE persona assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_faction_governance_optin.mjs",
+      "verdict": "PASSED",
+      "assertions": 94,
+      "durationsMs": [
+        112
+      ],
+      "durationMs": 112,
+      "summaryLine": "All 94 Faction Governance opt-in assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_fearcore_extended_scale.mjs",
+      "verdict": "PASSED",
+      "assertions": 57,
+      "durationsMs": [
+        48
+      ],
+      "durationMs": 48,
+      "summaryLine": "SUCCESS: All 57 fearcore extended-scale assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_fuzz_arbitration.mjs",
+      "verdict": "PASSED",
+      "assertions": 16,
+      "durationsMs": [
+        11475
+      ],
+      "durationMs": 11475,
+      "summaryLine": "SUCCESS: 16 fuzz-arbitration assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_godot_fallback_parity.mjs",
+      "verdict": "PASSED",
+      "assertions": 37,
+      "durationsMs": [
+        59
+      ],
+      "durationMs": 59,
+      "summaryLine": "SUCCESS: All 37 Godot fallback parity assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_godot_live_pipeline.mjs",
+      "verdict": "PASSED",
+      "assertions": 128,
+      "durationsMs": [
+        52
+      ],
+      "durationMs": 52,
+      "summaryLine": "SUCCESS: All 128 Godot live-pipeline wiring assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_godot_stations.mjs",
+      "verdict": "PASSED",
+      "assertions": 169,
+      "durationsMs": [
+        176
+      ],
+      "durationMs": 176,
+      "summaryLine": "SUCCESS: All 169 Godot station-level assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_host_feedback_bounds.mjs",
+      "verdict": "PASSED",
+      "assertions": 38,
+      "durationsMs": [
+        45
+      ],
+      "durationMs": 45,
+      "summaryLine": "SUCCESS: All 38 host feedback bounds assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_host_provenance.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        1480
+      ],
+      "durationMs": 1480,
+      "summaryLine": "SUCCESS: Host provenance root cause and resolution re-derived.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_host_token_persistence.mjs",
+      "verdict": "PASSED",
+      "assertions": 44,
+      "durationsMs": [
+        5415
+      ],
+      "durationMs": 5415,
+      "summaryLine": "SUCCESS: 44 host persistence assertions passed across 6 separate engine processes.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_information_propagation_optin.mjs",
+      "verdict": "PASSED",
+      "assertions": 41,
+      "durationsMs": [
+        116
+      ],
+      "durationMs": 116,
+      "summaryLine": "SUCCESS: the service is opt-in, advisory, roster-tracking, refusing and deterministic.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_long_horizon_lifecycle.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        245
+      ],
+      "durationMs": 245,
+      "summaryLine": "SUCCESS: Long-horizon runtime lifecycle verification passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_macro_settlement_optin.mjs",
+      "verdict": "PASSED",
+      "assertions": 54,
+      "durationsMs": [
+        114
+      ],
+      "durationMs": 114,
+      "summaryLine": "SUCCESS: All 54 macro-settlement opt-in assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_moral_dissonance.mjs",
+      "verdict": "PASSED",
+      "assertions": 110,
+      "durationsMs": [
+        43
+      ],
+      "durationMs": 43,
+      "summaryLine": "SUCCESS: All 110 moral dissonance assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_moral_dissonance_optin.mjs",
+      "verdict": "PASSED",
+      "assertions": 48,
+      "durationsMs": [
+        111
+      ],
+      "durationMs": 111,
+      "summaryLine": "ALL 48 MORAL DISSONANCE OPT-IN ASSERTIONS PASSED",
+      "skipLines": []
+    },
+    {
+      "name": "verify_night_fold_rehearsal.mjs",
+      "verdict": "PASSED",
+      "assertions": 29,
+      "durationsMs": [
+        7739
+      ],
+      "durationMs": 7739,
+      "summaryLine": "SUCCESS: All 29 night-fold-rehearsal assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_nonfinite_context_hygiene.mjs",
+      "verdict": "PASSED",
+      "assertions": 218,
+      "durationsMs": [
+        58
+      ],
+      "durationMs": 58,
+      "summaryLine": "218 assertions passed, 0 failed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_nonfinite_position_hygiene.mjs",
+      "verdict": "PASSED",
+      "assertions": 113,
+      "durationsMs": [
+        105
+      ],
+      "durationMs": 105,
+      "summaryLine": "113 assertions passed, 0 failed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_observation_acceptance.mjs",
+      "verdict": "PASSED",
+      "assertions": 29,
+      "durationsMs": [
+        135
+      ],
+      "durationMs": 135,
+      "summaryLine": "SUCCESS: All 29 observation-acceptance assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_optin_engine_lifecycle.mjs",
+      "verdict": "PASSED",
+      "assertions": 85,
+      "durationsMs": [
+        110
+      ],
+      "durationMs": 110,
+      "summaryLine": "SUCCESS: All 85 opt-in engine lifecycle assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_pack_coordination_optin.mjs",
+      "verdict": "PASSED",
+      "assertions": 38,
+      "durationsMs": [
+        114
+      ],
+      "durationMs": 114,
+      "summaryLine": "SUCCESS: All 38 pack-coordination opt-in assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_persistence_roundtrip.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        132
+      ],
+      "durationMs": 132,
+      "summaryLine": "SUCCESS: All persistence, migration, and reset tests PASSED!",
+      "skipLines": []
+    },
+    {
+      "name": "verify_persona_signatures_optin.mjs",
+      "verdict": "PASSED",
+      "assertions": 233,
+      "durationsMs": [
+        112
+      ],
+      "durationMs": 112,
+      "summaryLine": "ALL FUNCTIONAL PERSONA SIGNATURES (FABE) CHECKS PASSED (233 assertions)",
+      "skipLines": []
+    },
+    {
+      "name": "verify_protocol_abuse.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        286
+      ],
+      "durationMs": 286,
+      "summaryLine": "SUCCESS: Protocol abuse verification passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_quarantine_reach.mjs",
+      "verdict": "PASSED",
+      "assertions": 28,
+      "durationsMs": [
+        70
+      ],
+      "durationMs": 70,
+      "summaryLine": "SUCCESS: All 28 quarantine-reach assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_release_claim_boundaries.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        546
+      ],
+      "durationMs": 546,
+      "summaryLine": "SUCCESS: Release-claim document boundaries are explicit.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_runtime_real_browser.mjs",
+      "verdict": "PASSED",
+      "assertions": 11,
+      "durationsMs": [
+        28136
+      ],
+      "durationMs": 28136,
+      "summaryLine": "All 11 runtime-real-browser assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_runtime_wiring.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        157
+      ],
+      "durationMs": 157,
+      "summaryLine": "SUCCESS: Runtime wiring boundary verification passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_scenario_differentiation.mjs",
+      "verdict": "PASSED",
+      "assertions": 18,
+      "durationsMs": [
+        137
+      ],
+      "durationMs": 137,
+      "summaryLine": "All 18 scenario-differentiation assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_server_epistemic_belief.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        136
+      ],
+      "durationMs": 136,
+      "summaryLine": "ALL FEAR SERVER EPISTEMIC BELIEF CHECKS PASSED",
+      "skipLines": []
+    },
+    {
+      "name": "verify_server_faction_governance.mjs",
+      "verdict": "PASSED",
+      "assertions": 101,
+      "durationsMs": [
+        137
+      ],
+      "durationMs": 137,
+      "summaryLine": "ALL FEAR SERVER FACTION GOVERNANCE CHECKS PASSED (101 assertions)",
+      "skipLines": []
+    },
+    {
+      "name": "verify_server_lifecycle.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        292
+      ],
+      "durationMs": 292,
+      "summaryLine": "SUCCESS: Fear Server lifecycle and protocol verification passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_server_macro_settlement.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        137
+      ],
+      "durationMs": 137,
+      "summaryLine": "ALL FEAR SERVER MACRO & SETTLEMENT CHECKS PASSED",
+      "skipLines": []
+    },
+    {
+      "name": "verify_server_moral_dissonance.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        136
+      ],
+      "durationMs": 136,
+      "summaryLine": "ALL FEAR SERVER MORAL DISSONANCE CHECKS PASSED",
+      "skipLines": []
+    },
+    {
+      "name": "verify_server_pack_coordination.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        145
+      ],
+      "durationMs": 145,
+      "summaryLine": "SUCCESS: All FearServer Pack Coordination control plane assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_server_persona_signatures.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        136
+      ],
+      "durationMs": 136,
+      "summaryLine": "ALL FEAR SERVER FUNCTIONAL PERSONA SIGNATURES CHECKS PASSED",
+      "skipLines": []
+    },
+    {
+      "name": "verify_server_reconnect.mjs",
+      "verdict": "PASSED",
+      "assertions": null,
+      "durationsMs": [
+        395
+      ],
+      "durationMs": 395,
+      "summaryLine": "SUCCESS: Real WebSocket reconnect verification passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_simulation_contracts.mjs",
+      "verdict": "PASSED",
+      "assertions": 108,
+      "durationsMs": [
+        70
+      ],
+      "durationMs": 70,
+      "summaryLine": "All 108 simulation-contract assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_store_encryption.mjs",
+      "verdict": "PASSED",
+      "assertions": 46,
+      "durationsMs": [
+        1520
+      ],
+      "durationMs": 1520,
+      "summaryLine": "SUCCESS: 46 encrypted-store assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_trade_chain_causal_edges.mjs",
+      "verdict": "PASSED",
+      "assertions": 730,
+      "durationsMs": [
+        116
+      ],
+      "durationMs": 116,
+      "summaryLine": "All 730 trade-chain causal-edge assertions PASSED.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_trade_runtime_contracts.mjs",
+      "verdict": "FAILED",
+      "assertions": null,
+      "durationsMs": [
+        125
+      ],
+      "durationMs": 125,
+      "summaryLine": "FAILED check 37: tick 2 town north: FIRE decision carries PRESSURE_EXCEEDS_THRESHOLD (got PRESSURE_BELOW_THRESHOLD)",
+      "skipLines": []
+    },
+    {
+      "name": "verify_transport_signing.mjs",
+      "verdict": "PASSED",
+      "assertions": 61,
+      "durationsMs": [
+        1502
+      ],
+      "durationMs": 1502,
+      "summaryLine": "SUCCESS: 61 transport-signing assertions passed.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_unity_adapter_behavior.mjs",
+      "verdict": "PASSED",
+      "assertions": 37,
+      "durationsMs": [
+        1904
+      ],
+      "durationMs": 1904,
+      "summaryLine": "SUCCESS: 37 Unity behavioural assertions passed across 4 separate processes.",
+      "skipLines": []
+    },
+    {
+      "name": "verify_unity_editor_tests.mjs",
+      "verdict": "PARTIAL",
+      "assertions": null,
+      "durationsMs": [
+        47
+      ],
+      "durationMs": 47,
+      "summaryLine": "SKIPPED: no Unity Editor found on this machine.",
+      "skipLines": [
+        "SKIPPED: no Unity Editor found on this machine."
+      ]
+    },
+    {
+      "name": "verify_wire_numeric_boundary.mjs",
+      "verdict": "PASSED",
+      "assertions": 81,
+      "durationsMs": [
+        42
+      ],
+      "durationMs": 42,
+      "summaryLine": "81 assertions passed, 0 failed.",
+      "skipLines": []
+    }
+  ]
+}
