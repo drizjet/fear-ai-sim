@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "MUT-OBS-001",
+  "contractId": "TRADE.CATMOUSE.LEGAL_OBSERVATION_ONLY",
+  "description": "Merchant route selection reads authoritative bandit location directly",
+  "targetFile": "canonical-trade-system.js",
+  "preHash": "d6eb3e47bf449624a1c4352bd5cffa07c067da71d22595531ac9736f948215c0",
+  "postHash": "4dc5c4b79044f78f09c5304913c0657e7f9b3a89c657b5bbe6cfda7b034ab0e4",
+  "patchHash": "4dc5c4b79044f78f09c5304913c0657e7f9b3a89c657b5bbe6cfda7b034ab0e4",
+  "verifier": {
+    "kind": "deterministic-probe-suite",
+    "command": "node tools/verification/run_probe_suite.mjs --json .guardian-probe-run.json",
+    "probeSuite": {
+      "probes": 55,
+      "passed": 53,
+      "passedWithSkips": 1,
+      "failed": 1,
+      "notProven": [
+        "verify_unity_editor_tests.mjs"
+      ]
+    }
+  },
+  "expectedFailingProbe": "verify_trade_runtime_contracts.mjs",
+  "observedFailingProbes": [
+    "verify_trade_runtime_contracts.mjs"
+  ],
+  "exitCode": 1,
+  "result": "KILLED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-OBS-001-1792289701554",
+  "copyDurationMs": 1303,
+  "verdict": "MUTANT_KILLED",
+  "recordedAt": "2026-10-18T02:15:54.144Z"
+}
