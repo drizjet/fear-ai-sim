@@ -103,9 +103,12 @@ const CATALOG = {
         contractId: 'EVIDENCE.SEED.IDEMPOTENT',
         description: 'Append duplicate evidence despite same claim+dimension+fingerprint',
         targetFile: 'evidence/receipt.mjs',
-        findPattern: /        if \(!isDuplicate\) \{[\s\S]*?            appendFileSync\(ledgerPath, JSON\.stringify\(row\) \+ '\\n'\);[\s\S]*?        \}/,
-        replacement: `        // MUT-EVID-001: append without duplicate check (regression)
-        appendFileSync(ledgerPath, JSON.stringify(row) + '\\n');`,
+        // Re-anchored 2026-10-18 (MOVEMENT E2): the dedupe check moved
+        // inside the ledger-lock callback (race close), so the guard line
+        // is now indented one level deeper. The mutation forces the append
+        // branch regardless of the (still computed) duplicate check.
+        findPattern: /            if \(!isDuplicate\) \{/,
+        replacement: '            if (true) { // MUT-EVID-001: append without duplicate check (regression)',
         expectedFailingProbe: 'verify_evidence_seed_idempotency.mjs',
     },
 };
