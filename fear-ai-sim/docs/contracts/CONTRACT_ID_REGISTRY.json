@@ -148,19 +148,19 @@
       "forbiddenShortcut": "remove or reparent any required causal edge",
       "v5CoreOrigin": true,
       "firstAcceptedRevision": "PENDING",
-      "currentRevision": "V8-2026-08-31-DEVELOPMENT-PENDING-ACCEPTANCE",
+      "currentRevision": "V4-CHAIN-2026-10-18-DEVELOPMENT",
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["causal-edge-removal"],
       "protectedTests": [
-        "tests/causal-chain.test.js > observation -> belief -> decision -> trip -> exposure -> encounter -> consequence -> reaction is a valid partial order"
+        "tools/verification/verify_trade_chain_causal_edges.mjs > the route decision must name a BELIEF_UPDATE parent whenever the merchant held a belief (under the mutant the decision carries parents=[] and the check fails at the first driven tick that follows an observation); the same probe asserts the one-shot ordered type sequence and the full parent-linked OBSERVATION -> BELIEF_UPDATE -> ROUTE_DECISION -> TRIP_COMMITMENT -> ROUTE_EXPOSURE -> CANDIDATE_ENCOUNTER -> ENCOUNTER -> CONSEQUENCE -> FACTION_REACTION edge chain on the live reducer"
       ],
       "developmentMutationEvidence": {
         "killedInDevelopment": true,
-        "verifiedAt": "2026-08-31",
-        "mutationPatch": "closed-world.js > canonical route integration: clear beliefParentIds both when tickMerchant emits the decision and when event identity is finalized",
+        "verifiedAt": "2026-10-18",
+        "mutationPatch": "closed-world.js > canonical route integration: `beliefParentIds` returns [] — the MERCHANT_ROUTE_DECISION is emitted (tickCanonicalMerchant) and its identity finalized (ensureWorldEventIdentity) without its BELIEF_UPDATE parent",
         "observingTestsUnderMutation": [
-          "tests/causal-chain.test.js > decision child lookup fails because no MERCHANT_ROUTE_DECISION names the BELIEF_UPDATE parent"
+          "tools/verification/verify_trade_chain_causal_edges.mjs > check 9 fails at tick 4 ('decision names a BELIEF_UPDATE parent', parents=[empty]); receipt MUT-CHAIN-001-1792297594885 KILLED with this probe as the sole observed failure"
         ],
         "lane": "B",
         "frozenAcceptanceRequired": true

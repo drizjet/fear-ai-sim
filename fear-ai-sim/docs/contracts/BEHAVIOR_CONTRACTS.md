@@ -112,3 +112,16 @@ the audit-trail structure required by Guardian V3 §2.)
   remains PENDING_AUDIT pending independent review. No protected-manifest entry
   existed for this surface, so none was edited; the new-contract proposal is filed
   as `docs/guardian/change-proposals/MOVEMENT-D2-real-browser-boot-and-tick.json`.
+- 2026-10-18 — V4 P0 CHAIN (closed-world causal chain): TRADE.CHAIN.ORDERED_CAUSAL_SEQUENCE
+  rebound from the retired Jest source tests/closed-world-chain.test.js to the living probe
+  `tools/verification/verify_trade_chain_causal_edges.mjs` (section 1 asserts the one-shot
+  eight-type relative order under the sealed preconditions — membership/toContain is not
+  sufficient, and other system events such as LAW_VIOLATED legitimately interleave; section 2
+  asserts the parent-linked edge chain on the driven reducer, so the route decision must name
+  its BELIEF_UPDATE parent whenever the merchant held a belief, and every required edge from
+  OBSERVATION to FACTION_REACTION holds). Real-source mutation MUT-CHAIN-001 (the decision
+  drops its BELIEF_UPDATE parent) is killed by this probe (receipt
+  `docs/guardian/mutation-receipts/MUT-CHAIN-001-1792297594885.json`). The entry remains
+  PENDING_AUDIT pending independent review. Protected-test migration filed as
+  `docs/guardian/change-proposals/T-CHAIN-001-migration-to-probes.json`; the protected
+  manifest itself was not edited.

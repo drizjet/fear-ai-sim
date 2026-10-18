@@ -1,0 +1,43 @@
+{
+  "proposalId": "T-CHAIN-001-migration-to-probes",
+  "kind": "SPEC_TEST_CHANGE",
+  "campaign": "FEAR_GUARDIAN_CAMPAIGN_V4",
+  "movement": "P0-CHAIN",
+  "createdAt": "2026-10-18",
+  "author": "worker",
+  "status": "PENDING_GUARDIAN_ACCEPTANCE",
+  "summary": "Migrate the protected test T-CHAIN-001 (contractId TRADE.CHAIN.ORDERED_CAUSAL_SEQUENCE) from the retired Jest file tests/closed-world-chain.test.js to the living probe tools/verification/verify_trade_chain_causal_edges.mjs, and resolve its PENDING_RECONSTRUCTION status: the required order is a relative order of the eight named event types, and the entry additionally binds the parent-linked causal-edge chain of MUT-CHAIN-001.",
+  "motivation": "Hard Rule 9 retired the Jest suites (2026-09-06); tests/closed-world-chain.test.js no longer exists, so the manifest file/testName references are dead, and the recorded assertions had been weakened from toEqual to toContain (Guardian V3 §1 item #2). The V4 P0 resolution re-derives the authority for the order from the live reducer: runClosedWorldScenario under the sealed preconditions (bandit.lootExpectation === 0.95, bandit.switchMargin === 0) emits the eight required types in a fixed relative order with LAW_VIOLATED interleaving, so exact list equality is the wrong strength while relative order is the correct one. The same probe drives tickClosedWorld over 90 forced-attack ticks and asserts the MUT-CHAIN-001 edge contract (OBSERVATION -> BELIEF_UPDATE -> ROUTE_DECISION -> TRIP_COMMITMENT -> ROUTE_EXPOSURE -> CANDIDATE_ENCOUNTER -> ENCOUNTER -> CONSEQUENCE -> FACTION_REACTION), which the retired tests/causal-chain.test.js could no longer protect.",
+  "manifestImpact": [
+    {
+      "testId": "T-CHAIN-001",
+      "currentFile": "tests/closed-world-chain.test.js",
+      "currentTestName": "connects attack evidence, rumor, rerouting, and faction escalation",
+      "strengthClass": "ORDERED_SEQUENCE_PLUS_PARENT_LINKAGE",
+      "revisionStatus": "RECONSTRUCTED_IN_LIVING_PROBE",
+      "proposedFile": "tools/verification/verify_trade_chain_causal_edges.mjs",
+      "proposedLivingBinding": "section 1: runClosedWorldScenario under the sealed preconditions emits CONVOY_FORMED, BANDIT_ATTACK, RUMOR, ROUTE_SELECTED, FACTION_REASSESSMENT, FACTION_ACTION, INVASION, BANDIT_RELOCATION in the required relative order (LAW_VIOLATED interleaves; membership is not sufficient, and exact equality would be wrong). section 2: driven reducer preserves every required causal edge — the route decision names a BELIEF_UPDATE parent whenever the merchant held a belief, TRIP_COMMITMENT names its same-merchant same-tick decision, ROUTE_EXPOSURE names its commitment, CANDIDATE_ENCOUNTER names its exposure, ENCOUNTER names its candidate, BANDIT_ATTACK names its encounter, FACTION_REACTION names its attack, all parent references resolve, and an ancestry walk from the first reaction reaches the root through MERCHANT_ROUTE_DECISION.",
+      "resolution": "V4 §7.1 outcome: the contract authority is the relative order of the eight named types (partial order), not exact stream equality; the edge-level requirement is bound from MUT-CHAIN-001's registry statement (legalInformationSource: event causal parents).",
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-CHAIN-001-1792297594885.json (KILLED; expected failing probe observed as the sole failure)"
+    }
+  ],
+  "registryRebinds": [
+    {
+      "mutationId": "MUT-CHAIN-001",
+      "previously": "tests/causal-chain.test.js > observation -> belief -> decision -> trip -> exposure -> encounter -> consequence -> reaction is a valid partial order",
+      "now": "tools/verification/verify_trade_chain_causal_edges.mjs > section 2: the route decision must name a BELIEF_UPDATE parent whenever the merchant held a belief (the kill check; under MUT-CHAIN-001 the decision carries parents=[] and the check fails at the first driven tick that follows an observation), and the full parent-linked edge chain holds on the live reducer; section 1: one-shot ordered type sequence under the sealed preconditions"
+    }
+  ],
+  "workerDiscipline": {
+    "protectedManifestEdited": false,
+    "protectedManifest": "docs/guardian/PROTECTED_TESTS.json",
+    "note": "The worker did not modify the protected manifest; this proposal awaits guardian acceptance. docs/contracts/CONTRACT_ID_REGISTRY.json is worker-authored bootstrap (frozenBy PENDING_SUPERVISOR, V6 §2) and was rebound to the living probe as an honest binding. MUT-CHAIN-001 remains in v5CorePendingAcceptance with firstAcceptedRevision PENDING; its currentRevision carries the development revision V4-CHAIN-2026-10-18-DEVELOPMENT."
+  },
+  "evidence": [
+    "docs/guardian/mutation-receipts/MUT-CHAIN-001-1792297594885.json",
+    "docs/guardian/mutation-receipts/MUT-CHAIN-001-1792297594885-probe-run.json",
+    "tools/verification/verify_trade_chain_causal_edges.mjs",
+    "tools/guardian/contract-mutate.mjs (MUT-CHAIN-001 catalog entry)"
+  ],
+  "requestedDecision": "Accept the migration of T-CHAIN-001 to the living-probe binding (one-shot relative order + parent-linked edge chain) and update PROTECTED_TESTS.json's T-CHAIN-001 entry, which currently points at the retired tests/closed-world-chain.test.js with strengthClass PENDING_RECONSTRUCTION and revisionStatus NEEDS_RECONSTRUCTION, to the reconstructed living binding."
+}

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "MUT-CHAIN-001",
+  "contractId": "TRADE.CHAIN.ORDERED_CAUSAL_SEQUENCE",
+  "description": "Clear the route decision's BELIEF_UPDATE parents (the OBSERVATION -> BELIEF_UPDATE -> DECISION causal edge is removed)",
+  "targetFile": "closed-world.js",
+  "preHash": "0a8602dc8db9adb037ae2d65a00b5f2ce9d226512fd3b6dc3d04b003445706d9",
+  "postHash": "7486a1ce70316eb30d797cb622aed22050c36106dc42c26b5332519d2a884d3e",
+  "patchHash": "7486a1ce70316eb30d797cb622aed22050c36106dc42c26b5332519d2a884d3e",
+  "verifier": {
+    "kind": "deterministic-probe-suite",
+    "command": "node tools/verification/run_probe_suite.mjs --json .guardian-probe-run.json",
+    "probeSuite": {
+      "probes": 57,
+      "passed": 55,
+      "passedWithSkips": 1,
+      "failed": 1,
+      "notProven": [
+        "verify_unity_editor_tests.mjs"
+      ]
+    }
+  },
+  "expectedFailingProbe": "verify_trade_chain_causal_edges.mjs",
+  "observedFailingProbes": [
+    "verify_trade_chain_causal_edges.mjs"
+  ],
+  "exitCode": 1,
+  "result": "KILLED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-CHAIN-001-1792297516413",
+  "copyDurationMs": 1069,
+  "verdict": "MUTANT_KILLED",
+  "recordedAt": "2026-10-18T04:26:34.886Z"
+}
