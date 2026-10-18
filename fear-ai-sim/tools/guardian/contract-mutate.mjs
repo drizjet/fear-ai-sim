@@ -111,6 +111,19 @@ const CATALOG = {
         replacement: '            if (true) { // MUT-EVID-001: append without duplicate check (regression)',
         expectedFailingProbe: 'verify_evidence_seed_idempotency.mjs',
     },
+    'MUT-RUNTIME-003': {
+        contractId: 'RUNTIME.REAL_BROWSER.BOOT_AND_TICK',
+        description: 'Stop rescheduling the main frame loop (the runtime executes one frame, then freezes)',
+        targetFile: 'main.js',
+        // Added 2026-10-18 (MOVEMENT D2): the rAF reschedule at the tail of
+        // loop() is the runtime's heartbeat. Removing it leaves exactly the
+        // first frame executed: the population counter is still set once
+        // (so a naive "pop > 0" check would survive), but the counters are
+        // frozen — which is what the real-browser probe samples for.
+        findPattern: /    \/\/ Always schedule the next frame, even after an error\n    requestAnimationFrame\(loop\);/,
+        replacement: '    // MUT-RUNTIME-003: the frame loop is no longer rescheduled (regression)',
+        expectedFailingProbe: 'verify_runtime_real_browser.mjs',
+    },
 };
 
 // ---- CLI parsing ----

@@ -194,7 +194,7 @@ jobs:
     # probe that exists, because a declaration that matches nothing is inert.
     - name: Run the deterministic probe suite
       env:
-        FEAR_AI_EXPECT_PROVEN: store_encryption,host_token_persistence,transport_signing,verify_dotnet_adapters_compile
+        FEAR_AI_EXPECT_PROVEN: store_encryption,host_token_persistence,transport_signing,verify_dotnet_adapters_compile,verify_runtime_real_browser
       run: npm run verify:probes -- --json probe_suite_report.json
       working-directory: fear-ai-sim
 
@@ -253,7 +253,7 @@ jobs:
     # intermittently wrong rather than wrong every time.
     - name: Run the probe suite repeatedly
       env:
-        FEAR_AI_EXPECT_PROVEN: store_encryption,host_token_persistence,transport_signing,verify_dotnet_adapters_compile
+        FEAR_AI_EXPECT_PROVEN: store_encryption,host_token_persistence,transport_signing,verify_dotnet_adapters_compile,verify_runtime_real_browser
       run: npm run verify:probe-stability -- --json probe_stability_report.json
       working-directory: fear-ai-sim
 
