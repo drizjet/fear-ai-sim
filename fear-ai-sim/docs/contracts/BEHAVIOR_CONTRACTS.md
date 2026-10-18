@@ -1,7 +1,7 @@
 ---
 title: "Behavior Contracts — Fear AI"
 created: 2026-08-29
-updated: 2026-09-06
+updated: 2026-10-18
 type: contract-registry
 status: active
 ---
@@ -79,3 +79,11 @@ the audit-trail structure required by Guardian V3 §2.)
 - 2026-08-29 — Initial registry created. 11 contract candidates extracted from the 6 test
   files flagged by Guardian V3 §1. Status is PENDING_AUDIT for all entries pending fresh
   independent review. No contract has been accepted into durable state yet.
+- 2026-10-18 — V4 MOVEMENT C2 (exact-once tick phase): TRADE.RUNTIME.AUTHORITATIVE_PATH
+  and TRADE.RUNTIME.NO_DOUBLE_EXECUTION formalized as the at-least-once + at-most-once
+  pair and rebound from retired Jest sources to the living probe
+  `tools/verification/verify_trade_runtime_contracts.mjs` (call-site tripwire strengthened
+  from presence to exact cardinality; tickHistory delta asserted exactly +1 per call).
+  Both entries remain PENDING_AUDIT pending independent review. Protected-test migration
+  filed as `docs/guardian/change-proposals/T-RUNTIME-001-migration-to-probes.json`;
+  the protected manifest itself was not edited.

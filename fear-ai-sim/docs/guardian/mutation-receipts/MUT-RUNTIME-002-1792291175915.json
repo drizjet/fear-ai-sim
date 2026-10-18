@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "MUT-RUNTIME-002",
+  "contractId": "TRADE.RUNTIME.AUTHORITATIVE_PATH",
+  "description": "Make runClosedWorldStep stop invoking tickClosedWorld",
+  "targetFile": "simulation.js",
+  "preHash": "3b91c4dc778efea806ed47e704e02c2ecc65ab016819d4cb08d608108bd90ef5",
+  "postHash": "f1c113c7756ecae63e02dbaa16edc89e398a93621eb2d698f191c166c50c2c26",
+  "patchHash": "f1c113c7756ecae63e02dbaa16edc89e398a93621eb2d698f191c166c50c2c26",
+  "verifier": {
+    "kind": "deterministic-probe-suite",
+    "command": "node tools/verification/run_probe_suite.mjs --json .guardian-probe-run.json",
+    "probeSuite": {
+      "probes": 55,
+      "passed": 53,
+      "passedWithSkips": 1,
+      "failed": 1,
+      "notProven": [
+        "verify_unity_editor_tests.mjs"
+      ]
+    }
+  },
+  "expectedFailingProbe": "verify_trade_runtime_contracts.mjs",
+  "observedFailingProbes": [
+    "verify_trade_runtime_contracts.mjs"
+  ],
+  "exitCode": 1,
+  "result": "KILLED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-RUNTIME-002-1792291131847",
+  "copyDurationMs": 817,
+  "verdict": "MUTANT_KILLED",
+  "recordedAt": "2026-10-18T02:39:35.916Z"
+}
