@@ -1,10 +1,13 @@
 # Monorepo reconciliation proposal — `main` vs `master`
 
-Status: **option 1 EXECUTED 2026-09-23** — repository default branch flipped to `main` via
-`gh repo edit --default-branch main` (a reversible setting; no force-push, no push to `master`,
-no history rewrite). Options 2–4 remain owner decisions. Written 2026-09-23 during
-RESP-REPUTATION-PUBLIC-PRIVATE-001 work; recorded durably because the repository carries two
-disjoint projects under one name.
+Status: **option 1 partially rolled back — live default is `master` (verified 2026-10-17)**.
+The 2026-09-23 flip to `main` (`gh repo edit --default-branch main`, a reversible setting) was
+subsequently reverted to `master`; the revert date was not recorded. The default must stay
+`master`: the daily scheduled workflow (`test.yml`, cron `0 4 * * *` — nightly probe/fold/drift
+jobs) exists only on `master`, GitHub fires schedules only from the default branch, and `main`'s
+`ci.yml` carries no `schedule` trigger — flipping to `main` would silently disable the nightly
+jobs. Options 2–4 remain owner decisions. Written 2026-09-23 during
+RESP-REPUTATION-PUBLIC-PRIVATE-001 work; corrected 2026-10-17.
 
 ## The facts (measured, not assumed)
 
@@ -41,9 +44,9 @@ explicit re-open procedure.
 
 ## Options (owner decision required)1. **Status quo, dual branch — EXECUTED 2026-09-23 (recommended)** — `main` = V8 sim at root
 with its own green CI (runs `35874405000`, `35874679330`, `35879709609`, all success);
-`master` = untouched legacy monorepo. Default branch flipped to `main` with
-`gh repo edit --default-branch main` (reversible: `--default-branch master`). Cost: the repo
-*root* looks different per branch; `master` no longer defaults but is fully intact.
+`master` = untouched legacy monorepo. The default branch was flipped to `main` on 2026-09-23 and
+has since been reverted to `master` (verified 2026-10-17) so the only scheduled workflow
+(`test.yml`, on `master`) keeps firing; `main` remains fully intact as a branch.
 2. **Unrelated-history subtree merge** — branch off `master`, move our tree under a new
    top-level directory (e.g. `fear-ai-sim-v8/`) or replace the `fear-ai-sim/` subtree, commit
    with `--allow-unrelated-histories`, open a PR. Preserves both histories; requires CI
@@ -59,6 +62,6 @@ with its own green CI (runs `35874405000`, `35874679330`, `35879709609`, all suc
 ## What was deliberately NOT done
 
 No force-push, no push to `master`, no history rewrite, no subtree deletion. The only settings
-ever touched: remote (`origin` added) and the default-branch pointer (`master` → `main`,
-reversible). Both pushes to `main` were plain fast-forward updates of a branch that did not
-exist before 2026-09-23.
+ever touched: remote (`origin` added) and the default-branch pointer (`master` → `main` on
+2026-09-23, later reverted to `master`; both reversible). Both pushes to `main` were plain
+fast-forward updates of a branch that did not exist before 2026-09-23.
