@@ -353,7 +353,7 @@
       "legalInformationSource": "requestAnimationFrame scheduling and the DOM counters the loop updates (#pop-count, #gen-count, #avg-fear)",
       "forbiddenShortcut": "loop() executes one frame and never reschedules, so the counters freeze; or the runtime is only ever proven under a DOM shim (jsdom)",
       "firstAcceptedRevision": "PENDING",
-      "currentRevision": "V4-D2-2026-10-18-DEVELOPMENT",
+      "currentRevision": "V4-D2B-2026-10-18-DEVELOPMENT",
       "postV8DevelopmentAddition": true,
       "supersedes": null,
       "supersededBy": null,

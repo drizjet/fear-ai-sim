@@ -143,3 +143,13 @@ the audit-trail structure required by Guardian V3 §2.)
   All entries remain PENDING_AUDIT pending independent review. Protected-test migrations filed
   as `docs/guardian/change-proposals/P0-SIMULATION-CONTRACTS-migration-to-probes.json`; the
   protected manifest itself was not edited.
+- 2026-10-18 - V4 MOVEMENT D2B (browser-probe teardown hardening): after CI run 39099637140
+  recorded a false red — verify_runtime_real_browser.mjs printed all 11 assertions and its
+  SUCCESS banner, then the suite's 600s budget killed the process at 600.2s — the probe now
+  exits 0 decisively on success and force-closes its server sockets (closeAllConnections), and
+  the probe suite runs this probe under a 900s per-probe budget (an explicit --timeout still
+  wins; the probe's own bounded windows remain what kills a frozen runtime). The MUT-RUNTIME-003
+  kill was re-earned on the revised probe with the mutation text unchanged (same pre/post
+  hashes; the observed failing probe is still exactly the advancement assertion): receipt
+  `docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792301829914.json`. The entry remains
+  PENDING_AUDIT pending independent review.

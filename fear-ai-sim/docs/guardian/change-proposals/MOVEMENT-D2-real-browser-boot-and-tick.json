@@ -14,7 +14,7 @@
       "mutationId": "MUT-RUNTIME-003",
       "statement": "THE BROWSER RUNTIME MUST KEEP ITS FRAME LOOP ALIVE: THE BUILT APP, LOADED IN A REAL BROWSER, MUST BOOT A POPULATED SIMULATION AND ITS DOM COUNTERS MUST KEEP ADVANCING ACROSS OBSERVATION WINDOWS, NOT FREEZE AFTER A SINGLE FRAME.",
       "livingBinding": "tools/verification/verify_runtime_real_browser.mjs > the simulation advanced within a 120s window (not one frozen frame)",
-      "killEvidence": "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792296384180.json (KILLED; expected failing probe observed)"
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792301829914.json (KILLED on the teardown-hardened probe; expected failing probe observed; the original submission's receipt MUT-RUNTIME-003-1792296384180.json remains on the record)"
     }
   ],
   "contractAdditions": [
@@ -31,6 +31,8 @@
     "note": "The worker did not modify the protected manifest or docs/guardian/ACCEPTED_STATE.json; this proposal awaits guardian acceptance. docs/contracts/CONTRACT_ID_REGISTRY.json is worker-authored bootstrap (frozenBy PENDING_SUPERVISOR, V6 section 2) and gains an honest MUT-RUNTIME-003 binding."
   },
   "evidence": [
+    "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792301829914.json",
+    "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792301829914-probe-run.json",
     "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792296384180.json",
     "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792296384180-probe-run.json",
     "tools/verification/verify_runtime_real_browser.mjs"
