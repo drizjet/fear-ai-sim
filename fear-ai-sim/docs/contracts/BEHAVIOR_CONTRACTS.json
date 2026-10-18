@@ -316,6 +316,43 @@
       "status": "PENDING_AUDIT",
       "revisionHistory": [],
       "lastAcceptedSourceFingerprint": null
+    },
+    {
+      "contractId": "RUNTIME.REAL_BROWSER.BOOT_AND_TICK",
+      "domain": "runtime/browser",
+      "statement": "The runtime must boot and keep ticking in a real browser from the built artifact: a Vite build of the current source, served on loopback and loaded by a real headless Chrome, must produce a populated simulation and DOM counters (#pop-count, #gen-count, #avg-fear) that advance across observation windows. Proven only under a DOM shim (jsdom), frozen after a single frame, or read from a stale dist the probe did not build all fail this contract.",
+      "rationale": "Guardian MOVEMENT D2: 'runtime uses DOM shim, not real browser.' The retired Jest suites instantiated the simulation under jsdom and nothing since proved the runtime in a real browser; evidence/seed-runtime-verification.mjs recorded that limitation explicitly. This contract closes the boot-and-tick half at DOM level; it makes no rendering or visual-fidelity claim.",
+      "source": {
+        "constitutionalAnchor": "Guardian MOVEMENT D2 (runtime real-browser evidence gap)",
+        "testChangeGovernance": "2026-10-18 (V4 MOVEMENT D2 real-browser boot probe)",
+        "testOrigin": "tools/verification/verify_runtime_real_browser.mjs (fresh Vite build served on loopback, driven through a real headless Chrome CDP session); previously the gap was recorded by evidence/seed-runtime-verification.mjs"
+      },
+      "preconditions": [
+        "a Chrome/Chromium binary is locatable (FEAR_AI_BROWSER override honored)",
+        "the Vite production build of the current source succeeds",
+        "loopback ports in 8400-8499 and 8500-8599 are free"
+      ],
+      "mechanism": ["vite build", "static loopback server", "real headless Chrome over CDP", "runtime boot", "frame loop reschedules itself each frame", "DOM counters sampled across a 5s window"],
+      "forbidden": [
+        "a DOM shim (jsdom) standing in for the real browser",
+        "a single executed frame (loop never reschedules) counted as a ticking runtime",
+        "asserting boot and tick from a stale or externally supplied dist without saying so",
+        "a missing browser reported as a pass (the probe must skip loudly, and a required run treats the skip as a failure)"
+      ],
+      "observableConsequence": "#pop-count is populated (>0) at boot; over a 5s window the population and #avg-fear move off their initial values; #gen-count is present; zero error-level captured logs; the probe reports SKIPPED (not PASS) when no browser is available, and FEAR_AI_BROWSER_REQUIRED=1 turns that skip into a failure",
+      "stochastic": false,
+      "requiredEvidenceType": "real-browser DOM probe (boot + counter advancement across windows) + real-source mutation MUT-RUNTIME-003 killed by this probe (receipt docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792293664153.json)",
+      "requiredTestIds": ["verify_runtime_real_browser.mjs#boot-populated", "verify_runtime_real_browser.mjs#counters-advance"],
+      "requiredRuntimePath": "main.js#loop (requestAnimationFrame reschedule) over the Vite-built bundle",
+      "status": "PENDING_AUDIT",
+      "revisionHistory": [
+        {
+          "revision": "V4-D2-2026-10-18",
+          "change": "New contract (V4 MOVEMENT D2): the real-browser boot and tick advance are asserted end-to-end by tools/verification/verify_runtime_real_browser.mjs; real-source mutation MUT-RUNTIME-003 (frame loop no longer rescheduled) killed by this probe (receipt docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792293664153.json).",
+          "status": "PENDING_AUDIT"
+        }
+      ],
+      "lastAcceptedSourceFingerprint": null
     }
   ]
 }

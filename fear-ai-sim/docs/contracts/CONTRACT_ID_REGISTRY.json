@@ -340,6 +340,34 @@
         "lane": "B",
         "frozenAcceptanceRequired": true
       }
+    },
+    "MUT-RUNTIME-003": {
+      "id": "MUT-RUNTIME-003",
+      "statement": "THE BROWSER RUNTIME MUST KEEP ITS FRAME LOOP ALIVE: THE BUILT APP, LOADED IN A REAL BROWSER, MUST BOOT A POPULATED SIMULATION AND ITS DOM COUNTERS MUST KEEP ADVANCING ACROSS OBSERVATION WINDOWS, NOT FREEZE AFTER A SINGLE FRAME.",
+      "scope": "main.js > loop (the requestAnimationFrame reschedule at the loop tail)",
+      "polarity": "negative",
+      "preconditions": "Vite production build of the current source served on loopback to a real headless Chrome",
+      "legalInformationSource": "requestAnimationFrame scheduling and the DOM counters the loop updates (#pop-count, #gen-count, #avg-fear)",
+      "forbiddenShortcut": "loop() executes one frame and never reschedules, so the counters freeze; or the runtime is only ever proven under a DOM shim (jsdom)",
+      "firstAcceptedRevision": "PENDING",
+      "currentRevision": "V4-D2-2026-10-18-DEVELOPMENT",
+      "postV8DevelopmentAddition": true,
+      "supersedes": null,
+      "supersededBy": null,
+      "mutationFamilies": ["stalled-frame-loop"],
+      "protectedTests": [
+        "tools/verification/verify_runtime_real_browser.mjs > the simulation advanced over a 5s window (not one frozen frame); pop > 0 at boot alone is satisfied by the frozen one-frame mutant, which is why the kill rests on the advancement assertion"
+      ],
+      "developmentMutationEvidence": {
+        "killedInDevelopment": true,
+        "verifiedAt": "2026-10-18",
+        "mutationPatch": "main.js > loop tail: remove the requestAnimationFrame(loop) reschedule (the frame loop executes once, then freezes)",
+        "observingTestsUnderMutation": [
+          "tools/verification/verify_runtime_real_browser.mjs > assertion 9 (advancement across a 5s window) fails under mutation; 10 of 11 assertions still pass, including pop > 0"
+        ],
+        "lane": "B",
+        "frozenAcceptanceRequired": true
+      }
     }
   },
   "meta": {
@@ -347,13 +375,13 @@
     "v5CoreMatrixFixed": true,
     "v6AdditionalMutants": 1,
     "v6AdditionalMutantIds": ["MUT-OBS-003"],
-    "postV8DevelopmentAdditionalMutants": 3,
-    "postV8DevelopmentAdditionalMutantIds": ["MUT-DIR-001", "MUT-RECENCY-001", "MUT-MIG-PARENT-001"],
+    "postV8DevelopmentAdditionalMutants": 4,
+    "postV8DevelopmentAdditionalMutantIds": ["MUT-DIR-001", "MUT-RECENCY-001", "MUT-MIG-PARENT-001", "MUT-RUNTIME-003"],
     "v5CorePendingAcceptance": ["MUT-CHAIN-001", "MUT-EVID-002", "MUT-SAVE-001"],
     "currentCampaign": "V8",
     "currentCampaignActive": true,
     "v9CampaignExists": false,
     "denominatorMovable": false,
-    "denominatorNote": "The V5 core matrix denominator of 10 is pinned. v6 additional = [MUT-OBS-003]; v5-core pending acceptance = [MUT-CHAIN-001, MUT-EVID-002, MUT-SAVE-001]; post-V8 development additions = [MUT-DIR-001, MUT-RECENCY-001, MUT-MIG-PARENT-001]. No V9 campaign exists. Total currently-registered contracts = 14 = 10 v5-core (of which 3 await supervisor acceptance) + 1 v6-additional + 3 post-v8-development-additional. Do not compute a better mutation score on a smaller denominator (V6 §21)."
+    "denominatorNote": "The V5 core matrix denominator of 10 is pinned. v6 additional = [MUT-OBS-003]; v5-core pending acceptance = [MUT-CHAIN-001, MUT-EVID-002, MUT-SAVE-001]; post-V8 development additions = [MUT-DIR-001, MUT-RECENCY-001, MUT-MIG-PARENT-001, MUT-RUNTIME-003]. No V9 campaign exists. Total currently-registered contracts = 15 = 10 v5-core (of which 3 await supervisor acceptance) + 1 v6-additional + 4 post-v8-development-additional. Do not compute a better mutation score on a smaller denominator (V6 §21)."
   }
 }

@@ -1,0 +1,39 @@
+{
+  "proposalId": "MOVEMENT-D2-real-browser-boot-and-tick",
+  "kind": "SPEC_TEST_CHANGE",
+  "campaign": "FEAR_GUARDIAN_CAMPAIGN_V4",
+  "movement": "D2",
+  "createdAt": "2026-10-18",
+  "author": "worker",
+  "status": "PENDING_GUARDIAN_ACCEPTANCE",
+  "summary": "Close the MOVEMENT D2 finding ('runtime uses DOM shim, not real browser') with a new contract RUNTIME.REAL_BROWSER.BOOT_AND_TICK, the living probe tools/verification/verify_runtime_real_browser.mjs, and killed real-source mutation MUT-RUNTIME-003. No protected-manifest entry exists for this surface; none was edited.",
+  "motivation": "The retired Jest suites instantiated the simulation under jsdom, and evidence/seed-runtime-verification.mjs recorded that the runtime was never proven in a real browser. The probe now builds the current source with Vite, serves it on loopback, drives a real headless Chrome over CDP, and asserts at DOM level that the runtime boots a populated simulation (pop > 0) and that its counters keep advancing across a 5s window (the frame loop reschedules). 11/11 assertions pass on Chrome/155 (STABLE across two suite repetitions), and removing the loop's requestAnimationFrame reschedule kills the probe via the advancement assertion only: the frozen one-frame mutant still passes 10/11 assertions, including pop > 0, which is why the kill rests on advancement rather than on boot.",
+  "manifestImpact": [],
+  "registryAdditions": [
+    {
+      "mutationId": "MUT-RUNTIME-003",
+      "statement": "THE BROWSER RUNTIME MUST KEEP ITS FRAME LOOP ALIVE: THE BUILT APP, LOADED IN A REAL BROWSER, MUST BOOT A POPULATED SIMULATION AND ITS DOM COUNTERS MUST KEEP ADVANCING ACROSS OBSERVATION WINDOWS, NOT FREEZE AFTER A SINGLE FRAME.",
+      "livingBinding": "tools/verification/verify_runtime_real_browser.mjs > the simulation advanced over a 5s window (not one frozen frame)",
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792293664153.json (KILLED; expected failing probe observed)"
+    }
+  ],
+  "contractAdditions": [
+    {
+      "contractId": "RUNTIME.REAL_BROWSER.BOOT_AND_TICK",
+      "file": "docs/contracts/BEHAVIOR_CONTRACTS.json",
+      "status": "PENDING_AUDIT",
+      "note": "New 12th contract; worker-authored and awaiting independent review."
+    }
+  ],
+  "workerDiscipline": {
+    "protectedManifestEdited": false,
+    "protectedManifest": "docs/guardian/PROTECTED_TESTS.json",
+    "note": "The worker did not modify the protected manifest or docs/guardian/ACCEPTED_STATE.json; this proposal awaits guardian acceptance. docs/contracts/CONTRACT_ID_REGISTRY.json is worker-authored bootstrap (frozenBy PENDING_SUPERVISOR, V6 section 2) and gains an honest MUT-RUNTIME-003 binding."
+  },
+  "evidence": [
+    "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792293664153.json",
+    "docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792293664153-probe-run.json",
+    "tools/verification/verify_runtime_real_browser.mjs"
+  ],
+  "requestedDecision": "Accept RUNTIME.REAL_BROWSER.BOOT_AND_TICK as a valid contract candidate with a living probe, and record MUT-RUNTIME-003 among the post-V8 development additions (registry denominator note updated 14 to 15). Optionally require the probe in CI (FEAR_AI_BROWSER_REQUIRED=1) where a Chrome binary is guaranteed."
+}

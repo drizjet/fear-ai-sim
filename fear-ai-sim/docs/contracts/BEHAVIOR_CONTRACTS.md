@@ -101,3 +101,14 @@ the audit-trail structure required by Guardian V3 §2.)
   PENDING_AUDIT pending independent review. Protected-test migration filed as
   `docs/guardian/change-proposals/T-EVID-001-migration-to-probes.json`; the protected
   manifest itself was not edited.
+- 2026-10-18 - V4 MOVEMENT D2 (real-browser boot and tick): new contract
+  `RUNTIME.REAL_BROWSER.BOOT_AND_TICK` added, asserting that the Vite-built runtime
+  boots a populated simulation in a real headless Chrome and that its DOM counters
+  keep advancing across observation windows (zero error-level logs), closing the
+  jsdom-shim gap recorded by `evidence/seed-runtime-verification.mjs`. Real-source
+  mutation MUT-RUNTIME-003 (the frame loop is no longer rescheduled) is killed by
+  `tools/verification/verify_runtime_real_browser.mjs` (receipt
+  `docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792293664153.json`). The entry
+  remains PENDING_AUDIT pending independent review. No protected-manifest entry
+  existed for this surface, so none was edited; the new-contract proposal is filed
+  as `docs/guardian/change-proposals/MOVEMENT-D2-real-browser-boot-and-tick.json`.
