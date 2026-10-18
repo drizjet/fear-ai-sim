@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "MUT-RUNTIME-001",
+  "contractId": "TRADE.RUNTIME.NO_DOUBLE_EXECUTION",
+  "description": "Reintroduce second merchant canonical tick in a later phase",
+  "targetFile": "closed-world.js",
+  "preHash": "0a8602dc8db9adb037ae2d65a00b5f2ce9d226512fd3b6dc3d04b003445706d9",
+  "postHash": "3b74ef1ba84cc9f194cb1eb270ef0422c6e856b395891bbd882b7567ea7bfb4c",
+  "patchHash": "3b74ef1ba84cc9f194cb1eb270ef0422c6e856b395891bbd882b7567ea7bfb4c",
+  "verifier": {
+    "kind": "deterministic-probe-suite",
+    "command": "node tools/verification/run_probe_suite.mjs --json .guardian-probe-run.json",
+    "probeSuite": {
+      "probes": 55,
+      "passed": 53,
+      "passedWithSkips": 1,
+      "failed": 1,
+      "notProven": [
+        "verify_unity_editor_tests.mjs"
+      ]
+    }
+  },
+  "expectedFailingProbe": "verify_trade_runtime_contracts.mjs",
+  "observedFailingProbes": [
+    "verify_trade_runtime_contracts.mjs"
+  ],
+  "exitCode": 1,
+  "result": "KILLED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-RUNTIME-001-1792291079240",
+  "copyDurationMs": 982,
+  "verdict": "MUTANT_KILLED",
+  "recordedAt": "2026-10-18T02:38:44.583Z"
+}

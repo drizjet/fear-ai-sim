@@ -12,15 +12,19 @@
  * the suite failed on the planted defects, which would have been recorded
  * as a verifier weakness, not as a pass).
  *
- * Contracts proven here, one section each:
+ * Contracts proven here, one section each. The runtime pair is the
+ * exact-once tick phase formalized for Guardian V4 MOVEMENT C2 (2026-10-18):
+ * at least once (AUTHORITATIVE_PATH) and at most once (NO_DOUBLE_EXECUTION)
+ * per intended tick.
  *   TRADE.RUNTIME.NO_DOUBLE_EXECUTION
- *       One canonical merchant tick per merchant per tick. Every
- *       MERCHANT_ROUTE_DECISION observed in tick T belongs to a distinct
- *       merchant; the double-tick regression fires a second decision for
- *       the same merchant in the same tick.
+ *       Every MERCHANT_ROUTE_DECISION observed in tick T belongs to a
+ *       distinct merchant, and tickHistory advances by exactly one entry per
+ *       reducer call. The double-tick regression (MUT-RUNTIME-001) fires a
+ *       second decision for the same merchant in the same tick.
  *   TRADE.RUNTIME.AUTHORITATIVE_PATH
- *       Simulation.runClosedWorldStep invokes tickClosedWorld. The reducer
- *       is exercised behaviorally below (tickHistory grows every call);
+ *       Simulation.runClosedWorldStep invokes tickClosedWorld exactly once
+ *       (single uncommented call site). The reducer is exercised
+ *       behaviorally below (tickHistory grows by exactly one entry per call);
  *       the *call site* is checked at source level because `Simulation` is
  *       DOM-bound (canvas + document.createElement in its constructor) and
  *       this probe must stay runnable in plain Node — the pre-retirement
@@ -90,7 +94,8 @@ console.log(`  * scenario: ${world.merchants.length} merchants, ${world.routes.l
 // TRADE.RUNTIME.NO_DOUBLE_EXECUTION + reducer behavior.
 // Drive the canonical reducer directly (the production path — this is the
 // same function Simulation.runClosedWorldStep calls) and require:
-//   - tickHistory grows with every reducer call;
+//   - tickHistory advances by exactly one entry per reducer call
+//     (exact-once advancement);
 //   - each tick observed at least one MERCHANT_ROUTE_DECISION (the merchant
 //     wire is live, not silently skipped);
 //   - no merchant emits a second MERCHANT_ROUTE_DECISION in the same tick.
@@ -100,8 +105,8 @@ let decisionsSeen = 0;
 for (let tick = 1; tick <= TICKS; tick += 1) {
     const historyBefore = world.tickHistory?.length ?? 0;
     tickClosedWorld(world, { tick, perceivedDanger: 0.8, attackRoadId: null, encounterRng: rng });
-    check((world.tickHistory?.length ?? 0) > historyBefore,
-        `tick ${tick}: reducer appended a tickHistory entry (the canonical chain ran)`);
+    check((world.tickHistory?.length ?? 0) === historyBefore + 1,
+        `tick ${tick}: reducer appended exactly one tickHistory entry (exact-once advancement; observed delta ${(world.tickHistory?.length ?? 0) - historyBefore})`);
     const perMerchant = new Map();
     for (const event of world.events) {
         if (event.type !== 'MERCHANT_ROUTE_DECISION' || event.tick !== tick) continue;
@@ -129,18 +134,25 @@ for (const event of world.events) {
 console.log(`  * NO_DOUBLE_EXECUTION + alias: ${decisionsSeen} decisions over ${TICKS} ticks, each merchant once per tick: PASS`);
 
 // ---------------------------------------------------------------- section 2
-// TRADE.RUNTIME.AUTHORITATIVE_PATH — source tripwire on the call site.
+// TRADE.RUNTIME.AUTHORITATIVE_PATH + exact-once source tripwire on the call
+// site: the production method must contain exactly one canonical reducer
+// call and exactly one closed-world tick increment (no duplicate
+// advancement, no stale wrapper, no test-only second entry path).
 const simulationSource = read('simulation.js');
 const methodStart = simulationSource.indexOf('runClosedWorldStep(');
 check(methodStart !== -1, 'simulation.js contains runClosedWorldStep');
 const methodEnd = simulationSource.indexOf('\n    }', methodStart);
 check(methodEnd !== -1 && methodEnd > methodStart, 'runClosedWorldStep body is extractable');
 const methodBody = simulationSource.slice(methodStart, methodEnd);
+const reducerCallSites = (methodBody.match(/\btickClosedWorld\(/g) ?? []).length;
+check(reducerCallSites === 1,
+    `runClosedWorldStep contains exactly one tickClosedWorld call site (observed ${reducerCallSites})`);
 check(/^\s*tickClosedWorld\(this\.closedWorld,\s*\{ tick, perceivedDanger, attackRoadId \}\);/m.test(methodBody),
     'runClosedWorldStep invokes tickClosedWorld with the canonical arguments (uncommented)');
-check(/this\.closedWorldTick \+= 1;/.test(methodBody),
-    'runClosedWorldStep advances the closed-world tick exactly once');
-console.log('  * AUTHORITATIVE_PATH: runClosedWorldStep invokes the canonical reducer: PASS');
+const tickIncrements = (methodBody.match(/this\.closedWorldTick \+= 1;/g) ?? []).length;
+check(tickIncrements === 1,
+    `runClosedWorldStep advances the closed-world tick exactly once (observed ${tickIncrements})`);
+console.log('  * AUTHORITATIVE_PATH: runClosedWorldStep invokes the canonical reducer exactly once: PASS');
 
 // ---------------------------------------------------------------- section 3
 // TRADE.CATMOUSE.LEGAL_OBSERVATION_ONLY — the merchant tick must select

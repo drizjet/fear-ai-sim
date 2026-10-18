@@ -77,7 +77,7 @@
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["double-ticking"],
-      "protectedTests": ["tests/planted-defect-runtime.test.js > MERCHANT_ROUTE_DECISION fires exactly once per tick under the production path"]
+      "protectedTests": ["tools/verification/verify_trade_runtime_contracts.mjs > section 1: MERCHANT_ROUTE_DECISION fires exactly once per merchant per tick; tickHistory advances exactly one entry per reducer call"]
     },
     "MUT-RUNTIME-002": {
       "id": "MUT-RUNTIME-002",
@@ -92,7 +92,7 @@
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["missing-reducer-call"],
-      "protectedTests": ["tests/runtime-trade-wiring.test.js > runClosedWorldStep invokes the canonical reducer"]
+      "protectedTests": ["tools/verification/verify_trade_runtime_contracts.mjs > section 2: runClosedWorldStep invokes tickClosedWorld exactly once (canonical arguments, uncommented)"]
     },
     "MUT-MIG-001": {
       "id": "MUT-MIG-001",

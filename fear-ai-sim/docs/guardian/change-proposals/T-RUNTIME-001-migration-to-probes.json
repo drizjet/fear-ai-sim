@@ -1,0 +1,66 @@
+{
+  "proposalId": "T-RUNTIME-001-migration-to-probes",
+  "kind": "SPEC_TEST_CHANGE",
+  "campaign": "FEAR_GUARDIAN_CAMPAIGN_V4",
+  "movement": "C2",
+  "createdAt": "2026-10-18",
+  "author": "worker",
+  "status": "PENDING_GUARDIAN_ACCEPTANCE",
+  "summary": "Migrate the three runtime protected tests T-RUNTIME-001/002/003 (contractId TRADE.RUNTIME.NO_DOUBLE_EXECUTION) from the retired Jest file tests/planted-defect-runtime.test.js to the living probe tools/verification/verify_trade_runtime_contracts.mjs.",
+  "motivation": "Hard Rule 9 retired the Jest suites (2026-09-06); tests/planted-defect-runtime.test.js no longer exists, so the manifest file/testName references are dead. The V4 §5 MOVEMENT B2 harness migrated verification to the deterministic probe suite and has killed real-source mutants MUT-RUNTIME-001 and MUT-RUNTIME-002 with schema-v2 receipts. V4 MOVEMENT C2 (exact-once tick phase) formalizes these bindings.",
+  "manifestImpact": [
+    {
+      "testId": "T-RUNTIME-001",
+      "currentFile": "tests/planted-defect-runtime.test.js",
+      "currentTestName": "MERCHANT_ROUTE_DECISION fires exactly once per tick under the production path",
+      "strengthClass": "EXACT_CARDINALITY",
+      "proposedFile": "tools/verification/verify_trade_runtime_contracts.mjs",
+      "proposedLivingBinding": "section 1: every MERCHANT_ROUTE_DECISION in tick T belongs to a distinct merchant (per-merchant count === 1); section 2: runClosedWorldStep contains exactly one canonical reducer call site",
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-RUNTIME-001-1792291124582.json (KILLED; expected failing probe observed)"
+    },
+    {
+      "testId": "T-RUNTIME-002",
+      "currentFile": "tests/planted-defect-runtime.test.js",
+      "currentTestName": "tickHistory has exactly N entries after N runClosedWorldStep calls",
+      "strengthClass": "EXACT_CARDINALITY",
+      "proposedFile": "tools/verification/verify_trade_runtime_contracts.mjs",
+      "proposedLivingBinding": "section 1: tickHistory advances by exactly one entry per reducer call (per-call delta === +1; N calls -> exactly N entries); section 2: the DOM-bound runClosedWorldStep is proven by source tripwire (exactly one tickClosedWorld call, exactly one closedWorldTick increment)",
+      "note": "The retired Jest test instantiated Simulation under jsdom, which Hard Rule 9 removed; the probe proves the same cardinality at both ends (behavioral reducer delta + source-level single advancement site) without requiring a DOM.",
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-RUNTIME-002-1792291175915.json (KILLED; expected failing probe observed)"
+    },
+    {
+      "testId": "T-RUNTIME-003",
+      "currentFile": "tests/planted-defect-runtime.test.js",
+      "currentTestName": "planted defect simulation fires MERCHANT_ROUTE_DECISION twice per tick",
+      "strengthClass": "CONTROL_TEST",
+      "revisionStatus": "CONTROL_NOT_PRODUCTION",
+      "proposedLivingBinding": "SUPERSEDED — real-source mutation MUT-RUNTIME-001 (closed-world.js second merchant canonical tick) is killed by the living probe; a subclass-based control test is no longer needed as protection and jsdom no longer exists.",
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-RUNTIME-001-1792291124582.json"
+    }
+  ],
+  "registryRebinds": [
+    {
+      "mutationId": "MUT-RUNTIME-001",
+      "previously": "tests/planted-defect-runtime.test.js > MERCHANT_ROUTE_DECISION fires exactly once per tick under the production path",
+      "now": "tools/verification/verify_trade_runtime_contracts.mjs > section 1: MERCHANT_ROUTE_DECISION exactly once per merchant per tick; tickHistory advances exactly one entry per reducer call"
+    },
+    {
+      "mutationId": "MUT-RUNTIME-002",
+      "previously": "tests/runtime-trade-wiring.test.js > runClosedWorldStep invokes the canonical reducer",
+      "now": "tools/verification/verify_trade_runtime_contracts.mjs > section 2: runClosedWorldStep invokes tickClosedWorld exactly once (canonical arguments, uncommented)"
+    }
+  ],
+  "workerDiscipline": {
+    "protectedManifestEdited": false,
+    "protectedManifest": "docs/guardian/PROTECTED_TESTS.json",
+    "note": "The worker did not modify the protected manifest; this proposal awaits guardian acceptance (V4 §3.2). docs/contracts/CONTRACT_ID_REGISTRY.json is worker-authored bootstrap (frozenBy PENDING_SUPERVISOR, V6 §2) and was rebound to the living probe as an honest binding."
+  },
+  "evidence": [
+    "docs/guardian/mutation-receipts/MUT-RUNTIME-001-1792291124582.json",
+    "docs/guardian/mutation-receipts/MUT-RUNTIME-001-1792291124582-probe-run.json",
+    "docs/guardian/mutation-receipts/MUT-RUNTIME-002-1792291175915.json",
+    "docs/guardian/mutation-receipts/MUT-RUNTIME-002-1792291175915-probe-run.json",
+    "tools/verification/verify_trade_runtime_contracts.mjs"
+  ],
+  "requestedDecision": "Accept the migration of T-RUNTIME-001 and T-RUNTIME-002 to the living-probe bindings, and the supersession of T-RUNTIME-003 by real-source mutation evidence; update or retire the corresponding PROTECTED_TESTS.json entries."
+}
