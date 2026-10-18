@@ -524,6 +524,11 @@ async function main() {
         cdp?.close();
         killChromeTree(chrome.pid);
         server.close();
+        // close() only stops accepting new connections; the page's keep-alive
+        // sockets to this server can keep the event loop alive until they time
+        // out, which is exactly the "proved its claim, then got killed by the
+        // suite budget" false red this probe hit on CI 2026-10-18.
+        server.closeAllConnections?.();
         if (KEEP) {
             console.log(`Kept: ${userDataDir}`);
         } else {
@@ -533,6 +538,13 @@ async function main() {
     }
 
     if (failed.length > 0) process.exit(1);
+    // A success must terminate the process as decisively as a failure does.
+    // Everything this probe exists to prove has been printed above; from here
+    // only best-effort teardown remains. Without this exit, one stray handle
+    // (a socket the killed Chrome never FINed, a pending CDP frame) keeps the
+    // event loop alive and the suite's timeout kills a probe that already
+    // printed its SUCCESS banner — the false red observed on CI 2026-10-18.
+    process.exit(0);
 }
 
 main().catch((error) => {

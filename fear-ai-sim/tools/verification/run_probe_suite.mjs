@@ -47,10 +47,24 @@ import { spawnSync } from 'node:child_process';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const probeDir = join(repoRoot, 'tools', 'verification');
 
+// One probe is not a 600-second probe, and its slowness is bounded and
+// legitimate: it builds the bundle, launches a software-GL Chrome, waits on a
+// bounded PIXI-init window, then polls a bounded 120-second advancement
+// window. On a slow GPU-less CI runner the sum can exceed the default budget
+// (observed 2026-10-18: all 11 assertions passed and the SUCCESS banner
+// printed, and the default budget still killed the process and recorded
+// FAILED). The probe's own deadlines — not this budget — are what kill a
+// frozen runtime, so the larger budget only stops the harness from
+// decapitating a probe that already proved its claim. An explicit --timeout
+// still wins: a caller who asks for a bound gets that bound.
+const PER_PROBE_TIMEOUT_MS = new Map([
+    ['verify_runtime_real_browser.mjs', 900_000]
+]);
+
 function parseArgs(argv) {
-    const args = { timeoutMs: 600_000, only: null, jsonPath: null, expectProven: [], repeat: 1 };
+    const args = { timeoutMs: 600_000, timeoutExplicit: false, only: null, jsonPath: null, expectProven: [], repeat: 1 };
     for (let i = 2; i < argv.length; i += 1) {
-        if (argv[i] === '--timeout') args.timeoutMs = Number(argv[i + 1]) * 1000;
+        if (argv[i] === '--timeout') { args.timeoutMs = Number(argv[i + 1]) * 1000; args.timeoutExplicit = true; }
         else if (argv[i] === '--only') args.only = argv[i + 1];
         else if (argv[i] === '--json') args.jsonPath = argv[i + 1];
         else if (argv[i] === '--expect-proven') args.expectProven.push(argv[i + 1]);
@@ -96,6 +110,11 @@ function pickSummary(lines) {
     const outcome = substance.filter(line => /SUCCESS|PASSED|CLEANLY|NOT PROVEN|REFUSED|OK\b|SKIPPED/i.test(line));
     if (outcome.length > 0) return outcome[outcome.length - 1];
     return substance.length > 0 ? substance[substance.length - 1] : '';
+}
+
+function budgetMsFor(probe, args) {
+    if (args.timeoutExplicit) return args.timeoutMs;
+    return Math.max(args.timeoutMs, PER_PROBE_TIMEOUT_MS.get(probe.name) ?? 0);
 }
 
 function runProbe(probe, timeoutMs) {
@@ -191,7 +210,7 @@ for (const probe of probes) {
     // would only delay the report.
     const runs = [];
     for (let attempt = 0; attempt < args.repeat; attempt += 1) {
-        runs.push(runProbe(probe, args.timeoutMs));
+        runs.push(runProbe(probe, budgetMsFor(probe, args)));
         if (attempt > 0 && runs[attempt].verdict !== runs[0].verdict) break;
     }
     const first = runs[0];

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "MUT-RUNTIME-003",
+  "contractId": "RUNTIME.REAL_BROWSER.BOOT_AND_TICK",
+  "description": "Stop rescheduling the main frame loop (the runtime executes one frame, then freezes)",
+  "targetFile": "main.js",
+  "preHash": "620dcc707eca0290274f7e9d7b716d72cb255d43d7a5d6b7ab91b845e81bf3c4",
+  "postHash": "5a3cb5f2f5f8ce6114af96377c5c3519ae7290cb923877120b8402f2e69582c8",
+  "patchHash": "5a3cb5f2f5f8ce6114af96377c5c3519ae7290cb923877120b8402f2e69582c8",
+  "verifier": {
+    "kind": "deterministic-probe-suite",
+    "command": "node tools/verification/run_probe_suite.mjs --json .guardian-probe-run.json",
+    "probeSuite": {
+      "probes": 60,
+      "passed": 58,
+      "passedWithSkips": 1,
+      "failed": 1,
+      "notProven": [
+        "verify_unity_editor_tests.mjs"
+      ]
+    }
+  },
+  "expectedFailingProbe": "verify_runtime_real_browser.mjs",
+  "observedFailingProbes": [
+    "verify_runtime_real_browser.mjs"
+  ],
+  "exitCode": 1,
+  "result": "KILLED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-RUNTIME-003-1792301644480",
+  "copyDurationMs": 888,
+  "verdict": "MUTANT_KILLED",
+  "recordedAt": "2026-10-18T05:37:09.915Z"
+}
