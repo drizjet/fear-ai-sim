@@ -1,0 +1,54 @@
+{
+  "proposalId": "T-EVID-001-migration-to-probes",
+  "kind": "SPEC_TEST_CHANGE",
+  "campaign": "FEAR_GUARDIAN_CAMPAIGN_V4",
+  "movement": "E2",
+  "createdAt": "2026-10-18",
+  "author": "worker",
+  "status": "PENDING_GUARDIAN_ACCEPTANCE",
+  "summary": "Migrate the protected test T-EVID-001 (contractId EVIDENCE.SEED.IDEMPOTENT) from the retired Jest file tests/evidence-idempotency.test.js to the living probe tools/verification/verify_evidence_seed_idempotency.mjs, and record that contract EVIDENCE.SEED.TEST_ISOLATION (also formerly bound to the same dead file) is now probe-bound with production-ledger sha256 closure evidence.",
+  "motivation": "Hard Rule 9 retired the Jest suites (2026-09-06); tests/evidence-idempotency.test.js and tests/evidence-idempotency-integration.test.js no longer exist, so the manifest and registry references are dead. V4 MOVEMENT E2 (evidence idempotency race + production ledger isolation) closes the concurrent read-check-append race with an exclusive ledger lock, enforces the CLOSED (2026-09-06) canonical ledger in buildReceipt (canonical path refused by default and explicitly; test processes refused even with allowClosedLedgerWrite), retires the jest-era runTestReceipt helper as a loud stub, and rebinds MUT-EVID-001 (re-anchored to the lock-wrapped block) to the living probe. The strengthened probe kills the re-anchored mutant and proves production-ledger byte-identity.",
+  "manifestImpact": [
+    {
+      "testId": "T-EVID-001",
+      "currentFile": "tests/evidence-idempotency.test.js",
+      "currentTestName": "re-seeding the same claim+dimension+fingerprint does not create a duplicate",
+      "strengthClass": "EXACT_CARDINALITY",
+      "proposedFile": "tools/verification/verify_evidence_seed_idempotency.mjs",
+      "proposedLivingBinding": "sequential section: one row after one seed and after two seeds with the same claim+dimension+fingerprint (real command receipt, real source fingerprint); concurrent section: K=4 simultaneous same-claim seed processes produce exactly one row and leave no lock remnant; plus closure gates (default/explicit/test-process canonical-ledger appends refused) and canonical-ledger sha256 unchanged",
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-EVID-001-1792292235781.json (KILLED; expected failing probe observed; mutation re-anchored 2026-10-18 to the lock-wrapped dedupe guard)"
+    }
+  ],
+  "registryRebinds": [
+    {
+      "mutationId": "MUT-EVID-001",
+      "previously": "tests/evidence-idempotency-integration.test.js > buildReceipt is idempotent under repeated calls",
+      "now": "tools/verification/verify_evidence_seed_idempotency.mjs > sequential + concurrent sections: re-seeding the same claim+dimension+fingerprint yields exactly one row (K concurrent seeds, no lock remnant; canonical ledger sha256 unchanged)"
+    }
+  ],
+  "contractRebinds": [
+    {
+      "contractId": "EVIDENCE.SEED.IDEMPOTENT",
+      "previously": "tests/evidence-idempotency.test.js (2 tests) — retired",
+      "now": "tools/verification/verify_evidence_seed_idempotency.mjs#sequential-reseed-one-row, #concurrent-reseed-one-row"
+    },
+    {
+      "contractId": "EVIDENCE.SEED.TEST_ISOLATION",
+      "previously": "tests/evidence-idempotency.test.js#production-ledger-unchanged (NEW) — retired; detection was JEST_WORKER_ID only and the promised NODE_ENV=test fallback was never implemented",
+      "now": "tools/verification/verify_evidence_seed_idempotency.mjs#production-ledger-sha256-unchanged, #closed-ledger-write-refused (NODE_ENV=test fallback implemented 2026-10-18)"
+    }
+  ],
+  "workerDiscipline": {
+    "protectedManifestEdited": false,
+    "protectedManifest": "docs/guardian/PROTECTED_TESTS.json",
+    "note": "The worker did not modify the protected manifest; this proposal awaits guardian acceptance (V4 §3.2). docs/contracts/CONTRACT_ID_REGISTRY.json is worker-authored bootstrap (frozenBy PENDING_SUPERVISOR, V6 §2) and was rebound to the living probe as an honest binding. The MUT-EVID-001 findPattern in tools/guardian/contract-mutate.mjs was re-anchored (not weakened) so the mutation still re-plants the forbidden shortcut in the restructured source; the kill receipt proves the re-anchor."
+  },
+  "evidence": [
+    "docs/guardian/mutation-receipts/MUT-EVID-001-1792292235781.json",
+    "docs/guardian/mutation-receipts/MUT-EVID-001-1792292235781-probe-run.json",
+    "docs/guardian/mutation-receipts/MUT-EVID-001-1792292235781-stdout.log",
+    "tools/verification/verify_evidence_seed_idempotency.mjs",
+    "evidence/receipt.mjs"
+  ],
+  "requestedDecision": "Accept the migration of T-EVID-001 to the living-probe binding (sequential + concurrent idempotency sections) and the probe rebinding of EVIDENCE.SEED.TEST_ISOLATION; update or retire the corresponding PROTECTED_TESTS.json entry for T-EVID-001."
+}

@@ -87,3 +87,17 @@ the audit-trail structure required by Guardian V3 §2.)
   Both entries remain PENDING_AUDIT pending independent review. Protected-test migration
   filed as `docs/guardian/change-proposals/T-RUNTIME-001-migration-to-probes.json`;
   the protected manifest itself was not edited.
+- 2026-10-18 — V4 MOVEMENT E2 (evidence idempotency race + production ledger isolation):
+  EVIDENCE.SEED.IDEMPOTENT closed its concurrent race (read-check-append now runs inside an
+  exclusive ledger-lock critical section; the probe gains a K-process concurrent same-claim
+  section) and EVIDENCE.SEED.TEST_ISOLATION enforced the CLOSED canonical ledger in code
+  (buildReceipt refuses canonical appends by default, explicitly, and from test processes
+  even with `allowClosedLedgerWrite`; the promised `NODE_ENV=test` fallback is now actually
+  implemented; the jest-era `runTestReceipt` helper is a loud retirement stub). Both
+  entries rebound from retired Jest sources to the living probe
+  `tools/verification/verify_evidence_seed_idempotency.mjs`; real-source mutation
+  MUT-EVID-001 re-anchored to the lock-wrapped block and killed (receipt
+  `docs/guardian/mutation-receipts/MUT-EVID-001-1792292235781.json`). Both entries remain
+  PENDING_AUDIT pending independent review. Protected-test migration filed as
+  `docs/guardian/change-proposals/T-EVID-001-migration-to-probes.json`; the protected
+  manifest itself was not edited.

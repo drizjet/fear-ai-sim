@@ -26,7 +26,7 @@
 import { execFileSync } from 'node:child_process';
 import { resolve, relative, basename } from 'node:path';
 import { createHash } from 'node:crypto';
-import { readFileSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, statSync, existsSync, openSync, closeSync, writeSync, unlinkSync } from 'node:fs';
 import { appendFileSync, readFileSync as readJSONL } from 'node:fs';
 import { computeSourceFingerprint } from './fingerprint.mjs';
 
@@ -35,6 +35,60 @@ const ROOT = resolve(process.cwd());
 /** Deterministic, sorted, de-duplicated list. */
 function sortedUniq(items) {
     return Array.from(new Set(items)).sort();
+}
+
+/** Compare two resolved paths for identity (case-insensitive on win32). */
+function samePath(a, b) {
+    const norm = p => (process.platform === 'win32' ? p.toLowerCase() : p);
+    return norm(a) === norm(b);
+}
+
+/** Synchronous sleep (Atomics.wait on a throwaway buffer). */
+function sleepSync(ms) {
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/** Acquire an exclusive lock file next to the ledger (race guard, MOVEMENT
+ *  E2). `openSync(path, 'wx')` is an atomic create — two concurrent seeds
+ *  can never both hold the lock. A lock older than `staleMs` is treated as
+ *  a crashed writer's remnant and taken over. Returns { release }. */
+function acquireLedgerLock(ledgerPath, { retries = 300, retryDelayMs = 10, staleMs = 10000 } = {}) {
+    const lockPath = `${ledgerPath}.lock`;
+    for (let attempt = 0; ; attempt += 1) {
+        try {
+            const fd = openSync(lockPath, 'wx');
+            try { writeSync(fd, `${process.pid}\n`); } catch { /* pid tag is best-effort */ }
+            return {
+                release() {
+                    try { closeSync(fd); } catch { /* already closed */ }
+                    try { unlinkSync(lockPath); } catch { /* already gone */ }
+                },
+            };
+        } catch (err) {
+            if (err.code !== 'EEXIST') throw err;
+            try {
+                const st = statSync(lockPath);
+                if (Date.now() - st.mtimeMs > staleMs) {
+                    try { unlinkSync(lockPath); } catch { /* another taker won; retry */ }
+                    continue;
+                }
+            } catch { /* lock vanished between open and stat; retry immediately */ }
+            if (attempt >= retries) {
+                throw new Error(`buildReceipt: could not acquire ledger lock ${lockPath} after ${retries} attempts; remove the stale lock if no writer is active`);
+            }
+            sleepSync(retryDelayMs);
+        }
+    }
+}
+
+/** Run `fn` while holding the ledger lock. */
+function withLedgerLock(ledgerPath, fn) {
+    const lock = acquireLedgerLock(ledgerPath);
+    try {
+        return fn();
+    } finally {
+        lock.release();
+    }
 }
 
 /** Compute the transitive import closure of a file set.
@@ -114,36 +168,22 @@ export function gitDirty({ root = ROOT } = {}) {
     }
 }
 
-/** Run a test and capture the receipt (exit code, output digest). */
-export function runTestReceipt(command, { cwd = ROOT, timeoutMs = 60000, label = '' } = {}) {
-    const started = Date.now();
-    let exitCode = 0;
-    let stdout = '';
-    let stderr = '';
-    try {
-        stdout = execFileSync('node', ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', ...command.split(/\s+/).filter(Boolean)], {
-            cwd,
-            timeout: timeoutMs,
-            encoding: 'utf8',
-            stdio: ['ignore', 'pipe', 'pipe']
-        });
-    } catch (err) {
-        exitCode = err.status ?? 1;
-        stdout = err.stdout?.toString() ?? '';
-        stderr = err.stderr?.toString() ?? '';
-    }
-    const durationMs = Date.now() - started;
-    const digest = sha256Hex(stdout + stderr).slice(0, 16);
-    return {
-        command,
-        cwd: relative(ROOT, cwd) || '.',
-        timeoutMs,
-        exitCode,
-        durationMs,
-        outputDigest: digest,
-        outputSnippet: (stdout + stderr).trim().split(/\r?\n/).slice(-3).join('\n'),
-        label
-    };
+/** RETIRED (MOVEMENT E2, 2026-10-18): the jest-era command runner.
+ *
+ * This helper used to prepend the retired Jest CLI binary path to a Jest
+ * command line. Hard Rule 9 retired the Jest suites (2026-09-06) and
+ * removed that binary, and the canonical evidence ledger closed the same
+ * day, so every caller (evidence/seed-*.mjs) is a historical artifact.
+ * Live verification runs as deterministic probes (`npm run verify:probes`
+ * / `node tools/verification/run_probe_suite.mjs`); contract evidence
+ * comes from the guardian mutation harness
+ * (tools/guardian/contract-mutate.mjs); working-ledger receipts come from
+ * calling buildReceipt() directly with an explicit ledgerPath. */
+export function runTestReceipt(command, { label = '' } = {}) {
+    throw new Error(
+        `runTestReceipt RETIRED: '${label || command}' cannot run — Jest was retired by Hard Rule 9 (2026-09-06) and the evidence ledger closed. ` +
+        'Use npm run verify:probes for live verification, or buildReceipt() with an explicit ledgerPath for working-ledger receipts.'
+    );
 }
 
 /** Build a single evidence receipt row.
@@ -163,6 +203,7 @@ export function runTestReceipt(command, { cwd = ROOT, timeoutMs = 60000, label =
  * @param {string} args.evidenceId         - optional override (default: derived)
  * @param {number} args.dependencyDepth    - import-closure depth (default 5)
  * @param {boolean} args.dryRun            - return the row without writing
+ * @param {boolean} args.allowClosedLedgerWrite - explicit owner re-opening of the CLOSED canonical ledger (default false; test processes are refused even with this flag)
  * @returns {object} the evidence row
  */
 export function buildReceipt({
@@ -181,6 +222,7 @@ export function buildReceipt({
     dependencyDepth = 5,
     dryRun = false,
     ledgerPath: customLedgerPath = null,
+    allowClosedLedgerWrite = false,
 }) {
     if (!claimId) throw new Error('buildReceipt: claimId is required');
     if (!domain) throw new Error('buildReceipt: domain is required');
@@ -190,22 +232,22 @@ export function buildReceipt({
     const resolvedLedgerPath = customLedgerPath
         ? resolve(customLedgerPath)
         : canonicalLedgerPath;
-    // Tests are evidence consumers, not evidence producers. A Jest run must
-    // never append synthetic rows to the canonical project ledger: doing so
-    // makes the act of verification mutate the evidence being verified and
-    // leaves the worktree dirty. Tests that exercise writes must inject a
-    // disposable ledgerPath.
+    // Tests are evidence consumers, not evidence producers. A test process
+    // must never append synthetic rows to the canonical project ledger:
+    // doing so makes the act of verification mutate the evidence being
+    // verified and leaves the worktree dirty. Tests that exercise writes
+    // must inject a disposable ledgerPath.
     //
     // Detection uses JEST_WORKER_ID first (always set inside Jest worker
     // processes regardless of inherited NODE_ENV) and falls back to
-    // NODE_ENV=test for non-Jest test runners. A host shell that has set
-    // NODE_ENV=production must still see Jest writes blocked here, because
-    // the worktree dirty check is part of the evidence-integrity contract.
-    const inTestProcess = typeof process.env.JEST_WORKER_ID === 'string'
-        && process.env.JEST_WORKER_ID.length > 0;
-    if (!dryRun && inTestProcess && resolvedLedgerPath === canonicalLedgerPath) {
-        throw new Error('buildReceipt: test processes must provide an explicit ledgerPath outside the canonical production ledger');
-    }
+    // NODE_ENV=test for non-Jest test runners (fallback implemented
+    // 2026-10-18, MOVEMENT E2 — the comment promised it, the code did not).
+    // A host shell that has set NODE_ENV=production must still see Jest
+    // writes blocked here, because the worktree dirty check is part of the
+    // evidence-integrity contract.
+    const inTestProcess = (typeof process.env.JEST_WORKER_ID === 'string'
+        && process.env.JEST_WORKER_ID.length > 0)
+        || process.env.NODE_ENV === 'test';
 
     const declaredDeps = useImportClosure
         ? importClosure(sourceFiles, { depth: dependencyDepth })
@@ -267,39 +309,55 @@ export function buildReceipt({
     if (!dryRun) {
         // EVID-2026-08-29-V4-LEDGER-PATH (Guardian V4 §9.2):
         // The ledger path is injectable to enable test isolation.
-        // Production code passes no ledgerPath (defaults to the
-        // canonical path). Tests pass a temp directory.
+        // EVID-2026-10-18-E2-LEDGER-CLOSURE (V4 MOVEMENT E2):
+        // the canonical ledger CLOSED on 2026-09-06 — no automated or
+        // seed process may append to it. New evidence writes require an
+        // explicit (disposable/working) ledgerPath; re-opening the
+        // canonical ledger is an explicit owner action
+        // (allowClosedLedgerWrite). Test processes are refused even then.
         const ledgerPath = resolvedLedgerPath;
+        const isCanonical = samePath(ledgerPath, canonicalLedgerPath);
+        if (isCanonical && inTestProcess) {
+            throw new Error('buildReceipt: test processes must never write the canonical production ledger (CLOSED 2026-09-06), even with allowClosedLedgerWrite');
+        }
+        if (isCanonical && !allowClosedLedgerWrite) {
+            throw new Error('buildReceipt: refusing to append to the canonical evidence ledger — it is CLOSED (2026-09-06). Pass an explicit ledgerPath for new evidence, or allowClosedLedgerWrite: true for an owner-approved re-opening.');
+        }
         // EVID-2026-08-29-IDEMPOTENT-SEED (Guardian §1.3):
         // repeated seed execution must NOT create duplicate
         // active proof. A row is a duplicate if it has the
         // same claimId + dimension + fingerprint.hash as an
         // existing row. Duplicates are skipped (not appended).
-        let existing = [];
-        try {
-            existing = readJSONL(ledgerPath, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
-        } catch {
-            existing = [];
-        }
-        const isDuplicate = existing.some(prev =>
-            prev.claimId === row.claimId
-            && prev.dimension === row.dimension
-            && prev.sourceState?.fingerprint === row.sourceState.fingerprint
-            // V8 checkpoint §7 schema migration: pre-fileHashes rows
-            // carry strictly less proof (no content binding), so they
-            // never block an enriched re-seed of the same claim.
-            && Array.isArray(prev.sourceState?.fileHashes)
-            // R3: a FAILED proof (commands not ok) is not proof at
-            // all — it must never block a later green re-proof of
-            // the same claim (seeds that run mid-repair would
-            // otherwise poison the claim permanently).
-            && Array.isArray(prev.commandResults)
-            && prev.commandResults.length > 0
-            && prev.commandResults.every(cr => cr.ok === true)
-        );
-        if (!isDuplicate) {
-            appendFileSync(ledgerPath, JSON.stringify(row) + '\n');
-        }
+        // E2 (2026-10-18): the read-check-append critical section is
+        // serialized under an exclusive ledger lock so two concurrent
+        // seeds cannot both pass the duplicate check and double-append.
+        withLedgerLock(ledgerPath, () => {
+            let existing = [];
+            try {
+                existing = readJSONL(ledgerPath, 'utf8').trim().split('\n').filter(Boolean).map(line => JSON.parse(line));
+            } catch {
+                existing = [];
+            }
+            const isDuplicate = existing.some(prev =>
+                prev.claimId === row.claimId
+                && prev.dimension === row.dimension
+                && prev.sourceState?.fingerprint === row.sourceState.fingerprint
+                // V8 checkpoint §7 schema migration: pre-fileHashes rows
+                // carry strictly less proof (no content binding), so they
+                // never block an enriched re-seed of the same claim.
+                && Array.isArray(prev.sourceState?.fileHashes)
+                // R3: a FAILED proof (commands not ok) is not proof at
+                // all — it must never block a later green re-proof of
+                // the same claim (seeds that run mid-repair would
+                // otherwise poison the claim permanently).
+                && Array.isArray(prev.commandResults)
+                && prev.commandResults.length > 0
+                && prev.commandResults.every(cr => cr.ok === true)
+            );
+            if (!isDuplicate) {
+                appendFileSync(ledgerPath, JSON.stringify(row) + '\n');
+            }
+        });
     }
 
     return row;

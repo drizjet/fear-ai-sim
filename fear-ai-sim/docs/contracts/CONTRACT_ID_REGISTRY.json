@@ -179,7 +179,7 @@
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["missing-dedupe"],
-      "protectedTests": ["tests/evidence-idempotency-integration.test.js > buildReceipt is idempotent under repeated calls"]
+      "protectedTests": ["tools/verification/verify_evidence_seed_idempotency.mjs > sequential + concurrent sections: re-seeding the same claim+dimension+fingerprint yields exactly one row (K concurrent seeds, no lock remnant; canonical ledger sha256 unchanged)"]
     },
     "MUT-EVID-002": {
       "id": "MUT-EVID-002",

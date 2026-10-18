@@ -205,51 +205,66 @@
     {
       "contractId": "EVIDENCE.SEED.IDEMPOTENT",
       "domain": "evidence/seed",
-      "statement": "Repeated execution of the same evidence seed with the same inputs must produce exactly one active row in the ledger. Idempotency is keyed on (claimId, dimension, source-state fingerprint).",
-      "rationale": "Guardian V3 §5 Movement D §D1 item 4: 'repeated seed script execution → no duplicate active proof.'",
+      "statement": "Repeated execution of the same evidence seed with the same inputs must produce exactly one active row in the ledger. Idempotency is keyed on (claimId, dimension, source-state fingerprint) and holds under concurrency: the read-check-append critical section is serialized under an exclusive ledger lock.",
+      "rationale": "Guardian V3 §5 Movement D §D1 item 4: 'repeated seed script execution → no duplicate active proof.' V4 MOVEMENT E2 closed the concurrent race: the pre-E2 read-check-append was non-atomic, so two simultaneous seeds could both pass the duplicate check.",
       "source": {
         "constitutionalAnchor": "Guardian V3 §5 Movement D",
-        "testChangeGovernance": "EVID-2026-08-29-IDEMPOTENT-SEED",
-        "testOrigin": "tests/evidence-idempotency.test.js (2 tests)"
+        "testChangeGovernance": "EVID-2026-08-29-IDEMPOTENT-SEED; rebind to probe 2026-10-18 (V4 §5 MOVEMENT E2 exclusive ledger lock + concurrent race close)",
+        "testOrigin": "tools/verification/verify_evidence_seed_idempotency.mjs (sequential re-seed + K-concurrent same-claim seeds under the exclusive ledger lock); previously tests/evidence-idempotency.test.js (Jest suites retired 2026-09-06, Hard Rule 9)"
       },
-      "preconditions": ["ledger file exists and is parseable", "row with same claimId+dimension+fingerprint may or may not exist"],
-      "mechanism": ["read existing rows", "check for duplicate", "skip if duplicate", "append if new"],
+      "preconditions": ["ledger file exists and is parseable", "row with same claimId+dimension+fingerprint may or may not exist", "no writer may bypass the ledger-lock critical section"],
+      "mechanism": ["acquire exclusive ledger lock (O_EXCL lock file; stale takeover after 10s)", "read existing rows", "check for duplicate", "skip if duplicate", "append if new", "release lock"],
       "forbidden": [
         "appendFileSync without duplicate check",
-        "duplicate keying on claimId alone (ignoring fingerprint)"
+        "duplicate keying on claimId alone (ignoring fingerprint)",
+        "unsynchronized read-check-append exposed to concurrent writers (double-append)"
       ],
-      "observableConsequence": "running the same seed twice produces exactly one row; running it with a changed fingerprint produces two rows (old becomes stale, new is fresh)",
+      "observableConsequence": "running the same seed twice produces exactly one row; K concurrent same-claim seeds produce exactly one row and leave no lock remnant; running it with a changed fingerprint produces two rows (old becomes stale, new is fresh)",
       "stochastic": false,
-      "requiredEvidenceType": "idempotency test (1) same inputs → one row, (2) different fingerprint → two rows",
-      "requiredTestIds": ["evidence-idempotency.test.js#no-duplicate-same-fingerprint", "evidence-idempotency.test.js#new-row-changed-fingerprint"],
+      "requiredEvidenceType": "idempotency probe (1) same inputs → one row, (2) K concurrent same-claim seeds → exactly one row + no lock remnant, (3) different fingerprint → two rows; real-source mutation MUT-EVID-001 killed by this probe (receipt docs/guardian/mutation-receipts/MUT-EVID-001-1792292235781.json)",
+      "requiredTestIds": ["verify_evidence_seed_idempotency.mjs#sequential-reseed-one-row", "verify_evidence_seed_idempotency.mjs#concurrent-reseed-one-row"],
       "requiredRuntimePath": "evidence/receipt.mjs#buildReceipt",
       "status": "PENDING_AUDIT",
-      "revisionHistory": [],
+      "revisionHistory": [
+        {
+          "revision": "V4-E2-2026-10-18",
+          "change": "Closed the concurrent idempotency race (V4 MOVEMENT E2): read-check-append moved inside an exclusive ledger-lock critical section (O_EXCL lock file, 10s stale takeover) and the retired Jest reference was rebound to the living probe tools/verification/verify_evidence_seed_idempotency.mjs, strengthened with a K-process concurrent same-claim section. Protected-test migration filed as docs/guardian/change-proposals/T-EVID-001-migration-to-probes.json.",
+          "status": "PENDING_AUDIT"
+        }
+      ],
       "lastAcceptedSourceFingerprint": null
     },
     {
       "contractId": "EVIDENCE.SEED.TEST_ISOLATION",
       "domain": "evidence/seed",
-      "statement": "Automated tests must not mutate production evidence. Tests use a temporary ledger path or equivalent clean-room mechanism. Production ledger hash is unchanged before/after the test suite.",
-      "rationale": "Guardian V3 §5 Movement D §D2: 'Automated tests must not mutate production evidence.'",
+      "statement": "Automated tests must not mutate production evidence, and since 2026-09-06 no automated process may append to the CLOSED canonical ledger at all. Tests use a temporary ledger path or equivalent clean-room mechanism; buildReceipt refuses the canonical ledger by default, refuses it explicitly, and refuses test processes (JEST_WORKER_ID or NODE_ENV=test) even with the allowClosedLedgerWrite escape hatch. Production ledger hash is unchanged before/after any probe or test run.",
+      "rationale": "Guardian V3 §5 Movement D §D2: 'Automated tests must not mutate production evidence.' V4 MOVEMENT E2 enforced the CLOSED-ledger closure in code: the canonical ledger closed 2026-09-06 (Hard Rule 9) but buildReceipt still defaulted to writing it.",
       "source": {
         "constitutionalAnchor": "Guardian V3 §5 Movement D",
-        "testChangeGovernance": "EVID-2026-08-29-TEST-ISOLATION",
-        "testOrigin": "tests/evidence-idempotency.test.js (uses tmpdir)"
+        "testChangeGovernance": "EVID-2026-08-29-TEST-ISOLATION; enforced 2026-10-18 (V4 §5 MOVEMENT E2 closed-ledger closure gate)",
+        "testOrigin": "tools/verification/verify_evidence_seed_idempotency.mjs (NODE_ENV=test fallback actually implemented 2026-10-18; previously the comment promised it and the code did not); previously tests/evidence-idempotency.test.js (uses tmpdir)"
       },
       "preconditions": ["production ledger exists"],
-      "mechanism": ["tests write to tempDir, not docs/evidence/"],
+      "mechanism": ["CLOSED-ledger closure gate in buildReceipt (canonical path refused unless allowClosedLedgerWrite)", "test processes refused the canonical ledger even with allowClosedLedgerWrite", "tests write to tempDir, not docs/evidence/"],
       "forbidden": [
         "test writes to docs/evidence/EVIDENCE_LEDGER.jsonl",
-        "test creates rows visible to the production ledger"
+        "test creates rows visible to the production ledger",
+        "allowClosedLedgerWrite bypass from a test process",
+        "any seed/probe/automation append to the CLOSED canonical ledger"
       ],
-      "observableConsequence": "sha256 of docs/evidence/EVIDENCE_LEDGER.jsonl is identical before and after the test suite",
+      "observableConsequence": "sha256 of docs/evidence/EVIDENCE_LEDGER.jsonl is identical before and after the probe suite; buildReceipt throws with a CLOSED-ledger refusal for the default path, the explicit canonical path, and a test process passing allowClosedLedgerWrite",
       "stochastic": false,
-      "requiredEvidenceType": "production-ledger-hash test",
-      "requiredTestIds": ["evidence-idempotency.test.js#production-ledger-unchanged (NEW)"],
-      "requiredRuntimePath": "evidence/receipt.mjs#buildReceipt (must accept injectable ledgerPath)",
+      "requiredEvidenceType": "production-ledger-hash probe (sha256 identical before/after) + closure-gate refusals (default path, explicit path, test-process escape-hatch denial)",
+      "requiredTestIds": ["verify_evidence_seed_idempotency.mjs#production-ledger-sha256-unchanged", "verify_evidence_seed_idempotency.mjs#closed-ledger-write-refused"],
+      "requiredRuntimePath": "evidence/receipt.mjs#buildReceipt (injectable ledgerPath + CLOSED-ledger closure gate)",
       "status": "PENDING_AUDIT",
-      "revisionHistory": [],
+      "revisionHistory": [
+        {
+          "revision": "V4-E2-2026-10-18",
+          "change": "Enforced the CLOSED canonical ledger in code (V4 MOVEMENT E2): buildReceipt now refuses canonical-ledger appends (default and explicit) unless the owner passes allowClosedLedgerWrite, refuses test processes unconditionally (NODE_ENV=test fallback finally implemented alongside JEST_WORKER_ID), and the retired-Jest-era runTestReceipt helper is a loud retirement stub. Protected-test migration filed as docs/guardian/change-proposals/T-EVID-001-migration-to-probes.json.",
+          "status": "PENDING_AUDIT"
+        }
+      ],
       "lastAcceptedSourceFingerprint": null
     },
     {
