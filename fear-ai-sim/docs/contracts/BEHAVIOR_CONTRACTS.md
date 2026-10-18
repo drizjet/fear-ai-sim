@@ -108,7 +108,7 @@ the audit-trail structure required by Guardian V3 §2.)
   jsdom-shim gap recorded by `evidence/seed-runtime-verification.mjs`. Real-source
   mutation MUT-RUNTIME-003 (the frame loop is no longer rescheduled) is killed by
   `tools/verification/verify_runtime_real_browser.mjs` (receipt
-  `docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792293664153.json`). The entry
+  `docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792295233771.json`). The entry
   remains PENDING_AUDIT pending independent review. No protected-manifest entry
   existed for this surface, so none was edited; the new-contract proposal is filed
   as `docs/guardian/change-proposals/MOVEMENT-D2-real-browser-boot-and-tick.json`.

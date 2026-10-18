@@ -34,7 +34,7 @@
  *
  * WHAT IS NOT PROVEN, stated rather than implied
  *   * NOT rendering correctness — that agents are drawn where the sim says;
- *   * NOT GPU behaviour (headless Chrome may use SwiftShader software GL);
+ *   * NOT GPU behaviour (the probe pins SwiftShader software GL for determinism);
  *   * NOT long-run stability (seconds of ticks, not hours);
  *   * NOT the Electron/Tauri shells, only the browser bundle.
  *
@@ -71,7 +71,8 @@ const SKIP_BUILD = process.env.FEAR_AI_BROWSER_SKIP_BUILD === '1';
 const KEEP = process.env.FEAR_AI_BROWSER_KEEP === '1';
 
 const BOOT_DEADLINE_MS = 90_000;
-const PROGRESS_WINDOW_MS = 5_000;
+const PIXI_DEADLINE_MS = 60_000;
+const PROGRESS_DEADLINE_MS = 30_000;
 const SCREENSHOT_MIN_BYTES = 10_000;
 
 function findBrowser() {
@@ -336,6 +337,13 @@ async function main() {
         // needs this switch to allow it at all — without it, PIXI's WebGL
         // init can fail on GPU-less CI machines and the run would be a false red.
         '--enable-unsafe-swiftshader',
+        // Pin ANGLE's SwiftShader backend so the renderer stack is identical on
+        // every machine. On GPU-less Windows CI the default D3D11/WARP path lost
+        // its GPU context mid-run (THREE "Context Restored" in the job log) and
+        // the first frames stalled past the old fixed sampling window; pinning
+        // software GL removes that class of false red from the verdict.
+        '--use-gl=angle',
+        '--use-angle=swiftshader',
         'about:blank'
     ], { stdio: 'ignore' });
 
@@ -376,6 +384,21 @@ async function main() {
         }, BOOT_DEADLINE_MS, 500, 'main.js to execute in the browser');
         check('main.js executed as an ESM module graph in a real browser', moduleRan.captured === 'object', `document.readyState=${moduleRan.ready}`);
 
+        // PIXI's init is asynchronous and software GL can be slow: wait for it
+        // (bounded) instead of sampling once. A one-shot read here raced the
+        // async init on CI and produced a false red.
+        try {
+            await waitUntil(async () => {
+                const state = await cdp.evaluate(`(() => ({
+                    pixi: window.__capturedLogs.some(entry => /PixiJS High-Performance Renderer Initialized/.test(entry.message)),
+                    canvasCount: document.querySelectorAll('canvas').length
+                }))()`);
+                return state.pixi === true && state.canvasCount >= 2;
+            }, PIXI_DEADLINE_MS, 500, 'PIXI renderer to initialize (async; software GL can be slow)');
+        } catch (error) {
+            console.log(`  note: ${error.message}`);
+        }
+
         const bootLog = await cdp.evaluate(`(() => {
             const messages = window.__capturedLogs.map(entry => entry.message);
             const created = messages.find(message => /\\[DEBUG\\] Simulation created, agents: \\d+/.test(message)) || null;
@@ -406,10 +429,24 @@ async function main() {
         }, BOOT_DEADLINE_MS, 500, 'the population counter to become a positive number');
         check('the rAF loop set a positive population from real ticks', first.pop > 0, `population=${first.pop}`);
 
-        await sleep(PROGRESS_WINDOW_MS);
-        const second = await sample();
-        const advanced = second.pop > 0 && (second.pop !== first.pop || second.gen !== first.gen || second.fear !== first.fear);
-        check(`the simulation advanced over a ${PROGRESS_WINDOW_MS / 1000}s window (not one frozen frame)`, advanced,
+        // Poll for the first counter movement rather than sleeping a fixed
+        // window: on software GL the first frames after init can stall for
+        // several seconds, and the old fixed 5s sample turned that into a
+        // false red on CI. A frozen one-frame mutant never changes anything
+        // and still fails — after the deadline, not after five seconds.
+        let second = first;
+        let advanced = false;
+        try {
+            second = await waitUntil(async () => {
+                const current = await sample();
+                const moved = current.pop !== first.pop || current.gen !== first.gen || current.fear !== first.fear;
+                return moved ? current : false;
+            }, PROGRESS_DEADLINE_MS, 250, `the counters to move (up to ${PROGRESS_DEADLINE_MS / 1000}s)`);
+            advanced = true;
+        } catch (error) {
+            console.log(`  note: ${error.message}`);
+        }
+        check(`the simulation advanced within a ${PROGRESS_DEADLINE_MS / 1000}s window (not one frozen frame)`, advanced,
             `pop ${first.pop}->${second.pop}, gen ${first.gen}->${second.gen}, avgFear ${first.fear}->${second.fear}`);
 
         const errorState = await cdp.evaluate(`(() => {
@@ -440,7 +477,7 @@ async function main() {
             console.log(`loop advanced inside ${version.Browser}.`);
             console.log('Scope: boot + construction + real-canvas PIXI init + rAF progression +');
             console.log('error-free console, on this machine and this build. NOT rendering');
-            console.log('correctness, NOT GPU fidelity (software GL allowed), NOT long-run');
+            console.log('correctness, NOT GPU fidelity (software GL pinned for determinism), NOT long-run');
             console.log('stability, NOT the Electron/Tauri shells.');
             if (KEEP) console.log(`Artifacts kept at ${userDataDir} (FEAR_AI_BROWSER_KEEP=1).`);
             console.log(`All ${passed.length} runtime-real-browser assertions PASSED.`);
