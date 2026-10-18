@@ -124,6 +124,20 @@ const CATALOG = {
         replacement: '    // MUT-RUNTIME-003: the frame loop is no longer rescheduled (regression)',
         expectedFailingProbe: 'verify_runtime_real_browser.mjs',
     },
+    'MUT-CHAIN-001': {
+        contractId: 'TRADE.CHAIN.ORDERED_CAUSAL_SEQUENCE',
+        description: 'Clear the route decision\'s BELIEF_UPDATE parents (the OBSERVATION -> BELIEF_UPDATE -> DECISION causal edge is removed)',
+        targetFile: 'closed-world.js',
+        // Added 2026-10-18 (V4 P0 CHAIN): the canonical route integration
+        // computes beliefParentIds (same-tick BELIEF_UPDATEs, else the
+        // merchant's latest earlier belief event) and applies them both to
+        // the tickCanonicalMerchant decision and to ensureWorldEventIdentity.
+        // Forcing the list empty severs the decision -> belief edge in both
+        // places at once — the V5-core planted defect this mutant re-plants.
+        findPattern: /        const beliefParentIds = \(\(\) => \{/,
+        replacement: '        const beliefParentIds = (() => {\n            return []; // MUT-CHAIN-001: decision drops its BELIEF_UPDATE parent (regression)',
+        expectedFailingProbe: 'verify_trade_chain_causal_edges.mjs',
+    },
 };
 
 // ---- CLI parsing ----

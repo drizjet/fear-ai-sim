@@ -37,29 +37,38 @@
     {
       "contractId": "TRADE.CHAIN.ORDERED_CAUSAL_SEQUENCE",
       "domain": "trade/causal-chain",
-      "statement": "The one-shot closed-world scenario must emit the causal sequence: CONVOY_FORMED, BANDIT_ATTACK, RUMOR, ROUTE_SELECTED, FACTION_REASSESSMENT, FACTION_ACTION, INVASION, BANDIT_RELOCATION — in that order. Membership (toContain) is not sufficient; the order encodes the causal narrative (attack → rumor → route → reassess → action → invasion → relocation).",
-      "rationale": "Constitution §53/§161 require the causal chain to be traceable. A reordered event stream breaks causal provenance. Guardian V3 §1 item #2 explicitly named the weakening from toEqual to toContain.",
+      "statement": "The closed-world causal chain must be both ordered and parent-linked. One-shot: runClosedWorldScenario must emit CONVOY_FORMED, BANDIT_ATTACK, RUMOR, ROUTE_SELECTED, FACTION_REASSESSMENT, FACTION_ACTION, INVASION, BANDIT_RELOCATION in that relative order (membership/toContain is not sufficient; the order encodes the causal narrative attack → rumor → route → reassess → action → invasion → relocation; other system events such as LAW_VIOLATED legitimately interleave). Driven reducer: every event's parentEventIds must resolve to emitted events, and the required causal edges must hold — OBSERVATION → BELIEF_UPDATE → MERCHANT_ROUTE_DECISION → TRIP_COMMITMENT → ROUTE_EXPOSURE → CANDIDATE_ENCOUNTER → ENCOUNTER → CONSEQUENCE → FACTION_REACTION — so a merchant that held a belief must name the BELIEF_UPDATE parent on its route decision.",
+      "rationale": "Constitution §53/§161 require the causal chain to be traceable. A reordered event stream breaks causal provenance, and an edge-cleared stream breaks the V8 causal-parentage contract. Guardian V3 §1 item #2 explicitly named the weakening from toEqual to toContain; the V4 P0 resolution (2026-10-18) additionally binds the edge-level requirement of MUT-CHAIN-001 (legalInformationSource: event causal parents), whose registry statement requires every link from OBSERVATION to FACTION REACTION to be preserved on the live reducer.",
       "source": {
-        "constitutionalAnchor": "Constitution §53 causal trace; Guardian V3 §1 item #2",
-        "testChangeGovernance": "docs/evidence/TEST_CHANGES.jsonl (closed-world-chain test re-audit)",
-        "testOrigin": "tests/closed-world-chain.test.js (current toContain assertions)"
+        "constitutionalAnchor": "Constitution §53 causal trace; Guardian V3 §1 item #2; MUT-CHAIN-001 (V8-2026-08-31, v5-core pending acceptance)",
+        "testChangeGovernance": "docs/evidence/TEST_CHANGES.jsonl (closed-world-chain test re-audit); rebind to probe 2026-10-18 (V4 P0 chain resolution)",
+        "testOrigin": "tools/verification/verify_trade_chain_causal_edges.mjs (section 1 one-shot ordered type sequence under the sealed preconditions; section 2 driven parent-linked edge chain over 90 forced-attack ticks); previously tests/closed-world-chain.test.js and tests/causal-chain.test.js (Jest suites retired 2026-09-06, Hard Rule 9)"
       },
       "preconditions": [
         "runClosedWorldScenario called with world where bandit.lootExpectation === 0.95 and bandit.switchMargin === 0",
-        "perceivedDanger: 0.8"
+        "perceivedDanger: 0.8",
+        "driven section: tickClosedWorld over 90 forced-attack ticks (attackRoadId rotated to a road holding a route, perceivedDanger 0.9) on a closed-world scenario with a formed convoy"
       ],
-      "mechanism": ["bandit attack", "survivor evidence", "rumor propagation", "route re-selection", "faction reassess", "faction action", "invasion", "bandit relocation"],
+      "mechanism": ["bandit attack", "survivor evidence", "rumor propagation", "route re-selection", "faction reassess", "faction action", "invasion", "bandit relocation", "per-tick observation → belief → decision → commitment → exposure → encounter → consequence → faction-reaction edge emission with parentEventIds"],
       "forbidden": [
-        "test asserts membership (toContain) instead of ordered sequence (toEqual)",
-        "test mutates world after runClosedWorldScenario and accepts 'bandit may stay'"
+        "test asserts membership (toContain) instead of the required relative order",
+        "test mutates world after runClosedWorldScenario and accepts 'bandit may stay'",
+        "an emitted event whose parentEventIds entries do not resolve to emitted events",
+        "a MERCHANT_ROUTE_DECISION that drops its BELIEF_UPDATE parent while the merchant held a belief"
       ],
-      "observableConsequence": "eventTypes in result.events are exactly [CONVOY_FORMED, BANDIT_ATTACK, RUMOR, ROUTE_SELECTED, FACTION_REASSESSMENT, FACTION_ACTION, INVASION, BANDIT_RELOCATION] in that order",
+      "observableConsequence": "One-shot: the eight required event types appear in the required relative order (LAW_VIOLATED interleaves at fixed positions). Driven: every parent reference across the recorded window resolves (1333 references over 2050 events, zero dangling); decisions 90, belief-parented 87 (the 3 pre-belief ticks are parentless by design); every TRIP_COMMITMENT names its same-merchant same-tick decision; every ROUTE_EXPOSURE names its same-merchant same-tick commitment; every CANDIDATE_ENCOUNTER with parents includes ROUTE_EXPOSURE; every ENCOUNTER names its candidate; every BANDIT_ATTACK names its encounter; every FACTION_REACTION names its attack; and an ancestry walk from the first reaction reaches the root through BANDIT_ATTACK → ENCOUNTER → CANDIDATE_ENCOUNTER → ROUTE_EXPOSURE → TRIP_COMMITMENT → MERCHANT_ROUTE_DECISION.",
       "stochastic": false,
-      "requiredEvidenceType": "ordered sequence assertion + planted-defect (delete BANDIT_RELOCATION from one-shot → test fails)",
-      "requiredTestIds": ["closed-world-chain.test.js#ordered-causal-sequence"],
-      "requiredRuntimePath": "runClosedWorldScenario one-shot",
+      "requiredEvidenceType": "ordered-subsequence assertion (one-shot) + parent-integrity and edge-chain assertions (driven reducer) + real-source mutation MUT-CHAIN-001 killed by this probe (receipt docs/guardian/mutation-receipts/MUT-CHAIN-001-1792297594885.json)",
+      "requiredTestIds": ["verify_trade_chain_causal_edges.mjs#one-shot-ordered-type-sequence", "verify_trade_chain_causal_edges.mjs#parent-linked-edge-chain"],
+      "requiredRuntimePath": "runClosedWorldScenario one-shot; tickClosedWorld driven step chain",
       "status": "PENDING_AUDIT",
-      "revisionHistory": [],
+      "revisionHistory": [
+        {
+          "revision": "V4-CHAIN-2026-10-18",
+          "change": "Rebound from retired Jest sources (tests/closed-world-chain.test.js toContain assertions; tests/causal-chain.test.js) to the living probe tools/verification/verify_trade_chain_causal_edges.mjs; the order requirement is stated as a relative order of the eight named types (LAW_VIOLATED interleaves) and the entry now also binds the parent-linked edge chain (MUT-CHAIN-001). Protected-test migration filed as docs/guardian/change-proposals/T-CHAIN-001-migration-to-probes.json.",
+          "status": "PENDING_AUDIT"
+        }
+      ],
       "lastAcceptedSourceFingerprint": null
     },
     {
