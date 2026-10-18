@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "MUT-EVID-001",
+  "contractId": "EVIDENCE.SEED.IDEMPOTENT",
+  "description": "Append duplicate evidence despite same claim+dimension+fingerprint",
+  "targetFile": "evidence/receipt.mjs",
+  "preHash": "2ee7155aafaeb4446c6e50e8fec3425fc9862aa9dbe478bdb27f1918119d15ac",
+  "postHash": "7a85e18468fd461cb41033fd01959c958f5fda6a923a45873184e9465b83cff3",
+  "patchHash": "7a85e18468fd461cb41033fd01959c958f5fda6a923a45873184e9465b83cff3",
+  "verifier": {
+    "kind": "deterministic-probe-suite",
+    "command": "node tools/verification/run_probe_suite.mjs --json .guardian-probe-run.json",
+    "probeSuite": {
+      "probes": 55,
+      "passed": 53,
+      "passedWithSkips": 1,
+      "failed": 1,
+      "notProven": [
+        "verify_unity_editor_tests.mjs"
+      ]
+    }
+  },
+  "expectedFailingProbe": "verify_evidence_seed_idempotency.mjs",
+  "observedFailingProbes": [
+    "verify_evidence_seed_idempotency.mjs"
+  ],
+  "exitCode": 1,
+  "result": "KILLED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-EVID-001-1792289806007",
+  "copyDurationMs": 1382,
+  "verdict": "MUTANT_KILLED",
+  "recordedAt": "2026-10-18T02:17:38.802Z"
+}

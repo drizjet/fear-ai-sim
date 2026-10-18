@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "mutationId": "MUT-MIG-001",
+  "contractId": "MIGRATION.DRIVEN_BY_RECENT_GRIEVANCE",
+  "description": "Make migration fire independent of causal push pressure and cooldown",
+  "targetFile": "closed-world.js",
+  "preHash": "0a8602dc8db9adb037ae2d65a00b5f2ce9d226512fd3b6dc3d04b003445706d9",
+  "postHash": "4f41ff5a1debb19784663cc8ec2c7183c53228aab0f9541dd23e4eec519527ba",
+  "patchHash": "4f41ff5a1debb19784663cc8ec2c7183c53228aab0f9541dd23e4eec519527ba",
+  "verifier": {
+    "kind": "deterministic-probe-suite",
+    "command": "node tools/verification/run_probe_suite.mjs --json .guardian-probe-run.json",
+    "probeSuite": {
+      "probes": 55,
+      "passed": 53,
+      "passedWithSkips": 1,
+      "failed": 1,
+      "notProven": [
+        "verify_unity_editor_tests.mjs"
+      ]
+    }
+  },
+  "expectedFailingProbe": "verify_trade_runtime_contracts.mjs",
+  "observedFailingProbes": [
+    "verify_trade_runtime_contracts.mjs"
+  ],
+  "exitCode": 1,
+  "result": "KILLED",
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-MIG-001-1792289754382",
+  "copyDurationMs": 1047,
+  "verdict": "MUTANT_KILLED",
+  "recordedAt": "2026-10-18T02:16:45.730Z"
+}

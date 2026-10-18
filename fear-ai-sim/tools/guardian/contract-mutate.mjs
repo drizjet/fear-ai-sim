@@ -7,6 +7,15 @@
 // records the result (KILLED / SURVIVED / INVALID), and
 // restores the original. The main worktree is NEVER modified.
 //
+// Verifier (MOVEMENT B2 migration, post-Hard Rule 9): the protected
+// verifier is the deterministic probe suite (tools/verification/
+// run_probe_suite.mjs), not Jest — Hard Rule 9 retired the Jest
+// suites and removed the binary this file used to invoke. A mutant
+// is KILLED when its contract probe appears in the suite's failing
+// roster; SURVIVED when the suite is green; INVALID otherwise.
+// Receipts are schema v2: expectedFailingProbe / observedFailingProbes
+// replace the jest-era expectedFailingTest / observedFailingTests.
+//
 // Usage:
 //   node tools/guardian/contract-mutate.mjs --mutant MUT-RUNTIME-001
 //   node tools/guardian/contract-mutate.mjs --list
@@ -39,15 +48,18 @@ const CATALOG = {
         }
     }
     // 7.5. EVID-2026-08-29-CANONICAL-TRADE-INTEGRATION (Guardian V3`,
-        expectedFailingTest: 'MERCHANT_ROUTE_DECISION fires exactly once per tick under the production path',
+        expectedFailingProbe: 'verify_trade_runtime_contracts.mjs',
     },
     'MUT-RUNTIME-002': {
         contractId: 'TRADE.RUNTIME.AUTHORITATIVE_PATH',
         description: 'Make runClosedWorldStep stop invoking tickClosedWorld',
         targetFile: 'simulation.js',
-        findPattern: /        tickClosedWorld\(this\.closedWorld, \{ tick, perceivedDanger \}\);/,
-        replacement: '        // MUT-RUNTIME-002: stop invoking the canonical reducer (regression)\n        // tickClosedWorld(this.closedWorld, { tick, perceivedDanger });',
-        expectedFailingTest: 'Simulation.runClosedWorldStep alone invokes the canonical reducer',
+        // Re-anchored 2026-10-17 (MOVEMENT B2): the call site gained the
+        // attackRoadId field after the V3 seal; the old `{ tick, perceivedDanger }`
+        // pattern no longer matched live source.
+        findPattern: /        tickClosedWorld\(this\.closedWorld, \{ tick, perceivedDanger, attackRoadId \}\);/,
+        replacement: '        // MUT-RUNTIME-002: stop invoking the canonical reducer (regression)\n        // tickClosedWorld(this.closedWorld, { tick, perceivedDanger, attackRoadId });',
+        expectedFailingProbe: 'verify_trade_runtime_contracts.mjs',
     },
     'MUT-OBS-001': {
         contractId: 'TRADE.CATMOUSE.LEGAL_OBSERVATION_ONLY',
@@ -72,15 +84,20 @@ const CATALOG = {
     }
     merchant.selectedRoute = _mutObsChosenRoute;
     merchant.lastRoute = _mutObsChosenRoute;`,
-        expectedFailingTest: 'mechanism check',
+        expectedFailingProbe: 'verify_trade_runtime_contracts.mjs',
     },
     'MUT-MIG-001': {
         contractId: 'MIGRATION.DRIVEN_BY_RECENT_GRIEVANCE',
-        description: 'Make migration fire periodically independent of causal push pressure',
+        description: 'Make migration fire independent of causal push pressure and cooldown',
         targetFile: 'closed-world.js',
-        findPattern: /        if \(result\.migrationPressure > 0\.5 && !withinCooldown\) \{/,
-        replacement: `        if (result.migrationPressure > 0.5 || true) { // MUT-MIG-001: always fire (regression)`,
-        expectedFailingTest: 'a town can only emit MIGRATION once per cooldown window',
+        // Re-anchored 2026-10-17 (MOVEMENT B2): the V3 compound condition was
+        // refactored into named booleans; the old `if (result.migrationPressure > 0.5 ...)`
+        // pattern no longer matched live source. The mutation keeps the
+        // population/destination guards (so migration is still plausible) but
+        // drops the causal pressure gate and the cooldown gate.
+        findPattern: /        const canMigrate = pressureExceeds && !withinCooldown && hasPopulation && hasDestination;/,
+        replacement: '        const canMigrate = hasPopulation && hasDestination; // MUT-MIG-001: drop pressure and cooldown gates (regression)',
+        expectedFailingProbe: 'verify_trade_runtime_contracts.mjs',
     },
     'MUT-EVID-001': {
         contractId: 'EVIDENCE.SEED.IDEMPOTENT',
@@ -89,7 +106,7 @@ const CATALOG = {
         findPattern: /        if \(!isDuplicate\) \{[\s\S]*?            appendFileSync\(ledgerPath, JSON\.stringify\(row\) \+ '\\n'\);[\s\S]*?        \}/,
         replacement: `        // MUT-EVID-001: append without duplicate check (regression)
         appendFileSync(ledgerPath, JSON.stringify(row) + '\\n');`,
-        expectedFailingTest: 're-seeding the same claim+dimension+fingerprint produces exactly one row',
+        expectedFailingProbe: 'verify_evidence_seed_idempotency.mjs',
     },
 };
 
@@ -101,7 +118,7 @@ if (args.includes('--list')) {
         console.log(`  ${id}: ${m.description}`);
         console.log(`    target: ${m.targetFile}`);
         console.log(`    contract: ${m.contractId}`);
-        console.log(`    expected failing: ${m.expectedFailingTest}`);
+        console.log(`    expected failing probe: ${m.expectedFailingProbe}`);
     }
     process.exit(0);
 }
@@ -146,7 +163,7 @@ function copyDirSync(src, dest) {
 }
 const startTime = Date.now();
 copyDirSync(ROOT, disposableDir);
-// Symlink node_modules from host so jest can find all dependencies
+// Symlink node_modules from host so the probe suite resolves dependencies
 // without copying gigabytes.
 try {
     const hostNm = join(ROOT, 'node_modules');
@@ -184,70 +201,91 @@ console.log(`  pre-hash: ${preHash}`);
 console.log(`  post-hash: ${postHash}`);
 
 // ---- Run the protected verifier ----
-console.log('Running protected verifier...');
+// Hard Rule 9 retired Jest; the protected verifier is the deterministic probe
+// suite. --json writes the roster to a file INSIDE the disposable dir (the
+// runner resolves the path against its own repo root) — that roster is the
+// machine-readable verdict this harness parses.
+console.log('Running protected verifier (deterministic probe suite)...');
+const probeRunJsonRel = '.guardian-probe-run.json';
+const probeRunJsonPath = join(disposableDir, probeRunJsonRel);
 let exitCode = 0;
 let stdout = '';
-let stderr = '';
 try {
-    stdout = execSync('node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand 2>&1', {
+    stdout = execSync(`node tools/verification/run_probe_suite.mjs --json ${probeRunJsonRel} 2>&1`, {
         cwd: disposableDir,
         encoding: 'utf8',
-        timeout: 300000,
+        timeout: 1200000,
+        maxBuffer: 64 * 1024 * 1024,
     });
 } catch (e) {
     exitCode = e.status || 1;
     stdout = e.stdout || '';
-    stderr = e.stderr || '';
-    console.log(`Jest exited with code ${exitCode}, stdout length ${stdout.length}`);
+    console.log(`Probe suite exited with code ${exitCode}, stdout length ${stdout.length}`);
 }
 
-// Parse the jest output for failing test names
-// jest output format for failing tests:
-//   × <test name> (<duration> ms)
-// or:
-//   ✕ <test name> (<duration> ms)
-//   ● <describe block> > <test name>
-const lines = stdout.split('\n');
-const testFailures = [];
-for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    // Match the failing test marker (× or ✕ or FAIL)
-    if (line.match(/^\s*[×✕]\s/) || line.match(/^FAIL\s/)) {
-        testFailures.push({ type: 'test', line: line.trim() });
-    }
-    // Also collect the ● block which shows the test name
-    if (line.match(/^●\s/)) {
-        testFailures.push({ type: 'block', line: line.trim() });
+// Prefer the runner's own JSON roster; fall back to parsing its summary
+// lines (format: "  FAIL     verify_x.mjs  ..." / "  FLAKY    ...").
+let payload = null;
+try {
+    payload = JSON.parse(readFileSync(probeRunJsonPath, 'utf8'));
+} catch {
+    payload = null;
+}
+let observedFailingProbes = [];
+let probeSuite = null;
+if (payload && payload.totals) {
+    observedFailingProbes = Array.isArray(payload.failures) ? [...payload.failures] : [];
+    probeSuite = {
+        probes: payload.totals.probes,
+        passed: payload.totals.passed,
+        passedWithSkips: payload.totals.passedWithSkips,
+        failed: payload.totals.failed,
+        notProven: Array.isArray(payload.notProven) ? payload.notProven.map(entry => entry.name) : [],
+    };
+} else {
+    for (const line of stdout.split(/\r?\n/)) {
+        const m = line.match(/^\s+(?:FAIL|FLAKY)\s+(\S+\.mjs)/);
+        if (m) observedFailingProbes.push(m[1]);
     }
 }
+observedFailingProbes = [...new Set(observedFailingProbes)];
 
-// Check if the expected failing test is among the failures
-const expectedFailingTestName = mutant.expectedFailingTest;
-const observedFailing = testFailures.some(f =>
-    f.line.includes(expectedFailingTestName)
-);
+// KILLED: the mutant's own contract probe failed the suite (which is why the
+// suite exited non-zero). SURVIVED: the suite stayed green — a verifier
+// weakness (P0). INVALID: red for some other reason, so the mutation could
+// not be validated.
+const expectedFailingProbe = mutant.expectedFailingProbe;
+const observedFailing = observedFailingProbes.includes(expectedFailingProbe);
+let result;
+if (exitCode === 0 && observedFailingProbes.length === 0) {
+    result = 'SURVIVED'; // P0 verifier weakness
+} else if (exitCode !== 0 && observedFailing) {
+    result = 'KILLED';
+} else {
+    result = 'INVALID'; // failed but not for the expected reason
+}
 
 // ---- Record the receipt ----
 const receiptsDir = join(ROOT, 'docs/guardian/mutation-receipts');
 mkdirSync(receiptsDir, { recursive: true });
 
+const stamp = Date.now();
 // Write the full stdout to the receipt for debugging
-const fullLogPath = join(receiptsDir, `${mutantId}-${Date.now()}-stdout.log`);
+const fullLogPath = join(receiptsDir, `${mutantId}-${stamp}-stdout.log`);
 writeFileSync(fullLogPath, stdout);
 const fullLogSize = stdout.length;
 
-// Determine result
-let result;
-if (!observedFailing && exitCode === 0) {
-    result = 'SURVIVED'; // P0 verifier weakness
-} else if (!observedFailing && exitCode !== 0) {
-    result = 'INVALID'; // failed but not for the expected reason
-} else {
-    result = 'KILLED';
+// Preserve the probe-suite roster alongside the receipt: the disposable dir
+// is deleted below, and the roster is the machine-readable evidence the
+// verdict was computed from.
+let probeRunCopyPath = null;
+if (payload) {
+    probeRunCopyPath = join(receiptsDir, `${mutantId}-${stamp}-probe-run.json`);
+    writeFileSync(probeRunCopyPath, `${JSON.stringify(payload, null, 2)}\n`);
 }
 
-// ---- Record the receipt ----
 const receipt = {
+    schemaVersion: 2,
     mutationId: mutantId,
     contractId: mutant.contractId,
     description: mutant.description,
@@ -255,8 +293,13 @@ const receipt = {
     preHash,
     postHash,
     patchHash,
-    expectedFailingTest: expectedFailingTestName,
-    observedFailingTests: testFailures.filter(f => f.type === 'test').map(f => f.line),
+    verifier: {
+        kind: 'deterministic-probe-suite',
+        command: `node tools/verification/run_probe_suite.mjs --json ${probeRunJsonRel}`,
+        probeSuite,
+    },
+    expectedFailingProbe,
+    observedFailingProbes,
     exitCode,
     result,
     disposableDir,
@@ -265,12 +308,13 @@ const receipt = {
     recordedAt: new Date().toISOString(),
 };
 
-const receiptPath = join(receiptsDir, `${mutantId}-${Date.now()}.json`);
+const receiptPath = join(receiptsDir, `${mutantId}-${stamp}.json`);
 writeFileSync(receiptPath, JSON.stringify(receipt, null, 2));
 
 console.log('\n--- MUTATION RECEIPT ---');
 console.log(JSON.stringify(receipt, null, 2));
 console.log(`\nReceipt written to ${receiptPath}`);
+if (probeRunCopyPath) console.log(`Probe-suite roster preserved at ${probeRunCopyPath}`);
 
 // ---- Clean up disposable dir ----
 rmSync(disposableDir, { recursive: true, force: true });
