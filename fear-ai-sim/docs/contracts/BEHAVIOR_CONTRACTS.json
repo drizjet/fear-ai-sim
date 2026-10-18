@@ -332,23 +332,23 @@
         "the Vite production build of the current source succeeds",
         "loopback ports in 8400-8499 and 8500-8599 are free"
       ],
-      "mechanism": ["vite build", "static loopback server", "real headless Chrome over CDP (SwiftShader software GL pinned)", "runtime boot", "frame loop reschedules itself each frame", "DOM counters polled over a bounded observation window (up to 30s)"],
+      "mechanism": ["vite build", "static loopback server", "real headless Chrome over CDP (SwiftShader software GL pinned)", "runtime boot", "frame loop reschedules itself each frame", "DOM counters polled over a bounded observation window (up to 120s)"],
       "forbidden": [
         "a DOM shim (jsdom) standing in for the real browser",
         "a single executed frame (loop never reschedules) counted as a ticking runtime",
         "asserting boot and tick from a stale or externally supplied dist without saying so",
         "a missing browser reported as a pass (the probe must skip loudly, and a required run treats the skip as a failure)"
       ],
-      "observableConsequence": "#pop-count is populated (>0) at boot; within a bounded observation window (up to 30s) the counters move off their initial values; #gen-count is present; zero error-level captured logs; the probe reports SKIPPED (not PASS) when no browser is available, and FEAR_AI_BROWSER_REQUIRED=1 turns that skip into a failure",
+      "observableConsequence": "#pop-count is populated (>0) at boot; within a bounded observation window (up to 120s) the counters move off their initial values; #gen-count is present; zero error-level captured logs; the probe reports SKIPPED (not PASS) when no browser is available, and FEAR_AI_BROWSER_REQUIRED=1 turns that skip into a failure",
       "stochastic": false,
-      "requiredEvidenceType": "real-browser DOM probe (boot + counter advancement across windows) + real-source mutation MUT-RUNTIME-003 killed by this probe (receipt docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792295233771.json)",
+      "requiredEvidenceType": "real-browser DOM probe (boot + counter advancement across windows) + real-source mutation MUT-RUNTIME-003 killed by this probe (receipt docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792296384180.json)",
       "requiredTestIds": ["verify_runtime_real_browser.mjs#boot-populated", "verify_runtime_real_browser.mjs#counters-advance"],
       "requiredRuntimePath": "main.js#loop (requestAnimationFrame reschedule) over the Vite-built bundle",
       "status": "PENDING_AUDIT",
       "revisionHistory": [
         {
           "revision": "V4-D2-2026-10-18",
-          "change": "New contract (V4 MOVEMENT D2): the real-browser boot and tick advance are asserted end-to-end by tools/verification/verify_runtime_real_browser.mjs; real-source mutation MUT-RUNTIME-003 (frame loop no longer rescheduled) killed by this probe (receipt docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792295233771.json).",
+          "change": "New contract (V4 MOVEMENT D2): the real-browser boot and tick advance are asserted end-to-end by tools/verification/verify_runtime_real_browser.mjs; real-source mutation MUT-RUNTIME-003 (frame loop no longer rescheduled) killed by this probe (receipt docs/guardian/mutation-receipts/MUT-RUNTIME-003-1792296384180.json).",
           "status": "PENDING_AUDIT"
         }
       ],

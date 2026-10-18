@@ -71,8 +71,12 @@ const SKIP_BUILD = process.env.FEAR_AI_BROWSER_SKIP_BUILD === '1';
 const KEEP = process.env.FEAR_AI_BROWSER_KEEP === '1';
 
 const BOOT_DEADLINE_MS = 90_000;
-const PIXI_DEADLINE_MS = 60_000;
-const PROGRESS_DEADLINE_MS = 30_000;
+// CI margins: on the GPU-less windows runner PIXI init alone consumed most of
+// a 60s budget, and the first-run counter movement can crawl under SwiftShader
+// (slow frames + the sim's own dt clamp). Both waits are bounded; a frozen
+// one-frame mutant never moves and still fails — just after the deadline.
+const PIXI_DEADLINE_MS = 120_000;
+const PROGRESS_DEADLINE_MS = 120_000;
 const SCREENSHOT_MIN_BYTES = 10_000;
 
 function findBrowser() {
@@ -332,6 +336,12 @@ async function main() {
         '--disable-extensions',
         '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding',
+        // Windows-only occlusion heuristics can mark a headless window
+        // "occluded" and stop producing frames entirely (rAF never fires).
+        // On the GPU-less CI runner that class matched this probe's failure:
+        // boot logs present, zero counter movement, zero errors.
+        '--disable-backgrounding-occluded-windows',
+        '--disable-features=CalculateNativeWinOcclusion',
         '--disable-dev-shm-usage',
         // Software GL is acceptable here (see scope note) but recent Chrome
         // needs this switch to allow it at all — without it, PIXI's WebGL
@@ -445,6 +455,28 @@ async function main() {
             advanced = true;
         } catch (error) {
             console.log(`  note: ${error.message}`);
+            // Discriminate the two CI failure classes for the next run:
+            // rAF dead (frames 0 - throttling/occlusion) vs frames real but
+            // counter movement slower than the deadline (software GL slow,
+            // sim dt clamped). Printed to stderr so the CI error block shows it.
+            const frameProbe = await cdp.evaluate(`new Promise((resolve) => {
+                let frames = 0;
+                const t0 = performance.now();
+                const finish = () => resolve({
+                    frames,
+                    elapsedMs: Math.round(performance.now() - t0),
+                    pop: document.getElementById('pop-count').textContent,
+                    fear: document.getElementById('avg-fear').textContent,
+                    visibility: document.visibilityState
+                });
+                const tick = () => {
+                    frames += 1;
+                    if (performance.now() - t0 < 8000) requestAnimationFrame(tick); else finish();
+                };
+                requestAnimationFrame(tick);
+                setTimeout(finish, 10000);
+            })`).catch(() => null);
+            console.error(`    advancement diagnostic (stderr so CI shows it): ${JSON.stringify(frameProbe)}`);
         }
         check(`the simulation advanced within a ${PROGRESS_DEADLINE_MS / 1000}s window (not one frozen frame)`, advanced,
             `pop ${first.pop}->${second.pop}, gen ${first.gen}->${second.gen}, avgFear ${first.fear}->${second.fear}`);

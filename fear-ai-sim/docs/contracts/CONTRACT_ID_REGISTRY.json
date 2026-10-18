@@ -356,14 +356,14 @@
       "supersededBy": null,
       "mutationFamilies": ["stalled-frame-loop"],
       "protectedTests": [
-        "tools/verification/verify_runtime_real_browser.mjs > the simulation advanced within a 30s window (not one frozen frame); pop > 0 at boot alone is satisfied by the frozen one-frame mutant, which is why the kill rests on the advancement assertion"
+        "tools/verification/verify_runtime_real_browser.mjs > the simulation advanced within a 120s window (not one frozen frame); pop > 0 at boot alone is satisfied by the frozen one-frame mutant, which is why the kill rests on the advancement assertion"
       ],
       "developmentMutationEvidence": {
         "killedInDevelopment": true,
         "verifiedAt": "2026-10-18",
         "mutationPatch": "main.js > loop tail: remove the requestAnimationFrame(loop) reschedule (the frame loop executes once, then freezes)",
         "observingTestsUnderMutation": [
-          "tools/verification/verify_runtime_real_browser.mjs > assertion 9 (advancement within a 30s observation window) fails under mutation; 10 of 11 assertions still pass, including pop > 0"
+          "tools/verification/verify_runtime_real_browser.mjs > assertion 9 (advancement within a 120s observation window) fails under mutation; 10 of 11 assertions still pass, including pop > 0"
         ],
         "lane": "B",
         "frozenAcceptanceRequired": true

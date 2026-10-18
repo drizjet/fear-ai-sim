@@ -26,8 +26,8 @@
   ],
   "exitCode": 1,
   "result": "KILLED",
-  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-RUNTIME-003-1792295142571",
-  "copyDurationMs": 1161,
+  "disposableDir": "C:\\Users\\BADANA~1\\AppData\\Local\\Temp\\fear-mutate-MUT-RUNTIME-003-1792296196964",
+  "copyDurationMs": 944,
   "verdict": "MUTANT_KILLED",
-  "recordedAt": "2026-10-18T03:47:13.772Z"
+  "recordedAt": "2026-10-18T04:06:24.182Z"
 }
