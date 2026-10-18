@@ -74,12 +74,12 @@
     {
       "contractId": "TRADE.RUNTIME.AUTHORITATIVE_PATH",
       "domain": "trade/runtime",
-      "statement": "Simulation.runClosedWorldStep must invoke the canonical reducer (tickClosedWorld) exactly once per step. The production runtime path IS the canonical path; no test-only manual bridge is allowed.",
-      "rationale": "Guardian V3 §4 Movement C §C2: 'Prove there is exactly one authoritative simulation advancement path per intended tick. Detect: double ticking, helper + reducer duplicate execution, stale wrappers, test-only entry paths.' V4 MOVEMENT C2 (2026-10-18) formalizes the at-least-once half as the exact-once tick phase: the canonical call site must exist and run in production, and it must be the only one.",
+      "statement": "Simulation.runClosedWorldStep must invoke the canonical reducer (tickClosedWorld) exactly once per step. The production runtime path IS the canonical path; no test-only manual bridge is allowed. V4 §7.2 emission segment: the canonical reducer must emit the authoritative decision mix — FACTION_REASSESSMENT on escalation change and FACTION_ACTION only behind a same-tick authorizing gate event; every INVASION must name the FACTION_ACTION that caused it. RUMOR creation is scenario-setup-scoped (rootReason SCENARIO_SETUP), not part of the canonical tick loop.",
+      "rationale": "Guardian V3 §4 Movement C §C2: 'Prove there is exactly one authoritative simulation advancement path per intended tick. Detect: double ticking, helper + reducer duplicate execution, stale wrappers, test-only entry paths.' V4 MOVEMENT C2 (2026-10-18) formalizes the at-least-once half as the exact-once tick phase: the canonical call site must exist and run in production, and it must be the only one. V4 P0 §7.2 resolution (2026-10-18): the live reducer demonstrably emits FACTION_REASSESSMENT and gate-authorised FACTION_ACTION, and the single createRumor call site lives in scenario setup (closed-world.js applySurvivorEvidence, reached only from runClosedWorldScenario); the canonical tick loop has no rumor source. Resolved as a spec revision with evidence rather than a new mechanic.",
       "source": {
         "constitutionalAnchor": "Guardian V3 §4 Movement C",
-        "testChangeGovernance": "EVID-2026-08-29-RUNTIME-WIRING; rebind to probe 2026-10-18 (V4 §5 MOVEMENT B2 probe-suite verifier)",
-        "testOrigin": "tools/verification/verify_trade_runtime_contracts.mjs (section 2 call-site tripwire; section 1 behavioral reducer growth); previously tests/runtime-trade-wiring.test.js, tests/closed-world-all-systems.test.js (Jest suites retired 2026-09-06, Hard Rule 9)"
+        "testChangeGovernance": "EVID-2026-08-29-RUNTIME-WIRING; rebind to probe 2026-10-18 (V4 §5 MOVEMENT B2 probe-suite verifier); §7.2 emission-mix segment added 2026-10-18",
+        "testOrigin": "tools/verification/verify_trade_runtime_contracts.mjs (section 2 call-site tripwire; section 1 behavioral reducer growth) and tools/verification/verify_all_systems_runtime.mjs (emission-mix, gate parentage, INVASION linkage, RUMOR scoping tripwire); previously tests/runtime-trade-wiring.test.js, tests/closed-world-all-systems.test.js (Jest suites retired 2026-09-06, Hard Rule 9)"
       },
       "preconditions": ["Simulation.runClosedWorldStep source as loaded from simulation.js (DOM-bound class; verified as source text, not instantiated)"],
       "mechanism": ["Simulation.runClosedWorldStep → tickClosedWorld (full step chain), exactly one call site"],
@@ -88,16 +88,21 @@
         "runClosedWorldStep contains zero or 2+ tickClosedWorld call sites",
         "test files call tickClosedWorld after runClosedWorldStep (double execution)"
       ],
-      "observableConsequence": "runClosedWorldStep source contains exactly one uncommented `tickClosedWorld(this.closedWorld, { tick, perceivedDanger, attackRoadId });` call and exactly one `this.closedWorldTick += 1;`; step.events includes MERCHANT_ROUTE_DECISION from step 2.5 and BANDIT_RELOCATION from step 7.5 without any manual tickClosedWorld call after runClosedWorldStep",
+      "observableConsequence": "runClosedWorldStep source contains exactly one uncommented `tickClosedWorld(this.closedWorld, { tick, perceivedDanger, attackRoadId });` call and exactly one `this.closedWorldTick += 1;`; step.events includes MERCHANT_ROUTE_DECISION from step 2.5 and BANDIT_RELOCATION from step 7.5 without any manual tickClosedWorld call after runClosedWorldStep. Emission segment: a 60-tick canonical run includes the core trade chain plus FACTION_REASSESSMENT (escalation-change rows, rootReason WORLD_STATE_DERIVED) and FACTION_ACTION rows whose same-tick parent gate event has allowed === true; every INVASION carries the causationId of the FACTION_ACTION that produced it; the canonical tick loop emits no RUMOR; CONVOY_FORMED is minted by scenario setup.",
       "stochastic": false,
-      "requiredEvidenceType": "source tripwire (exact call-site count) + real-source mutation MUT-RUNTIME-002 killed by this probe (receipt docs/guardian/mutation-receipts/MUT-RUNTIME-002-1792291175915.json)",
-      "requiredTestIds": ["verify_trade_runtime_contracts.mjs#canonical-call-site-exactly-once", "verify_trade_runtime_contracts.mjs#reducer-tick-growth"],
+      "requiredEvidenceType": "source tripwire (exact call-site count) + real-source mutation MUT-RUNTIME-002 killed by this probe (receipt docs/guardian/mutation-receipts/MUT-RUNTIME-002-1792291175915.json) + all-systems runtime probe segment (emission mix, gate parentage, INVASION linkage, RUMOR scoping tripwire over a 60-tick run)",
+      "requiredTestIds": ["verify_trade_runtime_contracts.mjs#canonical-call-site-exactly-once", "verify_trade_runtime_contracts.mjs#reducer-tick-growth", "verify_all_systems_runtime.mjs#emission-mix-and-rumor-scoping"],
       "requiredRuntimePath": "Simulation.runClosedWorldStep",
       "status": "PENDING_AUDIT",
       "revisionHistory": [
         {
           "revision": "V4-C2-2026-10-18",
           "change": "Rebound from retired Jest sources to the living probe tools/verification/verify_trade_runtime_contracts.mjs; call-site tripwire strengthened from presence to exact cardinality (one call site, one tick increment). Protected-test migration filed as docs/guardian/change-proposals/T-RUNTIME-001-migration-to-probes.json.",
+          "status": "PENDING_AUDIT"
+        },
+        {
+          "revision": "V4-ALLSYS-2026-10-18",
+          "change": "V4 P0 §7.2 resolved as a spec revision with evidence: the contract gains the emission-mix segment (FACTION_REASSESSMENT + gate-authorised FACTION_ACTION + INVASION linkage; RUMOR is scenario-setup-scoped, protected by a single-createRumor-call-site tripwire in the probe). Bound additionally to tools/verification/verify_all_systems_runtime.mjs. Protected-test migration filed as docs/guardian/change-proposals/P0-SIMULATION-CONTRACTS-migration-to-probes.json.",
           "status": "PENDING_AUDIT"
         }
       ],
@@ -144,7 +149,7 @@
       "source": {
         "constitutionalAnchor": "Guardian V3 §2 Movement A §A2",
         "testChangeGovernance": "EVID-2026-08-29-CATMOUSE",
-        "testOrigin": "tests/scenario-differentiation-long-horizon.test.js (lines 27-30, 137-140)"
+        "testOrigin": "tools/verification/verify_scenario_differentiation.mjs (natural-profile section: zero BANDIT_ATTACK and zero MIGRATION with no fixture switch, engine provably live); previously tests/scenario-differentiation-long-horizon.test.js (Jest suite retired 2026-09-06, Hard Rule 9)"
       },
       "preconditions": ["no bandit on any route where a merchant has selectedRoute"],
       "mechanism": ["bandit stays on a road with no merchant traffic", "encounter engine finds no eligible bandit-ambush", "no BANDIT_ATTACK fires"],
@@ -152,13 +157,19 @@
         "test forces perceptionAccuracy to 0 to achieve 0 attacks",
         "noObservations flag is the only path to 0 attacks"
       ],
-      "observableConsequence": "When the bandit is on a road with no merchant AND the merchant's selectedRoute is a different road, the encounter engine must not fire bandit-ambush and BANDIT_ATTACK must not appear in the event log, without any fixture switch.",
+      "observableConsequence": "When the bandit is on a road with no merchant AND the merchant's selectedRoute is a different road, the encounter engine must not fire bandit-ambush and BANDIT_ATTACK must not appear in the event log, without any fixture switch. The natural profile keeps the engine live (ENCOUNTER events keep firing), merchant and bandit settle on different roads naturally (road-c vs road-a), and per-tick replays are identical.",
       "stochastic": false,
-      "requiredEvidenceType": "natural scenario test (no fixture switch) + planted-defect (make merchant pick bandit's road naturally → attacks appear)",
-      "requiredTestIds": ["scenario-differentiation-long-horizon.test.js#natural-no-attacks"],
+      "requiredEvidenceType": "natural scenario probe (no fixture switch; the natural run stays live with ongoing ENCOUNTER events, so 0 attacks is a causal outcome, not a dead engine) + real-source mutation MUT-MIG-001 killed within the same protected suite (receipt docs/guardian/mutation-receipts/MUT-MIG-001-1792299519003.json; the kill is observed on verify_trade_runtime_contracts.mjs, which is the co-protected assertion set for periodic-migration regressions; the scenario probe's 0-migration assertion is a second fence on the same contract)",
+      "requiredTestIds": ["verify_scenario_differentiation.mjs#natural-no-attacks"],
       "requiredRuntimePath": "tickClosedWorld full step chain",
       "status": "PENDING_AUDIT",
-      "revisionHistory": [],
+      "revisionHistory": [
+        {
+          "revision": "V4-SIM-2026-10-18",
+          "change": "Rebound from the retired Jest source tests/scenario-differentiation-long-horizon.test.js to the living probe tools/verification/verify_scenario_differentiation.mjs (natural profile: zero BANDIT_ATTACK and zero MIGRATION without fixture switch, engine liveness, natural road divergence road-c vs road-a, deterministic replays; the sustained-attacks comparison runs through the canonical attackRoadId path). Real-source mutation MUT-MIG-001 re-run against the 60-probe suite and killed (receipt docs/guardian/mutation-receipts/MUT-MIG-001-1792299519003.json). Protected-test migration filed as docs/guardian/change-proposals/P0-SIMULATION-CONTRACTS-migration-to-probes.json.",
+          "status": "PENDING_AUDIT"
+        }
+      ],
       "lastAcceptedSourceFingerprint": null
     },
     {

@@ -103,11 +103,14 @@
       "legalInformationSource": "recent BANDIT_ATTACK events (5-tick window)",
       "forbiddenShortcut": "migration fires every tick after any historical attack (sticky attacksUpToTick)",
       "firstAcceptedRevision": "V4-2026-08-30",
-      "currentRevision": "V4-2026-08-30",
+      "currentRevision": "V4-SIM-2026-10-18-DEVELOPMENT",
       "supersedes": null,
       "supersededBy": null,
       "mutationFamilies": ["periodic-event"],
-      "protectedTests": ["tests/closed-world-simulation.test.js > migration cooldown prevents rapid-fire"]
+      "protectedTests": [
+        "tools/verification/verify_trade_runtime_contracts.mjs > section 4: migration fires only on recent pressure (BANDIT_ATTACK within the 5-tick window) and respects the cooldown, never periodically (the kill check; under MUT-MIG-001 this probe fails on the pressure/cooldown assertions)",
+        "tools/verification/verify_scenario_differentiation.mjs > natural profile: 0 attacks and 0 migrations without fixture switch (second fence on the same periodic-event contract)"
+      ]
     },
     "MUT-TRADE-001": {
       "id": "MUT-TRADE-001",

@@ -1,0 +1,82 @@
+{
+  "proposalId": "P0-SIMULATION-CONTRACTS-migration-to-probes",
+  "kind": "SPEC_TEST_CHANGE",
+  "campaign": "FEAR_GUARDIAN_CAMPAIGN_V4",
+  "movement": "P0-SIMULATION-CONTRACTS",
+  "createdAt": "2026-10-18",
+  "author": "worker",
+  "status": "PENDING_GUARDIAN_ACCEPTANCE",
+  "summary": "Resolve the remaining four V3 P0 findings (V4 §7.2, §7.3, §7.4, §7.5) by migrating the protected tests T-ALLSYS-001, T-SIM-001, T-SIM-002 and T-DIFF-001 from their retired Jest files to three living probes, and settle the §7.2 event-mix question as a documented spec revision with evidence: the canonical runtime emits FACTION_REASSESSMENT and gate-authorised FACTION_ACTION, while RUMOR creation is scenario-setup-scoped.",
+  "motivation": "Hard Rule 9 retired the Jest suites (2026-09-06); tests/closed-world-all-systems.test.js, tests/closed-world-simulation.test.js and tests/scenario-differentiation-long-horizon.test.js no longer exist, so the four manifest entries point at dead files. V3 also recorded weakened or brittle assertions: the all-systems toEqual was weakened to a core subset (Guardian V3 §1 item #4), the simulation decision assertion was weakened to 'any decision' (item #5), the route assertion hard-coded selectedRoute === 'road-c', and the no-attacks scenario used a noObservations fixture switch (item #6). The three new probes re-derive each contract from live source and pin it with exact structural assertions.",
+  "manifestImpact": [
+    {
+      "testId": "T-ALLSYS-001",
+      "currentFile": "tests/closed-world-all-systems.test.js",
+      "currentTestName": "drives the chain through 5 ticks and produces the expected event mix",
+      "strengthClass": "EMISSION_MIX_PLUS_PARENT_LINKAGE",
+      "revisionStatus": "RECONSTRUCTED_IN_LIVING_PROBE",
+      "proposedFile": "tools/verification/verify_all_systems_runtime.mjs",
+      "proposedLivingBinding": "section 1: a 5-tick canonical run emits every core-8 type plus FACTION_REASSESSMENT (CONVOY_FORMED is scenario setup and is minted by formClosedWorldConvoy, so the window filter uses (event.tick ?? 0) <= 5). section 2: a 60-tick run emits 20 FACTION_ACTION and 20 INVASION events where every FACTION_ACTION is parented to a same-tick FACTION_ACTION_GATE event with allowed === true, every INVASION carries the causationId of the FACTION_ACTION that produced it, every FACTION_REASSESSMENT carries a snapshot with rootReason WORLD_STATE_DERIVED and only fires on escalation change, and the canonical tick loop emits zero RUMOR. section 3: RUMOR scoping — a one-shot runClosedWorldScenario with a populated world mints RUMOR with rootReason SCENARIO_SETUP, and a source-level tripwire asserts createRumor has exactly one call site in closed-world.js (inside applySurvivorEvidence).",
+      "resolution": "V4 §7.2 outcome: spec revision with evidence (no new civilization mechanic added to closed-world.js). The canonical path does emit FACTION_REASSESSMENT and gate-authorised FACTION_ACTION — V3's weakened core subset was under-asserting, not over-asserting. RUMOR is NOT a canonical-tick event: it is scenario-setup-scoped, and the tripwire fails loudly if a future change gives the tick loop a rumor source, forcing a deliberate contract revision instead of a silent drift.",
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-CHAIN-001-1792297594885.json (KILLED by tools/verification/verify_trade_chain_causal_edges.mjs, filed with T-CHAIN-001). The all-systems probe asserts the emission-mix segment, not the decision-parent edge, so the T-ALLSYS-001 kill obligation remains carried by the chain probe within the same living protected set; the division is stated here rather than over-claimed."
+    },
+    {
+      "testId": "T-SIM-001",
+      "currentFile": "tests/closed-world-simulation.test.js",
+      "currentTestName": "runs the canonical reducer (attack, evidence, rumor, route, faction) through Simulation",
+      "strengthClass": "FORCED_FIXTURE_EXACT_DECISION",
+      "revisionStatus": "RECONSTRUCTED_IN_LIVING_PROBE",
+      "proposedFile": "tools/verification/verify_simulation_contracts.mjs",
+      "proposedLivingBinding": "section 1: with the audit's forcing fixture applied to the south faction (grievance 0.5, militaryConfidence 1.0, riskTolerance 1.0, maxResources 4, resources 4), the south faction's decision at tick 1 is exactly RAID with escalation 6 and exactly one south FACTION_REASSESSMENT snapshot (matching escalation, hasResources true); the unforced control keeps HOLD with escalation 0.",
+      "resolution": "V4 §7.3 outcome: yes — RAID is the correct result for those inputs. The probe witness makes the weakened 'any decision' assertion unnecessary: the decision is exactly RAID in the forced arm and exactly HOLD in the control arm, on matched worlds.",
+      "killEvidence": "none required (mutationIdsItMustKill is empty for this entry)"
+    },
+    {
+      "testId": "T-SIM-002",
+      "currentFile": "tests/closed-world-simulation.test.js",
+      "currentTestName": "runs the canonical reducer (attack, evidence, rumor, route, faction) through Simulation",
+      "strengthClass": "STRUCTURAL_RANKING_CONTRACT",
+      "revisionStatus": "RECONSTRUCTED_IN_LIVING_PROBE",
+      "proposedFile": "tools/verification/verify_simulation_contracts.mjs",
+      "proposedLivingBinding": "section 2: over several ticks of driven decisions, the emitted MERCHANT_ROUTE_DECISION payloads are checked structurally, never by literal route id: ranked covers exactly the legal route set with ascending scores and route-table-index tie-break; the chosen route is ranked[0]; why.threshold.lastRoute equals the ranked[0].routeId argmin snapshot; rejectedAlternatives is exactly ranked minus the chosen entry with score and danger; the threshold block reports ticksSinceSwitch/inertiaApplied consistently with the switchingCost boundary; the reason string matches the risk_tol/perceived_danger format; merchant.selectedRoute agrees with the emitted chosenRoute. Literal-id brittleness (road-c) is replaced by the contract that produced it.",
+      "resolution": "V4 §7.4 outcome: the brittle selectedRoute === 'road-c' assertion is replaced by the structural utility-ranking contract. The probe deliberately does not pin any route literal, so a re-parameterized world with a different argmin still verifies the contract.",
+      "killEvidence": "none required (mutationIdsItMustKill is empty for this entry)"
+    },
+    {
+      "testId": "T-DIFF-001",
+      "currentFile": "tests/scenario-differentiation-long-horizon.test.js",
+      "currentTestName": "no-attacks vs sustained-attacks produce different event profiles",
+      "strengthClass": "NATURAL_CAUSAL_OUTCOME_PLUS_DIFFERENTIATION",
+      "revisionStatus": "RECONSTRUCTED_IN_LIVING_PROBE",
+      "proposedFile": "tools/verification/verify_scenario_differentiation.mjs",
+      "proposedLivingBinding": "section 1 (natural profile, no fixture switch, perception channel active): 0 BANDIT_ATTACK and 0 MIGRATION over the full horizon while the engine stays provably live (ENCOUNTERs keep firing), the merchant and bandit naturally settle on different roads (road-c vs road-a), and per-tick deterministic replays are identical. section 2 (sustained-attacks profile): the same world driven through the canonical attackRoadId path over even ticks produces BANDIT_ATTACK 25, MIGRATION 10, LAW_VIOLATED 50, FACTION_REACTION 25, JUSTICE_RESOLVED 10, so the difference between the profiles is causally driven by the attack input, not by a fixture that disables information. The noObservations fixture is not used anywhere.",
+      "resolution": "V4 §7.5 outcome: 0 attacks in the natural profile is a causal outcome of the low-exposure setup with the observation channel live, evidenced by the co-firing ENCOUNTERs (the engine is not deadlocked) and by the sustained arm's 25 attacks on the same world. The retired noObservations fixture is not the only path to 0 attacks anymore.",
+      "killEvidence": "docs/guardian/mutation-receipts/MUT-MIG-001-1792299519003.json (KILLED; re-run 2026-10-18 against the full 60-probe suite). The observed failing probe is verify_trade_runtime_contracts.mjs — the co-protected assertion set for periodic-migration regressions; the scenario probe itself survives the mutation (a scenario with no attacks never reaches the migration evaluation), so the manifest kill obligation is proposed as carried jointly by the living protected set, with the kill receipt as evidence, and the scenario probe's 0-migration assertion as the second fence."
+    }
+  ],
+  "registryRebinds": [
+    {
+      "mutationId": "MUT-MIG-001",
+      "previously": "tests/closed-world-simulation.test.js > migration cooldown prevents rapid-fire",
+      "now": "tools/verification/verify_trade_runtime_contracts.mjs > section 4: migration fires only on recent pressure (BANDIT_ATTACK within the 5-tick window) and respects the cooldown, never periodically (kill check; under MUT-MIG-001 this probe fails on the pressure/cooldown assertions); tools/verification/verify_scenario_differentiation.mjs > natural profile: 0 attacks and 0 migrations without fixture switch (second fence on the same periodic-event contract). currentRevision carries the development revision V4-SIM-2026-10-18-DEVELOPMENT."
+    }
+  ],
+  "workerDiscipline": {
+    "protectedManifestEdited": false,
+    "protectedManifest": "docs/guardian/PROTECTED_TESTS.json",
+    "note": "The worker did not modify the protected manifest; this proposal awaits guardian acceptance. docs/contracts/CONTRACT_ID_REGISTRY.json is worker-authored bootstrap (frozenBy PENDING_SUPERVISOR, V6 §2) and was rebound to the living probes as an honest binding. docs/contracts/BEHAVIOR_CONTRACTS.json (worker-authored, all entries PENDING_AUDIT) gained the §7.2 emission-mix segment on TRADE.RUNTIME.AUTHORITATIVE_PATH and the NATURAL_NO_ATTACKS rebind. The CLOSED_WORLD_SIMULATION.RAID / .ROUTE authority lives in the protected manifest registry, not in BEHAVIOR_CONTRACTS.json, so those two have no BC.json rebind. T-REROUTE-001 remains PROTECTED with a dead Jest file; observed but intentionally not touched (outside this P0 scope)."
+  },
+  "evidence": [
+    "tools/verification/verify_all_systems_runtime.mjs (T-ALLSYS-001 binding)",
+    "tools/verification/verify_simulation_contracts.mjs (T-SIM-001 + T-SIM-002 binding)",
+    "tools/verification/verify_scenario_differentiation.mjs (T-DIFF-001 binding)",
+    "docs/guardian/mutation-receipts/MUT-MIG-001-1792299519003.json",
+    "docs/guardian/mutation-receipts/MUT-MIG-001-1792299519003-probe-run.json",
+    "docs/guardian/mutation-receipts/MUT-MIG-001-1792299519003-stdout.log",
+    "docs/guardian/mutation-receipts/MUT-CHAIN-001-1792297594885.json",
+    "docs/guardian/mutation-receipts/MUT-MIG-001-1792289805728.json (prior kill, 55-probe era)",
+    "tools/guardian/contract-mutate.mjs (MUT-MIG-001 catalog entry)",
+    "docs/contracts/BEHAVIOR_CONTRACTS.json (V4-ALLSYS-2026-10-18 and V4-SIM-2026-10-18 revision entries)"
+  ],
+  "requestedDecision": "Accept the migration of T-ALLSYS-001, T-SIM-001, T-SIM-002 and T-DIFF-001 to their living-probe bindings and update the four PROTECTED_TESTS.json entries (currently pointing at retired Jest files with strengthClass PENDING_RECONSTRUCTION / BRITTLE_ASSERTION and revisionStatus NEEDS_RECONSTRUCTION) to the reconstructed strengthened bindings described above. Adopt the V4 §7.2 resolution (spec revision: canonical FACTION_REASSESSMENT + gate-authorised FACTION_ACTION; RUMOR scenario-setup-scoped with tripwire), the §7.3 result (RAID is correct for the forcing fixture), the §7.4 structural ranking contract, and the §7.5 natural-conditions result."
+}

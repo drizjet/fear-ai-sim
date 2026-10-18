@@ -125,3 +125,21 @@ the audit-trail structure required by Guardian V3 §2.)
   PENDING_AUDIT pending independent review. Protected-test migration filed as
   `docs/guardian/change-proposals/T-CHAIN-001-migration-to-probes.json`; the protected
   manifest itself was not edited.
+- 2026-10-18 - V4 P0 SIMULATION CONTRACTS (all-systems emission mix + forced RAID + structural
+  route ranking + natural no-attacks): TRADE.RUNTIME.AUTHORITATIVE_PATH gained the V4 §7.2
+  emission-mix segment (FACTION_REASSESSMENT + gate-authorised FACTION_ACTION + INVASION
+  causation linkage; RUMOR is scenario-setup-scoped, protected by a single-createRumor-call-site
+  tripwire in the probe) and TRADE.SCENARIO.NATURAL_NO_ATTACKS was rebound from the retired
+  Jest source tests/scenario-differentiation-long-horizon.test.js to the living probe
+  `tools/verification/verify_scenario_differentiation.mjs` (natural profile: 0 attacks and
+  0 migrations with the engine provably live, merchant road-c vs bandit road-a, deterministic
+  replays). New probes `tools/verification/verify_all_systems_runtime.mjs` (emission mix,
+  gate parentage, INVASION linkage, RUMOR scoping) and
+  `tools/verification/verify_simulation_contracts.mjs` (forced-south RAID with escalation-6
+  reassessment snapshot; structural route-decision ranking contract) carry the
+  CLOSED_WORLD_SIMULATION.RAID / .ROUTE authority, which lives in the protected manifest
+  rather than this document. Real-source mutation MUT-MIG-001 re-run against the 60-probe
+  suite and killed (receipt `docs/guardian/mutation-receipts/MUT-MIG-001-1792299519003.json`).
+  All entries remain PENDING_AUDIT pending independent review. Protected-test migrations filed
+  as `docs/guardian/change-proposals/P0-SIMULATION-CONTRACTS-migration-to-probes.json`; the
+  protected manifest itself was not edited.
