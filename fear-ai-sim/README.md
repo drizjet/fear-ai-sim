@@ -74,6 +74,10 @@ The zips, `CHECKSUMS.sha256` and `RELEASE_MANIFEST.json` land in
 package exclusions; the Unity entry excludes the duplicate root `.cs` copies
 because `Runtime/` is the UPM assembly source.
 
+Current release candidate: [`v0.1.0-rc2`](https://github.com/drizjet/fear-ai-sim/releases/tag/v0.1.0-rc2)
+(provisional; `v0.1.0-rc1` is superseded). Security posture and known open
+advisories: [`../SECURITY.md`](../SECURITY.md).
+
 ## Research sim (not the SDK)
 
 ```bash
