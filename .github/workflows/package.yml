@@ -27,6 +27,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+      with:
+        # On pull_request, actions/checkout defaults to the synthetic merge
+        # commit. Package the real PR head so PACKAGE_MANIFEST.json records a
+        # commit that exists on the branch, not a temporary merge ref.
+        ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
     - name: Use Node.js 20.x
       uses: actions/setup-node@v4
