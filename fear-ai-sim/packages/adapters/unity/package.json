@@ -1,6 +1,7 @@
 {
   "name": "com.fearai.middleware",
   "version": "1.0.0",
+  "license": "MIT",
   "displayName": "Fear AI Universal Middleware",
   "description": "Universal engine-agnostic Fear AI affective state and behavioral intent middleware for Unity.",
   "unity": "2022.3",

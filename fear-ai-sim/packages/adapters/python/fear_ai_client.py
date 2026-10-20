@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: MIT
 """
 Fear AI Python Reference Client (Zero-Dependency)
 Connects to the Fear AI Universal Middleware Server (default http://127.0.0.1:8765).

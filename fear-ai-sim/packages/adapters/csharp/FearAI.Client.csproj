@@ -7,6 +7,7 @@
     <PackageId>FearAI.Client</PackageId>
     <Version>1.0.0</Version>
     <Authors>Fear AI</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>Pure C# client library for Fear AI Universal Middleware.</Description>
   </PropertyGroup>
 

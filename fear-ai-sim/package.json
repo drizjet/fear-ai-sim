@@ -2,6 +2,7 @@
   "name": "fear-ai-sim",
   "private": true,
   "version": "0.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -50,6 +51,7 @@
     "dashboard": "node bin/fear-ai.js dashboard",
     "benchmark": "node benchmarks/headless-benchmark.mjs",
     "pack:adapters": "pwsh -File tools/packaging/pack-adapters.ps1",
+    "verify:adapters-package": "node tools/packaging/verify-adapters-package.mjs",
     "godot:showcase": "pwsh -File tools/launch-godot-showcase.ps1",
     "godot:evidence": "node tools/run-godot-inengine-evidence.mjs",
     "audit:newmaster": "pwsh -Command \"cd 'C:\\tools\\03-Projects\\lains Tools\\New Master Game\\pixel-pets'; cargo run --bin audit_fear_ai_connection\"",

@@ -70,7 +70,14 @@ const CI_RUN_ALLOWLIST = [
     // The Unity Editor gate. It is inert until a runner is provisioned for it —
     // see UNITY_GATE_INERT_MARKER below for why that is asserted rather than
     // trusted.
-    'npm run verify:unity-editor'
+    'npm run verify:unity-editor',
+    // Release-integrity gates, not verification: build the production bundle,
+    // pack the six adapters from tracked files, and assert their contents,
+    // licenses and checksums. They run in .github/workflows/package.yml and
+    // execute no test suite.
+    'npm run build',
+    'npm run pack:adapters',
+    'npm run verify:adapters-package'
 ];
 
 // The Unity job must never run unconditionally. No GitHub-hosted runner has a

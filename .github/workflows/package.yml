@@ -1,0 +1,62 @@
+name: Adapter Packaging
+
+# Release-integrity workflow, not a verification workflow.
+#
+# Hard Rule 9 retired every automated test suite. This workflow does not run a
+# suite and does not replace a probe. It builds the production bundle and the
+# six adapter packages from git-tracked files only, then verifies the package
+# contents, LICENSE, manifests and checksums. The manual verification regime
+# remains `test.yml` and the standalone probes.
+#
+# The `run:` commands are in the Hard Rule 9 allowlist, and
+# docs/SYSTEM_MAP.md states the same contract. The pull request trigger is bare
+# so every PR gets a run; the push trigger stays on the default branches.
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+        cache-dependency-path: fear-ai-sim/package-lock.json
+
+    - name: Install dependencies
+      run: npm ci
+      working-directory: fear-ai-sim
+
+    - name: Build the production bundle
+      run: npm run build
+      working-directory: fear-ai-sim
+
+    - name: Package adapters from tracked files only
+      run: npm run pack:adapters
+      working-directory: fear-ai-sim
+
+    - name: Verify package contents, licenses and checksums
+      run: npm run verify:adapters-package
+      working-directory: fear-ai-sim
+
+    - name: Upload the verified release packages
+      uses: actions/upload-artifact@v4
+      with:
+        name: fear-ai-adapter-packages
+        path: |
+          fear-ai-sim/packages/dist/*.zip
+          fear-ai-sim/packages/dist/CHECKSUMS.sha256
+          fear-ai-sim/packages/dist/RELEASE_MANIFEST.json
+        if-no-files-found: error
