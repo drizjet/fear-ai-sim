@@ -1,6 +1,8 @@
 /**
  * Fear AI Node.js / Web Reference Client
  * Provides both WebSocket streaming and HTTP REST communication.
+ *
+ * SPDX-License-Identifier: MIT
  */
 
 import { WebSocket } from 'ws';

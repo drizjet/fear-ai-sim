@@ -60,6 +60,20 @@ success banner over states that contradict it.
 
 For the current release boundary, use `docs/CURRENT_TRUTH_LEDGER.md` and `docs/RELEASE_CANDIDATE_CERTIFICATION.md`. The repository contains additional standalone world-simulation and research modules; their presence or CLI demos does not make them automatic `RuntimeSimulation` services.
 
+### Release packages
+
+Build and verify the six adapter zips from git-tracked files only:
+
+```bash
+npm run pack:adapters
+npm run verify:adapters-package
+```
+
+The zips, `CHECKSUMS.sha256` and `RELEASE_MANIFEST.json` land in
+`packages/dist/`. `tools/packaging/package-scope.json` records intentional
+package exclusions; the Unity entry excludes the duplicate root `.cs` copies
+because `Runtime/` is the UPM assembly source.
+
 ## Research sim (not the SDK)
 
 ```bash

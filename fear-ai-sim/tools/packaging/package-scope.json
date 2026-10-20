@@ -1,0 +1,52 @@
+{
+  "schema": "fear-ai-package-scope/v1",
+  "adapters": {
+    "unity": {
+      "exclude": [
+        {
+          "path": "FearAgent.cs",
+          "reason": "Duplicate of Runtime/FearAgent.cs; including both roots would compile the same type twice in Unity and fail with CS0101. Runtime/ is the UPM assembly source."
+        },
+        {
+          "path": "FearAgentHUD.cs",
+          "reason": "Duplicate of Runtime/FearAgentHUD.cs; including both roots would compile the same type twice in Unity and fail with CS0101. Runtime/ is the UPM assembly source."
+        },
+        {
+          "path": "FearAIClient.cs",
+          "reason": "Duplicate of Runtime/FearAIClient.cs; including both roots would compile the same type twice in Unity and fail with CS0101. Runtime/ is the UPM assembly source."
+        },
+        {
+          "path": "FearEncryptedStore.cs",
+          "reason": "Duplicate of Runtime/FearEncryptedStore.cs; including both roots would compile the same type twice in Unity and fail with CS0101. Runtime/ is the UPM assembly source."
+        },
+        {
+          "path": "FearSessionStore.cs",
+          "reason": "Duplicate of Runtime/FearSessionStore.cs; including both roots would compile the same type twice in Unity and fail with CS0101. Runtime/ is the UPM assembly source."
+        },
+        {
+          "path": "FearSigning.cs",
+          "reason": "Duplicate of Runtime/FearSigning.cs; including both roots would compile the same type twice in Unity and fail with CS0101. Runtime/ is the UPM assembly source."
+        },
+        {
+          "path": "FearTypes.cs",
+          "reason": "Duplicate of Runtime/FearTypes.cs; including both roots would compile the same type twice in Unity and fail with CS0101. Runtime/ is the UPM assembly source."
+        }
+      ]
+    },
+    "godot": {
+      "exclude": []
+    },
+    "unreal": {
+      "exclude": []
+    },
+    "csharp": {
+      "exclude": []
+    },
+    "python": {
+      "exclude": []
+    },
+    "rust": {
+      "exclude": []
+    }
+  }
+}

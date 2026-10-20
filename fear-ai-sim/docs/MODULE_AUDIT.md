@@ -1,7 +1,7 @@
 ---
 title: "Suspicious Module Audit"
 created: 2026-08-27
-updated: 2026-09-07
+updated: 2026-10-20
 type: module-audit
 status: historical
 ---
@@ -58,3 +58,11 @@ The 4 orphan modules are NOT deleted in this slice per the §11 doctrine ("do no
 ### Brain dual-ownership (Constitution §260 / §416)
 
 The `tests/orphan-reach.test.js` audit also surfaced a related but separate finding: `brain.js` (the live fear-band consumer) does NOT import `hysteresis.js`. Instead, `brain.js` uses `fearcore.js` (the production owner per the table above) AND runs an inline `this.state = 'RECOVER' | 'AGGRESSIVE' | ...` state machine that OVERRIDES `fearcore.state` in 43% of scenarios. This is the *Brain dual-ownership* P0 (EVID-2026-08-27-BRAIN-DUAL-OWNERSHIP), now documented as a constitutional §260 violation in the `docs/PROVENANCE.md` table. The fix is to route the inline state mutations through `FearCore` as additional bands (HIDE, FREEZE, AGGRESSIVE, RECOVER, PRESENCE_BREAK). This is parked per the §2 anti-tunnel-vision rule (4 consecutive breadth slices in the closed-world subsystem triggered this audit; the next breadth slice should rotate to a different subsystem before returning to FearCore).
+
+> **Post-fix status (2026-10-20).** The Brain dual-ownership finding above is
+> resolved at the current HEAD. `brain.js` now sources runtime state from
+> `fearCore.update()` / `broken.state` (lines 391, 469 and 488) instead of
+> running the inline state machine, and the retired
+> `tests/orphan-reach.test.js` referenced here no longer exists under Hard Rule
+> 9. The historical finding is retained for provenance; it is not a current
+> defect claim.
