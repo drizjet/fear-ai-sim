@@ -187,7 +187,9 @@ buildReceipt({
     })));
     const failedChildren = results.filter(r => r.code !== 0);
     check(failedChildren.length === 0,
-        `all ${K} concurrent seeds exited 0 (failures: ${failedChildren.map(r => `${r.code}: ${r.stderr.trim().split('\n').slice(-1)[0] || ''}`).join(' | ') || 'none'})`);
+        `all ${K} concurrent seeds exited 0 (failures: ${failedChildren
+            .map(r => `${r.code}: ${r.stderr.trim().slice(-2000) || '(no stderr)'}`)
+            .join(' | ') || 'none'})`);
 
     const concurrentRows = existsSync(concurrentLedger)
         ? readFileSync(concurrentLedger, 'utf8').trim().split('\n').filter(Boolean)
