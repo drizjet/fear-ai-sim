@@ -557,28 +557,34 @@ if ($prNumber) {
 #     can feed itself. A dispatched run's checks do not attach to the pull request, but
 #     the verification above and the run itself still hold.
 $commitFull = @(Get-Lines (Invoke-Git @('rev-parse', 'HEAD')))[0]
-$heldRunId = ''
-for ($attempt = 1; $attempt -le 6 -and -not $heldRunId; $attempt++) {
+$heldRunIds = @()
+for ($attempt = 1; $attempt -le 6 -and $heldRunIds.Count -eq 0; $attempt++) {
     $runsText = (& gh api ("repos/{owner}/{repo}/actions/runs?event=pull_request&head_sha=$commitFull&per_page=10") 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -and $runsText.Trim()) {
         $held = @(($runsText | ConvertFrom-Json).workflow_runs | Where-Object { $_.conclusion -eq 'action_required' })
-        if ($held.Count -gt 0) { $heldRunId = [string]$held[0].id }
+        if ($held.Count -gt 0) { $heldRunIds = @($held | ForEach-Object { [string]$_.id }) }
     }
-    if (-not $heldRunId -and $attempt -lt 6) { Start-Sleep -Seconds 5 }
+    if ($heldRunIds.Count -eq 0 -and $attempt -lt 6) { Start-Sleep -Seconds 5 }
 }
-$approved = $false
-if ($heldRunId) {
+# More than one workflow can raise a held `pull_request` run on this commit (the
+# probes workflow and the release-packaging workflow both do). Approving only
+# the first id returned leaves the rest held, and a held run contributes no
+# checks, so approve every held run for the commit, not just one.
+$approvedRunIds = @()
+foreach ($heldRunId in $heldRunIds) {
     $approveText = (& gh api -X POST ("repos/{owner}/{repo}/actions/runs/$heldRunId/approve") 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0) {
-        $approved = $true
+        $approvedRunIds += $heldRunId
         Write-Host "  ci:            held pull_request run $heldRunId approved; its checks will run on the pull request"
-        Add-Summary ''
-        Add-Summary "> The pull request's own CI run was held for approval and has been approved (run $heldRunId); its checks run on the pull request."
     } else {
         Write-Warning "a held pull_request run ($heldRunId) was found on $commitFull, but approving it failed (exit $LASTEXITCODE): $($approveText.Trim())"
     }
 }
-if (-not $approved) {
+if ($approvedRunIds.Count -gt 0) {
+    Add-Summary ''
+    Add-Summary "> The pull request's own CI runs were held for approval and have been approved (run(s) $($approvedRunIds -join ', ')); their checks run on the pull request."
+}
+if ($approvedRunIds.Count -eq 0) {
     & gh workflow run test.yml --ref $Branch
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "the branch and pull request are in place, but dispatching CI on $Branch failed (exit $LASTEXITCODE). The pull request will show no checks; the verification above still holds."
