@@ -202,7 +202,7 @@ jobs:
 
     - name: Upload the probe summary
       if: always()
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: probe-suite-report
         path: fear-ai-sim/probe_suite_report.json
@@ -293,7 +293,7 @@ jobs:
     # artifact is whatever this runner saw tonight.
     - name: Upload the stability report, ledger and comparison
       if: always()
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: probe-stability-report
         path: |
