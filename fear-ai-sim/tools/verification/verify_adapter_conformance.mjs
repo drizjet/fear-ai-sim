@@ -621,12 +621,17 @@ async function main() {
     pyJson.checks && pyJson.checks.credential_file_persisted_and_loaded === true);
 
   // 3. Rust SDK in-process evaluator and capability negotiator
+  // A cold runner compiles this example before running it: the nightly's first
+  // repeat measured 53.7 s end-to-end against ~4 s warm (2026-10-17..20). The
+  // old 60 s ceiling killed a cold PR run at 60.6 s with no stderr, so allow
+  // three minutes — enough for a cold toolchain, still short enough to expose
+  // a genuine hang.
   const rustRes = spawnSync('cargo', [
     'run', '--example', 'conformance', '--quiet'
   ], {
     cwd: path.join(REPO, 'packages/adapters/rust'),
     encoding: 'utf8',
-    timeout: 60000
+    timeout: 180000
   });
   check('Rust SDK conformance example compiles and runs cleanly', rustRes.status === 0, rustRes.stderr || '');
   check('Rust SDK verifies hysteresis, negotiation, and pack coordination',
