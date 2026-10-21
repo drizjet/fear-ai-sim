@@ -55,6 +55,22 @@ async function main() {
     }
     console.log('');
 
+    // The dashboard is unauthenticated and read-only, but "read-only" is not a
+    // network boundary. A public bind must be refused unless the caller opts
+    // in explicitly; otherwise a CLI typo silently exposes the local view.
+    console.log('Testing dashboard remote-bind guard...');
+    for (const publicHost of ['0.0.0.0', '::']) {
+        const guarded = new DesignerDashboardServer({ host: publicHost, port: 0 });
+        if (guarded.host !== '127.0.0.1') {
+            throw new Error(`A public dashboard bind was not refused for host ${publicHost}: ${guarded.host}`);
+        }
+    }
+    const optedIn = new DesignerDashboardServer({ host: '0.0.0.0', port: 0, allowRemoteAccess: true });
+    if (optedIn.host !== '0.0.0.0') {
+        throw new Error(`An explicit allowRemoteAccess opt-in was not honored: ${optedIn.host}`);
+    }
+    console.log('  * Public bind refused by default; explicit opt-in honored (PASS)');
+
     const server = new DesignerDashboardServer({ port: 0 }); // ephemeral port
     const { host, port, url } = await server.start();
     console.log(`Server started successfully on ${url}`);

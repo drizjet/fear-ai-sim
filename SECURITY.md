@@ -5,13 +5,19 @@ This page records the security boundary that the code actually enforces and the
 known gaps that remain. It is a disclosure document, not a claim that the
 middleware is safe to expose to an untrusted network.
 
+This policy describes the post-RC2 `master` tree. The `v0.1.0-rc2` tag predates
+the dashboard remote-bind guard described below; the other boundary statements
+apply to both.
+
 ## Default boundary
 
 - `FearServer` defaults to `127.0.0.1:8765`. A request to bind `0.0.0.0` or `::`
   is refused and reset to loopback unless the caller explicitly passes
   `allowRemoteAccess: true`.
-- `DesignerDashboardServer` defaults to loopback, but it does **not** have the
-  same explicit remote-access guard. Do not configure it with a public bind.
+- `DesignerDashboardServer` defaults to loopback and, on current `master`,
+  refuses `0.0.0.0` / `::` unless the caller explicitly passes
+  `allowRemoteAccess: true`, matching `FearServer`. The `v0.1.0-rc2` tag
+  predates that guard; do not configure the rc2 dashboard with a public bind.
 - The middleware speaks plain HTTP/WebSocket. There is no TLS. Request signing
   exists, but the default policy is `preferred`, not `required`; it is not
   confidentiality and does not encrypt the wire.

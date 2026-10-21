@@ -12,19 +12,30 @@ This package is intended to connect **Unity** to the **Fear AI middleware server
 
 ## Quick Start (3 Steps)
 
-### 1. Copy Files into Your Unity Project
-Copy the `packages/adapters/unity/` directory into your Unity project's `Assets/FearAI/` folder:
+### 1. Add the Adapter to Your Unity Project
+**From the release zip (recommended):** extract `fear-ai-unity.zip` and either
+copy the extracted folder into `Assets/FearAI/`, or use **Package Manager >
+Add package from disk** and select the extracted `package.json`.
+
+**From this repository:** copy `packages/adapters/unity/Runtime/` (and
+`Tests/` if you want the EditMode fixtures) into `Assets/FearAI/`. Do **not**
+copy the root `.cs` files next to this README: they are byte-identical copies
+kept for the conformance probe, and importing both roots makes Unity compile
+the same types twice. `Runtime/` is the UPM assembly source.
+
 ```
 Assets/
   └── FearAI/
-      ├── FearTypes.cs
-      ├── FearAIClient.cs
-      ├── FearAgent.cs
-      ├── FearAgentHUD.cs
-      ├── FearSessionStore.cs
-      ├── FearSigning.cs
-      ├── FearEncryptedStore.cs
-      └── README.md
+      ├── Runtime/
+      │   ├── FearAI.Runtime.asmdef
+      │   ├── FearTypes.cs
+      │   ├── FearAIClient.cs
+      │   ├── FearAgent.cs
+      │   ├── FearAgentHUD.cs
+      │   ├── FearSessionStore.cs
+      │   ├── FearSigning.cs
+      │   └── FearEncryptedStore.cs
+      └── Tests/            (optional)
 ```
 
 ### 1.1 (Optional) Instant Floating HUD

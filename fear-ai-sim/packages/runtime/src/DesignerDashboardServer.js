@@ -38,9 +38,19 @@ export class DesignerDashboardServer {
      * @param {object} [options={}]
      * @param {number} [options.port=8766]
      * @param {string} [options.host='127.0.0.1']
+     * @param {boolean} [options.allowRemoteAccess=false]
      */
     constructor(options = {}) {
         this.host = options.host || '127.0.0.1';
+        // The dashboard is an unauthenticated local observability surface. A
+        // public bind is refused by default for the same reason as FearServer:
+        // loopback is the security boundary, not CORS and not the read-only
+        // routes. Callers who really need a non-loopback bind must opt in.
+        this.allowRemoteAccess = Boolean(options.allowRemoteAccess);
+        if ((this.host === '0.0.0.0' || this.host === '::') && !this.allowRemoteAccess) {
+            console.warn('[DesignerDashboardServer] Public bind requested without allowRemoteAccess=true; defaulting safely to 127.0.0.1.');
+            this.host = '127.0.0.1';
+        }
         // R6: port 0 (OS ephemeral) must survive — `||` coerced it to the
         // fixed default, forcing parallel workers and sandboxes onto 8766
         // (EACCES). Finite numbers >= 0 pass through floored; garbage falls
