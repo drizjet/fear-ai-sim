@@ -26,17 +26,17 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         # On pull_request, actions/checkout defaults to the synthetic merge
         # commit. Package the real PR head so PACKAGE_MANIFEST.json records a
         # commit that exists on the branch, not a temporary merge ref.
         ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v4
+    - name: Use Node.js 24.x
+      uses: actions/setup-node@v5
       with:
-        node-version: 20.x
+        node-version: 24.x
         cache: 'npm'
         cache-dependency-path: fear-ai-sim/package-lock.json
 
@@ -57,7 +57,7 @@ jobs:
       working-directory: fear-ai-sim
 
     - name: Upload the verified release packages
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: fear-ai-adapter-packages
         path: |

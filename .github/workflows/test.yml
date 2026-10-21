@@ -129,15 +129,17 @@ on:
 
 jobs:
   repository-integrity:
-    runs-on: ubuntu-latest
+    # Pin the OS while the `ubuntu-latest` label migrates to Ubuntu 26. This job
+    # only runs Node builtins, so a silent OS jump is not part of the gate.
+    runs-on: ubuntu-24.04
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v4
+    - name: Use Node.js 24.x
+      uses: actions/setup-node@v5
       with:
-        node-version: 20.x
+        node-version: 24.x
 
     - name: Hard Rule 9 advisory compliance check
       run: npm run verify:hard-rule-9
@@ -151,12 +153,12 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v4
+    - name: Use Node.js 24.x
+      uses: actions/setup-node@v5
       with:
-        node-version: 20.x
+        node-version: 24.x
         cache: 'npm'
         cache-dependency-path: fear-ai-sim/package-lock.json
 
@@ -200,7 +202,7 @@ jobs:
 
     - name: Upload the probe summary
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: probe-suite-report
         path: fear-ai-sim/probe_suite_report.json
@@ -221,12 +223,12 @@ jobs:
       actions: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v4
+    - name: Use Node.js 24.x
+      uses: actions/setup-node@v5
       with:
-        node-version: 20.x
+        node-version: 24.x
         cache: 'npm'
         cache-dependency-path: fear-ai-sim/package-lock.json
 
@@ -291,7 +293,7 @@ jobs:
     # artifact is whatever this runner saw tonight.
     - name: Upload the stability report, ledger and comparison
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: probe-stability-report
         path: |
@@ -309,12 +311,12 @@ jobs:
     runs-on: ${{ vars.UNITY_RUNNER || 'windows-latest' }}
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
-    - name: Use Node.js 20.x
-      uses: actions/setup-node@v4
+    - name: Use Node.js 24.x
+      uses: actions/setup-node@v5
       with:
-        node-version: 20.x
+        node-version: 24.x
         cache: 'npm'
         cache-dependency-path: fear-ai-sim/package-lock.json
 
