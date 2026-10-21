@@ -376,7 +376,7 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 
 No probe has ever disagreed with itself in the ledger. That is a statement about 1152 recorded attempts across 9 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **29.9%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
-**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform and Node major).
+**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment).
 
 **Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 3 of 6 do; 3 carry no per-run durations and are excluded rather than treated as zero. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
 

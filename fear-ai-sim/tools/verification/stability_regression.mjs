@@ -25,9 +25,9 @@
  *   3. NOTHING LOOKED AT TIME. A probe that has quietly become ten times slower is
  *      a defect in the same family — its green no longer means what it did — and
  *      the ledger already holds the evidence. Durations are compared against a
- *      baseline drawn from *comparable* nights only (same platform and Node major),
- *      because a duration ratio across two different machines measures the
- *      machines, not the probe.
+ *      baseline drawn from *comparable* nights only (same platform, Node major,
+ *      and recorded execution environment), because a duration ratio across two
+ *      different machines measures the machines, not the probe.
  *
  * WHAT A CLEAN LEDGER IS NOT. It is not determinism, and this file never prints it
  * as such. A probe that has never disagreed may still be broken; the interval does
@@ -228,6 +228,7 @@ export function ledgerEntry(report) {
         recordedAt: report.recordedAt,
         node: report.node,
         platform: report.platform,
+        environment: report.environment || null,
         repeat: report.repeat,
         engine: report.engine || null,
         probes
@@ -310,13 +311,26 @@ export function ledgerSummary(entries, rosterNames) {
     };
 }
 
-const comparable = (a, b) => Boolean(a && b)
-    && a.platform === b.platform
-    && String(a.node || '').split('.')[0] === String(b.node || '').split('.')[0];
+const comparable = (a, b) => {
+    if (!a || !b) return false;
+    if (a.platform !== b.platform) return false;
+    if (String(a.node || '').split('.')[0] !== String(b.node || '').split('.')[0]) return false;
+    // Platform and Node major do not identify the machine. A local run and a CI
+    // run can share both and still produce a 3x duration ratio for a probe that
+    // did not change, so a night that declares its environment is never compared
+    // with one that does not, or with a night from a different environment.
+    // Historical entries predate the field; they stay comparable to each other
+    // so an old report does not silently change its meaning.
+    const aEnvironment = a.environment || null;
+    const bEnvironment = b.environment || null;
+    if (aEnvironment === null && bEnvironment === null) return true;
+    return aEnvironment === bEnvironment;
+};
 
 const asReport = entry => ({
     node: entry.node,
     platform: entry.platform,
+    environment: entry.environment || null,
     probes: Object.entries(entry.probes || {}).map(([name, data]) => ({ name, durationMs: data.durationMs }))
 });
 
@@ -350,7 +364,7 @@ export function timingComparison(current, baselineEntries, recording = null) {
             }
         }
         if (baselineMs === null) {
-            rows.push({ name: probe.name, status: 'NOT_COMPARABLE', currentMs: probe.durationMs, detail: 'no same-platform, same-Node-major baseline to compare against' });
+            rows.push({ name: probe.name, status: 'NOT_COMPARABLE', currentMs: probe.durationMs, detail: 'no same-platform, same-Node-major, same-environment baseline to compare against' });
             continue;
         }
         const ratio = baselineMs === 0 ? null : probe.durationMs / baselineMs;
@@ -524,9 +538,9 @@ function main() {
     console.log(`  fresh:     ${args.fresh}`);
     console.log(`  recording: ${args.recording}`);
     console.log(`  recording taken ${recording.recordedAt} on Node ${recording.node} / ${recording.platform}, `
-        + `up to ${recording.repeat}x per probe`);
+        + `environment ${recording.environment || 'not recorded'}, up to ${recording.repeat}x per probe`);
     console.log(`  fresh run taken ${fresh.recordedAt} on Node ${fresh.node} / ${fresh.platform}, `
-        + `up to ${fresh.repeat}x per probe`);
+        + `environment ${fresh.environment || 'not recorded'}, up to ${fresh.repeat}x per probe`);
     if (fresh.engine || recording.engine) {
         console.log(`  engine:    recording: ${recording.engine || 'not recorded'}`);
         console.log(`             fresh:     ${fresh.engine || 'not recorded'}`);
@@ -542,7 +556,7 @@ function main() {
     console.log('  VERDICT REGRESSIONS above are GATED: an intermittent or newly-failing probe, or one');
     console.log('  that has lost the proof the recording recorded. Suite drift (NEW / DROPPED) is not.');
     console.log('');
-    console.log(`  TIMING — compared only against nights with the same platform and Node major, because a`);
+    console.log(`  TIMING — compared only against nights with the same platform, Node major, and execution environment, because a`);
     console.log(`  ratio across two different machines measures the machines. Threshold: >= ${TIMING_SLOWDOWN_RATIO}x, `
         + `from a baseline >= ${TIMING_MIN_BASELINE_MS} ms, delta >= ${TIMING_MIN_DELTA_MS} ms.`);
     if (timing.slower.length === 0) {
@@ -615,8 +629,8 @@ function main() {
             + 'survive the comparability check, and a flake rate measured over enough nights to be a finding. '
             + 'Reported only: everything historical, because a recorded fact cannot be failed away.',
         comparedAt: new Date().toISOString(),
-        fresh: { path: args.fresh, recordedAt: fresh.recordedAt, node: fresh.node, platform: fresh.platform, repeat: fresh.repeat, engine: fresh.engine || null },
-        recording: { path: args.recording, recordedAt: recording.recordedAt, node: recording.node, platform: recording.platform, repeat: recording.repeat, engine: recording.engine || null },
+        fresh: { path: args.fresh, recordedAt: fresh.recordedAt, node: fresh.node, platform: fresh.platform, environment: fresh.environment || null, repeat: fresh.repeat, engine: fresh.engine || null },
+        recording: { path: args.recording, recordedAt: recording.recordedAt, node: recording.node, platform: recording.platform, environment: recording.environment || null, repeat: recording.repeat, engine: recording.engine || null },
         thresholds: {
             flakeRateGate: FLAKE_RATE_GATE,
             minNightsForRateGate: MIN_NIGHTS_FOR_RATE_GATE,

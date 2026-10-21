@@ -340,6 +340,12 @@ if (args.jsonPath) {
         recordedAt: new Date().toISOString(),
         node: process.version,
         platform: process.platform,
+        // A duration ratio across two machines measures the machines. Platform and
+        // Node major are not enough to tell a local run from a GitHub runner, so the
+        // report states which execution environment it came from and the comparison
+        // refuses to mix the two. Historical artifacts predate this field.
+        environment: process.env.RUNNER_ENVIRONMENT
+            || (process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local'),
         repeat: args.repeat,
         engine: engineNote,
         expectedToBeProven: args.expectProven,

@@ -301,8 +301,8 @@ export function renderDeterminism(rosterReport = loadReport()) {
         // Timing: the ledger holds durations, and a probe that quietly became much
         // slower is the same family of defect as one that became intermittent — its
         // green no longer means what it did. Compared only against earlier nights on
-        // the same platform and Node major, because a ratio across two machines
-        // measures the machines.
+        // the same platform, Node major, and execution environment, because a ratio
+        // across two machines measures the machines.
         const lastNight = ledger[ledger.length - 1];
         const timing = timingComparison(lastNight, ledger.slice(0, -1), null);
         lines.push('');
@@ -317,7 +317,7 @@ export function renderDeterminism(rosterReport = loadReport()) {
             }
         } else {
             lines.push(`**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same `
-                + `platform and Node major${timing.notComparable.length > 0
+                + `platform, Node major, and execution environment${timing.notComparable.length > 0
                     ? `; ${timing.notComparable.length} probe(s) had no comparable baseline, because a ratio across `
                         + 'two machines measures the machines'
                     : ''}).`);
