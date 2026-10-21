@@ -355,7 +355,21 @@ async function main() {
         '--use-gl=angle',
         '--use-angle=swiftshader',
         'about:blank'
-    ], { stdio: 'ignore' });
+    ], { stdio: ['ignore', 'ignore', 'pipe'] });
+
+    // Chrome's stdout is irrelevant, but its stderr is the only witness when it
+    // refuses to start. Keep a bounded tail so a startup timeout can say whether
+    // the process is still running or died instead of only "endpoint never
+    // answered" — the bare message cost a rerun to classify on 2026-10-21.
+    let chromeStderr = '';
+    chrome.stderr?.on('data', (chunk) => {
+        chromeStderr = (chromeStderr + chunk.toString()).slice(-4000);
+    });
+    const chromeDetail = (message) => {
+        const state = chrome.exitCode === null ? 'still running' : `exit ${chrome.exitCode}`;
+        const tail = chromeStderr.trim().replace(/\s+/g, ' ');
+        return `${message}; chrome ${state}` + (tail ? `; stderr tail: ${tail.slice(-600)}` : '; no stderr');
+    };
 
     let cdp = null;
     const passed = [];
@@ -367,16 +381,30 @@ async function main() {
     };
 
     try {
-        const version = await waitUntil(async () => {
-            try { return await fetchJson(`http://127.0.0.1:${cdpPort}/json/version`); } catch { return false; }
-        }, 30_000, 500, 'Chrome DevTools endpoint');
+        // A cold, loaded runner can spend longer than 30 s before Chrome opens
+        // the debugging port; the nightly's real-browser probe already runs
+        // 110-160 s per repeat. 90 s keeps a slow start from becoming a false
+        // red without turning a dead browser into a silent hang.
+        let version;
+        try {
+            version = await waitUntil(async () => {
+                try { return await fetchJson(`http://127.0.0.1:${cdpPort}/json/version`); } catch { return false; }
+            }, 90_000, 500, 'Chrome DevTools endpoint');
+        } catch (error) {
+            throw new Error(chromeDetail(error.message));
+        }
         console.log(`Browser: ${version.Browser}\n`);
         check('CDP endpoint answered with a real browser version', /Chrome|Chromium|Edg|HeadlessChrome/.test(version.Browser), version.Browser);
 
-        const target = await waitUntil(async () => {
-            const list = await fetchJson(`http://127.0.0.1:${cdpPort}/json/list`);
-            return list.find((entry) => entry.type === 'page') || false;
-        }, 30_000, 500, 'a page target');
+        let target;
+        try {
+            target = await waitUntil(async () => {
+                const list = await fetchJson(`http://127.0.0.1:${cdpPort}/json/list`);
+                return list.find((entry) => entry.type === 'page') || false;
+            }, 60_000, 500, 'a page target');
+        } catch (error) {
+            throw new Error(chromeDetail(error.message));
+        }
         cdp = await Cdp.connect(target.webSocketDebuggerUrl);
         await cdp.send('Page.enable');
         await cdp.send('Runtime.enable');
