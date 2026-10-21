@@ -52,8 +52,11 @@ function sleepSync(ms) {
  *  E2). `openSync(path, 'wx')` is an atomic create — two concurrent seeds
  *  can never both hold the lock. A lock older than `staleMs` is treated as
  *  a crashed writer's remnant and taken over. Returns { release }. */
-function acquireLedgerLock(ledgerPath, { retries = 300, retryDelayMs = 10, staleMs = 10000 } = {}) {
+function acquireLedgerLock(ledgerPath, { retries = 1200, retryDelayMs = 10, staleMs = 10000 } = {}) {
     const lockPath = `${ledgerPath}.lock`;
+    // The retry budget must outlast `staleMs`, or a writer that died holding
+    // the lock fails every contender just before the takeover would free it.
+    let lastCode = 'NONE';
     for (let attempt = 0; ; attempt += 1) {
         try {
             const fd = openSync(lockPath, 'wx');
@@ -65,16 +68,26 @@ function acquireLedgerLock(ledgerPath, { retries = 300, retryDelayMs = 10, stale
                 },
             };
         } catch (err) {
-            if (err.code !== 'EEXIST') throw err;
+            // Windows reports an open on a file that is being deleted as
+            // EPERM/EACCES (delete-pending), not EEXIST, and a virus scan can
+            // hold a just-created lock briefly. Both mean "another writer is
+            // using this path right now", so retry them exactly like EEXIST
+            // rather than failing a seed that would succeed a moment later.
+            const contended = err.code === 'EEXIST'
+                || err.code === 'EPERM'
+                || err.code === 'EACCES'
+                || err.code === 'EBUSY';
+            if (!contended) throw err;
+            lastCode = err.code;
             try {
                 const st = statSync(lockPath);
                 if (Date.now() - st.mtimeMs > staleMs) {
                     try { unlinkSync(lockPath); } catch { /* another taker won; retry */ }
                     continue;
                 }
-            } catch { /* lock vanished between open and stat; retry immediately */ }
+            } catch { /* lock vanished between open and stat; retry */ }
             if (attempt >= retries) {
-                throw new Error(`buildReceipt: could not acquire ledger lock ${lockPath} after ${retries} attempts; remove the stale lock if no writer is active`);
+                throw new Error(`buildReceipt: could not acquire ledger lock ${lockPath} after ${retries} attempts (last error: ${lastCode}); remove the stale lock if no writer is active`);
             }
             sleepSync(retryDelayMs);
         }
