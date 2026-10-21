@@ -39,11 +39,11 @@ At the `v0.1.0-rc2` tag:
 | Dependency | Severity | Where | Status |
 |---|---|---|---|
 | `glib 0.18.5` | Medium (`GHSA-wrw7-89jp-8q8g`) | `src-tauri/Cargo.lock`, Linux Tauri UI stack | Open. `glib` is pinned by the `gtk 0.18` / `webkit2gtk` stack used by Tauri; upgrading only `glib` to the patched `0.20.x` line is not compatible with that stack. It is not present on the Windows target build. |
-| `sprintf-js 1.0.3` | Medium (`GHSA-hp3w-g68c-fv3c`) | root `package-lock.json` via `@tensorflow/tfjs@4.22.0 -> argparse@1.0.10` | Open. No patched `sprintf-js` release is published. The dependency is in the research-simulation dependency chain; this document does not claim it is unreachable. |
+| `sprintf-js 1.0.3` | Medium (`GHSA-hp3w-g68c-fv3c`) | root `package-lock.json` via `@tensorflow/tfjs@4.22.0 -> argparse@1.0.10` | **Resolved on post-RC2 `master`** by an `argparse@2.0.1` override, which removes `sprintf-js` entirely. The `v0.1.0-rc2` tag still contains the old chain. |
 
-`npm audit` reports three moderate advisories for the root dependency tree.
-These advisories are not fixed by this release and are not represented as fixed
-in the release notes.
+On the `v0.1.0-rc2` tag, `npm audit` reported three moderate advisories, all from
+the `sprintf-js` chain. Current `master` reports **0 vulnerabilities** after the
+override; the fix is not backported into the published RC2 tag or its assets.
 
 ## Reporting
 
