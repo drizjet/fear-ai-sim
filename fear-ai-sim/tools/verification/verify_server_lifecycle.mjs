@@ -515,21 +515,47 @@ async function main() {
 
         // A reset that clears agents destroys every crowd on the server, so a
         // caller with no standing must not be able to do it while a host is live.
+        //
+        // Its OWN server on the default liveness window, because hostA and hostB
+        // above are only kept out of this reset by a 40 ms staleness window
+        // racing a 40 ms sleep. A timer that fires a fraction early leaves them
+        // live, and the reset is then refused for a reason that has nothing to
+        // do with the case under test - the intermittent CI failure this
+        // isolation removes.
+        const resetServer = new FearServer({ seed: 4242 });
+        const resetPop = (path, body) => {
+            const res = makeResponse();
+            resetServer._routeHttpPost(path, body, res);
+            return res;
+        };
+        resetPop('/api/v1/register/batch', { session_id: 'hostC', agents: [{ agent_id: 'npc_3' }] });
+        // Take the name over so the reset is authorized by a NEWLY ROTATED
+        // credential, the same proof the earlier block was exercising.
+        const resetTakeover = resetPop('/api/v1/register/batch', {
+            session_id: 'hostC', claim: 'takeover', agents: [{ agent_id: 'npc_4' }]
+        });
+        assert(resetTakeover.body.claim === CLAIM_OUTCOMES.TAKEN_OVER,
+            'setup: hostC must hold a rotated token before the reset gate.');
+        const resetToken = resetTakeover.body.session_token;
+
         const strangerReset = makeResponse();
-        server._routeHttpPost('/api/v1/reset', { clear_agents: true }, strangerReset);
-        assert(strangerReset.status === 409, 'a reset that clears a live session\'s agents must be refused.');
+        resetServer._routeHttpPost('/api/v1/reset', { clear_agents: true }, strangerReset);
+        assert(strangerReset.status === 409,
+            `a reset that clears a live session's agents must be refused (status ${strangerReset.status}).`);
         assert(strangerReset.body.blocked_by.includes('hostC'),
             'a refused reset must name the session that is blocking it.');
-        assert(server.claims.ownerOf('npc_4') === 'hostC', 'a refused reset must mutate nothing.');
+        assert(resetServer.claims.ownerOf('npc_4') === 'hostC', 'a refused reset must mutate nothing.');
 
         // Ownership must not outlive the agents it describes.
         const resetRes = makeResponse();
-        server._routeHttpPost('/api/v1/reset', {
-            clear_agents: true, session_id: 'hostC', session_token: rotatedToken
+        resetServer._routeHttpPost('/api/v1/reset', {
+            clear_agents: true, session_id: 'hostC', session_token: resetToken
         }, resetRes);
-        assert(resetRes.status === 200, 'the owning session must be able to clear its own world.');
-        assert(server.claims.active === false, 'clearing agents must clear the ownership records with them.');
-        const afterReset = pop('/api/v1/register/batch', { session_id: 'hostC', agents: [{ agent_id: 'npc_1' }] });
+        assert(resetRes.status === 200,
+            `the owning session must be able to clear its own world (status ${resetRes.status}, `
+            + `blocked_by ${JSON.stringify(resetRes.body && resetRes.body.blocked_by)}).`);
+        assert(resetServer.claims.active === false, 'clearing agents must clear the ownership records with them.');
+        const afterReset = resetPop('/api/v1/register/batch', { session_id: 'hostC', agents: [{ agent_id: 'npc_1' }] });
         assert(afterReset.body.count === 1, 'a fresh session must be able to claim an id freed by a reset.');
         assert(afterReset.body.claims[0].claim === CLAIM_OUTCOMES.GRANTED, 'a post-reset claim must be a fresh grant.');
 
