@@ -5,19 +5,18 @@ This page records the security boundary that the code actually enforces and the
 known gaps that remain. It is a disclosure document, not a claim that the
 middleware is safe to expose to an untrusted network.
 
-This policy describes the post-RC2 `master` tree. The `v0.1.0-rc2` tag predates
-the dashboard remote-bind guard described below; the other boundary statements
-apply to both.
+This policy describes the `v0.1.0-rc3` tree and current `master`. The
+`v0.1.0-rc2` tag predates the dashboard remote-bind guard and the `argparse`
+override described below; the other boundary statements apply to both.
 
 ## Default boundary
 
 - `FearServer` defaults to `127.0.0.1:8765`. A request to bind `0.0.0.0` or `::`
   is refused and reset to loopback unless the caller explicitly passes
   `allowRemoteAccess: true`.
-- `DesignerDashboardServer` defaults to loopback and, on current `master`,
-  refuses `0.0.0.0` / `::` unless the caller explicitly passes
-  `allowRemoteAccess: true`, matching `FearServer`. The `v0.1.0-rc2` tag
-  predates that guard; do not configure the rc2 dashboard with a public bind.
+- `DesignerDashboardServer` defaults to loopback and refuses `0.0.0.0` / `::`
+  unless the caller explicitly passes `allowRemoteAccess: true`, matching
+  `FearServer`.
 - The middleware speaks plain HTTP/WebSocket. There is no TLS. Request signing
   exists, but the default policy is `preferred`, not `required`; it is not
   confidentiality and does not encrypt the wire.
@@ -34,16 +33,17 @@ other game state. Fear AI emits advisory data only.
 
 ## Known open advisories
 
-At the `v0.1.0-rc2` tag:
+At the `v0.1.0-rc3` tag and current `master`:
 
 | Dependency | Severity | Where | Status |
 |---|---|---|---|
 | `glib 0.18.5` | Medium (`GHSA-wrw7-89jp-8q8g`) | `src-tauri/Cargo.lock`, Linux Tauri UI stack | Open. `glib` is pinned by the `gtk 0.18` / `webkit2gtk` stack used by Tauri; upgrading only `glib` to the patched `0.20.x` line is not compatible with that stack. It is not present on the Windows target build. |
-| `sprintf-js 1.0.3` | Medium (`GHSA-hp3w-g68c-fv3c`) | root `package-lock.json` via `@tensorflow/tfjs@4.22.0 -> argparse@1.0.10` | **Resolved on post-RC2 `master`** by an `argparse@2.0.1` override, which removes `sprintf-js` entirely. The `v0.1.0-rc2` tag still contains the old chain. |
+| `sprintf-js 1.0.3` | Medium (`GHSA-hp3w-g68c-fv3c`) | root `package-lock.json` via `@tensorflow/tfjs@4.22.0 -> argparse@1.0.10` at RC2 | **Not present in RC3 or current `master`.** An `argparse@2.0.1` override removes `sprintf-js` entirely. The `v0.1.0-rc2` tag still contains the old chain. |
 
-On the `v0.1.0-rc2` tag, `npm audit` reported three moderate advisories, all from
-the `sprintf-js` chain. Current `master` reports **0 vulnerabilities** after the
-override; the fix is not backported into the published RC2 tag or its assets.
+At the `v0.1.0-rc2` tag, `npm audit` reported three moderate advisories, all from
+the `sprintf-js` chain. The `v0.1.0-rc3` tag and current `master` report **0
+vulnerabilities** after the override; the fix is not backported into the
+published RC2 tag or its assets.
 
 ## Reporting
 

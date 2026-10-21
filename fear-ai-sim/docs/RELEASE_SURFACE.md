@@ -1,7 +1,7 @@
 ---
 title: "Fear AI — Release Surface Definition (RC1)"
 created: 2026-09-20
-updated: 2026-10-13
+updated: 2026-10-20
 type: specification
 status: active
 ---
@@ -12,12 +12,13 @@ This is the **binding scope boundary** for the Fear AI middleware release
 candidate. It answers one question unambiguously: *what is the thing we are
 releasing, and what is deliberately not part of it?*
 
-> **RC2 packaging note (2026-10-20).** `v0.1.0-rc2` re-packages the same frozen
-> RC1 surface; it does not add scope or close the RC1 certification gate. The
-> RC1 release dossier remains the evidence summary, and its
-> **PROVISIONAL / NOT CERTIFIED** verdict still applies. The change is package
-> provenance: tracked files only, a LICENSE in every package, per-package
-> manifests, and published checksums.
+> **RC3 security note (2026-10-20).** `v0.1.0-rc3` supersedes `v0.1.0-rc2` on
+> the same frozen RC1 surface. It does not add scope or close the RC1
+> certification gate. The RC1 release dossier remains the evidence summary, and
+> its **PROVISIONAL / NOT CERTIFIED** verdict still applies. RC3 hardens the
+> dashboard's default bind, removes the `sprintf-js` advisory from the root
+> dependency tree with an `argparse@2.0.1` override, and corrects the Unity
+> quick-start to import `Runtime/` only. RC2 remains available for provenance.
 
 It exists because the repository contains far more than the shippable
 middleware. Optional world-simulation, analytics, and research modules are real
