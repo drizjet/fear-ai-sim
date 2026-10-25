@@ -5,7 +5,10 @@
   "type": "module",
   "main": "index.js",
   "exports": {
-    ".": "./index.js"
+    ".": "./index.js",
+    "./road-graph-node": "./src/RoadGraphFingerprint.mjs",
+    "./civilization-trusted-checkpoint-node": "./src/CivilizationTrustedCheckpoint.mjs",
+    "./world-trade-authority-node": "./src/WorldTradeAuthority.mjs"
   },
   "keywords": [
     "fear-ai",

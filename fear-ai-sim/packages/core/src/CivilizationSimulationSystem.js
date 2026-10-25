@@ -52,7 +52,10 @@ export const DEFAULT_CIV_CONFIG = Object.freeze({
         macroRoute: 1000   // LOD3 < 1000m, LOD4 >= 1000m
     }),
     routeDangerHalfLifeTicks: 80.0, // Decay of route danger memory
-    maxWaypointsPerRoute: 20
+    maxWaypointsPerRoute: 20,
+    // Opt-in: middleware computes route intent only; host retains position and cargo authority.
+    distanceAwareTravel: false,
+    caravanUnitsPerTick: 1.0
 });
 
 function clamp01(v) {
@@ -358,6 +361,7 @@ export class CivilizationSimulationSystem {
 
         // 2. Advance entities according to their LOD cadence
         let updatedCount = 0;
+        const arrivalIntents = [];
         for (const entity of this.entities.values()) {
             const cadence = LOD_CADENCES[entity.lodTier] || 1;
             const ticksSinceLast = this.tickCount - entity.lastUpdateTick;
@@ -371,8 +375,31 @@ export class CivilizationSimulationSystem {
                     const route = this.routes.get(entity.currentRouteId);
                     if (route) {
                         // Travel speed influenced by fear and terrain
-                        const speed = 0.01 * cadence * (entity.fear > 0.6 ? 1.4 : 1.0);
-                        entity.routeProgress = clamp01(entity.routeProgress + speed);
+                        if (this.config.distanceAwareTravel === true && entity.type === 'CARAVAN') {
+                            const units = Number(this.config.caravanUnitsPerTick);
+                            if (!Number.isFinite(units) || units <= 0) {
+                                throw new Error('distance-aware caravan speed must be positive and finite');
+                            }
+                            if (!Number.isFinite(route.distance) || route.distance <= 0) {
+                                throw new Error('caravan road distance must be positive and finite');
+                            }
+                            if (route.status !== ROUTE_STATUS.BLOCKED) {
+                                const delta = units * ticksSinceLast * (entity.fear > 0.6 ? 1.4 : 1.0) / route.distance;
+                                entity.routeProgress = clamp01(entity.routeProgress + delta);
+                                if (entity.routeProgress >= 1.0) {
+                                    // An intent, NOT an inventory transfer. Host must commit cargo atomically.
+                                    const intent = { type: 'caravan_arrival_intent', tick: this.tickCount,
+                                        entityId: entity.id, routeId: route.id, targetNodeId: route.toNodeId,
+                                        cargo: { ...entity.cargo } };
+                                    arrivalIntents.push(intent);
+                                    this.events.push(intent);
+                                    entity.currentRouteId = null; // exactly once, including after save/restore
+                                }
+                            }
+                        } else {
+                            const speed = 0.01 * cadence * (entity.fear > 0.6 ? 1.4 : 1.0);
+                            entity.routeProgress = clamp01(entity.routeProgress + speed);
+                        }
 
                         // If route has high danger, fear rises
                         if (route.perceivedDanger > 0.5) {
@@ -388,7 +415,8 @@ export class CivilizationSimulationSystem {
         return {
             tickCount: this.tickCount,
             updatedEntityCount: updatedCount,
-            totalEntityCount: this.entities.size
+            totalEntityCount: this.entities.size,
+            arrivalIntents
         };
     }
 
@@ -405,6 +433,7 @@ export class CivilizationSimulationSystem {
                 position: { ...n.position },
                 market: { ...n.market }
             })),
+            events: this.events.map(e => ({ ...e, cargo: e.cargo ? { ...e.cargo } : undefined })),
             routes: Array.from(this.routes.values()).map(r => ({
                 ...r,
                 waypoints: [...r.waypoints]
@@ -428,6 +457,9 @@ export class CivilizationSimulationSystem {
         this.nodes.clear();
         this.routes.clear();
         this.entities.clear();
+        this.events = Array.isArray(snapshot.events)
+            ? snapshot.events.map(e => ({ ...e, cargo: e.cargo ? { ...e.cargo } : undefined }))
+            : [];
 
         if (Array.isArray(snapshot.nodes)) {
             for (const n of snapshot.nodes) {
