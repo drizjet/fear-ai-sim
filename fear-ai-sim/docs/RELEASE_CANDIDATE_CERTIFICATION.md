@@ -372,13 +372,15 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 - `verify_trade_chain_causal_edges.mjs`
 - `verify_trade_runtime_contracts.mjs`
 
-**Across the ledger of recorded repeated runs (10 night(s), 1332 probe attempts):**
+**Across the ledger of recorded repeated runs (19 night(s), 2952 probe attempts):**
 
-No probe has ever disagreed with itself in the ledger. That is a statement about 1332 recorded attempts across 10 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **27.8%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
+No probe has ever disagreed with itself in the ledger. That is a statement about 2952 recorded attempts across 19 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **16.8%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
-**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment; 60 probe(s) had no comparable baseline, because a ratio across two machines measures the machines).
+**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment).
 
-**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 0 of 0 do. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
+**Timing drift — no probe is creeping** (46 probe(s) had enough pooled samples across 9 comparable night(s); none reached 1.5x its earlier median while also exceeding its own p90).
+
+Reported, not gated: 1 probe(s) rose past 1.25x their earlier median without passing the drift gate (`verify_runtime_wiring.mjs`).
 
 **Every probe in the roster appears in the ledger**, so no probe is left without a cross-night result.
 
