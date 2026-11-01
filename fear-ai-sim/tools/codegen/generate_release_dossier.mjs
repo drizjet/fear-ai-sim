@@ -362,6 +362,18 @@ export function renderDeterminism(rosterReport = loadReport()) {
                 + `across ${drift.nightsWithPerRunDurations} comparable night(s); none reached ${DRIFT_LIMITS.ratio}x its `
                 + 'earlier median while also exceeding its own p90).');
         }
+        // A timing epoch is why "not yet measurable" can appear with a long ledger:
+        // the nights exist, they were measured on a different host level. Said out
+        // loud, because a reader who counts the ledger is owed the reason the pooled
+        // sample is smaller than it.
+        if (drift.epoch) {
+            lines.push('');
+            lines.push(`The timing baseline restarts at ${String(drift.epoch.from).slice(0, 10)} for `
+                + `\`${drift.epoch.environment}\`: ${drift.epoch.excludedNights} earlier comparable night(s) are not `
+                + 'pooled into any probe\'s distribution, because the host level moved while the code did not '
+                + `(${drift.epoch.why}). A ratio across two machines measures the machines, whether or not the two `
+                + 'machines declare the same environment name.');
+        }
         if (drift.status === 'MEASURED' && drift.excludedNightsWithoutPerRunDurations > 0) {
             lines.push('');
             lines.push(`The pooled sample excludes ${drift.excludedNightsWithoutPerRunDurations} of `
