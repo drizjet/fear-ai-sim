@@ -99,6 +99,20 @@ export class WorldTradeAuthority {
     this.assertConservation();
     return clone(this.shipments[shipmentId]);
   }
+  _assertEntityMirror(ship) {
+    const entity=this.sim.entities.get(ship.entityId);
+    if(!entity)throw Error('shipment entity missing');
+    const entityCargo=norm(entity.cargo);
+    const shipmentCargo=norm(ship.cargo);
+    if(!sameGoods(entityCargo,shipmentCargo) ||
+      !Number.isSafeInteger(entity.wealth) || entity.wealth!==amount(ship.gold,'shipment gold'))
+      throw Error('shipment entity mirror mismatch');
+    return entity;
+  }
+  _syncEntityMirror(ship,entity) {
+    entity.cargo=clone(ship.cargo);
+    entity.wealth=ship.gold;
+  }
   _random() { this.rng=(Math.imul(this.rng,1664525)+1013904223)>>>0; return this.rng; }
   _policy(p,ship) {
     const relation=this.relations[p.faction+'|'+ship.faction] || 0;
@@ -113,6 +127,7 @@ export class WorldTradeAuthority {
     return p.hunger >= 0.45 && relation < 0.3 ? 'toll' : 'pass';
   }
   _encounter(ship,p,tick) {
+    const entity=this._assertEntityMirror(ship);
     const kind=this._policy(p,ship);
     const event={type:'encounter',shipmentId:ship.id,patrolId:p.id,tick,kind};
     if (kind==='toll') {
@@ -126,18 +141,20 @@ export class WorldTradeAuthority {
         const take=Math.floor(v/4);ship.cargo[k]-=take;stolen[k]=take;
       }
       plus(this.factionLoot[p.faction] ||= {},stolen);
-      const entity=this.sim.entities.get(ship.entityId);
-      if (entity)entity.cargo=clone(ship.cargo);
       event.stolen=stolen;
     }
+    this._syncEntityMirror(ship,entity);
     this.events.push(event);
   }
   _settle(ship,tick) {
     if(ship.status==='completed')return false;
     if(ship.status!=='enroute')throw Error('invalid shipment status');
+    const entity=this._assertEntityMirror(ship);
+    if(entity.currentRouteId!==null)throw Error('settlement before route arrival');
     plus(this.stocks[ship.targetNodeId] ||= {},ship.cargo);
     this.vaults[ship.targetNodeId]=(this.vaults[ship.targetNodeId]||0)+ship.gold;
     ship.cargo={};ship.gold=0;ship.status='completed';
+    this._syncEntityMirror(ship,entity);
     this.events.push({type:'arrival_committed',shipmentId:ship.id,tick});
     return true;
   }
@@ -187,6 +204,7 @@ export class WorldTradeAuthority {
   }
   assertConservation() {
     if(this.initial === null)return true;
+    for(const ship of Object.values(this.shipments))this._assertEntityMirror(ship);
     const current=this.totals();
     if(!sameGoods(current.goods,this.initial.goods) || current.gold!==this.initial.gold)
       throw Error('resource conservation violated');
@@ -229,9 +247,12 @@ export class WorldTradeAuthority {
       if(dispatches.length!==1 || arrivals.length!==(ship.status==='completed'?1:0))
         throw Error('shipment journal disagreement');
       if(ship.status==='enroute' && (entity.currentRouteId!==ship.routeId ||
-        !sameGoods(entity.cargo,ship.cargo)))throw Error('enroute escrow mismatch');
+        !sameGoods(norm(entity.cargo),norm(ship.cargo)) || entity.wealth!==ship.gold))
+        throw Error('enroute escrow mismatch');
       if(ship.status==='completed' && (Object.keys(ship.cargo).length!==0 ||
-        ship.gold!==0 || entity.currentRouteId!==null))throw Error('completed escrow mismatch');
+        ship.gold!==0 || entity.currentRouteId!==null ||
+        !sameGoods(norm(entity.cargo),{}) || entity.wealth!==0))
+        throw Error('completed escrow mismatch');
     }
     staged.assertConservation();
     // Transfer to the original simulator only after independent map trust

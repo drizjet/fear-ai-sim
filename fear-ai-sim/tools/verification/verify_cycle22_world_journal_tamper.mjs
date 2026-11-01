@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
-import {CivilizationSimulationSystem} from './src/CivilizationSimulationSystem.js';
-import {WorldTradeAuthority} from './src/WorldTradeAuthority.mjs';
-import {civRoadGraphFingerprint} from './src/CivilizationTrustedCheckpoint.mjs';
+import {CivilizationSimulationSystem} from '../../packages/core/src/CivilizationSimulationSystem.js';
+import {WorldTradeAuthority} from '../../packages/core/src/WorldTradeAuthority.mjs';
+import {civRoadGraphFingerprint} from '../../packages/core/src/CivilizationTrustedCheckpoint.mjs';
 function make(){
  const s=new CivilizationSimulationSystem({distanceAwareTravel:true,caravanUnitsPerTick:1});
  s.registerNode('A');s.registerNode('B');s.registerRoute('R',{fromNodeId:'A',toNodeId:'B',distance:80,baseSecurity:0.99});

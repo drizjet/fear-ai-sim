@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {performance} from 'node:perf_hooks';
-import {CivilizationSimulationSystem} from './src/CivilizationSimulationSystem.js';
-import {WorldTradeAuthority} from './src/WorldTradeAuthority.mjs';
-import {civRoadGraphFingerprint} from './src/CivilizationTrustedCheckpoint.mjs';
+import {CivilizationSimulationSystem} from '../../packages/core/src/CivilizationSimulationSystem.js';
+import {WorldTradeAuthority} from '../../packages/core/src/WorldTradeAuthority.mjs';
+import {civRoadGraphFingerprint} from '../../packages/core/src/CivilizationTrustedCheckpoint.mjs';
 function create({distance=80,speed=2,ore=20,gold=30,
   passive=false,hunger=0.92,grievance=0.8,relation=-0.8,threat=0,blocked=false,
   guard=0,patrol=true,seed=6}={}) {
