@@ -571,6 +571,27 @@ includes('docs/SYSTEM_MAP.md', 'npm run evidence:report');
 includes('docs/PROVENANCE.md', 'npm run evidence:report');
 console.log('  * The retired evidence-ledger gate refuses, its report makes no verdict claim, and the generated map section matches the ledger: PASS');
 
-console.log('\nScope: this probe audits release-claim document boundaries only.');
+// NEXT-83: the source-facing option is `seed`, never `rngSeed`. A typo in
+// another harness must not silently restore the fixed 1337 default stream.
+// Scan every tracked JS/TS source, not only the two previously repaired files.
+const sourcePaths = spawnSync('git', ['ls-files', '-z', '--', '*.js', '*.mjs', '*.cjs', '*.jsx', '*.ts', '*.tsx'], {
+    cwd: repoRoot,
+    encoding: 'buffer'
+});
+assert(sourcePaths.status === 0, 'cannot enumerate tracked source files for NEXT-83 guard');
+const staleSeedKey = /\brngSeed\s*:/g;
+const staleSources = [];
+for (const filename of sourcePaths.stdout.toString('utf8').split('\0').filter(Boolean)) {
+    const source = read(filename);
+    // Historical comments explain the old defect; only executable keys count.
+    const withoutComments = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\r\n]*/g, '');
+    if (staleSeedKey.test(withoutComments)) staleSources.push(filename);
+    staleSeedKey.lastIndex = 0;
+}
+assert(staleSources.length === 0,
+    `NEXT-83 dead rngSeed option can silently freeze world randomness; use seed: ${staleSources.join(', ')}`);
+console.log(`  * NEXT-83 dead seed-key pattern absent across ${sourcePaths.stdout.toString('utf8').split('\0').filter(Boolean).length} tracked JS/TS sources: PASS`);
+
+console.log('\nScope: this probe audits release-claim document boundaries and the NEXT-83 source-key tripwire only.');
 console.log('It does not certify runtime behavior, external hosts, adapters, or research semantics.');
 console.log('\nSUCCESS: Release-claim document boundaries are explicit.');

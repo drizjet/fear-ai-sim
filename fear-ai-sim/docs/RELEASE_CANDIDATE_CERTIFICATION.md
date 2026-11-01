@@ -372,13 +372,15 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 - `verify_trade_chain_causal_edges.mjs`
 - `verify_trade_runtime_contracts.mjs`
 
-**Across the ledger of recorded repeated runs (10 night(s), 1332 probe attempts):**
+**Across the ledger of recorded repeated runs (21 night(s), 3312 probe attempts):**
 
-No probe has ever disagreed with itself in the ledger. That is a statement about 1332 recorded attempts across 10 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **27.8%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
+No probe has ever disagreed with itself in the ledger. That is a statement about 3312 recorded attempts across 21 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **15.5%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
-**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment; 60 probe(s) had no comparable baseline, because a ratio across two machines measures the machines).
+**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment).
 
-**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 0 of 0 do. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
+**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 3 of 11 do. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
+
+The timing baseline restarts at 2026-10-29 for `github-hosted`: 8 earlier comparable night(s) are not pooled into any probe's distribution, because the host level moved while the code did not (first nightly at the slower host level; 10-28 and 10-29 both ran b8fd013 and the runtime-graph probes stepped up together while the spawn-floor probes did not). A ratio across two machines measures the machines, whether or not the two machines declare the same environment name.
 
 **Every probe in the roster appears in the ledger**, so no probe is left without a cross-night result.
 

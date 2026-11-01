@@ -27,7 +27,10 @@
  *      the ledger already holds the evidence. Durations are compared against a
  *      baseline drawn from *comparable* nights only (same platform, Node major,
  *      and recorded execution environment), because a duration ratio across two
- *      different machines measures the machines, not the probe.
+ *      different machines measures the machines, not the probe. That check is
+ *      necessary but not sufficient: a hosted runner pool can change under a fixed
+ *      `environment` string, so each environment also carries dated timing epochs
+ *      (see TIMING_EPOCHS) and nights from two sides of one are not pooled either.
  *
  * WHAT A CLEAN LEDGER IS NOT. It is not determinism, and this file never prints it
  * as such. A probe that has never disagreed may still be broken; the interval does
@@ -101,6 +104,55 @@ const DRIFT_MIN_BASELINE_MS = 100;
 // Percentiles need per-run samples, and a pooled sample of a few values says nothing.
 const DRIFT_MIN_RECENT_SAMPLES = 2;
 const DRIFT_MIN_BASELINE_SAMPLES = 4;
+
+// TIMING EPOCHS: a dated host level inside one declared environment.
+//
+// `comparable()` refuses to compare across platform, Node major and environment,
+// because a duration ratio across two machines measures the machines. A hosted
+// runner pool defeats that check by rotating underneath a *fixed* environment
+// string: on 2026-10-29 the nightly probes that import the runtime graph stepped up
+// 1.3-1.8x at once while every probe sitting at the process-spawn floor stayed flat
+// (minimum 53-57 ms before and after, median of the sub-400 ms probes 155 -> 159),
+// and all of 2026-10-21, 10-28, 10-29 and 10-30 ran the SAME commit `b8fd013` - no
+// code changed, so it was a different machine wearing the same label.
+//
+// Left alone, that step has one reachable outcome, because the drift gate is fed by
+// the ledger and a red gate skips the fold that would have extended the ledger: the
+// same two nights are re-judged every night, the pool never absorbs the new level,
+// and the nightly stays red forever with no new evidence entering. So an epoch names
+// the first night at the new level. Nights before it stay in the ledger - they still
+// count for verdicts and for the flake rate - but they are not pooled into the timing
+// distribution, exactly as a cross-environment night is not. The gate then rebuilds
+// from post-epoch nights and is measurable again at MIN_NIGHTS_FOR_DRIFT_GATE.
+//
+// An epoch is evidence-bounded, not a mute button: it is per environment, it cannot
+// pre-date the nights it covers, and the excluded nights are counted in every report
+// that uses it. Add one only with a same-commit (or same-behaviour) demonstration
+// that the level moved without the code moving.
+const TIMING_EPOCHS = [
+    {
+        environment: 'github-hosted',
+        from: '2026-10-29T00:00:00.000Z',
+        why: 'first nightly at the slower host level; 10-28 and 10-29 both ran b8fd013 '
+            + 'and the runtime-graph probes stepped up together while the spawn-floor probes did not'
+    }
+];
+
+/**
+ * The newest timing epoch that a night at `recordedAt` belongs to, or null.
+ * Chronological order is the list order, so the last match wins.
+ */
+function timingEpochFor(recordedAt, environment) {
+    const env = environment || null;
+    let active = null;
+    for (const epoch of TIMING_EPOCHS) {
+        if (epoch.environment !== env) continue;
+        if (String(epoch.from) > String(recordedAt)) continue;
+        active = epoch;
+    }
+    return active;
+}
+
 
 function parseArgs(argv) {
     const args = {
@@ -409,12 +461,25 @@ export function timingComparison(current, baselineEntries, recording = null) {
  */
 export function durationDrift(reference, entries) {
     const now = Array.isArray(reference.probes) ? reference : asReport(reference);
+    // The epoch is selected from the night being judged, before asReport() narrows
+    // `now` to the comparison fields, so a re-baselined night is never pooled with the
+    // host level it replaced.
+    const epoch = timingEpochFor(reference.recordedAt, reference.environment);
     const comparableNights = entries
         .filter(entry => comparable(entry, now))
         .sort((a, b) => String(a.recordedAt).localeCompare(String(b.recordedAt)));
-    const withDurations = comparableNights.filter(entry => Object.values(entry.probes || {})
+    // Night before the active epoch: still comparable, still recorded, not pooled into
+    // the timing distribution (see TIMING_EPOCHS). Counted, never hidden.
+    const windowNights = epoch
+        ? comparableNights.filter(entry => String(entry.recordedAt) >= String(epoch.from))
+        : comparableNights;
+    const excludedByEpoch = comparableNights.length - windowNights.length;
+    const withDurations = windowNights.filter(entry => Object.values(entry.probes || {})
         .some(data => Array.isArray(data.durationsMs) && data.durationsMs.length > 0));
-    const excluded = comparableNights.length - withDurations.length;
+    const excluded = windowNights.length - withDurations.length;
+    const epochReport = epoch
+        ? { from: epoch.from, environment: epoch.environment, why: epoch.why, excludedNights: excludedByEpoch }
+        : null;
 
     if (withDurations.length < MIN_NIGHTS_FOR_DRIFT_GATE) {
         return {
@@ -422,6 +487,7 @@ export function durationDrift(reference, entries) {
             comparableNights: comparableNights.length,
             nightsWithPerRunDurations: withDurations.length,
             excludedNightsWithoutPerRunDurations: excluded,
+            epoch: epochReport,
             neededNights: MIN_NIGHTS_FOR_DRIFT_GATE,
             // Every field a caller reads is present in every branch. A "not yet
             // measurable" result that omitted them crashed the report loop the first
@@ -485,6 +551,7 @@ export function durationDrift(reference, entries) {
         comparableNights: comparableNights.length,
         nightsWithPerRunDurations: withDurations.length,
         excludedNightsWithoutPerRunDurations: excluded,
+        epoch: epochReport,
         neededNights: MIN_NIGHTS_FOR_DRIFT_GATE,
         rows,
         drifted: rows.filter(row => row.status === 'DRIFT'),
@@ -580,6 +647,15 @@ function main() {
         console.log(`    no probe is drifting (${drift.rows.length} probe(s) had enough samples to judge, `
             + `${drift.nightsWithPerRunDurations} comparable nights)`);
     }
+    // An epoch changes what "not yet measurable" means, so it is stated in both cases:
+    // two nights after a re-baseline is a young sample, not a shortfall in the ledger,
+    // and a reader who counted ten nights in the artifact must not read "2 comparable
+    // nights" as ten nights of data having gone missing.
+    if (drift.epoch) {
+        console.log(`    epoch   ${drift.epoch.environment} timing history starts ${String(drift.epoch.from).slice(0, 10)}: `
+            + `${drift.epoch.excludedNights} earlier comparable night(s) are not pooled `
+            + `(${drift.epoch.why})`);
+    }
     for (const row of drift.rising || []) console.log(`    RISING  ${row.name.padEnd(44)} ${row.detail}`);
     // Stated in the measured case too, not only when the sample came up short: a pooled
     // distribution is only as broad as the nights that fed it, and a reviewer deciding
@@ -648,6 +724,7 @@ function main() {
             comparableNights: drift.comparableNights,
             nightsWithPerRunDurations: drift.nightsWithPerRunDurations,
             excludedNightsWithoutPerRunDurations: drift.excludedNightsWithoutPerRunDurations,
+            epoch: drift.epoch || null,
             neededNights: drift.neededNights,
             drifted: drift.rows.filter(row => row.status === 'DRIFT').map(row => ({
                 name: row.name,
@@ -719,6 +796,11 @@ function main() {
                     : (drift.drifted.length > 0
                         ? 'the recent median sits above the probe\'s own p90.'
                         : `no probe's recent ${DRIFT_RECENT_NIGHTS}-night median sits above its own p90.`)),
+            ...(drift.epoch
+                ? [`Timing epoch: \`${drift.epoch.environment}\` timing history starts ${String(drift.epoch.from).slice(0, 10)} - `
+                    + `${drift.epoch.excludedNights} earlier comparable night(s) are not pooled (a host level change, not a `
+                    + `different result): ${drift.epoch.why}.`]
+                : []),
             '',
             ...(summary.everIntermittent.length > 0
                 ? ['**Ever intermittent in the ledger:**', '',
