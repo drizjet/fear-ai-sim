@@ -225,6 +225,7 @@ function printHelp() {
     console.log(`  counterfactual     Run 8 causal counterfactual experiments (Section XL)`);
     console.log(`  dashboard          Launch the Web-Based Designer Replay & Diagnostic Viewer (Sections XXXI & XXXII)`);
     console.log(`                     Options: --port <8766> --host <127.0.0.1>`);
+    console.log('                     Tip: --port 0 asks the OS for a free loopback port.');
     console.log(`  presets            List curated archetype presets or inspect a specific preset card (Front B)`);
     console.log(`                     Options: --id <preset_id> --json`);
     console.log(`  validate-safety    Validate agent tuning against designer safety invariants (Section 78)`);
@@ -643,33 +644,47 @@ async function handleDashboard(options) {
     // those endpoints report themselves as unattached rather than rendering an
     // empty view that would read as "nothing is happening".
     let middleware = null;
-    if (options.middleware) {
-        const middlewarePort = Number(options['middleware-port'] ?? 8765);
-        middleware = new FearServer({
-            host,
-            port: middlewarePort,
-            seed: parseInt(options.seed || '1337', 10)
+    let startingDashboard = false;
+    try {
+        if (options.middleware) {
+            const middlewarePort = Number(options['middleware-port'] ?? 8765);
+            middleware = new FearServer({
+                host,
+                port: middlewarePort,
+                seed: parseInt(options.seed || '1337', 10)
+            });
+            await middleware.start();
+            server.attachSimulation(middleware.simulation);
+            server.attachOwnership(middleware.claims);
+            console.log(`[FearAI-CLI] Middleware attached in-process at http://${host}:${middleware.port}`);
+            console.log(`[FearAI-CLI] Ownership view reads GET /api/v1/sessions (read-only; it can observe claims, never arbitrate them)`);
+        } else {
+            console.log(`[FearAI-CLI] No middleware attached. Live views will report NO_SIMULATION_ATTACHED / NO_OWNERSHIP_SOURCE_ATTACHED.`);
+            console.log(`[FearAI-CLI] Pass --middleware to attach the server in-process.`);
+        }
+
+        startingDashboard = true;
+        const { url } = await server.start();
+        startingDashboard = false;
+        console.log(`[FearAI-CLI] Designer Dashboard active at: ${url}`);
+        console.log(`[FearAI-CLI] Press Ctrl+C to terminate dashboard server.`);
+
+        process.on('SIGINT', async () => {
+            console.log('\n[FearAI-CLI] Gracefully stopping Designer Dashboard...');
+            await server.stop();
+            if (middleware) await middleware.stop();
+            process.exit(0);
         });
-        await middleware.start();
-        server.attachSimulation(middleware.simulation);
-        server.attachOwnership(middleware.claims);
-        console.log(`[FearAI-CLI] Middleware attached in-process at http://${host}:${middleware.port}`);
-        console.log(`[FearAI-CLI] Ownership view reads GET /api/v1/sessions (read-only; it can observe claims, never arbitrate them)`);
-    } else {
-        console.log(`[FearAI-CLI] No middleware attached. Live views will report NO_SIMULATION_ATTACHED / NO_OWNERSHIP_SOURCE_ATTACHED.`);
-        console.log(`[FearAI-CLI] Pass --middleware to attach the server in-process.`);
-    }
-
-    const { url } = await server.start();
-    console.log(`[FearAI-CLI] Designer Dashboard active at: ${url}`);
-    console.log(`[FearAI-CLI] Press Ctrl+C to terminate dashboard server.`);
-
-    process.on('SIGINT', async () => {
-        console.log('\n[FearAI-CLI] Gracefully stopping Designer Dashboard...');
-        await server.stop();
+    } catch (error) {
+        // A dashboard bind refusal must not strand the already started
+        // in-process middleware on its own port.
         if (middleware) await middleware.stop();
-        process.exit(0);
-    });
+        if (startingDashboard && (error?.code === 'EACCES' || error?.code === 'EADDRINUSE')) {
+            console.error('[FearAI-CLI] Dashboard port ' + port + ' is unavailable on ' + host
+                + '. Try: fear-ai dashboard --port 0 (the OS selects a free loopback port).');
+        }
+        throw error;
+    }
 }
 
 function handleGodot(options) {

@@ -60,7 +60,7 @@ either `VERIFIED_CURRENT` or a bounded adapter with a named caveat.
 | `packages/adapters/csharp` | Generic C# client | `VERIFIED_CURRENT (COMPILE + STATIC_CONFORMANCE)` — rebuilt with `-t:Rebuild`, zero errors, in the 2026-09-20 sweep; session identity (`session_id`/`session_token`/`ClaimMode`), batched register/unregister/trauma, `404` legacy fallback, `409` distinguished from transport failure, and batching chunked at the server's cap. No live runner exists in this repository, so runtime behaviour is not exercised here |
 | Examples (`examples/`) | The CLI, Python and reference-game walkthroughs, each self-asserting and gated; the Godot, Unity and Unreal examples are **not run** here | `RUN_OR_DECLARED` — `examples/cli/neutral-horror-demo.mjs` is executed and mutation-tested by `verify_contagion_transmission.mjs` (18 claims), the Python demo runs against a server the probe starts (15 claims), and the reference-game runner derives its status from real checks. `verify_examples_inventory.mjs` derives the roster from disk, requires the classification to cover it exactly, and **refuses a success verdict from any file nothing runs**. The six examples needing a Godot binary, a Unity Editor or a UE5 host are declared unrun with reasons rather than counted as coverage |
 | Designer tooling | `DesignerDashboardServer` + `fear-ai dashboard` | `VERIFIED_CURRENT` (observability only) — 11 views / 13 endpoints including `GET /api/ownership` live session ownership (read-only, `scope: SERVER_SESSION_STATE`, token-free by construction; `POST /api/ownership` is a `404`, so the tooling has no arbitration path) its **refusal drill-down** (`refusals[]`: verb, agent, caller, blocking session, countdown and a resolution sentence — a null countdown means the blocker holds a connection and has no deadline) and an **identity audit timeline** (`timeline[]`: grants *and* refusals on one ordered, bounded (100), token-free stream, each row carrying a `meaning` and a headline, scoped explicitly to this process so an empty ring after a restart is not read as "nothing happened"). `fear-ai dashboard --middleware` attaches a real `FearServer` in-process; unattached, the live views report `NO_SIMULATION_ATTACHED` / `NO_OWNERSHIP_SOURCE_ATTACHED` rather than an empty view |
-| Verification | `tools/verification/*.mjs` standalone harnesses (63 `verify_*.mjs` probes — 54 runtime/protocol/behaviour, 3 Godot contract/parity/live-wiring, 1 .NET compile-**and-run** check, 1 Unity behaviour harness, 1 CI-integration gate, 1 Unity Editor gate, 1 examples-inventory gate, 1 quarantine-reach gate — plus 2 `measure_*.mjs` measurement harnesses; the numbers sum to the total, which the integrity gate requires rather than assumes) and 1 external-resource runner (`npm run godot:evidence`) | current — the 2026-10-20 local declared-toolchain run and nightly ledger are **60 probes: 59 passed, 1 declared skip, 0 failed**; the skip is the Unity Editor gate. The committed 2026-10-17 single-run recording is **53 probes: 52 passed, 1 declared skip, 0 failed** because it predates the quarantine-reach and later probes; the nightly repeated run is the current determinism evidence, and the 4/4 in-engine suites were green in the 2026-09-20 sweep. `verify_unity_editor_tests.mjs` reports `SKIPPED` rather than `PASS` (no Editor installed) and the .NET, Godot and Unity multi-process probes report `SKIPPED`, never `PASS`, when their external tools are absent. The count is a count of files, not a claim about coverage |
+| Verification | `tools/verification/*.mjs` standalone harnesses (63 `verify_*.mjs` probes — 54 runtime/protocol/behaviour, 3 Godot contract/parity/live-wiring, 1 .NET compile-**and-run** check, 1 Unity behaviour harness, 1 CI-integration gate, 1 Unity Editor gate, 1 examples-inventory gate, 1 quarantine-reach gate — plus 2 `measure_*.mjs` measurement harnesses; the numbers sum to the total, which the integrity gate requires rather than assumes) and 1 external-resource runner (`npm run godot:evidence`) | dated 2026-10-20 local run snapshot: **60 probes: 59 passed, 1 declared skip, 0 failed**; separate isolated 2026-11-01 run of the 63-file roster: **62 passed, 1 declared skip, 0 failed**; the skip is the Unity Editor gate. The committed 2026-10-17 single-run recording is **53 probes: 52 passed, 1 declared skip, 0 failed** because it predates the quarantine-reach and later probes; the nightly repeated run is the current determinism evidence, and the 4/4 in-engine suites were green in the 2026-09-20 sweep. `verify_unity_editor_tests.mjs` reports `SKIPPED` rather than `PASS` (no Editor installed) and the .NET, Godot and Unity multi-process probes report `SKIPPED`, never `PASS`, when their external tools are absent. The count is a count of files, not a claim about coverage |
 | Measurement | `tools/verification/measure_runtime_performance.mjs` (tick cost) and `measure_session_bringup.mjs` (`npm run measure:session-bringup`, control-plane bring-up) | current — measurement artifacts, explicitly not pass/fail gates |
 | Generated adapter artifact | `tests/godot_project/addons/fear_ai/fear_canonical_core.gd`, emitted by `tools/codegen/generate_godot_fallback.mjs` | current — `npm run codegen:godot-fallback:check` fails if stale |
 | External-resource evidence | `tools/run-godot-inengine-evidence.mjs` (`npm run godot:evidence`) | requires the Godot binary; reports `SKIPPED` (never `PASSED`) when absent; headless only |
@@ -69,6 +69,15 @@ either `VERIFIED_CURRENT` or a bounded adapter with a named caveat.
 layer with validated protocol adapters, bounded persistence, lifecycle handling,
 and an observability dashboard. The host engine retains authority over
 movement, physics, combat, damage, inventory, and world mutation.
+
+**Dashboard local-bind troubleshooting (2026-11-01):** A fixed loopback port
+can be denied by the host OS even when no process listens there. On this
+machine, 127.0.0.1:8766 returned EACCES; a one-shot dashboard with
+`--port 0` received an OS-selected port, served HTTP 200, and shut down.
+Use `npm run dashboard -- --port 0` and read the actual bound URL.
+If a dashboard started with `--middleware` cannot bind, the CLI now stops
+the middleware it started instead of stranding a listener. This is a
+local workaround, not a claim that fixed port 8766 works.
 
 ---
 
@@ -81,12 +90,9 @@ own explicit CLI/scenario entry points, labelled as standalone.
 
 | Module / surface | Why out of scope | How it remains available |
 |---|---|---|
-| `EconomicFeedbackSystem` | Economic world-sim; host owns inventory/world mutation | `fear-ai economy`, collision harness |
-| `SettlementMigrationSystem` | Demographic world-sim | `fear-ai migration` |
-| `EpistemicBeliefEngine` | Belief/perception simulation; the core consumes host-reported danger, it does not compute rumor internally | `fear-ai epistemic-fog`, scenario paths |
 | `WorldCounterfactualEngine` / `FrontierValleySimulation` | Analytics tool over a reference world | `fear-ai counterfactual-world` |
-| Standalone world-sim tail (`FactionGovernanceSystem`, `CoalitionDiplomacyEngine`, trade chains, memory consolidation, trauma crystallization, Pareto frontier, streaming buffers, …) | Research sandbox exposed through ~60 CLI commands | individual `fear-ai <command>` paths |
-| `FunctionalPersonaSignatures` (FABE) | Research; decoupled math proven, no live host consumer, human evaluation blocked | `fear-ai fabe-world` / `persona` |
+| Standalone world-sim tail (`CoalitionDiplomacyEngine`, trade chains, memory consolidation, trauma crystallization, Pareto frontier, streaming buffers, …) | Research sandbox exposed through separate CLI commands; not an automatic core service | individual `fear-ai <command>` paths |
+| FABE / moral **research validation and external-host efficacy claims** | The underlying persona and moral modules have opt-in advisory services in §1, but experimental behavioral validity, external adoption and the blocked human study are **not** promoted by that wiring | `fear-ai fabe-world` / `persona` / research scenarios |
 | `packages/adapters/unreal` | `DEFERRED` by owner policy | present so an Unreal host *can* connect later |
 | Elixir + Rust NIF tree | Divergent research backend; no `mix.lock`, no toolchain on this host | separate repository, excluded |
 
@@ -101,11 +107,12 @@ A module leaves this list only by changing the code, not the prose — see §3.
 The scope is not maintained by good intentions. It is checked:
 
 - **Code boundary** — `tools/verification/verify_runtime_wiring.mjs` asserts that
-  `RuntimeSimulation` constructs **none** of the optional modules, and that each
-  optional module still has an explicit CLI/scenario entry point. It is a
-  deliberate tripwire: if a future change wires one into the core constructor,
-  the probe fails and the ledger and this document must be revisited rather than
-  silently inheriting a broader claim.
+  the **two remaining excluded world/analytics constructors**
+  (`WorldCounterfactualEngine`, `FrontierValleySimulation`) are absent,
+  while the eight promoted advisory services have explicit default-off opt-in
+  guards. A newly unconditional constructor, a removed default-off guard, or a
+  future unsupported promotion must fail its corresponding positive/negative
+  proof rather than silently broaden the release claim.
 - **Document boundary** — `tools/verification/verify_release_claim_boundaries.mjs`
   asserts this document exists with its in-scope and out-of-scope sections, lists
   the named out-of-scope modules, and is referenced by the truth ledger.
@@ -193,8 +200,10 @@ path wearing an opt-in flag's clothes.
   **executed** against a live server outside the Editor, which is strictly
   stronger than compiling it and strictly weaker than running it in the engine:
   WHEN Unity calls the lifecycle, frame scheduling and the shim's fidelity to
-  Unity's real API remain unverified, and `FearAgent.cs`/`FearAgentHUD.cs` are
-  covered by neither probe. The lifecycle **bodies** are no longer in that list —
+  Unity's real API remain unverified. `FearAgent.cs`/`FearAgentHUD.cs` are
+  executed against the shim in the behavioral probe's Phase 1 (sensory scan,
+  fear-band unpacking, speed and HUD behavior), but not inside the Unity
+  Editor. The lifecycle **bodies** are no longer in that list —
   the shim drives `Awake`, `OnEnable`, `Start`, `Update`, `OnDisable` and
   `OnDestroy` in Unity's order, so a body that can never work is caught without an
   Editor — but the timing is the shim's model, not Unity's, so the qualifier
