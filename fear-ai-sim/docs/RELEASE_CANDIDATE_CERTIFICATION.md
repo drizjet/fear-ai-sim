@@ -378,9 +378,9 @@ No probe has ever disagreed with itself in the ledger. That is a statement about
 
 **Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment).
 
-**Timing drift — no probe is creeping** (46 probe(s) had enough pooled samples across 9 comparable night(s); none reached 1.5x its earlier median while also exceeding its own p90).
+**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 1 of 9 do. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
 
-Reported, not gated: 1 probe(s) rose past 1.25x their earlier median without passing the drift gate (`verify_runtime_wiring.mjs`).
+The timing baseline restarts at 2026-10-29 for `github-hosted`: 8 earlier comparable night(s) are not pooled into any probe's distribution, because the host level moved while the code did not (first nightly at the slower host level; 10-28 and 10-29 both ran b8fd013 and the runtime-graph probes stepped up together while the spawn-floor probes did not). A ratio across two machines measures the machines, whether or not the two machines declare the same environment name.
 
 **Every probe in the roster appears in the ledger**, so no probe is left without a cross-night result.
 
