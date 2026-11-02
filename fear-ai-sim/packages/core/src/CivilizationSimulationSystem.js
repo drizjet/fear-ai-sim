@@ -82,6 +82,44 @@ export function assertCivilizationEventJournal(events, tickCount) {
     }
 }
 
+// Snapshot replay must not admit malformed coordinates or numeric prices that
+// JSON serialization changes (NaN/Infinity -> null). This validates only the
+// reference simulator's known numeric fields, not host-defined metadata or
+// the independently trusted road graph.
+export function assertCivilizationReplayFields(state) {
+    const position = value => value !== null && typeof value === 'object' &&
+        !Array.isArray(value) && Number.isFinite(value.x) &&
+        Number.isFinite(value.y) &&
+        (!Object.hasOwn(value, 'z') || Number.isFinite(value.z));
+    if (!position(state.focusOrigin))
+        throw new Error('invalid civilization position');
+    for (const node of state.nodes) {
+        if (!position(node.position))
+            throw new Error('invalid civilization position');
+        for (const quote of Object.values(node.market)) {
+            if (quote === null || typeof quote !== 'object' || Array.isArray(quote))
+                continue; // Custom scalar/null market entries remain supported.
+            for (const key of ['buyPrice', 'sellPrice']) {
+                if (Object.hasOwn(quote, key) &&
+                    (typeof quote[key] !== 'number' ||
+                        !Number.isFinite(quote[key]) || quote[key] < 0))
+                    throw new Error('invalid civilization market quote');
+            }
+        }
+    }
+    for (const route of state.routes) {
+        for (let i = 0; i < route.waypoints.length; i++) {
+            if (!Object.hasOwn(route.waypoints, i) ||
+                !position(route.waypoints[i]))
+                throw new Error('invalid civilization waypoint coordinates');
+        }
+    }
+    for (const entity of state.entities) {
+        if (!position(entity.position))
+            throw new Error('invalid civilization position');
+    }
+}
+
 // Admission for this reference simulator's existing restore target, not a
 // general transactional rollback. setState writes these fields and calls the
 // three maps' clear/set methods; a host may replace any of them publicly.
@@ -464,7 +502,7 @@ export class CivilizationSimulationSystem {
      */
     getState() {
         assertCivilizationEventJournal(this.events, this.tickCount);
-        return {
+        const snapshot = {
             tickCount: this.tickCount,
             focusOrigin: { ...this.focusOrigin },
             nodes: Array.from(this.nodes.values()).map(n => ({
@@ -486,6 +524,8 @@ export class CivilizationSimulationSystem {
                 cargo: { ...e.cargo }
             }))
         };
+        assertCivilizationReplayFields(snapshot);
+        return snapshot;
     }
 
     /**

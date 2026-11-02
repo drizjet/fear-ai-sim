@@ -677,4 +677,65 @@ equal(replayOne.authority.shipments.shipment.status,'completed',
   'replayed shipment settles exactly once');
 replayOne.authority.assertConservation();
 replayTwo.authority.assertConservation();
+
+// Trusted checkpoint values may be valid for the road fingerprint while
+// containing numeric/waypoint data that JSON would silently rewrite or whose
+// quotes would yield NaN profits. Reject before changing the target world.
+assertMalformedRestore(sim=>{sim.routes[0].waypoints=new Array(2);sim.routes[0].waypoints[0]={x:2,y:0,z:0};},
+  /invalid civilization waypoint coordinates/,
+  'sparse waypoint indices must not survive a trusted restore');
+assertMalformedRestore(sim=>{sim.routes[0].waypoints=[null];},
+  /invalid civilization waypoint coordinates/,
+  'null waypoint must not survive a trusted restore');
+assertMalformedRestore(sim=>{sim.routes[0].waypoints=[{x:Infinity,y:0,z:0}];},
+  /invalid civilization waypoint coordinates/,
+  'nonfinite waypoint must not become null on JSON serialization');
+assertMalformedRestore(sim=>{sim.nodes[0].position.x=Infinity;},
+  /invalid civilization position/,
+  'nonfinite node coordinate must not become null on JSON serialization');
+assertMalformedRestore(sim=>{sim.nodes[0].position.x='nonnumeric';},
+  /invalid civilization position/,
+  'string node coordinate must not silently alter world geometry');
+assertMalformedRestore(sim=>{sim.focusOrigin.x=Infinity;},
+  /invalid civilization position/,
+  'nonfinite snapshot focus coordinate must not survive restore');
+assertMalformedRestore(sim=>{sim.entities.find(e=>e.id==='trade:shipment').position.y=NaN;},
+  /invalid civilization position/,
+  'nonfinite entity coordinate must not silently change LOD inputs');
+assertMalformedRestore(sim=>{sim.nodes[0].market={ORE:{sellPrice:'bad'}};},
+  /invalid civilization market quote/,
+  'nonnumeric sell quote cannot generate NaN profit');
+assertMalformedRestore(sim=>{sim.nodes[0].market={ORE:{sellPrice:Infinity}};},
+  /invalid civilization market quote/,
+  'nonfinite sell quote cannot turn into null');
+assertMalformedRestore(sim=>{sim.nodes[0].market={ORE:{sellPrice:-2}};},
+  /invalid civilization market quote/,
+  'negative sell quote cannot inflate trade profit');
+const invalidLiveSnapshot=createWorld();
+invalidLiveSnapshot.sim.nodes.get('A').position.x=Infinity;
+throws(()=>invalidLiveSnapshot.authority.getState(),/invalid civilization position/,
+  'authority export must refuse nonfinite node values before JSON serialization');
+const invalidLiveWaypoint=createWorld();
+invalidLiveWaypoint.sim.routes.get('R').waypoints=[{x:NaN,y:0,z:0}];
+throws(()=>invalidLiveWaypoint.authority.getState(),/invalid civilization waypoint coordinates/,
+  'authority export must not silently turn a nonfinite waypoint into null');
+const invalidLiveMarket=createWorld();
+invalidLiveMarket.sim.nodes.get('A').market={ORE:{sellPrice:NaN}};
+throws(()=>invalidLiveMarket.authority.getState(),/invalid civilization market quote/,
+  'authority export must refuse nonfinite sell prices');
+const validTwoDimensional=createWorld();
+const validTwoDimensionalSnapshot=validTwoDimensional.authority.getState();
+validTwoDimensionalSnapshot.sim.routes[0].waypoints=[{x:2,y:3,meta:{hostTag:'keep'}}];
+validTwoDimensionalSnapshot.sim.nodes[0].market={ORE:3,CUSTOM:{meta:{flag:true}}};
+const validTwoDimensionalTarget=createWorld();
+validTwoDimensionalTarget.authority.restore(validTwoDimensionalSnapshot,
+  civRoadGraphFingerprint(validTwoDimensionalSnapshot.sim));
+equal(validTwoDimensionalTarget.sim.routes.get('R').waypoints,
+  [{x:2,y:3,meta:{hostTag:'keep'}}],
+  'valid 2D waypoint and custom metadata survive restore');
+equal(validTwoDimensionalTarget.sim.nodes.get('A').market,
+  {ORE:3,CUSTOM:{meta:{flag:true}}},
+  'custom scalar market values and unquoted metadata retain existing behavior');
+validTwoDimensionalTarget.authority.tick();
+validTwoDimensionalTarget.authority.assertConservation();
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

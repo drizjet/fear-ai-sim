@@ -1,5 +1,5 @@
 import { fingerprintGraph, verifyTrustedGraph } from './RoadGraphFingerprint.mjs';
-import { CivilizationSimulationSystem, assertCivilizationEventJournal, assertCivilizationRestoreTarget } from './CivilizationSimulationSystem.js';
+import { CivilizationSimulationSystem, assertCivilizationEventJournal, assertCivilizationRestoreTarget, assertCivilizationReplayFields } from './CivilizationSimulationSystem.js';
 export function civRoadGraph(state) {
   if (!state || !Array.isArray(state.nodes) || !Array.isArray(state.routes)) throw new Error('malformed civilization road graph');
   return {
@@ -40,6 +40,9 @@ export function restoreTrustedCivState(system, snapshot, independentlyTrustedFin
       throw new Error('invalid caravan state');
     ids.add(e.id);
   }
+  // Validate replay-consumed numeric fields before staged setState or any
+  // JSON-based authority clone can silently normalize nonfinite numbers.
+  assertCivilizationReplayFields(snapshot);
   const staged = new CivilizationSimulationSystem(system.config);
   staged.setState(snapshot);
   assertCivilizationRestoreTarget(system);
