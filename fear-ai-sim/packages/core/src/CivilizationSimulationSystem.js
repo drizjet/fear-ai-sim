@@ -63,6 +63,25 @@ function clamp01(v) {
     return Math.max(0.0, Math.min(1.0, v));
 }
 
+// Structural snapshot admission, not event provenance or checkpoint
+// authentication. Events are append-only in the reference simulator;
+// arbitrary host-defined types remain permitted, but a future, missing,
+// out-of-order, or null tick cannot form a truthful snapshot timeline.
+export function assertCivilizationEventJournal(events, tickCount) {
+    if (!Array.isArray(events) || !Number.isSafeInteger(tickCount) || tickCount < 0)
+        throw new Error('invalid simulation event journal');
+    let previousTick = -1;
+    for (let index = 0; index < events.length; index++) {
+        if (!Object.hasOwn(events, index)) throw new Error('invalid simulation event journal');
+        const event = events[index];
+        if (event === null || typeof event !== 'object' || Array.isArray(event) ||
+            !Number.isSafeInteger(event.tick) || event.tick < previousTick ||
+            event.tick > tickCount)
+            throw new Error('invalid simulation event journal');
+        previousTick = event.tick;
+    }
+}
+
 export class CivilizationSimulationSystem {
     /**
      * @param {object} [config={}]
@@ -425,6 +444,7 @@ export class CivilizationSimulationSystem {
      * @returns {object}
      */
     getState() {
+        assertCivilizationEventJournal(this.events, this.tickCount);
         return {
             tickCount: this.tickCount,
             focusOrigin: { ...this.focusOrigin },

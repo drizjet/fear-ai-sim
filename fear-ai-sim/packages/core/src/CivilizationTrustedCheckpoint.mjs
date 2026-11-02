@@ -1,5 +1,5 @@
 import { fingerprintGraph, verifyTrustedGraph } from './RoadGraphFingerprint.mjs';
-import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
+import { CivilizationSimulationSystem, assertCivilizationEventJournal } from './CivilizationSimulationSystem.js';
 export function civRoadGraph(state) {
   if (!state || !Array.isArray(state.nodes) || !Array.isArray(state.routes)) throw new Error('malformed civilization road graph');
   return {
@@ -14,6 +14,7 @@ export function restoreTrustedCivState(system, snapshot, independentlyTrustedFin
   verifyTrustedGraph(civRoadGraph(snapshot), independentlyTrustedFingerprint);
   if (!Number.isSafeInteger(snapshot.tickCount) || snapshot.tickCount < 0 ||
     !Array.isArray(snapshot.entities) || !Array.isArray(snapshot.events)) throw new Error('invalid snapshot');
+  assertCivilizationEventJournal(snapshot.events, snapshot.tickCount);
   const ids = new Set();
   for (const e of snapshot.entities) {
     // CivilizationSimulationSystem.setState silently skips falsy entity IDs.

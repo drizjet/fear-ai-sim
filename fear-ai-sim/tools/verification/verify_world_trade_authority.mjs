@@ -506,4 +506,50 @@ equal(readonlyPriorEventIndex.tick().settled,2,
 equal(readonlyPriorEventIndex.sim.events.length,3,
   'read-only prior journal entry preserves both later arrival intents');
 
+// Graph fingerprint trust is not journal trust. A host may mutate or append
+// historical sim-event records after delivery: trusted restore must refuse an
+// impossible event chronology, without modifying the destination simulator.
+const checkpointAfterArrival=createSimultaneousArrivals();
+equal(checkpointAfterArrival.tick().settled,2,
+  'journal snapshot fixture settles two shipments before export');
+const completedCheckpoint=checkpointAfterArrival.getState();
+function rejectCorruptSimJournal(change, label) {
+  const snapshot=JSON.parse(JSON.stringify(completedCheckpoint));
+  change(snapshot.sim.events,snapshot.sim.tickCount);
+  const target=createWorld({dispatch:false}).authority;
+  const before=JSON.stringify(target.getState());
+  throws(()=>target.restore(snapshot,civRoadGraphFingerprint(snapshot.sim)),
+    /invalid simulation event journal/,label);
+  equal(JSON.stringify(target.getState()),before,
+    label+': trusted checkpoint failure leaves the target unchanged');
+}
+rejectCorruptSimJournal((events,tick)=>events.push(
+  {type:'host_note',tick:tick+1}), 'future simulation event refuses trusted restore');
+rejectCorruptSimJournal(events=>events.push(
+  {type:'host_note'}), 'missing simulation event tick refuses trusted restore');
+rejectCorruptSimJournal(events=>events.push(null),
+  'null simulation event refuses with an explicit checkpoint error');
+rejectCorruptSimJournal(events=>{events[1].tick=events[0].tick-1;},
+  'out-of-order simulation event refuses trusted restore');
+rejectCorruptSimJournal(events=>{events.length+=1;},
+  'sparse simulation journal refuses trusted restore');
+
+const customCivJournal=JSON.parse(JSON.stringify(completedCheckpoint));
+customCivJournal.sim.events.push({type:'host_note',tick:40,cargo:{ORE:1}});
+const restoredCustomCiv=createWorld({dispatch:false}).authority;
+restoredCustomCiv.restore(customCivJournal,civRoadGraphFingerprint(customCivJournal.sim));
+equal(restoredCustomCiv.sim.events.at(-1),
+  {type:'host_note',tick:40,cargo:{ORE:1}},
+  'valid host-defined simulation event round-trips without type allowlisting');
+restoredCustomCiv.assertConservation();
+
+const preCorruptedLiveJournal=createSimultaneousArrivals();
+preCorruptedLiveJournal.tick();
+preCorruptedLiveJournal.sim.events.unshift(null);
+const liveTickBefore=preCorruptedLiveJournal.sim.tickCount;
+equal(preCorruptedLiveJournal.tick().tick,liveTickBefore+1,
+  'append-only tick does not read previously corrupted journal entries');
+throws(()=>preCorruptedLiveJournal.getState(),/invalid simulation event journal/,
+  'export rejects an already malformed historical simulation event');
+
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
