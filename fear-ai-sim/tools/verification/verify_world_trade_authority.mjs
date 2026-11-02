@@ -14,6 +14,7 @@ import { decodeHostTransferFrame, HOST_TRANSFER_MAX_CODE_UNITS } from '../../pac
 import { createAuthenticatedHostIpcGateway, createHostIpcCredential,
   makeAuthenticatedHostMessage } from '../../packages/core/src/AuthenticatedHostIpcGateway.mjs';
 import { createAuthenticatedHostSender } from '../../packages/adapters/node/host_ipc_adapter.mjs';
+import { readFileSync } from 'node:fs';
 
 let assertions = 0;
 function assert(condition, label) {
@@ -1889,4 +1890,44 @@ equal(signerSent,2,'Node adapter does not send before authentication');
 sessionSigner.close();
 throws(()=>sessionSigner.send(smallFrame),/not authenticated/,
   'Node adapter closes signer after explicit disconnect');
+
+// Engine-specific receivers are *source contracts* here: Rust is exercised
+// by cargo test separately; Godot/Unreal Editor execution is NOT PROVEN.
+const readEngineSource=relative=>readFileSync(new URL(relative,import.meta.url),'utf8');
+const gdReceiver=readEngineSource('../../packages/adapters/godot/fear_host_ipc_receiver.gd');
+const gdClient=readEngineSource('../../packages/adapters/godot/fear_ai_client.gd');
+const ueReceiver=readEngineSource('../../packages/adapters/unreal/Source/FearAI/Private/FearHostIpcReceiver.cpp');
+const ueComponent=readEngineSource('../../packages/adapters/unreal/Source/FearAI/Private/FearAgentComponent.cpp');
+const rustReceiver=readEngineSource('../../packages/adapters/rust/src/host_ipc_receiver.rs');
+assert(gdReceiver.includes('hmac_digest(') &&
+  gdReceiver.includes('constant_time_compare('),
+  'Godot authenticated metadata uses native SHA256 and constant-time comparison');
+assert(gdReceiver.includes('replay_or_sequence') &&
+  gdReceiver.includes('frame_too_large') &&
+  gdReceiver.includes('forbidden_entity'),
+  'Godot receiver specifies replay, byte and cargo authority refusal');
+assert(gdClient.includes('receive_authenticated_host_metadata') &&
+  gdClient.includes('close_host_metadata_receiver()'),
+  'Godot client exposes separate opt-in receiving and lifecycle methods');
+assert(ueReceiver.includes('HmacSha256') &&
+  ueReceiver.includes('CalcSHA256') &&
+  ueReceiver.includes('FBase64::Decode'),
+  'Unreal receiving source requires SHA256 HMAC before JSON decode');
+assert(ueReceiver.includes('replay_or_sequence') &&
+  ueReceiver.includes('rate_limited') &&
+  ueReceiver.includes('forbidden_entity'),
+  'Unreal receiver specifies replay, rate and cargo authority refusal');
+assert(ueComponent.includes('ProcessStateJson(Message);') &&
+  ueComponent.includes('ReceiveAuthenticatedHostMetadata'),
+  'Unreal preserves middleware WS handler and separates authenticated metadata');
+assert(rustReceiver.includes('verify_slice') &&
+  rustReceiver.includes('HostIpcRejection::Replay') &&
+  rustReceiver.includes('ForbiddenEntity'),
+  'Rust receiver verifies authentic MAC and retains replay/trade authority');
+const knownCrossEngineSigned=makeAuthenticatedHostMessage({
+  frame:'{"version":1,"kind":"event","type":"host_signal","tick":0,"details":{"note":"cross-language"}}',
+  sequence:1,sessionId:'ab'.repeat(16),secret:'cd'.repeat(32)
+});
+assert(rustReceiver.includes(knownCrossEngineSigned),
+  'Rust receiving tests include the exact independently generated Node wire vector');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

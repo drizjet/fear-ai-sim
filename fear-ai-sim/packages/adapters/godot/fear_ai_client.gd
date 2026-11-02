@@ -23,6 +23,7 @@ extends Node
 ## from the outside. Relative preload, so the package works wherever a host drops
 ## it rather than only under an `addons/fear_ai/` path.
 const FEAR_ENCRYPTED_STORE = preload("fear_encrypted_store.gd")
+const FEAR_HOST_IPC_RECEIVER = preload("fear_host_ipc_receiver.gd")
 
 signal connected_to_server
 signal disconnected_from_server
@@ -36,6 +37,45 @@ signal trauma_zone_added(ok: bool)
 ## restarts instead of falling back to adoption.
 signal session_established(issued: bool)
 signal control_plane_idle_reached
+## This event is ONLY emitted for authenticated opt-in metadata transfers.
+## It is separate from middleware WS/HTTP observations and agent intents.
+signal authenticated_host_metadata_received(frame: Dictionary)
+signal authenticated_host_metadata_rejected(reason: String)
+
+var _host_metadata_receiver: RefCounted = null
+
+## The trusted host must supply fresh secrets from its owned IPC bootstrap;
+## never add keys to inspector/session_token or persistent middleware config.
+func configure_host_metadata_receiver(session: String, secret: String,
+		allowed_events: PackedStringArray = PackedStringArray(),
+		allowed_entities: PackedStringArray = PackedStringArray()) -> bool:
+	close_host_metadata_receiver()
+	var receiver := FEAR_HOST_IPC_RECEIVER.new()
+	if not receiver.configure(session, secret, allowed_events, allowed_entities):
+		return false
+	_host_metadata_receiver = receiver
+	return true
+
+func close_host_metadata_receiver() -> void:
+	if _host_metadata_receiver != null:
+		_host_metadata_receiver.close()
+		_host_metadata_receiver = null
+
+func _exit_tree() -> void:
+	close_host_metadata_receiver()
+
+## Call ONLY from the separately owned trusted metadata transport, never
+## from the existing middleware WebSocket's generic message callback.
+func receive_authenticated_host_metadata(packet: String, current_tick: int) -> Dictionary:
+	if _host_metadata_receiver == null:
+		authenticated_host_metadata_rejected.emit("not_configured")
+		return {"accepted": false, "reason": "not_configured"}
+	var result: Dictionary = _host_metadata_receiver.receive_packet(packet, current_tick)
+	if result.get("accepted", false):
+		authenticated_host_metadata_received.emit(result["frame"])
+	else:
+		authenticated_host_metadata_rejected.emit(result.get("reason", "rejected"))
+	return result
 
 @export var server_host: String = "127.0.0.1"
 @export var server_port: int = 8765

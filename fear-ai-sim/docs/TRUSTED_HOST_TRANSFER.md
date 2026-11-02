@@ -1,5 +1,32 @@
 # Fear AI — trusted host data-transfer boundary (opt-in)
 
+## Engine-specific receiving contracts (2026-11-02)
+
+The Rust SDK now includes a **compiled and tested** FEAR-IPC-1
+`HostIpcReceiver` that returns authenticated, bounded event/nontrade
+cargo metadata to a trusted host-owned local transport handler. Godot 4's
+`fear_host_ipc_receiver.gd` and Unreal 5.5+'s
+`FFearHostIpcReceiver` provide corresponding opt-in receivers, linked
+to the packaged clients by separate metadata methods/signals. These
+do not replace existing middleware HTTP/WS agent registration, session
+ownership, advisory tick requests or outcome-feedback protocols.
+
+Each engine's trusted host must bind its receiver to the exact owned
+transport endpoint, bootstrap a fresh per-process secret and session,
+rotate on disconnect/restart, throttle queued messages upstream, and
+apply only validated metadata. A signature validates possession of a
+shared key; it cannot establish operating-system process containment,
+prevent an authorized child from submitting permitted metadata, or
+authorize movement, combat, physics, spawning or inventory mutations.
+Godot 4.6 official headless runtime parsing and the new dedicated
+`run_host_ipc_conformance.gd` have been verified with **18 passing
+in-engine checks**, in addition to the source-level contracts. **Unreal
+receiving code has not been compiled or tested in UE Editor/PIE** here;
+its PlatformCrypto linkage requires an installed UE 5.5+ runtime.
+Rust locked/offline unit tests and the JavaScript deterministic/authority
+suite provide the remaining executable evidence. This still does not
+certify arbitrary external host transports or cross-engine game runtime.
+
 ## Security contract
 
 **The host extension runs outside the trusted simulation process.** It is not

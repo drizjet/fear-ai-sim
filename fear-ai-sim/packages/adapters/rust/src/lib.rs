@@ -4,12 +4,14 @@
 //! Strictly adheres to the Host Game Authority Invariant.
 
 pub mod evaluator;
+pub mod host_ipc_receiver;
 pub mod negotiator;
 pub mod pack;
 pub mod protocol;
 pub mod psychoacoustics;
 
 pub use evaluator::{EntityFearState, FearEvaluator, HysteresisThresholds};
+pub use host_ipc_receiver::{HostIpcReceiver, HostIpcFrame, HostIpcPolicy, HostIpcRejection};
 pub use negotiator::HostCapabilityNegotiator;
 pub use pack::{PackCoordinator, PackMember, PackRole, TacticalFormation, TacticalPhase};
 pub use protocol::{

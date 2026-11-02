@@ -1,5 +1,31 @@
 # Fear AI - Godot 4 Integration Guide
 
+## Optional authenticated local metadata receiver
+
+The separate `fear_host_ipc_receiver.gd` and opt-in
+`FearAIClient.configure_host_metadata_receiver(session, secret,
+allowed_events, allowed_entities)` verify **FEAR-IPC-1** HMAC-SHA256
+messages with a constant-time tag check, strictly increasing sequence
+numbers, per-session rate/byte limits, current-tick checks, and explicit
+event/entity allowlists. A trusted owner must provide **fresh credentials
+on every child/process restart** and deliver signed packets from a
+separately owned authenticated local channel to
+`FearAIClient.receive_authenticated_host_metadata(packet, current_tick)`.
+On admission the client emits `authenticated_host_metadata_received`;
+unauthorized/invalid packets emit `authenticated_host_metadata_rejected`.
+Call `close_host_metadata_receiver()` when the owned channel ends;
+autoload destruction also closes it.
+
+Do **not** forward the existing middleware WebSocket response messages
+into this receiver, or let untrusted scripts access the session secret or
+the host's authoritative movement/inventory fields. This is a metadata
+receiver, not a general network socket, process sandbox, or replacement
+for the normal HTTP/WebSocket host session. The bundled official Godot
+4.6 headless runtime parsed the packaged/showcase receiver and client,
+and `tests/godot_project/run_host_ipc_conformance.gd` passed **18 in-engine
+assertions** of HMAC vector parity, replay, forgery, rate and lifecycle.
+This is not a proof of arbitrary external OS transport or complete games.
+
 > **Verification Gate Status**: `HEADLESS_ADAPTER_CONFORMANCE (GODOT_4_6_STABLE_OFFICIAL_HEADLESS)` — headless binary only.
 > This is **not** a Fear AI Godot game. The host Godot project owns physics.
 >
