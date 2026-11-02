@@ -96,9 +96,32 @@ function cloneHostSnapshotMetadata(root, copies = new WeakMap()) {
             pending.push([value, collection]);
             return collection;
         }
-        // Other supported native values need their internal slots retained.
-        if (value instanceof RegExp || value instanceof ArrayBuffer ||
-            ArrayBuffer.isView(value)) {
+        // A view and its backing ArrayBuffer must resolve through this same
+        // memo: cloning each view independently splits intentionally shared
+        // bytes between event/cargo roots (and overlapping views).
+        if (value instanceof ArrayBuffer) {
+            const buffer = ArrayBuffer.prototype.slice.call(value, 0);
+            copies.set(value, buffer);
+            return buffer;
+        }
+        if (ArrayBuffer.isView(value)) {
+            const backing = copy(value.buffer);
+            let view;
+            if (value instanceof DataView) {
+                view = new DataView(backing, value.byteOffset, value.byteLength);
+            } else {
+                const typed = [Int8Array, Uint8Array, Uint8ClampedArray,
+                    Int16Array, Uint16Array, Int32Array, Uint32Array,
+                    Float32Array, Float64Array, BigInt64Array, BigUint64Array]
+                    .find(type => value instanceof type);
+                if (!typed) throw new Error('unsupported host typed array metadata');
+                view = new typed(backing, value.byteOffset, value.length);
+            }
+            copies.set(value, view);
+            return view;
+        }
+        // RegExp has internal native state but no separate shared buffer.
+        if (value instanceof RegExp) {
             const nativeCopy = structuredClone(value);
             copies.set(value, nativeCopy);
             return nativeCopy;

@@ -1197,4 +1197,77 @@ mapJsonAuthority.seedNode('X',{},0);mapJsonAuthority.seedNode('Y',{},0);
 mapJsonAuthority.sealGenesis(321);
 equal(mapJsonAuthority.getState().sim.events[0].details.map,{},
   'scientific negative: authority JSON does not represent Map entries');
+
+// Direct snapshot metadata can refer to the same backing ArrayBuffer via
+// several typed-array and DataView windows and through unrelated event/cargo
+// roots. It is a mutable shared memory graph, not separate value copies.
+const bufferHost=hostReferenceFixture(),backing=new ArrayBuffer(16);
+const bytes=new Uint8Array(backing),words=new Uint16Array(backing,2,4),
+  dataWindow=new DataView(backing,1,6);
+bytes.set([1,2,3,4]);
+bufferHost.events[0].details.buffer=backing;
+bufferHost.events[0].details.bytes=bytes;
+bufferHost.events[0].details.words=words;
+bufferHost.events[0].details.dataWindow=dataWindow;
+bufferHost.entities.get('neutral-ref').cargo.host.buffer=backing;
+bufferHost.entities.get('neutral-ref').cargo.host.words=words;
+const bufferSnapshot=bufferHost.getState(),
+  exportedMeta=bufferSnapshot.events[0].details,
+  exportedCargo=bufferSnapshot.entities.find(e=>e.id==='neutral-ref').cargo.host;
+assert(exportedMeta.buffer===exportedCargo.buffer &&
+  exportedMeta.bytes.buffer===exportedMeta.buffer &&
+  exportedMeta.words.buffer===exportedMeta.buffer &&
+  exportedMeta.dataWindow.buffer===exportedMeta.buffer,
+  'direct snapshot retains common ArrayBuffer identity across native views and cargo');
+assert(exportedMeta.words===exportedCargo.words &&
+  exportedMeta.buffer!==backing && exportedMeta.words!==words,
+  'typed array identity reused across roots without aliasing live host');
+equal(exportedMeta.words.byteOffset,2,
+  'typed array offset survives shared buffer clone');
+equal(exportedMeta.dataWindow.byteOffset,1,
+  'DataView offset survives shared buffer clone');
+exportedMeta.bytes[2]=9;
+equal(exportedMeta.dataWindow.getUint8(1),9,
+  'overlapping DataView observes typed array mutation on shared snapshot buffer');
+equal(new Uint8Array(exportedMeta.words.buffer,exportedMeta.words.byteOffset,1)[0],9,
+  'overlapping typed view observes common backing-byte mutation');
+equal(bytes[2],3,
+  'mutating native snapshot buffer leaves original host memory unchanged');
+const restoredBufferHost=hostReferenceFixture();
+restoredBufferHost.setState(bufferSnapshot);
+const restoredBufferMeta=restoredBufferHost.events[0].details,
+  restoredBufferCargo=restoredBufferHost.entities.get('neutral-ref').cargo.host;
+assert(restoredBufferMeta.bytes.buffer===restoredBufferMeta.buffer &&
+  restoredBufferMeta.dataWindow.buffer===restoredBufferMeta.buffer &&
+  restoredBufferMeta.words.buffer===restoredBufferCargo.buffer &&
+  restoredBufferMeta.words===restoredBufferCargo.words,
+  'direct setState preserves shared backing buffer and repeated native view identity');
+assert(restoredBufferMeta.buffer!==exportedMeta.buffer,
+  'direct setState detaches native buffer from caller snapshot');
+restoredBufferMeta.bytes[2]=7;
+equal(exportedMeta.bytes[2],9,
+  'direct restore mutation does not alter caller snapshot bytes');
+const trustedBufferHost=hostReferenceFixture();
+restoreTrustedCivState(trustedBufferHost,bufferSnapshot,
+  civRoadGraphFingerprint(bufferSnapshot));
+assert(trustedBufferHost.events[0].details.bytes.buffer===
+  trustedBufferHost.entities.get('neutral-ref').cargo.host.buffer,
+  'trusted direct restore preserves backing buffer identity');
+const dataDescriptorHost=hostReferenceFixture(),plainRecord=Object.create(null);
+Object.defineProperty(plainRecord,'value',{
+  value:{tag:'data'},enumerable:true,writable:false,configurable:false});
+dataDescriptorHost.events[0].details.record=plainRecord;
+const plainCopy=dataDescriptorHost.getState().events[0].details.record;
+equal(plainCopy.value,{tag:'data'},
+  'direct snapshot retains valid data-only descriptor values');
+assert(plainCopy!==plainRecord && plainCopy.value!==plainRecord.value,
+  'valid plain record data descriptor copy is detached');
+const unsafeGetterHost=hostReferenceFixture();
+let accessorCount=0;const unsafeRecord={};
+Object.defineProperty(unsafeRecord,'flag',{enumerable:true,get(){
+  accessorCount++;return 'safe';}});
+unsafeGetterHost.events[0].details.record=unsafeRecord;
+unsafeGetterHost.getState();
+assert(accessorCount>0,
+  'scientific negative: a valid-looking getter executes during current metadata capture');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
