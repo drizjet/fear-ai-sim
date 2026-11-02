@@ -820,4 +820,99 @@ equal(intentionalBlockTarget.sim.entities.get('trade:shipment').routeProgress,0,
   'explicit host route block prevents first-tick shipment advancement');
 intentionalBlockTarget.authority.assertConservation();
 
+
+// The trusted checkpoint checks all cognitive state and route history, not
+// just an enroute trade entity. Live ticks previously skipped equivalent
+// preflight on unrelated entities/roads, then delivered two shipments while
+// the reference simulation still held malformed data.
+function assertLiveCognitiveHistoryRefusal(change,pattern,label) {
+  const authority=createSimultaneousArrivals();
+  const neutral=authority.sim.registerEntity('neutral',{type:'SCOUT',
+    position:{x:0,y:0,z:0},currentRouteId:'R',cargo:{host:{label:'preserve'}}});
+  authority.sim.registerNode('C');
+  const idle=authority.sim.registerRoute('IDLE',
+    {fromNodeId:'A',toNodeId:'C',distance:80,baseSecurity:0.99});
+  change({authority,neutral,idle});
+  // getState rightly refuses malformed public simulation fields: capture
+  // the live tick/escrow/journals directly rather than normalizing via JSON.
+  const snapshot=()=>JSON.stringify({
+    tick:authority.sim.tickCount,
+    neutral:{lodTier:neutral.lodTier,fear:neutral.fear,
+      morale:neutral.morale,lastLodChangeTick:neutral.lastLodChangeTick,
+      progress:neutral.routeProgress,lastUpdateTick:neutral.lastUpdateTick},
+    idle:{status:idle.status,incidentCount:idle.incidentCount,
+      lastRaidTick:idle.lastRaidTick,perceivedDanger:idle.perceivedDanger},
+    shipments:authority.shipments,stocks:authority.stocks,vaults:authority.vaults,
+    journal:authority.events,simJournal:authority.sim.events
+  });
+  const before=snapshot();
+  throws(()=>authority.tick(),pattern,label);
+  equal(snapshot(),before,label+': live clock, escrow, and journals unchanged');
+  authority.assertConservation();
+}
+assertLiveCognitiveHistoryRefusal(({neutral})=>{neutral.morale=Infinity;},
+  /invalid civilization cognitive state/,
+  'nontrade nonfinite morale refuses before two deliveries');
+assertLiveCognitiveHistoryRefusal(({neutral,authority})=>{
+  neutral.lastLodChangeTick=authority.sim.tickCount+1;},
+  /invalid civilization cognitive state/,
+  'future nontrade LOD transition refuses before two deliveries');
+assertLiveCognitiveHistoryRefusal(({idle})=>{idle.incidentCount=-1;},
+  /invalid civilization route danger history/,
+  'negative unrelated road incident count refuses before two deliveries');
+assertLiveCognitiveHistoryRefusal(({idle,authority})=>{
+  idle.lastRaidTick=authority.sim.tickCount+1;},
+  /invalid civilization route danger history/,
+  'future unrelated road raid timestamp refuses before two deliveries');
+assertLiveCognitiveHistoryRefusal(({idle})=>{idle.status='UNKNOWN';},
+  /invalid civilization route danger history/,
+  'unknown unrelated road status refuses before two deliveries');
+assertLiveCognitiveHistoryRefusal(({neutral})=>{neutral.fear=-0.25;},
+  /invalid live simulation entity progress/,
+  'preexisting fear-specific live diagnostic remains intact');
+const validLiveMetadata=createSimultaneousArrivals();
+const customNeutral=validLiveMetadata.sim.registerEntity('neutral-host',
+  {type:'SCOUT',currentRouteId:'MISSING',cargo:{host:{label:'kept',weight:2}}});
+validLiveMetadata.sim.events.push({type:'host_note',tick:39,
+  metadata:{hostTag:'keep',readings:[0.25,0.5]}});
+const customBefore=validLiveMetadata.getState();
+equal(customBefore.sim.events.at(-1),
+  {type:'host_note',tick:39,metadata:{hostTag:'keep',readings:[0.25,0.5]}},
+  'arbitrary valid structured host simulation event survives JSON export');
+equal(customBefore.sim.entities.find(e=>e.id==='neutral-host').cargo,
+  {host:{label:'kept',weight:2}},
+  'valid nested custom nontrade cargo survives JSON export');
+equal(validLiveMetadata.tick().settled,2,
+  'nontrade missing-route and host metadata cannot block valid shipment settlement');
+equal(customNeutral.currentRouteId,'MISSING',
+  'nontrade unknown route remains an intentionally skipped reference-world route');
+validLiveMetadata.assertConservation();
+const nonfiniteHostNote=createWorld();
+nonfiniteHostNote.sim.events.push({type:'host_note',tick:0,
+  metadata:{measurements:[1,{reading:Infinity}]}});
+throws(()=>nonfiniteHostNote.authority.getState(),
+  /invalid simulation event numeric payload/,
+  'nonfinite nested host event numeric value cannot silently serialize to null');
+equal(nonfiniteHostNote.sim.events.at(-1).metadata.measurements[1].reading,Infinity,
+  'rejected nested host event export does not rewrite the live source');
+assertMalformedRestore(sim=>{sim.events.push({type:'host_note',tick:0,
+    metadata:{reading:NaN}});},
+  /invalid simulation event numeric payload/,
+  'trusted restore rejects nested nonfinite host event number before destination transfer');
+
+const invalidNontradeCargo=createWorld();
+invalidNontradeCargo.sim.registerEntity('neutral-cargo',
+  {type:'SCOUT',cargo:{host:{measurements:[Infinity],label:'keep'}}});
+throws(()=>invalidNontradeCargo.authority.getState(),
+  /invalid civilization cargo numeric metadata/,
+  'nonfinite nested nontrade cargo cannot silently change into null on JSON export');
+equal(invalidNontradeCargo.sim.entities.get('neutral-cargo').cargo.host.measurements[0],
+  Infinity,'rejected cargo export does not mutate host-owned nested metadata');
+assertMalformedRestore(sim=>{sim.entities.push({
+    ...sim.entities[0],id:'neutral-cargo',type:'SCOUT',currentRouteId:null,
+    cargo:{host:{values:[NaN]}},wealth:0
+  });},
+  /invalid civilization cargo numeric metadata/,
+  'trusted restore refuses nested nonfinite host cargo before destination transfer');
+
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

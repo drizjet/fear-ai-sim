@@ -1,4 +1,4 @@
-import { CivilizationSimulationSystem, LOD_CADENCES, assertCivilizationRestoreTarget } from './CivilizationSimulationSystem.js';
+import { CivilizationSimulationSystem, LOD_CADENCES, assertCivilizationRestoreTarget, assertCivilizationCognitiveAndDangerState } from './CivilizationSimulationSystem.js';
 import { restoreTrustedCivState } from './CivilizationTrustedCheckpoint.mjs';
 
 // Host-authoritative ledger: middleware proposes path progress; this layer is the
@@ -364,6 +364,14 @@ export class WorldTradeAuthority {
           throw Error('invalid live simulation caravan step');
       }
     }
+    // The reference simulation will also update nontrade/offscreen entities
+    // and unrelated roads. A malformed LOD or history must not survive until
+    // after the clock, delivery intents or escrow transfers have advanced.
+    assertCivilizationCognitiveAndDangerState({
+      tickCount:this.sim.tickCount,
+      routes:this.sim.routes.values(),
+      entities:this.sim.entities.values()
+    }, true); // Preserve neutral-entity unknown-LOD cadence-one fallback.
   }
   tick() {
     if (this.initial === null) throw Error('genesis not sealed');

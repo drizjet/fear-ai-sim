@@ -63,6 +63,24 @@ function clamp01(v) {
     return Math.max(0.0, Math.min(1.0, v));
 }
 
+// Known JSON numeric-loss case only, not an arbitrary host data serializer.
+// Iteration instead of recursion bounds call-stack use for deeply nested
+// valid custom objects. No references escape the validation call.
+function assertFiniteNestedNumbers(root, errorMessage) {
+    const pending = [root];
+    const visited = new WeakSet();
+    while (pending.length) {
+        const value = pending.pop();
+        if (typeof value === 'number') {
+            if (!Number.isFinite(value)) throw new Error(errorMessage);
+            continue;
+        }
+        if (!value || typeof value !== 'object' || visited.has(value)) continue;
+        visited.add(value);
+        for (const child of Object.values(value)) pending.push(child);
+    }
+}
+
 // Structural snapshot admission, not event provenance or checkpoint
 // authentication. Events are append-only in the reference simulator;
 // arbitrary host-defined types remain permitted, but a future, missing,
@@ -79,6 +97,39 @@ export function assertCivilizationEventJournal(events, tickCount) {
             event.tick > tickCount)
             throw new Error('invalid simulation event journal');
         previousTick = event.tick;
+        // A nested NaN/Infinity would otherwise become null at the authority
+        // JSON checkpoint boundary, even for a valid custom event name.
+        assertFiniteNestedNumbers(event, 'invalid simulation event numeric payload');
+    }
+}
+
+// Shared known fields: both the trusted snapshot boundary and the
+// authoritative live tick must agree on cadence and danger history.
+export function assertCivilizationCognitiveAndDangerState(state, allowNontradeLodFallback = false) {
+    for (const route of state.routes) {
+        // A host may deliberately mark a low-danger route BLOCKED.
+        const danger = route.perceivedDanger;
+        if (!Number.isFinite(danger) || danger < 0 || danger > 1 ||
+            !Object.values(ROUTE_STATUS).includes(route.status) ||
+            !Number.isSafeInteger(route.incidentCount) ||
+            route.incidentCount < 0 ||
+            (route.lastRaidTick !== null &&
+                (!Number.isSafeInteger(route.lastRaidTick) ||
+                    route.lastRaidTick < 0 || route.lastRaidTick > state.tickCount)))
+            throw new Error('invalid civilization route danger history');
+    }
+    for (const entity of state.entities) {
+        const invalidLod = !Number.isInteger(entity.lodTier) ||
+            entity.lodTier < COGNITIVE_LOD_TIERS.LOD0_IMMEDIATE ||
+            entity.lodTier > COGNITIVE_LOD_TIERS.LOD4_OFFSCREEN;
+        if ((invalidLod && !(allowNontradeLodFallback &&
+            !String(entity.id).startsWith('trade:'))) ||
+            !Number.isFinite(entity.fear) || entity.fear < 0 || entity.fear > 1 ||
+            !Number.isFinite(entity.morale) || entity.morale < 0 || entity.morale > 1 ||
+            !Number.isSafeInteger(entity.lastLodChangeTick) ||
+            entity.lastLodChangeTick < 0 ||
+            entity.lastLodChangeTick > state.tickCount)
+            throw new Error('invalid civilization cognitive state');
     }
 }
 
@@ -108,18 +159,6 @@ export function assertCivilizationReplayFields(state) {
         }
     }
     for (const route of state.routes) {
-        // A road fingerprint authenticates topology, not its mutable danger
-        // history. A host may deliberately override status to block travel,
-        // so validate the enum but do not force status to match danger bands.
-        const danger = route.perceivedDanger;
-        if (!Number.isFinite(danger) || danger < 0 || danger > 1 ||
-            !Object.values(ROUTE_STATUS).includes(route.status) ||
-            !Number.isSafeInteger(route.incidentCount) ||
-            route.incidentCount < 0 ||
-            (route.lastRaidTick !== null &&
-                (!Number.isSafeInteger(route.lastRaidTick) ||
-                    route.lastRaidTick < 0 || route.lastRaidTick > state.tickCount)))
-            throw new Error('invalid civilization route danger history');
         for (let i = 0; i < route.waypoints.length; i++) {
             if (!Object.hasOwn(route.waypoints, i) ||
                 !position(route.waypoints[i]))
@@ -129,16 +168,11 @@ export function assertCivilizationReplayFields(state) {
     for (const entity of state.entities) {
         if (!position(entity.position))
             throw new Error('invalid civilization position');
-        if (!Number.isInteger(entity.lodTier) ||
-            entity.lodTier < COGNITIVE_LOD_TIERS.LOD0_IMMEDIATE ||
-            entity.lodTier > COGNITIVE_LOD_TIERS.LOD4_OFFSCREEN ||
-            !Number.isFinite(entity.fear) || entity.fear < 0 || entity.fear > 1 ||
-            !Number.isFinite(entity.morale) || entity.morale < 0 || entity.morale > 1 ||
-            !Number.isSafeInteger(entity.lastLodChangeTick) ||
-            entity.lastLodChangeTick < 0 ||
-            entity.lastLodChangeTick > state.tickCount)
-            throw new Error('invalid civilization cognitive state');
+        // Nontrade cargo is host-defined; do not impose shipment inventory
+        // rules on it, only refuse silent nonfinite-to-null JSON conversion.
+        assertFiniteNestedNumbers(entity.cargo,'invalid civilization cargo numeric metadata');
     }
+    assertCivilizationCognitiveAndDangerState(state);
 }
 
 // Admission for this reference simulator's existing restore target, not a
