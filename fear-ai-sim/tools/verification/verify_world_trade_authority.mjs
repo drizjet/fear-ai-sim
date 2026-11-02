@@ -463,4 +463,47 @@ equal(unknownNeutralLod.tick().settled,2,
 equal(unknownLodEntity.routeProgress,0.01,
   'existing unknown-LOD fallback advances with cadence one');
 
+// A host mutation of the relations lookup was previously detected only when
+// an encounter consulted it, after simulation time and arrival intents advanced.
+const nullLiveRelations=createSimultaneousArrivals();
+nullLiveRelations.relations=null;
+nullLiveRelations.shipments.S1.encounterDone=false;
+assertTickRefusalWithoutMutation(nullLiveRelations,/invalid live relations/,
+  'null relations refuse before simultaneous arrivals and encounter policy');
+
+const arrayLiveRelations=createSimultaneousArrivals();
+arrayLiveRelations.relations=[];
+arrayLiveRelations.shipments.S1.encounterDone=false;
+assertTickRefusalWithoutMutation(arrayLiveRelations,/invalid live relations/,
+  'array relations refuse rather than silently changing encounter outcomes');
+
+const nanLiveRelation=createSimultaneousArrivals();
+nanLiveRelation.relations['["orcs","traders"]']=NaN;
+nanLiveRelation.shipments.S1.encounterDone=false;
+assertTickRefusalWithoutMutation(nanLiveRelation,/invalid live relations/,
+  'nonfinite live relation score cannot silently bias a patrol');
+
+const frozenValidRelations=createSimultaneousArrivals();
+Object.freeze(frozenValidRelations.relations);
+frozenValidRelations.shipments.S1.encounterDone=false;
+equal(frozenValidRelations.tick().settled,2,
+  'readonly valid relation lookup is harmless during a tick');
+frozenValidRelations.assertConservation();
+
+const readonlyPatrolIndex=createSimultaneousArrivals();
+Object.defineProperty(readonlyPatrolIndex.patrols.patrol.routeIds,'0',
+  {value:'R',writable:false,configurable:true});
+equal(readonlyPatrolIndex.tick().settled,2,
+  'readonly existing patrol route index is safe for roaming');
+readonlyPatrolIndex.assertConservation();
+
+const readonlyPriorEventIndex=createSimultaneousArrivals();
+readonlyPriorEventIndex.sim.events.push({type:'host_note',tick:39});
+Object.defineProperty(readonlyPriorEventIndex.sim.events,'0',
+  {value:readonlyPriorEventIndex.sim.events[0],writable:false,configurable:true});
+equal(readonlyPriorEventIndex.tick().settled,2,
+  'readonly existing simulation journal entry does not block future appends');
+equal(readonlyPriorEventIndex.sim.events.length,3,
+  'read-only prior journal entry preserves both later arrival intents');
+
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

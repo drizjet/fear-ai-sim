@@ -271,6 +271,13 @@ export class WorldTradeAuthority {
       assertPatrolShape(patrolId,p,this.sim);
       assertWritableLedgerRecord(p,'patrol');
     }
+    // Encounter policy reads this host-public dictionary after simulation
+    // advance and may run after multiple caravan arrival intents are emitted.
+    // Reuse checkpoint relation-key/score validation without rewriting or
+    // requiring writability of this read-only-during-tick lookup table.
+    if(!isRecord(this.relations))throw Error('invalid live relations');
+    try { restoredRelations(this.relations); }
+    catch { throw Error('invalid live relations'); }
     for(const [shipmentId,ship] of Object.entries(this.shipments)){
       id(shipmentId);
       if(!isRecord(ship) || ship.id!==shipmentId ||
