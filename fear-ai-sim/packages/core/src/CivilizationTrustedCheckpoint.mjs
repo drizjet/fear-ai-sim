@@ -16,9 +16,13 @@ export function restoreTrustedCivState(system, snapshot, independentlyTrustedFin
     !Array.isArray(snapshot.entities) || !Array.isArray(snapshot.events)) throw new Error('invalid snapshot');
   const ids = new Set();
   for (const e of snapshot.entities) {
-    if (!e || typeof e.id !== 'string' || ids.has(e.id) || !Number.isFinite(e.routeProgress) ||
+    // CivilizationSimulationSystem.setState silently skips falsy entity IDs.
+    // Reject before loading, or a "successful" trusted restore loses an entity.
+    if (!e || typeof e.id !== 'string' || e.id.length===0 ||
+        ids.has(e.id) || !Number.isFinite(e.routeProgress) ||
         e.routeProgress < 0 || e.routeProgress > 1 ||
-        !Number.isSafeInteger(e.lastUpdateTick) || e.lastUpdateTick > snapshot.tickCount)
+        !Number.isSafeInteger(e.lastUpdateTick) || e.lastUpdateTick < 0 ||
+        e.lastUpdateTick > snapshot.tickCount)
       throw new Error('invalid caravan state');
     ids.add(e.id);
   }

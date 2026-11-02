@@ -8,15 +8,34 @@ function amount(v, label) {
   if (!Number.isSafeInteger(v) || v < 0) throw Error(label + ' must be a nonnegative safe integer');
   return v;
 }
+function checkedSum(a, b, label) {
+  const result = amount(a, label) + amount(b, label);
+  if (!Number.isSafeInteger(result)) throw Error(label + ' exceeds safe integer range');
+  return result;
+}
 function id(v) {
   if (typeof v !== 'string' || !v.length) throw Error('nonempty ID required');
+  // These dictionaries are ordinary JSON objects. Never interpret a caller
+  // supplied key as an inherited property or the legacy __proto__ setter.
+  if (Object.hasOwn(Object.prototype, v) || v === 'prototype')
+    throw Error('reserved ID or goods key: ' + v);
   return v;
 }
 function sumInto(out, goods) {
-  for (const [k, value] of Object.entries(goods)) out[k] = (out[k] || 0) + amount(value, k);
+  for (const [k, value] of Object.entries(goods)) {
+    id(k);
+    out[k] = checkedSum(out[k] || 0, value, k);
+  }
 }
 function plus(stock, goods) {
-  for (const [k,v] of Object.entries(goods)) stock[k] = (stock[k] || 0) + v;
+  // Preflight the entire transfer. An overflowing second key must not leave
+  // the first key modified before the caller can reject the transaction.
+  const next = [];
+  for (const [k,v] of Object.entries(goods)) {
+    id(k);
+    next.push([k, checkedSum(stock[k] || 0, v, k)]);
+  }
+  for (const [k,v] of next) stock[k] = v;
 }
 function subtract(stock, goods) {
   for (const [k,v] of Object.entries(goods)) {
@@ -132,15 +151,15 @@ export class WorldTradeAuthority {
     const event={type:'encounter',shipmentId:ship.id,patrolId:p.id,tick,kind};
     if (kind==='toll') {
       const transfer=Math.min(ship.gold,p.toll);
-      ship.gold-=transfer;this.factionGold[p.faction]=(this.factionGold[p.faction]||0)+transfer;
+      const factionGold=checkedSum(this.factionGold[p.faction]||0,transfer,'faction gold');
+      ship.gold-=transfer;this.factionGold[p.faction]=factionGold;
       event.gold=transfer;
     }
     if (kind==='attack') {
       const stolen={};
-      for (const [k,v] of Object.entries(ship.cargo)) {
-        const take=Math.floor(v/4);ship.cargo[k]-=take;stolen[k]=take;
-      }
+      for (const [k,v] of Object.entries(ship.cargo)) stolen[k]=Math.floor(v/4);
       plus(this.factionLoot[p.faction] ||= {},stolen);
+      for (const [k,take] of Object.entries(stolen)) ship.cargo[k]-=take;
       event.stolen=stolen;
     }
     this._syncEntityMirror(ship,entity);
@@ -151,8 +170,9 @@ export class WorldTradeAuthority {
     if(ship.status!=='enroute')throw Error('invalid shipment status');
     const entity=this._assertEntityMirror(ship);
     if(entity.currentRouteId!==null)throw Error('settlement before route arrival');
+    const vaultGold=checkedSum(this.vaults[ship.targetNodeId]||0,ship.gold,'vault gold');
     plus(this.stocks[ship.targetNodeId] ||= {},ship.cargo);
-    this.vaults[ship.targetNodeId]=(this.vaults[ship.targetNodeId]||0)+ship.gold;
+    this.vaults[ship.targetNodeId]=vaultGold;
     ship.cargo={};ship.gold=0;ship.status='completed';
     this._syncEntityMirror(ship,entity);
     this.events.push({type:'arrival_committed',shipmentId:ship.id,tick});
@@ -197,9 +217,9 @@ export class WorldTradeAuthority {
     const goods={},allStocks=[...Object.values(this.stocks),...Object.values(this.factionLoot),
       ...Object.values(this.shipments).map(s=>s.cargo)];
     for(const stock of allStocks) sumInto(goods,stock);
-    let gold=Object.values(this.vaults).reduce((a,b)=>a+amount(b,'vault'),0);
-    gold+=Object.values(this.factionGold).reduce((a,b)=>a+amount(b,'faction gold'),0);
-    gold+=Object.values(this.shipments).reduce((a,s)=>a+amount(s.gold,'shipment gold'),0);
+    let gold=Object.values(this.vaults).reduce((a,b)=>checkedSum(a,b,'total gold'),0);
+    gold=Object.values(this.factionGold).reduce((a,b)=>checkedSum(a,b,'total gold'),gold);
+    gold=Object.values(this.shipments).reduce((a,s)=>checkedSum(a,s.gold,'total gold'),gold);
     return {goods,gold};
   }
   assertConservation() {
