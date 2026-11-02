@@ -4,7 +4,8 @@ class_name FearHostIpcReceiver
 ## Optional FEAR-IPC-1 receiving verifier for a separately authenticated
 ## owned Godot transport. It DOES NOT replace FearAIClient HTTP/WebSocket.
 ## Only emit/apply returned metadata after accepted == true; this receiver
-## never moves an actor or changes inventory. Engine execution NOT PROVEN.
+## never moves an actor or changes inventory. Headless engine tests cover
+## verifier behavior; an authenticated OS-owned Godot transport is NOT PROVEN.
 
 const MAX_WIRE := 1400000
 const MAX_FRAME_UTF16 := 262144

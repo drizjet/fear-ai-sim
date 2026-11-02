@@ -195,3 +195,24 @@ inside the trusted process, leaked authorized credentials, resource exhaustion
 outside the bounded parser, and hostile code with host OS privileges remain
 outside this boundary. An OS process does not, by itself, provide strong
 filesystem/network containment; use platform sandboxing for untrusted plugins.
+
+## Bounded Rust owned-child intake (2026-11-02 continuation)
+
+Rust's new opt-in `HostIpcOwnedChild` owns a specifically launched child
+process, reads only its stdout as newline-delimited signed FEAR-IPC-1
+envelopes, and bounds each incoming line and the entire pending queue
+*before* signature/JSON verification. Queue saturation and oversized lines
+poison the transport and cause child termination/key revocation on the
+next host poll. The underlying `HostIpcReceiver` still applies strict HMAC,
+replay, tick and allowlist policy and emits advisory metadata only. Managed
+Command credentials are removed after each spawn attempt; the parent still
+depends on its caller to provide independent fresh CSPRNG credentials.
+
+This is a real owned child-process byte stream, **not** a verified OS sandbox,
+mutually authenticated socket, cross-user peer identity, response ACK,
+bounded outbound pipeline, automatic restart, or authorization for a Godot
+or Unreal WebSocket to invoke trusted metadata ingress. No middleware HTTP
+or WebSocket session protocol changed. Godot 4.6 native verifier now has
+additional headless byte-boundary, cumulative budget, pre-auth flood and
+session-rotation assertions. Unreal C++ remains source-only until an actual
+Unreal toolchain can compile/link/run the PlatformCrypto integration.
