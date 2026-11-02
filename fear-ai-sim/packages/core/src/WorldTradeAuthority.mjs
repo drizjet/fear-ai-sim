@@ -1,4 +1,4 @@
-import { CivilizationSimulationSystem, LOD_CADENCES, assertCivilizationRestoreTarget, assertCivilizationCognitiveAndDangerState } from './CivilizationSimulationSystem.js';
+import { CivilizationSimulationSystem, LOD_CADENCES, assertCivilizationRestoreTarget, assertCivilizationCognitiveAndDangerState, assertDataOnlyHostGraph } from './CivilizationSimulationSystem.js';
 import { restoreTrustedCivState } from './CivilizationTrustedCheckpoint.mjs';
 
 // Host-authoritative ledger: middleware proposes path progress; this layer is the
@@ -427,10 +427,17 @@ export class WorldTradeAuthority {
       throw Error('resource conservation violated');
     return true;
   }
-  getState() {
-    return clone({version:1,sim:this.sim.getState(),stocks:this.stocks,vaults:this.vaults,
+  getState(options = {}) {
+    // Opt-in only. The ordinary authority JSON checkpoint retains its
+    // historical custom-toJSON behavior. In data-only mode, reject ordinary
+    // own callbacks before JSON.stringify can execute them; this is not a
+    // Proxy sandbox or protection from hooks on separately owned fields.
+    const dataOnly=options?.dataOnlyHostMetadata===true;
+    const snapshot={version:1,sim:this.sim.getState(dataOnly ? options : {}),stocks:this.stocks,vaults:this.vaults,
       factionLoot:this.factionLoot,factionGold:this.factionGold,shipments:this.shipments,
-      relations:this.relations,patrols:this.patrols,events:this.events,initial:this.initial,rng:this.rng});
+      relations:this.relations,patrols:this.patrols,events:this.events,initial:this.initial,rng:this.rng};
+    if(dataOnly)assertDataOnlyHostGraph(snapshot);
+    return clone(snapshot);
   }
   restore(snapshot,independentTrustedGraphFingerprint) {
     if(!snapshot || snapshot.version!==1 || !snapshot.initial ||

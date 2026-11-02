@@ -63,6 +63,24 @@ function clamp01(v) {
     return Math.max(0.0, Math.min(1.0, v));
 }
 
+function hasNativeBufferBrand(value) {
+    // Intrinsic brand reads work for cross-realm native buffers and refuse
+    // Proxy receivers without asking for their keys or prototypes.
+    try {
+        Object.getOwnPropertyDescriptor(ArrayBuffer.prototype, 'byteLength')
+            .get.call(value);
+        return true;
+    } catch { /* not an ArrayBuffer */ }
+    if (typeof SharedArrayBuffer !== 'undefined') {
+        try {
+            Object.getOwnPropertyDescriptor(SharedArrayBuffer.prototype,
+                'byteLength').get.call(value);
+            return true;
+        } catch { /* not a SharedArrayBuffer */ }
+    }
+    return false;
+}
+
 // Direct simulator snapshots must be detached from live host-defined event
 // and nontrade cargo objects, including nested arrays and Dates. Keep cycles,
 // sparse array holes and custom toJSON methods intact at this direct boundary;
@@ -70,6 +88,28 @@ function clamp01(v) {
 // iterative to avoid blowing the JS call stack on deeply nested metadata.
 function cloneHostSnapshotMetadata(root, copies = new WeakMap(), dataOnly = false) {
     const pending = [];
+    // Brand getters inspect the real native internal slots across realms,
+    // without trusting a host's constructor, prototype, or byteLength getter.
+    const nativeBufferLength = Object.getOwnPropertyDescriptor(
+        ArrayBuffer.prototype, 'byteLength').get;
+    const nativeResizable = Object.getOwnPropertyDescriptor(
+        ArrayBuffer.prototype, 'resizable')?.get;
+    const sharedBufferLength = typeof SharedArrayBuffer === 'undefined' ? null
+        : Object.getOwnPropertyDescriptor(SharedArrayBuffer.prototype, 'byteLength').get;
+    const typedBase = Object.getPrototypeOf(Uint8Array.prototype);
+    const typedBuffer = Object.getOwnPropertyDescriptor(typedBase, 'buffer').get;
+    const typedOffset = Object.getOwnPropertyDescriptor(typedBase, 'byteOffset').get;
+    const typedLength = Object.getOwnPropertyDescriptor(typedBase, 'length').get;
+    const dataBuffer = Object.getOwnPropertyDescriptor(DataView.prototype, 'buffer').get;
+    const dataOffset = Object.getOwnPropertyDescriptor(DataView.prototype, 'byteOffset').get;
+    const dataLength = Object.getOwnPropertyDescriptor(DataView.prototype, 'byteLength').get;
+    const nativeTypes = [Int8Array, Uint8Array, Uint8ClampedArray,
+        Int16Array, Uint16Array, Int32Array, Uint32Array,
+        Float32Array, Float64Array, BigInt64Array, BigUint64Array];
+    const hasBrand = (getter, value) => {
+        if (!getter) return false;
+        try { getter.call(value); return true; } catch { return false; }
+    };
     const copy = value => {
         if (value === null || typeof value !== 'object') return value;
         if (copies.has(value)) return copies.get(value);
@@ -100,30 +140,69 @@ function cloneHostSnapshotMetadata(root, copies = new WeakMap(), dataOnly = fals
         // to Object.create(SharedArrayBuffer.prototype) fabricates a native
         // instance whose byteLength getter fails, and sharing live memory
         // would violate direct snapshot detachment. Refuse explicitly.
-        if (typeof SharedArrayBuffer !== 'undefined' &&
-            value instanceof SharedArrayBuffer)
+        if (hasBrand(sharedBufferLength, value))
             throw new Error('unsupported shared host memory metadata');
         // A view and its backing ArrayBuffer must resolve through this same
         // memo: cloning each view independently splits intentionally shared
         // bytes between event/cargo roots (and overlapping views).
-        if (value instanceof ArrayBuffer) {
-            const buffer = ArrayBuffer.prototype.slice.call(value, 0);
+        if (hasBrand(nativeBufferLength, value)) {
+            // Slice produces a fixed buffer for resizable sources and uses
+            // foreign-realm Symbol.species for cross-realm buffers. Native
+            // structured cloning retains maxByteLength and creates a local
+            // genuine ArrayBuffer without invoking the host's constructor.
+            const buffer = (nativeResizable?.call(value) ||
+                Object.getPrototypeOf(value) !== ArrayBuffer.prototype)
+                ? structuredClone(value)
+                : ArrayBuffer.prototype.slice.call(value, 0);
             copies.set(value, buffer);
             return buffer;
         }
         if (ArrayBuffer.isView(value)) {
-            const backing = copy(value.buffer);
+            const dataView = hasBrand(dataBuffer, value);
+            const backing = copy(dataView
+                ? dataBuffer.call(value) : typedBuffer.call(value));
+            const offset = dataView
+                ? dataOffset.call(value) : typedOffset.call(value);
             let view;
-            if (value instanceof DataView) {
-                view = new DataView(backing, value.byteOffset, value.byteLength);
-            } else {
-                const typed = [Int8Array, Uint8Array, Uint8ClampedArray,
-                    Int16Array, Uint16Array, Int32Array, Uint32Array,
-                    Float32Array, Float64Array, BigInt64Array, BigUint64Array]
-                    .find(type => value instanceof type);
-                if (!typed) throw new Error('unsupported host typed array metadata');
-                view = new typed(backing, value.byteOffset, value.length);
+            const type = dataView ? null : nativeTypes.find(t => value instanceof t);
+            // structuredClone reads native view slots, not user-defined
+            // .constructor, .length, or Symbol.toStringTag overrides. For a
+            // cross-realm view it also identifies its true native element type.
+            const sample = (backing.resizable || (!dataView && !type))
+                ? structuredClone(value) : null;
+            const typed = type ?? (dataView ? null
+                : nativeTypes.find(t => sample instanceof t));
+            if (!dataView && !typed)
+                throw new Error('unsupported host typed array metadata');
+            const length = dataView
+                ? dataLength.call(value) : typedLength.call(value);
+            let tracking = false;
+            if (backing.resizable) {
+                // JS exposes no length-tracking flag. Resize only a temporary
+                // *clone* to observe it, never the live host buffer. If there
+                // is no growth headroom, refuse instead of guessing.
+                const probe = sample;
+                const unit = dataView ? 1 : typed.BYTES_PER_ELEMENT;
+                const original = probe.buffer.byteLength;
+                if (original + unit > probe.buffer.maxByteLength)
+                    throw new Error('unsupported resizable host view metadata');
+                probe.buffer.resize(original + unit);
+                tracking = (dataView
+                    ? dataLength.call(probe) : typedLength.call(probe)) !== length;
             }
+            if (dataView) {
+                view = tracking
+                    ? new DataView(backing, offset)
+                    : new DataView(backing, offset, length);
+            } else {
+                view = tracking
+                    ? new typed(backing, offset)
+                    : new typed(backing, offset, length);
+            }
+            // Buffer is Node-specific; preserve its native API on Node while
+            // keeping portable Uint8Array behavior outside Node runtimes.
+            if (typeof Buffer !== 'undefined' && Buffer.isBuffer(value))
+                view = Buffer.from(backing, offset, length);
             copies.set(value, view);
             return view;
         }
@@ -180,7 +259,7 @@ function cloneHostSnapshotMetadata(root, copies = new WeakMap(), dataOnly = fals
 // collections are walked through their internal slots so a getter nested in
 // a Map/Set member is not missed. Proxy reflection traps remain executable:
 // this is NOT a sandbox or a generic hostile-object serializer.
-function assertDataOnlyHostGraph(root) {
+export function assertDataOnlyHostGraph(root) {
     const pending = [root], visited = new WeakSet();
     while (pending.length) {
         const value = pending.pop();
@@ -188,9 +267,14 @@ function assertDataOnlyHostGraph(root) {
             throw new Error('host metadata must contain data values');
         if (!value || typeof value !== 'object' || visited.has(value)) continue;
         visited.add(value);
+        // JSON.stringify calls own toJSON even when it is non-enumerable.
+        // Reject it before authority export can invoke host code.
+        if (Object.hasOwn(value, 'toJSON'))
+            throw new Error('host metadata must not define toJSON callbacks');
         if (value instanceof Date || value instanceof URL ||
             value instanceof RegExp || value instanceof ArrayBuffer ||
             ArrayBuffer.isView(value)) continue;
+        if (hasNativeBufferBrand(value)) continue;
         if (value instanceof Map) {
             for (const [key, member] of Map.prototype.entries.call(value))
                 pending.push(key, member);
@@ -816,12 +900,27 @@ export class CivilizationSimulationSystem {
         // Incoming direct snapshot roots may share host-owned metadata. Keep
         // their identity within the restored world, but no caller references.
         const hostCopies = new WeakMap();
+        // In opt-in data-only mode, stage every host event/cargo copy before
+        // the first world write. Unsupported native buffers can otherwise
+        // throw halfway through clearing/rebuilding destination state.
+        // This does not roll back arbitrary host callbacks or unrelated fields.
+        const stagedEvents = dataOnly && Array.isArray(snapshot.events)
+            ? snapshot.events.map(e => {
+                const event = cloneHostSnapshotMetadata(e, hostCopies, true);
+                if (!Object.getOwnPropertyDescriptor(e, 'cargo')?.value)
+                    event.cargo = undefined;
+                return event;
+            }) : null;
+        const stagedCargo = dataOnly && Array.isArray(snapshot.entities)
+            ? snapshot.entities.map(e => cloneHostSnapshotMetadata(
+                Object.getOwnPropertyDescriptor(e, 'cargo')?.value ?? {},
+                hostCopies, true)) : null;
         this.tickCount = Number(snapshot.tickCount) || 0;
         this.focusOrigin = snapshot.focusOrigin ? { ...snapshot.focusOrigin } : { x: 0, y: 0, z: 0 };
         this.nodes.clear();
         this.routes.clear();
         this.entities.clear();
-        this.events = Array.isArray(snapshot.events)
+        this.events = stagedEvents ?? (Array.isArray(snapshot.events)
             ? snapshot.events.map(e => {
                 const event = cloneHostSnapshotMetadata(e, hostCopies, dataOnly);
                 const cargo = dataOnly
@@ -830,7 +929,7 @@ export class CivilizationSimulationSystem {
                 if (!cargo) event.cargo = undefined;
                 return event;
             })
-            : [];
+            : []);
 
         if (Array.isArray(snapshot.nodes)) {
             for (const n of snapshot.nodes) {
@@ -854,14 +953,14 @@ export class CivilizationSimulationSystem {
         }
 
         if (Array.isArray(snapshot.entities)) {
-            for (const e of snapshot.entities) {
+            for (const [index, e] of snapshot.entities.entries()) {
                 if (!e || !e.id) continue;
                 this.entities.set(e.id, {
                     ...e,
                     position: { ...e.position },
-                    cargo: cloneHostSnapshotMetadata(dataOnly
-                        ? (Object.getOwnPropertyDescriptor(e, 'cargo')?.value ?? {})
-                        : (e.cargo ?? {}), hostCopies, dataOnly)
+                    cargo: stagedCargo
+                        ? stagedCargo[index]
+                        : cloneHostSnapshotMetadata(e.cargo ?? {}, hostCopies)
                 });
             }
         }

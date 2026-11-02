@@ -9,6 +9,7 @@
 import { CivilizationSimulationSystem } from '../../packages/core/src/CivilizationSimulationSystem.js';
 import { WorldTradeAuthority } from '../../packages/core/src/WorldTradeAuthority.mjs';
 import { civRoadGraphFingerprint, restoreTrustedCivState } from '../../packages/core/src/CivilizationTrustedCheckpoint.mjs';
+import { createContext, runInContext } from 'node:vm';
 
 let assertions = 0;
 function assert(condition, label) {
@@ -1389,7 +1390,136 @@ if (typeof SharedArrayBuffer !== 'undefined') {
 const nodeBufferHost=hostReferenceFixture(),nodeBuffer=Buffer.from([3,4,5]);
 nodeBufferHost.events[0].details.buffer=nodeBuffer;
 const nodeBytes=nodeBufferHost.getState().events[0].details.buffer;
-assert(nodeBytes instanceof Uint8Array && !Buffer.isBuffer(nodeBytes) &&
+assert(nodeBytes instanceof Uint8Array && Buffer.isBuffer(nodeBytes) &&
   nodeBytes[0]===3 && nodeBytes[1]===4 && nodeBytes[2]===5,
-  'scientific negative: Node Buffer metadata retains bytes but not Buffer subclass API');
+  'Node Buffer snapshot retains its native Node Buffer API and bytes');
+
+const realmFixture=runInContext('(()=>{const b=new ArrayBuffer(24); const bytes=new Uint8Array(b);bytes.set([1,2,3,4]);return {b,bytes,words:new Uint16Array(b,2,3),view:new DataView(b,1,8),big:new BigInt64Array(new ArrayBuffer(16))};})()',createContext({}));
+const realmHost=hostReferenceFixture();
+realmHost.events[0].details={backing:realmFixture.b,bytes:realmFixture.bytes,
+  words:realmFixture.words,view:realmFixture.view,big:realmFixture.big};
+realmHost.entities.get('neutral-ref').cargo.host={backing:realmFixture.b,
+  words:realmFixture.words};
+const realmSnapshot=realmHost.getState(),realmData=realmSnapshot.events[0].details,
+  realmCargo=realmSnapshot.entities.find(e=>e.id==='neutral-ref').cargo.host;
+assert(realmData.bytes instanceof Uint8Array &&
+  realmData.words instanceof Uint16Array &&
+  realmData.view instanceof DataView &&
+  realmData.big instanceof BigInt64Array,
+  'cross-realm native views reconstructed with local genuine internal slots');
+assert(realmData.backing===realmData.bytes.buffer &&
+  realmData.backing===realmData.words.buffer &&
+  realmData.backing===realmData.view.buffer &&
+  realmData.backing===realmCargo.backing &&
+  realmData.words===realmCargo.words,
+  'cross-realm typed views share copied buffer across event and cargo roots');
+assert(realmData.backing instanceof ArrayBuffer &&
+  realmData.backing.constructor===ArrayBuffer,
+  'foreign ArrayBuffer snapshots normalize to local native ArrayBuffer');
+assert(realmData.backing!==realmFixture.b && realmData.words!==realmFixture.words &&
+  realmData.words.byteOffset===2 && realmData.view.byteOffset===1,
+  'cross-realm native view offsets detached from the original host');
+const realmRestored=hostReferenceFixture();
+realmRestored.setState(realmSnapshot);
+assert(realmRestored.events[0].details.words===
+  realmRestored.entities.get('neutral-ref').cargo.host.words &&
+  realmRestored.events[0].details.bytes.buffer===
+  realmRestored.entities.get('neutral-ref').cargo.host.backing,
+  'cross-realm view graph fidelity survives direct restore');
+const realmTrusted=hostReferenceFixture();
+restoreTrustedCivState(realmTrusted,realmSnapshot,civRoadGraphFingerprint(realmSnapshot));
+assert(realmTrusted.events[0].details.words===
+  realmTrusted.entities.get('neutral-ref').cargo.host.words,
+  'cross-realm view graph fidelity survives trusted restore');
+const realmOptIn=hostReferenceFixture();
+realmOptIn.events[0].details.view=realmFixture.view;
+equal(realmOptIn.getState({dataOnlyHostMetadata:true}).events[0].details.view.byteOffset,1,
+  'opt-in data-only metadata accepts genuine foreign native DataView');
+
+const resizableBuffer=new ArrayBuffer(16,{maxByteLength:64});
+if(resizableBuffer.resizable){
+  const resizableHost=hostReferenceFixture(),
+    trackingView=new Uint8Array(resizableBuffer,2),
+    fixedView=new Uint8Array(resizableBuffer,2,5),
+    trackingDataView=new DataView(resizableBuffer,1);
+  trackingView[0]=7;
+  resizableHost.events[0].details={resizableBuffer,trackingView,fixedView,trackingDataView};
+  const saved=resizableHost.getState().events[0].details;
+  assert(saved.resizableBuffer.resizable && saved.resizableBuffer.maxByteLength===64 &&
+    saved.trackingView.buffer===saved.resizableBuffer &&
+    saved.fixedView.buffer===saved.resizableBuffer &&
+    saved.trackingDataView.buffer===saved.resizableBuffer,
+    'resizable native buffer capacity and shared view backing survive snapshot');
+  saved.resizableBuffer.resize(24);
+  equal(saved.trackingView.length,22,
+    'length-tracking typed view expands with detached resizable snapshot');
+  equal(saved.fixedView.length,5,
+    'fixed typed view remains fixed when cloned backing grows');
+  equal(saved.trackingDataView.byteLength,23,
+    'length-tracking DataView expands with detached resizable snapshot');
+  equal(resizableBuffer.byteLength,16,
+    'resizing direct snapshot leaves host original buffer length unchanged');
+  const noHeadroom=new ArrayBuffer(8,{maxByteLength:8});
+  const noHeadroomHost=hostReferenceFixture();
+  noHeadroomHost.events[0].details.view=new Uint8Array(noHeadroom);
+  throws(()=>noHeadroomHost.getState(),/unsupported resizable host view metadata/,
+    'ambiguous no-headroom length-tracking resizable view refused explicitly');
+  const beforeUnsafeNativeRestore=hostReferenceFixture(),
+    unsafeNativeInput=hostReferenceFixture().getState(),
+    originalNativeState=JSON.stringify(beforeUnsafeNativeRestore.getState());
+  unsafeNativeInput.events[0].details.badView=new Uint8Array(noHeadroom);
+  throws(()=>beforeUnsafeNativeRestore.setState(unsafeNativeInput,{
+    dataOnlyHostMetadata:true}),
+    /unsupported resizable host view metadata/,
+    'data-only direct restore pre-stages native metadata before state writes');
+  equal(JSON.stringify(beforeUnsafeNativeRestore.getState()),originalNativeState,
+    'unsupported native view rejection leaves destination direct simulator unchanged');
+}
+
+const customJsonHost=hostReferenceFixture();let customJsonRuns=0;
+customJsonHost.config.distanceAwareTravel=true;
+customJsonHost.config.caravanUnitsPerTick=2;
+const customRecord={value:1};
+Object.defineProperty(customRecord,'toJSON',{enumerable:false,value(){
+  customJsonRuns++;customJsonHost.entities.get('neutral-ref').morale=0.1;
+  return {value:2};
+}});
+customJsonHost.events[0].details.custom=customRecord;
+const customJsonAuthority=new WorldTradeAuthority(customJsonHost);
+customJsonAuthority.seedNode('X',{},0);customJsonAuthority.seedNode('Y',{},0);
+customJsonAuthority.sealGenesis(123);
+throws(()=>customJsonAuthority.getState({dataOnlyHostMetadata:true}),
+  /host metadata must not define toJSON callbacks/,
+  'data-only authority snapshot refuses nonenumerable custom toJSON before serialization');
+equal(customJsonRuns,0,'data-only authority snapshot does not call rejected toJSON');
+equal(customJsonHost.entities.get('neutral-ref').morale,1,
+  'rejected custom toJSON leaves host morale untouched');
+equal(customJsonAuthority.getState().sim.events[0].details.custom.value,1,
+  'legacy direct snapshot omits nonenumerable custom toJSON as before');
+equal(customJsonRuns,0,'legacy clone does not copy nonenumerable toJSON');
+const enumerableToJsonHost=hostReferenceFixture();
+enumerableToJsonHost.config.distanceAwareTravel=true;
+enumerableToJsonHost.config.caravanUnitsPerTick=2;
+let enumerableToJsonRuns=0;
+enumerableToJsonHost.events[0].details.record={value:1,toJSON(){
+  enumerableToJsonRuns++;return {value:2};}};
+const enumerableToJsonAuthority=new WorldTradeAuthority(enumerableToJsonHost);
+enumerableToJsonAuthority.seedNode('X',{},0);
+enumerableToJsonAuthority.seedNode('Y',{},0);
+enumerableToJsonAuthority.sealGenesis(123);
+equal(enumerableToJsonAuthority.getState().sim.events[0].details.record.value,2,
+  'legacy authority JSON retains enumerable custom toJSON transformation');
+equal(enumerableToJsonRuns,1,'legacy authority invokes enumerable toJSON once');
+
+// Without a trusted native isProxy predicate, Reflect.ownKeys and descriptor
+// validation cannot sandbox an arbitrary Proxy. Keep the negative result.
+const proxyHazard=hostReferenceFixture();let descriptorTraps=0;
+proxyHazard.events[0].details.proxy=new Proxy({value:1},{
+  getOwnPropertyDescriptor(target,key){descriptorTraps++;
+    proxyHazard.entities.get('neutral-ref').fear=0.4;
+    return Reflect.getOwnPropertyDescriptor(target,key);}});
+proxyHazard.getState({dataOnlyHostMetadata:true});
+assert(descriptorTraps>0 &&
+  proxyHazard.entities.get('neutral-ref').fear===0.4,
+  'scientific negative: opt-in Proxy descriptor traps can still mutate host state');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
