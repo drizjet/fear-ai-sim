@@ -1063,4 +1063,74 @@ privateSlotHost.events[0].details.custom=privateObj;
 const privateDirect=privateSlotHost.getState().events[0].details.custom;
 throws(()=>privateDirect.getSecret(),/private member|class did not declare/,
   'scientific negative: arbitrary class private slots cannot be cloned by prototype copy');
+
+// Direct simulator event/cargo snapshots are graphs, not independent JSON
+// roots. Preserve repeated source identity across events and neutral cargo
+// while detaching all snapshot references from the live host world.
+const crossIdentityWorld=hostReferenceFixture(),crossIdentityShared={tag:'shared',nested:{n:1}};
+crossIdentityWorld.events[0].details.first=crossIdentityShared;
+crossIdentityWorld.events[0].details.again=crossIdentityShared;
+crossIdentityWorld.events.push({type:'host_second',tick:0,payload:crossIdentityShared});
+crossIdentityWorld.entities.get('neutral-ref').cargo.host.shared=crossIdentityShared;
+const crossIdentitySnapshot=crossIdentityWorld.getState();
+const sharedEvent=crossIdentitySnapshot.events[0].details.first;
+const sharedCargo=crossIdentitySnapshot.entities.find(e=>e.id==='neutral-ref').cargo.host.shared;
+assert(sharedEvent!==crossIdentityShared && sharedCargo!==crossIdentityShared,
+  'cross-root direct snapshot object detached from original host');
+assert(sharedEvent===crossIdentitySnapshot.events[0].details.again,
+  'same-event repeated host reference retains identical detached object');
+assert(sharedEvent===crossIdentitySnapshot.events[1].payload,
+  'different-event roots retain common detached reference');
+assert(sharedEvent===sharedCargo,
+  'event and neutral cargo roots share detached object identity');
+sharedEvent.nested.n=2;
+equal(sharedCargo.nested.n,2,
+  'mutations to one direct snapshot reference are visible to its shared alias');
+equal(crossIdentityShared.nested.n,1,
+  'mutating direct shared snapshot does not change live source');
+const crossIdentityRestore=hostReferenceFixture();
+crossIdentityRestore.setState(crossIdentitySnapshot);
+const restoredEvent=crossIdentityRestore.events[0].details.first,
+  restoredCargo=crossIdentityRestore.entities.get('neutral-ref').cargo.host.shared;
+assert(restoredEvent===restoredCargo &&
+  restoredEvent===crossIdentityRestore.events[1].payload &&
+  restoredEvent!==sharedEvent,
+  'direct setState retains cross-root identity without caller reference aliases');
+restoredCargo.nested.n=3;
+equal(restoredEvent.nested.n,3,
+  'restored event and neutral cargo mutations see one reference');
+equal(sharedEvent.nested.n,2,
+  'restored world does not mutate caller snapshot');
+const crossTrustedTarget=hostReferenceFixture();
+restoreTrustedCivState(crossTrustedTarget,crossIdentitySnapshot,
+  civRoadGraphFingerprint(crossIdentitySnapshot));
+assert(crossTrustedTarget.events[0].details.first===
+  crossTrustedTarget.entities.get('neutral-ref').cargo.host.shared,
+  'trusted restore preserves direct shared host graph identity');
+assert(crossTrustedTarget.events[0].details.first!==sharedEvent,
+  'trusted restore detaches shared metadata from input snapshot');
+const crossCycleHost=hostReferenceFixture(),cyclicShared={label:'cycle'};
+cyclicShared.self=cyclicShared;
+crossCycleHost.events[0].details.cycle=cyclicShared;
+crossCycleHost.entities.get('neutral-ref').cargo.host.cycle=cyclicShared;
+const crossCycleSnap=crossCycleHost.getState(),crossEventCycle=crossCycleSnap.events[0].details.cycle;
+assert(crossEventCycle.self===crossEventCycle &&
+  crossEventCycle===crossCycleSnap.entities.find(e=>e.id==='neutral-ref').cargo.host.cycle &&
+  crossEventCycle!==cyclicShared,
+  'cyclic cross-root host data is both detached and reference-identical');
+// Explicit JSON limitation: the authority serializes data, not JS aliasing.
+const crossAuthoritySim=hostReferenceFixture(),crossAuthorityShared={tag:'json'};
+crossAuthoritySim.config.distanceAwareTravel=true;
+crossAuthoritySim.config.caravanUnitsPerTick=2;
+crossAuthoritySim.events[0].details.ref=crossAuthorityShared;
+crossAuthoritySim.entities.get('neutral-ref').cargo.host.ref=crossAuthorityShared;
+const crossAuthority=new WorldTradeAuthority(crossAuthoritySim);
+crossAuthority.seedNode('X',{},0);crossAuthority.seedNode('Y',{},0);crossAuthority.sealGenesis(123);
+const crossJson=crossAuthority.getState().sim;
+const crossJsonEvent=crossJson.events[0].details.ref,
+  crossJsonCargo=crossJson.entities.find(e=>e.id==='neutral-ref').cargo.host.ref;
+equal(crossJsonEvent,crossJsonCargo,
+  'JSON authority snapshot keeps equal host metadata values');
+assert(crossJsonEvent!==crossJsonCargo,
+  'scientific negative: JSON authority protocol does not preserve JS graph identity');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

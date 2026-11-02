@@ -68,8 +68,7 @@ function clamp01(v) {
 // sparse array holes and custom toJSON methods intact at this direct boundary;
 // the separate authority JSON protocol may still reject cycles. Explicitly
 // iterative to avoid blowing the JS call stack on deeply nested metadata.
-function cloneHostSnapshotMetadata(root) {
-    const copies = new WeakMap();
+function cloneHostSnapshotMetadata(root, copies = new WeakMap()) {
     const pending = [];
     const copy = value => {
         if (value === null || typeof value !== 'object') return value;
@@ -621,6 +620,11 @@ export class CivilizationSimulationSystem {
      */
     getState() {
         assertCivilizationEventJournal(this.events, this.tickCount);
+        // Use one transient memo across event and nontrade cargo roots: a
+        // shared host object must remain one detached object *within* a direct
+        // snapshot. The JSON authority checkpoint intentionally cannot encode
+        // reference identity and continues to make its own independent clone.
+        const hostCopies = new WeakMap();
         const snapshot = {
             tickCount: this.tickCount,
             focusOrigin: { ...this.focusOrigin },
@@ -632,7 +636,7 @@ export class CivilizationSimulationSystem {
                 market: structuredClone(n.market)
             })),
             events: this.events.map(e => {
-                const event = cloneHostSnapshotMetadata(e);
+                const event = cloneHostSnapshotMetadata(e, hostCopies);
                 if (!e.cargo) event.cargo = undefined;
                 return event;
             }),
@@ -644,7 +648,7 @@ export class CivilizationSimulationSystem {
             entities: Array.from(this.entities.values()).map(e => ({
                 ...e,
                 position: { ...e.position },
-                cargo: cloneHostSnapshotMetadata(e.cargo ?? {})
+                cargo: cloneHostSnapshotMetadata(e.cargo ?? {}, hostCopies)
             }))
         };
         assertCivilizationReplayFields(snapshot);
@@ -657,6 +661,9 @@ export class CivilizationSimulationSystem {
      */
     setState(snapshot) {
         if (!snapshot) return;
+        // Incoming direct snapshot roots may share host-owned metadata. Keep
+        // their identity within the restored world, but no caller references.
+        const hostCopies = new WeakMap();
         this.tickCount = Number(snapshot.tickCount) || 0;
         this.focusOrigin = snapshot.focusOrigin ? { ...snapshot.focusOrigin } : { x: 0, y: 0, z: 0 };
         this.nodes.clear();
@@ -664,7 +671,7 @@ export class CivilizationSimulationSystem {
         this.entities.clear();
         this.events = Array.isArray(snapshot.events)
             ? snapshot.events.map(e => {
-                const event = cloneHostSnapshotMetadata(e);
+                const event = cloneHostSnapshotMetadata(e, hostCopies);
                 if (!e.cargo) event.cargo = undefined;
                 return event;
             })
@@ -697,7 +704,7 @@ export class CivilizationSimulationSystem {
                 this.entities.set(e.id, {
                     ...e,
                     position: { ...e.position },
-                    cargo: cloneHostSnapshotMetadata(e.cargo ?? {})
+                    cargo: cloneHostSnapshotMetadata(e.cargo ?? {}, hostCopies)
                 });
             }
         }
