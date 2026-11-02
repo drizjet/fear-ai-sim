@@ -738,4 +738,86 @@ equal(validTwoDimensionalTarget.sim.nodes.get('A').market,
   'custom scalar market values and unquoted metadata retain existing behavior');
 validTwoDimensionalTarget.authority.tick();
 validTwoDimensionalTarget.authority.assertConservation();
+
+// A trusted road fingerprint does not authenticate the separately mutable
+// incident timeline, LOD cadence or fear/morale fields. These fields
+// affect first-tick behavior, so refuse invalid simulator checkpoint values
+// before modifying a destination's maps or authoritative escrow. Preserve
+// explicit host route-status overrides independent of perceived danger.
+assertMalformedRestore(sim=>{sim.entities[0].lodTier=42;},
+  /invalid civilization cognitive state/,
+  'unknown LOD cannot fall back to cadence one');
+assertMalformedRestore(sim=>{sim.entities[0].fear=-0.25;},
+  /invalid civilization cognitive state/,
+  'negative fear cannot survive a trusted restore');
+assertMalformedRestore(sim=>{sim.entities[0].morale=NaN;},
+  /invalid civilization cognitive state/,
+  'nonfinite morale cannot silently serialize to null');
+assertMalformedRestore(sim=>{sim.entities[0].morale=2;},
+  /invalid civilization cognitive state/,
+  'out-of-range morale cannot survive a trusted restore');
+assertMalformedRestore(sim=>{sim.entities[0].lastLodChangeTick=sim.tickCount+1;},
+  /invalid civilization cognitive state/,
+  'future LOD transition timestamp cannot survive restore');
+assertMalformedRestore(sim=>{sim.entities[0].lastLodChangeTick=-1;},
+  /invalid civilization cognitive state/,
+  'negative LOD transition timestamp cannot survive restore');
+assertMalformedRestore(sim=>{sim.routes[0].status='UNKNOWN';},
+  /invalid civilization route danger history/,
+  'an invalid route status cannot survive a trusted restore');
+assertMalformedRestore(sim=>{sim.routes[0].perceivedDanger=NaN;},
+  /invalid civilization route danger history/,
+  'nonfinite perceived danger cannot become null on export');
+assertMalformedRestore(sim=>{sim.routes[0].incidentCount=-1;},
+  /invalid civilization route danger history/,
+  'negative incident counter cannot survive restore');
+assertMalformedRestore(sim=>{sim.routes[0].lastRaidTick=sim.tickCount+1;},
+  /invalid civilization route danger history/,
+  'future raid timestamp cannot survive restore');
+const invalidLiveLod=createWorld();
+invalidLiveLod.sim.entities.get('trade:shipment').lodTier=42;
+throws(()=>invalidLiveLod.authority.getState(),/invalid civilization cognitive state/,
+  'export refuses an unknown LOD before writing a checkpoint');
+const invalidLiveDanger=createWorld();
+invalidLiveDanger.sim.routes.get('R').perceivedDanger=NaN;
+throws(()=>invalidLiveDanger.authority.getState(),/invalid civilization route danger history/,
+  'export refuses nonfinite route danger before serializing');
+const validCognitiveSource=createWorld(),validCognitiveSnapshot=validCognitiveSource.authority.getState();
+validCognitiveSnapshot.sim.entities[0].lodTier=4;
+validCognitiveSnapshot.sim.entities[0].fear=0.75;
+validCognitiveSnapshot.sim.entities[0].morale=0.25;
+validCognitiveSnapshot.sim.entities[0].lastLodChangeTick=0;
+validCognitiveSnapshot.sim.routes[0].perceivedDanger=0.55;
+validCognitiveSnapshot.sim.routes[0].status='CONTESTED';
+validCognitiveSnapshot.sim.routes[0].incidentCount=1;
+validCognitiveSnapshot.sim.routes[0].lastRaidTick=0;
+validCognitiveSnapshot.sim.events.push({type:'host_custom',tick:0,
+  metadata:{hostTag:'keep',severity:0.75}});
+const validCognitiveTarget=createWorld();
+validCognitiveTarget.authority.restore(validCognitiveSnapshot,
+  civRoadGraphFingerprint(validCognitiveSnapshot.sim));
+equal(validCognitiveTarget.sim.entities.get('trade:shipment').lodTier,4,
+  'legitimate offscreen LOD survives trusted restore');
+equal(validCognitiveTarget.sim.routes.get('R').status,'CONTESTED',
+  'route danger and matching status survive restore');
+equal(validCognitiveTarget.sim.events.at(-1),
+  {type:'host_custom',tick:0,metadata:{hostTag:'keep',severity:0.75}},
+  'host-defined structured event metadata survives unchanged');
+const validCognitiveBefore=validCognitiveTarget.sim.entities.get('trade:shipment').routeProgress;
+equal(validCognitiveTarget.authority.tick().tick,1,
+  'valid offscreen shipment resumes deterministic first tick');
+equal(validCognitiveTarget.sim.entities.get('trade:shipment').routeProgress,
+  validCognitiveBefore,'offscreen LOD waits until its cadence is due');
+validCognitiveTarget.authority.assertConservation();
+const intentionalBlock=createWorld(),intentionalBlockSnapshot=intentionalBlock.authority.getState();
+intentionalBlockSnapshot.sim.routes[0].status='BLOCKED';
+const intentionalBlockTarget=createWorld();
+intentionalBlockTarget.authority.restore(intentionalBlockSnapshot,
+  civRoadGraphFingerprint(intentionalBlockSnapshot.sim));
+equal(intentionalBlockTarget.authority.tick().settled,0,
+  'host may deliberately block a low-danger route');
+equal(intentionalBlockTarget.sim.entities.get('trade:shipment').routeProgress,0,
+  'explicit host route block prevents first-tick shipment advancement');
+intentionalBlockTarget.authority.assertConservation();
+
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

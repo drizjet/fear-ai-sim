@@ -108,6 +108,18 @@ export function assertCivilizationReplayFields(state) {
         }
     }
     for (const route of state.routes) {
+        // A road fingerprint authenticates topology, not its mutable danger
+        // history. A host may deliberately override status to block travel,
+        // so validate the enum but do not force status to match danger bands.
+        const danger = route.perceivedDanger;
+        if (!Number.isFinite(danger) || danger < 0 || danger > 1 ||
+            !Object.values(ROUTE_STATUS).includes(route.status) ||
+            !Number.isSafeInteger(route.incidentCount) ||
+            route.incidentCount < 0 ||
+            (route.lastRaidTick !== null &&
+                (!Number.isSafeInteger(route.lastRaidTick) ||
+                    route.lastRaidTick < 0 || route.lastRaidTick > state.tickCount)))
+            throw new Error('invalid civilization route danger history');
         for (let i = 0; i < route.waypoints.length; i++) {
             if (!Object.hasOwn(route.waypoints, i) ||
                 !position(route.waypoints[i]))
@@ -117,6 +129,15 @@ export function assertCivilizationReplayFields(state) {
     for (const entity of state.entities) {
         if (!position(entity.position))
             throw new Error('invalid civilization position');
+        if (!Number.isInteger(entity.lodTier) ||
+            entity.lodTier < COGNITIVE_LOD_TIERS.LOD0_IMMEDIATE ||
+            entity.lodTier > COGNITIVE_LOD_TIERS.LOD4_OFFSCREEN ||
+            !Number.isFinite(entity.fear) || entity.fear < 0 || entity.fear > 1 ||
+            !Number.isFinite(entity.morale) || entity.morale < 0 || entity.morale > 1 ||
+            !Number.isSafeInteger(entity.lastLodChangeTick) ||
+            entity.lastLodChangeTick < 0 ||
+            entity.lastLodChangeTick > state.tickCount)
+            throw new Error('invalid civilization cognitive state');
     }
 }
 
