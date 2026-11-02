@@ -1,4 +1,4 @@
-import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
+import { CivilizationSimulationSystem, LOD_CADENCES } from './CivilizationSimulationSystem.js';
 import { restoreTrustedCivState } from './CivilizationTrustedCheckpoint.mjs';
 
 // Host-authoritative ledger: middleware proposes path progress; this layer is the
@@ -238,6 +238,12 @@ export class WorldTradeAuthority {
     // These reference-host objects are public and can be altered independently.
     // Reject malformed patrols and escrow routing before advanceSimulation(1),
     // not after time, roaming, or encounters have already changed live state.
+    if (!Number.isSafeInteger(this.sim.tickCount) ||
+      this.sim.tickCount<0 || this.sim.tickCount===Number.MAX_SAFE_INTEGER)
+      throw Error('invalid live simulation clock');
+    const nextTick=this.sim.tickCount+1;
+    if (!(this.sim.routes instanceof Map) || !(this.sim.entities instanceof Map))
+      throw Error('invalid live simulation maps');
     for (const name of ['stocks','factionLoot']) {
       assertWritableLedgerRecord(this[name],name);
       for (const record of Object.values(this[name]))
@@ -295,6 +301,39 @@ export class WorldTradeAuthority {
         !Number.isFinite(entity.fear) || entity.fear<0 || entity.fear>1)
         throw Error('invalid live caravan entity');
       assertWritableLedgerRecord(entity,'caravan entity');
+    }
+    // Preserve the original shipment-specific refusal diagnostics above.
+    // advanceSimulation also decays every road and processes every entity,
+    // including those outside this trade authority's shipment namespace.
+    for(const [routeId,route] of this.sim.routes){
+      if(!isRecord(route) || route.id!==routeId ||
+        !Number.isFinite(route.baseSecurity) || route.baseSecurity<0 ||
+        route.baseSecurity>1 || !Number.isFinite(route.perceivedDanger) ||
+        route.perceivedDanger<0 || route.perceivedDanger>1)
+        throw Error('invalid live simulation route');
+      if(route.perceivedDanger>1-route.baseSecurity)
+        assertWritableLedgerRecord(route,'decaying simulation route');
+    }
+    for(const [entityId,entity] of this.sim.entities){
+      if(!isRecord(entity) || entity.id!==entityId ||
+        !Number.isSafeInteger(entity.lastUpdateTick) ||
+        entity.lastUpdateTick<0 || entity.lastUpdateTick>this.sim.tickCount)
+        throw Error('invalid live simulation entity');
+      const cadence=LOD_CADENCES[entity.lodTier] || 1;
+      if(nextTick-entity.lastUpdateTick<cadence)continue;
+      assertWritableLedgerRecord(entity,'due simulation entity');
+      if(!entity.currentRouteId)continue;
+      const route=this.sim.routes.get(entity.currentRouteId);
+      if(!route)continue; // Missing routes are skipped by advanceSimulation.
+      if(!Number.isFinite(entity.fear) || entity.fear<0 || entity.fear>1 ||
+        !Number.isFinite(entity.routeProgress) ||
+        entity.routeProgress<0 || entity.routeProgress>1)
+        throw Error('invalid live simulation entity progress');
+      if(this.sim.config.distanceAwareTravel===true && entity.type==='CARAVAN' &&
+        (!Number.isFinite(Number(this.sim.config.caravanUnitsPerTick)) ||
+          Number(this.sim.config.caravanUnitsPerTick)<=0 ||
+          !Number.isFinite(route.distance) || route.distance<=0))
+        throw Error('invalid live simulation caravan travel');
     }
   }
   tick() {

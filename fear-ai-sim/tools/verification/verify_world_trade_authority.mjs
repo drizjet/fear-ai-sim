@@ -348,6 +348,58 @@ assertTickRefusalWithoutMutation(frozenSimulationJournal,
   /invalid live writable simulation journal/,
   'readonly simulation arrival journal cannot fail after advancing caravan progress');
 
+// The simulation processes unrelated entities and all road danger before
+// delivering trade intents. Their host-mutated state must not break a tick
+// after two trade caravans have already generated arrival intents.
+const frozenNeutral = createSimultaneousArrivals();
+Object.freeze(frozenNeutral.sim.registerEntity('neutral',
+  {type:'SCOUT',currentRouteId:'R',wealth:0}));
+assertTickRefusalWithoutMutation(frozenNeutral,
+  /invalid live writable due simulation entity/,
+  'frozen nontrade entity cannot throw after two arriving caravans advance');
+
+const badCoarseCaravan = createSimultaneousArrivals();
+badCoarseCaravan.sim.registerRoute('BAD',
+  {fromNodeId:'A',toNodeId:'B',distance:80,baseSecurity:0.99}).distance=0;
+const badCoarseEntity = badCoarseCaravan.sim.registerEntity('neutral-caravan',
+  {type:'CARAVAN',currentRouteId:'BAD',position:{x:150,y:0,z:0},wealth:0});
+badCoarseEntity.lastUpdateTick=20; // LOD2 cadence 20 becomes due at tick 40.
+assertTickRefusalWithoutMutation(badCoarseCaravan,
+  /invalid live simulation caravan travel/,
+  'bad neutral coarse-LOD road cannot fail after trade arrival intents');
+
+const readonlyIdleRoute = createSimultaneousArrivals();
+const idle = readonlyIdleRoute.sim.registerRoute('IDLE',
+  {fromNodeId:'A',toNodeId:'B',distance:80,baseSecurity:0.99});
+Object.defineProperty(idle,'perceivedDanger',
+  {value:0.9,writable:false,enumerable:true,configurable:true});
+assertTickRefusalWithoutMutation(readonlyIdleRoute,
+  /invalid live writable decaying simulation route/,
+  'unrelated readonly danger decay cannot throw after clock advances');
+
+const mixedRoutes = createSimultaneousArrivals();
+mixedRoutes.sim.registerRoute('BLOCKED_R',
+  {fromNodeId:'A',toNodeId:'B',distance:80,baseSecurity:0.99});
+mixedRoutes.dispatch({id:'BLOCK',routeId:'BLOCKED_R',fromNodeId:'A',
+  faction:'traders',cargo:{ORE:4},gold:1});
+mixedRoutes.sim.routes.get('BLOCKED_R').status='BLOCKED';
+equal(mixedRoutes.tick().settled,2,
+  'two open-road shipments arrive while a third blocked-route shipment waits');
+equal(mixedRoutes.shipments.BLOCK.status,'enroute',
+  'blocked-route shipment retains escrow and does not arrive');
+mixedRoutes.assertConservation();
+
+const coarseCatchup = createSimultaneousArrivals();
+const neutralCatchup = coarseCatchup.sim.registerEntity('neutral',
+  {type:'CARAVAN',currentRouteId:'R',position:{x:150,y:0,z:0},
+    routeProgress:0.2,wealth:0});
+neutralCatchup.lastUpdateTick=20;
+equal(coarseCatchup.tick().settled,2,
+  'two open-road shipments settle alongside a due neutral coarse-LOD caravan');
+assert(Math.abs(neutralCatchup.routeProgress-0.7)<1e-12,
+  'neutral LOD2 route progresses by 20 ticks of distance-aware travel');
+coarseCatchup.assertConservation();
+
 const validPair = createSimultaneousArrivals();
 equal(validPair.tick().settled,2,'two uncorrupted same-tick arrivals both settle');
 equal(validPair.shipments.S1.status,'completed','first simultaneous arrival completes');
