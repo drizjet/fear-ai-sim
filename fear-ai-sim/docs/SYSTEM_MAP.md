@@ -34,7 +34,10 @@ objects never cross as live JS references; only opt-in primitive JSON frames
 enter the simulator. For Node IPC, use
 `AuthenticatedHostIpcGateway.mjs` with fresh HMAC sessions, owned child
 handles, event/entity allowlists, per-peer rate bounds, replay protection
-and sealed direct ingress. This is **not** an in-process Proxy sandbox.
+and sealed direct ingress. The production Node owned-child adapter plus
+Python, C# and Unity compatible sender helpers are opt-in; unrelated
+middleware HTTP/WebSocket clients and Godot/Unreal/Rust transports are
+not silently replaced. This is **not** an in-process Proxy sandbox.
 
 Build the **best fear AI in the world that plugs into any game**.
 

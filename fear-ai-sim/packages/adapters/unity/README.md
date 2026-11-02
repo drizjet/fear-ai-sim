@@ -70,3 +70,15 @@ Attach `FearAgentHUD` to any GameObject that has `FearAgent` to render floating 
 - **Host Capabilities**: Set `FearAIClient.HostCapabilities` (e.g. `["supports_dialogue", "supports_cover_points"]`) to dynamically filter unsupported intents.
 - **Social Awareness**: Populate `FearAgent.PeerIds` with visible companion IDs to enable peer-directed intents (`WARN_GROUP`, `APPROACH_ALLY`).
 - **Outcome Feedback**: Call `FearAgent.ReportExecutionOutcome(outcome, reason)` to let the server learn structural execution limits.
+
+## Optional authenticated host metadata wire signing
+
+`Runtime/FearHostIpcSigner.cs` provides the same FEAR-IPC-1 HMAC-SHA256
+primitive JSON signer as the C# SDK, without changing Unity's existing
+HTTP/WebSocket server session, gameplay, or movement authority. A trusted
+**separate Node parent** must own and authenticate the receiving child/bridge,
+rotate credentials at every child launch and enforce scoped event/entity
+permissions. Signing alone does not implement a Unity IPC bridge or establish
+Unity Editor test evidence. The source is compiled in an isolated .NET
+compatibility probe; Unity Editor runtime remains **NOT PROVEN** on this
+machine.

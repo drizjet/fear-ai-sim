@@ -22,7 +22,7 @@ function validSession(sessionId) {
         throw new Error('invalid trusted IPC session');
 }
 function macFor(secret, signed) {
-    return createHmac('sha256', Buffer.from(secret, 'hex'))
+    return createHmac('sha256', Buffer.isBuffer(secret) ? secret : Buffer.from(secret, 'hex'))
         .update(signed, 'utf8').digest('hex');
 }
 function boundedInteger(value, low, high, label) {
@@ -66,47 +66,60 @@ export class AuthenticatedHostIpcGateway {
     #capability;
     #peers = new Map();
     #clock;
+    #maxPeers;
 
-    constructor(target, { clock = () => performance.now() } = {}) {
+    constructor(target, { clock = () => performance.now(), maxPeers = 32 } = {}) {
         if (!target || typeof target.sealHostTransferIngress !== 'function' ||
             typeof target.acceptHostTransferFrame !== 'function')
             throw new Error('trusted simulator or authority required');
         if (typeof clock !== 'function') throw new Error('invalid trusted IPC clock');
+        boundedInteger(maxPeers, 1, 256, 'peer capacity');
         // Seals even the public raw transfer API; the opaque Symbol only lives
         // in trusted code. No untrusted child receives this capability.
         this.#capability = target.sealHostTransferIngress();
         this.#target = target;
         this.#clock = clock;
+        this.#maxPeers = maxPeers;
     }
 
     registerPeer(peer, {
         peerId, secret, sessionId, allowedEventTypes = [],
-        allowedEntityIds = [], maxMessagesPerWindow = 32, windowMs = 1000
+        allowedEntityIds = [], maxMessagesPerWindow = 32, windowMs = 1000,
+        maxFrameBytes = 262144, maxBytesPerWindow = 1048576
     } = {}) {
         if (!peer || typeof peer !== 'object' || this.#peers.has(peer))
             throw new Error('invalid or duplicate owned IPC peer');
+        if (this.#peers.size >= this.#maxPeers)
+            throw new Error('trusted IPC peer capacity exceeded');
         if (typeof peerId !== 'string' || peerId.length < 1 || peerId.length > 128)
             throw new Error('invalid trusted IPC peer ID');
         validSecret(secret);
         validSession(sessionId);
         boundedInteger(maxMessagesPerWindow, 1, 1024, 'rate capacity');
         boundedInteger(windowMs, 10, 60000, 'rate window');
+        boundedInteger(maxFrameBytes, 1, 1048576, 'frame bytes');
+        boundedInteger(maxBytesPerWindow, maxFrameBytes, 67108864, 'window bytes');
         if ([...this.#peers.values()].some(p => p.peerId === peerId ||
             p.sessionId === sessionId))
             throw new Error('duplicate trusted IPC identity or session');
         const state = {
-            peerId, secret, sessionId,
+            peerId, secret: Buffer.from(secret, 'hex'), sessionId,
             eventTypes: allowList(allowedEventTypes, 'event permissions'),
             entityIds: allowList(allowedEntityIds, 'entity permissions'),
-            maxMessagesPerWindow, windowMs,
+            maxMessagesPerWindow, windowMs, maxFrameBytes, maxBytesPerWindow,
             lastSequence: 0, windowStart: null, lastNow: 0,
-            attempts: 0, admitted: 0, accepted: 0, rejected: 0
+            attempts: 0, admitted: 0, admittedBytes: 0, accepted: 0, rejected: 0
         };
         this.#peers.set(peer, state);
         return Object.freeze({ peerId, sessionId });
     }
 
     revokePeer(peer) {
+        const state = this.#peers.get(peer);
+        if (!state) return false;
+        // Copies of bootstrap credentials in a child or JS strings cannot
+        // be zeroed, but parent-owned native key bytes can be erased.
+        state.secret.fill(0);
         return this.#peers.delete(peer);
     }
 
@@ -140,6 +153,7 @@ export class AuthenticatedHostIpcGateway {
             state.windowStart = now;
             state.attempts = 0;
             state.admitted = 0;
+            state.admittedBytes = 0;
         }
         return state;
     }
@@ -176,8 +190,27 @@ export class AuthenticatedHostIpcGateway {
         if (seq !== state.lastSequence + 1) return reject('replay_or_sequence');
         if (state.admitted >= state.maxMessagesPerWindow)
             return reject('rate_limited');
+        // Base64url length provides a safe upper bound without decoding an
+        // attacker-controlled payload. Enforce a per-frame bound and a
+        // per-peer byte budget before allocating/copying the decoded bytes.
+        if (fields[3].length % 4 === 1) {
+            state.lastSequence = seq;
+            state.admitted++;
+            return reject('invalid_payload');
+        }
+        // Unpadded base64url carries exactly floor(encodedLength*3/4)
+        // bytes for lengths modulo 4 of 0, 2 or 3.
+        const decodedBound = Math.floor(fields[3].length * 3 / 4);
+        if (decodedBound > state.maxFrameBytes) {
+            state.lastSequence = seq;
+            state.admitted++;
+            return reject('frame_too_large');
+        }
+        if (state.admittedBytes + decodedBound > state.maxBytesPerWindow)
+            return reject('rate_limited');
         state.lastSequence = seq;
         state.admitted++;
+        state.admittedBytes += decodedBound;
         let wire;
         try {
             const raw = Buffer.from(fields[3], 'base64url');
@@ -206,7 +239,8 @@ export class AuthenticatedHostIpcGateway {
         return Object.freeze({
             peerId: state.peerId, lastSequence: state.lastSequence,
             accepted: state.accepted, rejected: state.rejected,
-            admittedInWindow: state.admitted, attemptsInWindow: state.attempts
+            admittedInWindow: state.admitted, attemptsInWindow: state.attempts,
+            admittedBytesInWindow: state.admittedBytes
         });
     }
 }

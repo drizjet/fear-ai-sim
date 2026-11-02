@@ -13,6 +13,7 @@ import { createContext, runInContext } from 'node:vm';
 import { decodeHostTransferFrame, HOST_TRANSFER_MAX_CODE_UNITS } from '../../packages/core/src/HostTransferFrame.mjs';
 import { createAuthenticatedHostIpcGateway, createHostIpcCredential,
   makeAuthenticatedHostMessage } from '../../packages/core/src/AuthenticatedHostIpcGateway.mjs';
+import { createAuthenticatedHostSender } from '../../packages/adapters/node/host_ipc_adapter.mjs';
 
 let assertions = 0;
 function assert(condition, label) {
@@ -1795,4 +1796,97 @@ signedReplayTwo.authority.assertConservation();
 throws(()=>signedReplayOne.authority.acceptHostTransferFrame(signedFrame),
   /authenticated host ingress required/,
   'sealed authority cannot bypass owned authenticated transport');
+
+// Host-adapter lifecycle/resource guards: default scope remains unchanged;
+// per-owner limits prevent unbounded live peers and oversized allocations.
+const quotaWorld=hostReferenceFixture(),quotaOne={},quotaTwo={},quotaThree={},
+  quotaGateway=createAuthenticatedHostIpcGateway(quotaWorld,{clock:()=>0,maxPeers:2}),
+  quotaCredential={secret:'a3'.repeat(32),sessionId:'b4'.repeat(16)};
+quotaGateway.registerPeer(quotaOne,{peerId:'quota-one',...quotaCredential,
+  allowedEventTypes:['host_signal'],maxFrameBytes:128,maxBytesPerWindow:200});
+quotaGateway.registerPeer(quotaTwo,{peerId:'quota-two',
+  secret:'c5'.repeat(32),sessionId:'d6'.repeat(16),
+  allowedEntityIds:['neutral-ref']});
+throws(()=>quotaGateway.registerPeer(quotaThree,{peerId:'excess',
+  secret:'e7'.repeat(32),sessionId:'f8'.repeat(16)}),
+  /peer capacity exceeded/,
+  'bounded peer registry refuses third concurrently registered host');
+const quotaSign=(n,frame)=>makeAuthenticatedHostMessage({
+  sequence:n,frame,...quotaCredential});
+const largePayload='{"version":1,"kind":"event","type":"host_signal","tick":0,"details":{"message":"'+
+  'x'.repeat(140)+'"}}';
+equal(quotaGateway.receiveFrom(quotaOne,quotaSign(1,largePayload)).reason,
+  'frame_too_large','authenticated oversized frame refused before JSON copy');
+equal(quotaGateway.getPeerStats(quotaOne).lastSequence,1,
+  'oversized signed frame consumes sequence against replay');
+equal(quotaGateway.receiveFrom(quotaOne,quotaSign(1,largePayload)).reason,
+  'replay_or_sequence','oversized signed payload cannot replay');
+const smallFrame='{"version":1,"kind":"event","type":"host_signal","tick":0,"details":{}}';
+equal(quotaGateway.receiveFrom(quotaOne,quotaSign(2,smallFrame)).accepted,true,
+  'allowed small signed frame accepted under byte limit');
+assert(quotaGateway.getPeerStats(quotaOne).admittedBytesInWindow>0,
+  'per-peer decoded byte accounting increments on admission');
+equal(quotaGateway.receiveFrom(quotaOne,quotaSign(3,smallFrame)).accepted,true,
+  'second allowed small signed frame shares cumulative budget');
+equal(quotaGateway.receiveFrom(quotaOne,quotaSign(4,smallFrame)).reason,
+  'rate_limited','per-peer decoded-byte budget limits cumulative data');
+const exactHost=hostReferenceFixture(),exactPeer={},
+  exactGateway=createAuthenticatedHostIpcGateway(exactHost,{clock:()=>0});
+exactGateway.registerPeer(exactPeer,{peerId:'exact-binary-bytes',
+  secret:'19'.repeat(32),sessionId:'2a'.repeat(16),
+  allowedEventTypes:['host_signal'],maxFrameBytes:128,
+  maxBytesPerWindow:512});
+const exactPrefix='{"version":1,"kind":"event","type":"host_signal","tick":0,"details":{"a":"',
+  exactSuffix='"}}',
+  exactFrame=length=>exactPrefix+'x'.repeat(length-exactPrefix.length-exactSuffix.length)+exactSuffix,
+  exactSign=(sequence,frame)=>makeAuthenticatedHostMessage({
+    sequence,frame,secret:'19'.repeat(32),sessionId:'2a'.repeat(16)});
+equal(Buffer.byteLength(exactFrame(128),'utf8'),128,
+  'exact gateway decoded payload fixture contains 128 bytes');
+equal(exactGateway.receiveFrom(exactPeer,exactSign(1,exactFrame(128))).accepted,
+  true,'exact byte-capacity boundary admits exactly 128 bytes');
+equal(exactGateway.receiveFrom(exactPeer,exactSign(2,exactFrame(129))).reason,
+  'frame_too_large','exact byte-capacity boundary refuses 129th byte');
+equal(exactHost.events.filter(e=>e.type==='host_signal').length,1,
+  'strict byte limit rejected overflow before event journal write');
+equal(quotaGateway.getPeerStats(quotaOne).lastSequence,3,
+  'byte rate rejection does not consume signed sequence');
+equal(quotaGateway.getPeerStats(quotaTwo).lastSequence,0,
+  'other host never inherits first peer byte or sequence budget');
+equal(quotaGateway.revokePeer(quotaOne),true,'owner revokes first quota peer');
+quotaGateway.registerPeer(quotaThree,{peerId:'replacement',
+  secret:'e7'.repeat(32),sessionId:'f8'.repeat(16),
+  allowedEventTypes:['host_signal']});
+equal(quotaGateway.receiveFrom(quotaOne,quotaSign(4,smallFrame)).reason,
+  'unknown_peer','revoked credentials cannot reenter after slot recycling');
+throws(()=>createAuthenticatedHostIpcGateway(hostReferenceFixture(),{
+  maxPeers:257}),/peer capacity/,
+  'peer capacity outside bounded range refused');
+throws(()=>createAuthenticatedHostIpcGateway(hostReferenceFixture(),{
+  maxPeers:0}),/peer capacity/,
+  'zero peer-capacity invalid before host registration');
+let signerSent=0;
+const fakeChannel={
+  connected:true,
+  _listeners:new Map(),
+  on(event,cb){this._listeners.set(event,cb);return this;},
+  once(event,cb){this._listeners.set(event,cb);return this;},
+  off(event){this._listeners.delete(event);return this;},
+  send(frame){signerSent++;return !frame.includes('BOGUS');},
+  disconnect(){this.connected=false;}
+};
+const sessionSigner=createAuthenticatedHostSender(fakeChannel);
+throws(()=>sessionSigner.send(smallFrame),/not authenticated/,
+  'Node adapter sender starts fail-closed before parent bootstrap');
+fakeChannel._listeners.get('message')({kind:'FEAR_IPC_BOOTSTRAP_V1',
+  ...quotaCredential});
+assert(sessionSigner.ready,'Node adapter sender unlocks only on controlled bootstrap');
+equal(sessionSigner.send(smallFrame),1,
+  'Node adapter sender increments nonce for first authenticated frame');
+equal(sessionSigner.send(smallFrame),2,
+  'Node adapter sender increments nonce monotonically');
+equal(signerSent,2,'Node adapter does not send before authentication');
+sessionSigner.close();
+throws(()=>sessionSigner.send(smallFrame),/not authenticated/,
+  'Node adapter closes signer after explicit disconnect');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

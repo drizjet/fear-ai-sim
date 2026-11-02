@@ -32,6 +32,27 @@ isolation. Do not feed untrusted objects into `getState`,
 
 ## Authenticated Node child-process IPC (recommended)
 
+The production Node adapter now supplies
+`packages/adapters/node/host_ipc_adapter.mjs` for owned child launch,
+fresh parent credential bootstrap, scoped gateway registration, and
+revocation on child exit/disconnect. Replacing a terminated child uses the
+same sealed gateway but **always a new session/secret**. No automatic retry
+of uncertain writes is performed. Gateway configuration now additionally
+bounds active registered peers (default 32, maximum 256), decoded bytes
+per frame (default 262,144, maximum 1,048,576), and cumulative admitted
+decoded bytes per peer/window (default 1,048,576, maximum 67,108,864).
+Peer-owned key bytes are zeroed on revocation; copies in JS strings and
+the child process cannot be reliably zeroed by the parent.
+
+The Python, C# and Unity SDKs expose optional interoperable FEAR-IPC-1
+**sending/signing** helpers for explicit adapter-side IPC bridges. They
+do not change or impersonate the existing HTTP/WebSocket clients. The
+Node gateway accepts byte-identical Python/C#/Unity envelopes and rejects
+cross-language sequence replay. Godot, Unreal and Rust still use their
+pre-existing middleware transports and have NOT automatically migrated to
+this Node-only child IPC protocol. Those engines need separately authorized
+transport integrations, threat models and engine-runtime verification.
+
 Use `AuthenticatedHostIpcGateway.mjs` in the **trusted parent only**. The
 gateway seals the simulator against direct unsigned transfer calls. It
 authenticates each incoming message using the owned ChildProcess object
