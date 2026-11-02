@@ -86,10 +86,18 @@ function cloneHostSnapshotMetadata(root, copies = new WeakMap()) {
             copies.set(value, url);
             return url;
         }
-        // Preserve built-in internal slots rather than fabricating objects
-        // with Map/Set/RegExp/typed-array prototypes but no usable internals.
-        if (value instanceof Map || value instanceof Set ||
-            value instanceof RegExp || value instanceof ArrayBuffer ||
+        // Map keys/values and Set members share the same memo as event/cargo
+        // roots, including cycles and repeated collection references.
+        // structuredClone(value) here would build an isolated second graph
+        // and silently split otherwise shared host-owned metadata.
+        if (value instanceof Map || value instanceof Set) {
+            const collection = value instanceof Map ? new Map() : new Set();
+            copies.set(value, collection);
+            pending.push([value, collection]);
+            return collection;
+        }
+        // Other supported native values need their internal slots retained.
+        if (value instanceof RegExp || value instanceof ArrayBuffer ||
             ArrayBuffer.isView(value)) {
             const nativeCopy = structuredClone(value);
             copies.set(value, nativeCopy);
@@ -107,6 +115,16 @@ function cloneHostSnapshotMetadata(root, copies = new WeakMap()) {
     const result = copy(root);
     while (pending.length) {
         const [source, target] = pending.pop();
+        if (source instanceof Map) {
+            for (const [key, value] of Map.prototype.entries.call(source))
+                Map.prototype.set.call(target, copy(key), copy(value));
+            continue;
+        }
+        if (source instanceof Set) {
+            for (const value of Set.prototype.values.call(source))
+                Set.prototype.add.call(target, copy(value));
+            continue;
+        }
         // Object.keys omits enumerable symbol metadata even though direct
         // snapshots are permitted to carry it (authority JSON is separate).
         const keys = [...Object.keys(source),

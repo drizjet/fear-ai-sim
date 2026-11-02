@@ -1133,4 +1133,68 @@ equal(crossJsonEvent,crossJsonCargo,
   'JSON authority snapshot keeps equal host metadata values');
 assert(crossJsonEvent!==crossJsonCargo,
   'scientific negative: JSON authority protocol does not preserve JS graph identity');
+
+// Cross-field host metadata can include native Map/Set containers. Do not
+// structuredClone each container independently: its keys/members may be the
+// same object as nontrade cargo, other collections or the container itself.
+const mapHost=hostReferenceFixture();
+const mapShared={label:'same',deep:{value:1}},mapMeta=new Map(),setMeta=new Set();
+mapMeta.set(mapShared,mapShared);
+mapMeta.set('ref',mapShared);
+mapMeta.set('self',mapMeta);
+setMeta.add(mapShared);setMeta.add(mapMeta);setMeta.add(setMeta);
+mapHost.events[0].details.map=mapMeta;
+mapHost.events[0].details.set=setMeta;
+mapHost.entities.get('neutral-ref').cargo.host.shared=mapShared;
+mapHost.entities.get('neutral-ref').cargo.host.map=mapMeta;
+const mapSnap=mapHost.getState(),snapMap=mapSnap.events[0].details.map,
+  snapSet=mapSnap.events[0].details.set,
+  snapShared=mapSnap.entities.find(e=>e.id==='neutral-ref').cargo.host.shared;
+assert(snapMap instanceof Map && snapSet instanceof Set,
+  'direct snapshot retains native Map and Set internal slots');
+assert(snapMap!==mapMeta && snapSet!==setMeta && snapShared!==mapShared,
+  'Map/Set direct snapshot graph detached from live host');
+assert([...snapMap.keys()][0]===snapShared && snapMap.get('ref')===snapShared,
+  'Map key/value identity agrees with direct nontrade cargo root');
+assert(snapMap.get('self')===snapMap,
+  'Map self-references remain cyclic and detached');
+assert(snapSet.has(snapShared) && snapSet.has(snapMap) && snapSet.has(snapSet),
+  'Set members preserve cross-collection and self-references');
+assert(snapMap===mapSnap.entities.find(e=>e.id==='neutral-ref').cargo.host.map,
+  'Map itself is identity-shared between event and cargo');
+snapMap.get('ref').deep.value=2;
+equal(snapShared.deep.value,2,
+  'mutating Map member updates alias within exported direct snapshot');
+equal(mapShared.deep.value,1,
+  'modifying exported Map does not change live host');
+const mapRestored=hostReferenceFixture();
+mapRestored.setState(mapSnap);
+const restoredMap=mapRestored.events[0].details.map,
+  restoredSet=mapRestored.events[0].details.set,
+  restoredShared=mapRestored.entities.get('neutral-ref').cargo.host.shared;
+assert(restoredMap.get('ref')===restoredShared &&
+  restoredSet.has(restoredMap) && restoredSet.has(restoredShared) &&
+  restoredSet.has(restoredSet) && restoredMap.get('self')===restoredMap,
+  'setState preserves native collection cross-root identity and cycles');
+assert(restoredShared!==snapShared && restoredMap!==snapMap,
+  'setState copies Map/Set graph without aliasing caller snapshot');
+restoredMap.get('ref').deep.value=3;
+equal(snapShared.deep.value,2,
+  'mutating restored native collection leaves caller snapshot unchanged');
+const mapTrusted=hostReferenceFixture();
+restoreTrustedCivState(mapTrusted,mapSnap,civRoadGraphFingerprint(mapSnap));
+assert(mapTrusted.events[0].details.map.get('ref')===
+  mapTrusted.entities.get('neutral-ref').cargo.host.shared,
+  'trusted direct restore preserves Map-valued host graph identity');
+// Scope boundary: authority JSON intentionally treats a Map as an object with
+// no enumerable string members, not a universal JS collection protocol.
+const mapJsonSim=hostReferenceFixture();
+mapJsonSim.config.distanceAwareTravel=true;
+mapJsonSim.config.caravanUnitsPerTick=2;
+mapJsonSim.events[0].details.map=new Map([['host',{label:'valid'}]]);
+const mapJsonAuthority=new WorldTradeAuthority(mapJsonSim);
+mapJsonAuthority.seedNode('X',{},0);mapJsonAuthority.seedNode('Y',{},0);
+mapJsonAuthority.sealGenesis(321);
+equal(mapJsonAuthority.getState().sim.events[0].details.map,{},
+  'scientific negative: authority JSON does not represent Map entries');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
