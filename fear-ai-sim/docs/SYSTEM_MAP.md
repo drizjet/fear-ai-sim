@@ -28,6 +28,11 @@ This is the durable map for humans and agents. It does **not** store volatile te
 
 ## Product goal
 
+Trusted cross-process host metadata ingress is documented in
+[`docs/TRUSTED_HOST_TRANSFER.md`](TRUSTED_HOST_TRANSFER.md): untrusted host
+objects never cross as live JS references; only opt-in primitive JSON frames
+enter the simulator. This is **not** an in-process Proxy sandbox.
+
 Build the **best fear AI in the world that plugs into any game**.
 
 Fear AI is **intelligence middleware**. The host game stays authoritative for movement, pathfinding, physics, combat, inventory, animation, spawning, and world geometry. Fear AI returns affect, intents, explanations, and confidence. It must not become a second game engine.

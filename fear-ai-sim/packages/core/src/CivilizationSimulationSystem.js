@@ -13,6 +13,8 @@
  * the host game engine executes unit pathfinding physics, terrain navigation, collision, and inventory.
  */
 
+import { decodeHostTransferFrame } from './HostTransferFrame.mjs';
+
 export const COGNITIVE_LOD_TIERS = Object.freeze({
     LOD0_IMMEDIATE: 0,   // Immediate vicinity (<30m): Full per-tick affective simulation (cadence = 1)
     LOD1_TACTICAL: 1,    // Tactical range (30-80m): Amortized group simulation (cadence = 5)
@@ -469,6 +471,38 @@ export class CivilizationSimulationSystem {
         this.entities = new Map();    // Map<entityId, SimEntity>
         this.tickCount = 0;
         this.events = [];
+    }
+
+    /**
+     * Opt-in ingress for a primitive JSON string received through a trusted
+     * transport (for example, a child-process IPC message). This method never
+     * reflects over an untrusted JavaScript object or executes host callbacks.
+     * The caller must keep untrusted plugins in a separate OS process; direct
+     * access to this public simulator's fields still belongs to trusted code.
+     * Neither a successful receipt nor this API authenticates the sender.
+     *
+     * Event ticks must equal the current world tick; cargo is limited to an
+     * existing nontrade entity. The engine/game retains inventory authority.
+     * @param {string} wire - Primitive, bounded, JSON-encoded v1 frame
+     * @returns {{kind:string, tick?:number, entityId?:string}}
+     */
+    acceptHostTransferFrame(wire) {
+        const frame = decodeHostTransferFrame(wire);
+        if (frame.kind === 'event') {
+            if (frame.tick !== this.tickCount)
+                throw new Error('host transfer event tick mismatch');
+            // Do not expose caller references: frame was rebuilt entirely
+            // from native JSON text in this trusted simulation process.
+            this.events.push({ type: frame.type, tick: frame.tick,
+                details: frame.details });
+            return { kind: 'event', tick: frame.tick };
+        }
+        if (frame.entityId.startsWith('trade:'))
+            throw new Error('host transfer cannot modify trade cargo');
+        const entity = this.entities.get(frame.entityId);
+        if (!entity) throw new Error('host transfer unknown entity');
+        entity.cargo = frame.cargo;
+        return { kind: 'cargo', entityId: frame.entityId };
     }
 
     /**

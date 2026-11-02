@@ -10,6 +10,7 @@ import { CivilizationSimulationSystem } from '../../packages/core/src/Civilizati
 import { WorldTradeAuthority } from '../../packages/core/src/WorldTradeAuthority.mjs';
 import { civRoadGraphFingerprint, restoreTrustedCivState } from '../../packages/core/src/CivilizationTrustedCheckpoint.mjs';
 import { createContext, runInContext } from 'node:vm';
+import { decodeHostTransferFrame, HOST_TRANSFER_MAX_CODE_UNITS } from '../../packages/core/src/HostTransferFrame.mjs';
 
 let assertions = 0;
 function assert(condition, label) {
@@ -1522,4 +1523,125 @@ proxyHazard.getState({dataOnlyHostMetadata:true});
 assert(descriptorTraps>0 &&
   proxyHazard.entities.get('neutral-ref').fear===0.4,
   'scientific negative: opt-in Proxy descriptor traps can still mutate host state');
+
+// NEW opt-in trusted wire boundary: only primitive JSON strings cross into
+// simulator-owned data. These controls are separate from the deliberately
+// unsafe legacy direct-object snapshot negative above.
+const transferHost=hostReferenceFixture();
+const wireEvent='{"version":1,"kind":"event","type":"host_signal","tick":0,"details":{"group":{"calm":0.8},"samples":[1,null,true]}}';
+const acceptedEvent=transferHost.acceptHostTransferFrame(wireEvent);
+equal(acceptedEvent,{kind:'event',tick:0},'trusted host wire event receipt');
+equal(transferHost.events.at(-1).details.group.calm,0.8,
+  'trusted ingress commits decoded event data');
+assert(Object.getPrototypeOf(transferHost.events.at(-1).details)===null &&
+  Object.getPrototypeOf(transferHost.events.at(-1).details.group)===null,
+  'trusted ingress uses null-prototype detached records');
+const wireCargo='{"version":1,"kind":"cargo","entityId":"neutral-ref","cargo":{"host":{"intent":"observe"},"values":[2,3]}}';
+equal(transferHost.acceptHostTransferFrame(wireCargo),{
+  kind:'cargo',entityId:'neutral-ref'},'trusted host nontrade cargo receipt');
+equal(transferHost.entities.get('neutral-ref').cargo.host.intent,'observe',
+  'trusted ingress writes only the chosen nontrade cargo');
+assert(Object.getPrototypeOf(transferHost.entities.get('neutral-ref').cargo.host)===null,
+  'transferred cargo cannot inherit host-provided prototype callbacks');
+const beforeTransferSnapshot=transferHost.getState({dataOnlyHostMetadata:true});
+assert(beforeTransferSnapshot.events.at(-1).details.group.calm===0.8 &&
+  beforeTransferSnapshot.entities.find(e=>e.id==='neutral-ref').cargo.values[1]===3,
+  'transferred event/cargo metadata survives opt-in data-only snapshot');
+const transferRestored=hostReferenceFixture();
+transferRestored.setState(beforeTransferSnapshot,{dataOnlyHostMetadata:true});
+assert(transferRestored.events.at(-1).details.group.calm===0.8 &&
+  transferRestored.entities.get('neutral-ref').cargo.values[0]===2,
+  'transferred JSON metadata survives direct opt-in restoration');
+
+let transferTraps=0,transferCallbackCalls=0;
+const badWireProxy=new Proxy({},{
+  ownKeys(target){transferTraps++;transferHost.entities.get('neutral-ref').fear=0.9;
+    return Reflect.ownKeys(target);},
+  getOwnPropertyDescriptor(target,key){transferTraps++;
+    transferHost.entities.get('neutral-ref').morale=0.2;
+    return Reflect.getOwnPropertyDescriptor(target,key);},
+  get(){transferTraps++;throw Error('untrusted getter invoked');},
+  getPrototypeOf(){transferTraps++;throw Error('untrusted prototype invoked');}
+});
+throws(()=>transferHost.acceptHostTransferFrame(badWireProxy),
+  /primitive JSON string/,'host wire boundary rejects hostile Proxy without reflecting');
+equal(transferTraps,0,'host transfer never invokes Proxy ownKeys/descriptor/get/prototype traps');
+equal(transferHost.entities.get('neutral-ref').fear,0,'rejected Proxy does not change live fear');
+equal(transferHost.entities.get('neutral-ref').morale,1,'rejected Proxy does not change live morale');
+const badCallbackObject={toJSON(){transferCallbackCalls++;
+  transferHost.entities.get('neutral-ref').fear=0.99;return {}; }};
+throws(()=>transferHost.acceptHostTransferFrame(badCallbackObject),
+  /primitive JSON string/,'host wire rejects callback-bearing objects without serializing');
+equal(transferCallbackCalls,0,'host wire never invokes hostile toJSON');
+equal(transferHost.entities.get('neutral-ref').fear,0,
+  'host wire callback refusal leaves live fear unchanged');
+throws(()=>decodeHostTransferFrame(new String(wireEvent)),/primitive JSON string/,
+  'boxed string objects do not bypass primitive wire-only boundary');
+throws(()=>decodeHostTransferFrame('{"version":1,"kind":"event","type":"note",'),
+  /invalid host transfer JSON/,'malformed primitive frame is rejected');
+throws(()=>decodeHostTransferFrame('null'),
+  /invalid host transfer envelope/,'null wire envelope rejected deterministically');
+throws(()=>decodeHostTransferFrame(' '.repeat(HOST_TRANSFER_MAX_CODE_UNITS+1)),
+  /size limit/,'oversized frame is rejected before parse');
+throws(()=>decodeHostTransferFrame('{"version":1,"kind":"event","type":"note","tick":0,"details":{"__proto__":{"p":true}}}'),
+  /forbidden metadata key/,'host wire forbids prototype pollution keys');
+throws(()=>decodeHostTransferFrame('{"version":1,"kind":"cargo","entityId":"neutral-ref","cargo":{"toJSON":"evil"}}'),
+  /forbidden metadata key/,'host wire rejects callback-reserved metadata names');
+throws(()=>decodeHostTransferFrame('{"version":1,"kind":"event","type":"note","tick":0,"details":{"x":1e999}}'),
+  /nonfinite/,'host wire rejects overflowed numeric JSON literals');
+throws(()=>decodeHostTransferFrame('{"version":1,"kind":"event","type":"note","tick":0,"details":[] }'),
+  /invalid host transfer event details/,'host wire requires record event details');
+throws(()=>decodeHostTransferFrame('{"version":1,"kind":"event","type":"note","tick":0,"details":{},"extra":9}'),
+  /invalid host transfer event/,'host wire refuses unknown envelope fields');
+assert(!Object.hasOwn(Object.prototype,'p'),
+  'host wire forbidden keys do not pollute global prototypes');
+const beforeWrongTick=transferHost.events.length;
+throws(()=>transferHost.acceptHostTransferFrame('{"version":1,"kind":"event","type":"later","tick":3,"details":{}}'),
+  /tick mismatch/,'host transfer cannot inject future or out-of-order event');
+equal(transferHost.events.length,beforeWrongTick,
+  'rejected future host event leaves journal unchanged');
+throws(()=>transferHost.acceptHostTransferFrame('{"version":1,"kind":"cargo","entityId":"trade:spoof","cargo":{}}'),
+  /cannot modify trade cargo/,'host wire cannot cross trade authority escrow');
+throws(()=>transferHost.acceptHostTransferFrame('{"version":1,"kind":"cargo","entityId":"missing","cargo":{}}'),
+  /unknown entity/,'host wire cannot mint new cargo entities');
+const savedCargo=transferHost.entities.get('neutral-ref').cargo;
+throws(()=>transferHost.acceptHostTransferFrame('{"version":1,"kind":"cargo","entityId":"neutral-ref","cargo":{"x":{"constructor":"bad"}}}'),
+  /forbidden metadata key/,'host wire nested validation occurs before cargo commit');
+assert(transferHost.entities.get('neutral-ref').cargo===savedCargo,
+  'rejected nested wire metadata leaves cargo reference and state unchanged');
+
+// The trusted engine process may have normal Object.prototype code, but the
+// incoming wire cannot supply it. No inherited callback runs during ingress.
+let inheritedWireCalls=0;
+const priorToJson=Object.getOwnPropertyDescriptor(Object.prototype,'toJSON');
+try{
+  Object.defineProperty(Object.prototype,'toJSON',{configurable:true,value(){
+    inheritedWireCalls++;transferHost.entities.get('neutral-ref').morale=0.1;return {}; }});
+  transferHost.acceptHostTransferFrame('{"version":1,"kind":"cargo","entityId":"neutral-ref","cargo":{"metadata":{"v":7}}}');
+}finally{
+  if(priorToJson)Object.defineProperty(Object.prototype,'toJSON',priorToJson);
+  else delete Object.prototype.toJSON;
+}
+equal(inheritedWireCalls,0,'host wire transfer never invokes inherited toJSON callbacks');
+equal(transferHost.entities.get('neutral-ref').morale,1,
+  'host wire inherited callback cannot change live morale during ingress');
+equal(transferHost.entities.get('neutral-ref').cargo.metadata.v,7,
+  'host wire accepts ordinary JSON without executing inherited callbacks');
+
+const authorityTransferOne=createWorld(),authorityTransferTwo=createWorld();
+const replayWire='{"version":1,"kind":"event","type":"host_signal","tick":0,"details":{"hazard":0.4}}';
+equal(authorityTransferOne.authority.acceptHostTransferFrame(replayWire),
+  {kind:'event',tick:0},'authority delegates primitive event ingress');
+authorityTransferTwo.authority.acceptHostTransferFrame(replayWire);
+for(let step=0;step<40;step++){
+  authorityTransferOne.authority.tick();
+  authorityTransferTwo.authority.tick();
+  equal(authorityTransferOne.authority.getState(),
+    authorityTransferTwo.authority.getState(),
+    'transferred metadata retains identical authority replay at tick '+step);
+}
+authorityTransferOne.authority.assertConservation();
+authorityTransferTwo.authority.assertConservation();
+assert(authorityTransferOne.sim.events.some(e=>e.type==='host_signal'),
+  'trusted wire event remains in authority replay journal');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
