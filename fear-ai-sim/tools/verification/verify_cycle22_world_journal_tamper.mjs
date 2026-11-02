@@ -23,6 +23,20 @@ deny(s=>{s.events[0].tick=1000},/invalid event order/);
 deny(s=>{s.shipments.a.cargo.ORE=7;s.stocks.A.ORE++},/enroute escrow mismatch/);
 deny(s=>{s.shipments.a.targetNodeId='A'},/shipment route disagreement/);
 deny(s=>{s.sim.routes[0].distance++},/graph differs/);
+// Checkpoint schema/provenance: a graph fingerprint does not validate the
+// ledger's JSON dictionaries, journal references or caravan escrow fields.
+deny(s=>{s.stocks=[]},/invalid checkpoint dictionary stocks/);
+deny(s=>{s.patrols=[]},/invalid checkpoint dictionary patrols/);
+deny(s=>{s.shipments.a.encounterDone='false'},/invalid restored shipment/);
+deny(s=>{s.shipments.a.routeId='missing-route'},/invalid restored shipment/);
+deny(s=>{
+ const ghost=structuredClone(s.sim.entities[0]);
+ ghost.id='trade:ghost';ghost.cargo={};ghost.wealth=0;ghost.routeProgress=0.99;
+ s.sim.entities.push(ghost);
+},/unclaimed trade entity/);
+deny(s=>{s.events.push({type:'arrival_committed',shipmentId:'ghost',tick:s.sim.tickCount});},
+ /unknown journal shipment/);
+deny(s=>{s.events[0].type='unrecognized'},/unknown journal event/);
 for(let i=0;i<120;i++)live.tick();
 const completed=JSON.stringify(live.getState());
 const same=civRoadGraphFingerprint(live.sim.getState());
@@ -37,4 +51,4 @@ for(const mutator of [
  assert.throws(()=>live.restore(bad,same),/journal disagreement|enroute escrow mismatch/);
  assert.equal(JSON.stringify(live.getState()),completed);
 }
-console.log('PASS: 9 corrupt ledger/journal/route/escrow/arrival checkpoints rejected atomically');
+console.log('PASS: 16 corrupt ledger/journal/route/escrow/arrival checkpoints rejected atomically');

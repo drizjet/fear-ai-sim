@@ -4,6 +4,8 @@ import { restoreTrustedCivState } from './CivilizationTrustedCheckpoint.mjs';
 // Host-authoritative ledger: middleware proposes path progress; this layer is the
 // sole owner of delivery, theft and toll inventory transfers in this reference.
 const clone = v => JSON.parse(JSON.stringify(v));
+const isRecord = v => v !== null && typeof v === 'object' && !Array.isArray(v) &&
+  (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
 function amount(v, label) {
   if (!Number.isSafeInteger(v) || v < 0) throw Error(label + ' must be a nonnegative safe integer');
   return v;
@@ -247,17 +249,75 @@ export class WorldTradeAuthority {
       if(snapshot[k]===undefined) throw Error('missing checkpoint field '+k);
       staged[k]=clone(snapshot[k]);
     }
+    // A matching road graph authenticates no ledger dictionaries. Do not allow
+    // arrays/null to masquerade as maps (Object.values silently accepts arrays).
+    for(const k of ['stocks','vaults','factionLoot','factionGold','shipments',
+      'relations','patrols','initial']) {
+      if(!isRecord(staged[k])) throw Error('invalid checkpoint dictionary '+k);
+    }
+    if(!isRecord(staged.initial.goods))throw Error('invalid initial goods');
+    norm(staged.initial.goods);amount(staged.initial.gold,'initial gold');
+    for(const [node,stock] of Object.entries(staged.stocks)){
+      id(node);
+      if(!stagedSim.nodes.has(node))throw Error('unknown stocked node');
+      norm(stock);
+      if(!Object.hasOwn(staged.vaults,node))throw Error('unpaired stocked node');
+    }
+    for(const [node,gold] of Object.entries(staged.vaults)){
+      id(node);amount(gold,'vault gold');
+      if(!Object.hasOwn(staged.stocks,node))throw Error('unpaired vault node');
+    }
+    for(const [faction,stock] of Object.entries(staged.factionLoot)){
+      id(faction);norm(stock);
+    }
+    for(const [faction,gold] of Object.entries(staged.factionGold)){
+      id(faction);amount(gold,'faction gold');
+    }
+    for(const [relation,score] of Object.entries(staged.relations)){
+      if(typeof relation!=='string' || !Number.isFinite(score) || score < -1 || score > 1)
+        throw Error('invalid restored relation');
+    }
+    for(const [patrolId,p] of Object.entries(staged.patrols)){
+      id(patrolId);
+      if(!isRecord(p) || p.id!==patrolId || typeof p.passive!=='boolean' ||
+        !Array.isArray(p.routeIds) || p.routeIds.length===0 ||
+        !p.routeIds.every(r=>stagedSim.routes.has(r)) ||
+        !p.routeIds.includes(p.currentRouteId) ||
+        ![p.hunger,p.threat,p.grievance].every(x=>Number.isFinite(x)&&x>=0&&x<=1) ||
+        !Number.isSafeInteger(p.lastRoamTick) || p.lastRoamTick<0 ||
+        p.lastRoamTick>stagedSim.tickCount)throw Error('invalid restored patrol');
+      id(p.faction);amount(p.toll,'patrol toll');
+      if(amount(p.roamEvery,'roam period')===0)throw Error('invalid roam period');
+    }
     if(!Array.isArray(staged.events))throw Error('malformed event journal');
     let previousTick=-1;
     for(const event of staged.events){
-      if(!Number.isSafeInteger(event.tick) || event.tick < previousTick ||
+      if(!isRecord(event) || !Number.isSafeInteger(event.tick) || event.tick<0 ||
+        event.tick < previousTick ||
         event.tick > stagedSim.tickCount)throw Error('invalid event order');
       previousTick=event.tick;
+      if(['dispatch','encounter','arrival_committed'].includes(event.type)){
+        if(typeof event.shipmentId!=='string' ||
+          !Object.hasOwn(staged.shipments,event.shipmentId))
+          throw Error('unknown journal shipment');
+        if(event.type==='encounter' &&
+          (!Object.hasOwn(staged.patrols,event.patrolId) ||
+            !['pass','attack','toll'].includes(event.kind)))
+          throw Error('invalid encounter journal');
+      }else if(event.type==='roam'){
+        const p=staged.patrols[event.patrolId];
+        if(!p || !p.routeIds.includes(event.routeId))
+          throw Error('invalid roam journal');
+      }else throw Error('unknown journal event');
     }
     for(const [id,ship] of Object.entries(staged.shipments)){
-      if(id!==ship.id || !['enroute','completed'].includes(ship.status) ||
+      if(!isRecord(ship) || id!==ship.id || ship.entityId!=='trade:'+id ||
+        typeof ship.encounterDone!=='boolean' ||
+        ![ship.threat,ship.guard].every(x=>Number.isFinite(x)&&x>=0&&x<=1) ||
+        !['enroute','completed'].includes(ship.status) ||
         !stagedSim.entities.has(ship.entityId) || !stagedSim.routes.has(ship.routeId))
         throw Error('invalid restored shipment');
+      norm(ship.cargo);amount(ship.gold,'shipment gold');
       const route=stagedSim.routes.get(ship.routeId);
       if(route.fromNodeId!==ship.fromNodeId || route.toNodeId!==ship.targetNodeId)
         throw Error('shipment route disagreement');
@@ -273,6 +333,13 @@ export class WorldTradeAuthority {
         ship.gold!==0 || entity.currentRouteId!==null ||
         !sameGoods(norm(entity.cargo),{}) || entity.wealth!==0))
         throw Error('completed escrow mismatch');
+    }
+    // The trade: namespace is authoritative here. Otherwise a spoofed caravan
+    // is restored successfully and later causes an unknown delivery intent.
+    for(const entityId of stagedSim.entities.keys()){
+      if(entityId.startsWith('trade:') &&
+        !Object.hasOwn(staged.shipments,entityId.slice(6)))
+        throw Error('unclaimed trade entity');
     }
     staged.assertConservation();
     // Transfer to the original simulator only after independent map trust
