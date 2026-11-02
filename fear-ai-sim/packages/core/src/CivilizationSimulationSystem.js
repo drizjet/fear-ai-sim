@@ -68,7 +68,7 @@ function clamp01(v) {
 // sparse array holes and custom toJSON methods intact at this direct boundary;
 // the separate authority JSON protocol may still reject cycles. Explicitly
 // iterative to avoid blowing the JS call stack on deeply nested metadata.
-function cloneHostSnapshotMetadata(root, copies = new WeakMap()) {
+function cloneHostSnapshotMetadata(root, copies = new WeakMap(), dataOnly = false) {
     const pending = [];
     const copy = value => {
         if (value === null || typeof value !== 'object') return value;
@@ -96,6 +96,13 @@ function cloneHostSnapshotMetadata(root, copies = new WeakMap()) {
             pending.push([value, collection]);
             return collection;
         }
+        // A SharedArrayBuffer is not a detachable snapshot. Falling through
+        // to Object.create(SharedArrayBuffer.prototype) fabricates a native
+        // instance whose byteLength getter fails, and sharing live memory
+        // would violate direct snapshot detachment. Refuse explicitly.
+        if (typeof SharedArrayBuffer !== 'undefined' &&
+            value instanceof SharedArrayBuffer)
+            throw new Error('unsupported shared host memory metadata');
         // A view and its backing ArrayBuffer must resolve through this same
         // memo: cloning each view independently splits intentionally shared
         // bytes between event/cargo roots (and overlapping views).
@@ -154,8 +161,13 @@ function cloneHostSnapshotMetadata(root, copies = new WeakMap()) {
             ...Object.getOwnPropertySymbols(source).filter(
                 key => Object.getOwnPropertyDescriptor(source, key)?.enumerable)];
         for (const key of keys) {
+            const descriptor = dataOnly
+                ? Object.getOwnPropertyDescriptor(source, key) : null;
+            if (dataOnly && !Object.hasOwn(descriptor ?? {}, 'value'))
+                throw new Error('host metadata must have own data properties');
             Object.defineProperty(target, key, {
-                value: copy(source[key]), writable: true, enumerable: true,
+                value: copy(dataOnly ? descriptor.value : source[key]),
+                writable: true, enumerable: true,
                 configurable: true
             });
         }
@@ -163,10 +175,50 @@ function cloneHostSnapshotMetadata(root, copies = new WeakMap()) {
     return result;
 }
 
+// Explicit opt-in for ordinary data-only host metadata. Only traverse own
+// descriptors; an accessor is refused before its getter is read. Native
+// collections are walked through their internal slots so a getter nested in
+// a Map/Set member is not missed. Proxy reflection traps remain executable:
+// this is NOT a sandbox or a generic hostile-object serializer.
+function assertDataOnlyHostGraph(root) {
+    const pending = [root], visited = new WeakSet();
+    while (pending.length) {
+        const value = pending.pop();
+        if (typeof value === 'function')
+            throw new Error('host metadata must contain data values');
+        if (!value || typeof value !== 'object' || visited.has(value)) continue;
+        visited.add(value);
+        if (value instanceof Date || value instanceof URL ||
+            value instanceof RegExp || value instanceof ArrayBuffer ||
+            ArrayBuffer.isView(value)) continue;
+        if (value instanceof Map) {
+            for (const [key, member] of Map.prototype.entries.call(value))
+                pending.push(key, member);
+            continue;
+        }
+        if (value instanceof Set) {
+            for (const member of Set.prototype.values.call(value))
+                pending.push(member);
+            continue;
+        }
+        const prototype = Object.getPrototypeOf(value);
+        if (!Array.isArray(value) && prototype !== Object.prototype &&
+            prototype !== null)
+            throw new Error('unsupported data-only host metadata prototype');
+        for (const key of Reflect.ownKeys(value)) {
+            const descriptor = Object.getOwnPropertyDescriptor(value, key);
+            if (!descriptor?.enumerable) continue;
+            if (!Object.hasOwn(descriptor, 'value'))
+                throw new Error('host metadata must have own data properties');
+            pending.push(descriptor.value);
+        }
+    }
+}
+
 // Known JSON numeric-loss case only, not an arbitrary host data serializer.
 // Iteration instead of recursion bounds call-stack use for deeply nested
 // valid custom objects. No references escape the validation call.
-function assertFiniteNestedNumbers(root, errorMessage) {
+function assertFiniteNestedNumbers(root, errorMessage, dataOnly = false) {
     const pending = [root];
     const visited = new WeakSet();
     while (pending.length) {
@@ -181,7 +233,25 @@ function assertFiniteNestedNumbers(root, errorMessage) {
         // loss as a nonfinite number in host event/cargo checkpoint metadata.
         if (value instanceof Date && !Number.isFinite(value.getTime()))
             throw new Error(errorMessage);
-        for (const child of Object.values(value)) pending.push(child);
+        if (dataOnly) {
+            if (value instanceof Map) {
+                for (const [key, child] of Map.prototype.entries.call(value))
+                    pending.push(key, child);
+            } else if (value instanceof Set) {
+                for (const child of Set.prototype.values.call(value))
+                    pending.push(child);
+            } else if (!(value instanceof Date) && !(value instanceof URL) &&
+                !(value instanceof RegExp) && !(value instanceof ArrayBuffer) &&
+                !ArrayBuffer.isView(value)) {
+                for (const key of Reflect.ownKeys(value)) {
+                    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+                    if (descriptor?.enumerable && Object.hasOwn(descriptor, 'value'))
+                        pending.push(descriptor.value);
+                }
+            }
+        } else {
+            for (const child of Object.values(value)) pending.push(child);
+        }
     }
 }
 
@@ -189,21 +259,26 @@ function assertFiniteNestedNumbers(root, errorMessage) {
 // authentication. Events are append-only in the reference simulator;
 // arbitrary host-defined types remain permitted, but a future, missing,
 // out-of-order, or null tick cannot form a truthful snapshot timeline.
-export function assertCivilizationEventJournal(events, tickCount) {
+export function assertCivilizationEventJournal(events, tickCount, dataOnly = false) {
     if (!Array.isArray(events) || !Number.isSafeInteger(tickCount) || tickCount < 0)
         throw new Error('invalid simulation event journal');
     let previousTick = -1;
     for (let index = 0; index < events.length; index++) {
         if (!Object.hasOwn(events, index)) throw new Error('invalid simulation event journal');
         const event = events[index];
-        if (event === null || typeof event !== 'object' || Array.isArray(event) ||
-            !Number.isSafeInteger(event.tick) || event.tick < previousTick ||
-            event.tick > tickCount)
+        if (event === null || typeof event !== 'object' || Array.isArray(event))
             throw new Error('invalid simulation event journal');
-        previousTick = event.tick;
+        if (dataOnly) assertDataOnlyHostGraph(event);
+        const eventTick = dataOnly
+            ? Object.getOwnPropertyDescriptor(event, 'tick')?.value
+            : event?.tick;
+        if (!Number.isSafeInteger(eventTick) || eventTick < previousTick ||
+            eventTick > tickCount)
+            throw new Error('invalid simulation event journal');
+        previousTick = eventTick;
         // A nested NaN/Infinity would otherwise become null at the authority
         // JSON checkpoint boundary, even for a valid custom event name.
-        assertFiniteNestedNumbers(event, 'invalid simulation event numeric payload');
+        assertFiniteNestedNumbers(event, 'invalid simulation event numeric payload', dataOnly);
     }
 }
 
@@ -656,11 +731,24 @@ export class CivilizationSimulationSystem {
     }
 
     /**
-     * Serialize full state for 100% snapshot replay determinism
+     * Capture the direct simulator state. dataOnlyHostMetadata=true opts in
+     * to rejecting enumerable accessors in ordinary event/nontrade cargo
+     * metadata before reading them; it is not a Proxy sandbox or a guarantee
+     * about caller-defined hooks in other world fields or authority JSON.
+     * @param {{dataOnlyHostMetadata?: boolean}} [options]
      * @returns {object}
      */
-    getState() {
-        assertCivilizationEventJournal(this.events, this.tickCount);
+    getState(options = {}) {
+        const dataOnly = options?.dataOnlyHostMetadata === true;
+        assertCivilizationEventJournal(this.events, this.tickCount, dataOnly);
+        if (dataOnly) {
+            for (const entity of this.entities.values()) {
+                const cargo = Object.getOwnPropertyDescriptor(entity, 'cargo');
+                if (!cargo || !Object.hasOwn(cargo, 'value'))
+                    throw new Error('host metadata must have own data properties');
+                assertDataOnlyHostGraph(cargo.value);
+            }
+        }
         // Use one transient memo across event and nontrade cargo roots: a
         // shared host object must remain one detached object *within* a direct
         // snapshot. The JSON authority checkpoint intentionally cannot encode
@@ -677,8 +765,11 @@ export class CivilizationSimulationSystem {
                 market: structuredClone(n.market)
             })),
             events: this.events.map(e => {
-                const event = cloneHostSnapshotMetadata(e, hostCopies);
-                if (!e.cargo) event.cargo = undefined;
+                const event = cloneHostSnapshotMetadata(e, hostCopies, dataOnly);
+                const cargo = dataOnly
+                    ? Object.getOwnPropertyDescriptor(e, 'cargo')?.value
+                    : e.cargo;
+                if (!cargo) event.cargo = undefined;
                 return event;
             }),
             routes: Array.from(this.routes.values()).map(r => ({
@@ -689,7 +780,9 @@ export class CivilizationSimulationSystem {
             entities: Array.from(this.entities.values()).map(e => ({
                 ...e,
                 position: { ...e.position },
-                cargo: cloneHostSnapshotMetadata(e.cargo ?? {}, hostCopies)
+                cargo: cloneHostSnapshotMetadata(dataOnly
+                    ? (Object.getOwnPropertyDescriptor(e, 'cargo')?.value ?? {})
+                    : (e.cargo ?? {}), hostCopies, dataOnly)
             }))
         };
         assertCivilizationReplayFields(snapshot);
@@ -697,11 +790,29 @@ export class CivilizationSimulationSystem {
     }
 
     /**
-     * Restore full state from snapshot
+     * Restore direct state. The opt-in data-only preflight happens before
+     * state writes, but does not replace trusted checkpoint admission.
      * @param {object} snapshot
+     * @param {{dataOnlyHostMetadata?: boolean}} [options]
      */
-    setState(snapshot) {
+    setState(snapshot, options = {}) {
         if (!snapshot) return;
+        const dataOnly = options?.dataOnlyHostMetadata === true;
+        if (dataOnly) {
+            for (const event of snapshot.events ?? []) {
+                if (!event || typeof event !== 'object' || Array.isArray(event))
+                    throw new Error('invalid data-only simulation event');
+                assertDataOnlyHostGraph(event);
+            }
+            for (const entity of snapshot.entities ?? []) {
+                if (!entity || typeof entity !== 'object')
+                    throw new Error('invalid data-only simulation entity');
+                const cargo = Object.getOwnPropertyDescriptor(entity, 'cargo');
+                if (!cargo || !Object.hasOwn(cargo, 'value'))
+                    throw new Error('host metadata must have own data properties');
+                assertDataOnlyHostGraph(cargo.value);
+            }
+        }
         // Incoming direct snapshot roots may share host-owned metadata. Keep
         // their identity within the restored world, but no caller references.
         const hostCopies = new WeakMap();
@@ -712,8 +823,11 @@ export class CivilizationSimulationSystem {
         this.entities.clear();
         this.events = Array.isArray(snapshot.events)
             ? snapshot.events.map(e => {
-                const event = cloneHostSnapshotMetadata(e, hostCopies);
-                if (!e.cargo) event.cargo = undefined;
+                const event = cloneHostSnapshotMetadata(e, hostCopies, dataOnly);
+                const cargo = dataOnly
+                    ? Object.getOwnPropertyDescriptor(e, 'cargo')?.value
+                    : e.cargo;
+                if (!cargo) event.cargo = undefined;
                 return event;
             })
             : [];
@@ -745,7 +859,9 @@ export class CivilizationSimulationSystem {
                 this.entities.set(e.id, {
                     ...e,
                     position: { ...e.position },
-                    cargo: cloneHostSnapshotMetadata(e.cargo ?? {}, hostCopies)
+                    cargo: cloneHostSnapshotMetadata(dataOnly
+                        ? (Object.getOwnPropertyDescriptor(e, 'cargo')?.value ?? {})
+                        : (e.cargo ?? {}), hostCopies, dataOnly)
                 });
             }
         }

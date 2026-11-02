@@ -1270,4 +1270,126 @@ unsafeGetterHost.events[0].details.record=unsafeRecord;
 unsafeGetterHost.getState();
 assert(accessorCount>0,
   'scientific negative: a valid-looking getter executes during current metadata capture');
+
+// Explicit direct-snapshot opt-in uses own data descriptors for ordinary host
+// event/cargo metadata. It does not alter the legacy host contract, authority
+// JSON semantics, or the behavior of Proxy reflection traps.
+const dataOnlySource=hostReferenceFixture(), dataOnlyRecord=Object.create(null),
+  dataOnlyBacking=new ArrayBuffer(12), dataOnlyView=new Uint16Array(dataOnlyBacking,2,3);
+Object.defineProperty(dataOnlyRecord,'level',{
+  value:{value:1},enumerable:true,writable:false,configurable:false});
+const dataOnlyMap=new Map([[dataOnlyRecord,dataOnlyView]]);
+const dataOnlySet=new Set([dataOnlyRecord,dataOnlyMap]);
+dataOnlySource.events[0].details={record:dataOnlyRecord,backing:dataOnlyBacking,
+  view:dataOnlyView,map:dataOnlyMap,set:dataOnlySet};
+dataOnlySource.entities.get('neutral-ref').cargo.host={record:dataOnlyRecord,
+  backing:dataOnlyBacking,view:dataOnlyView,map:dataOnlyMap,set:dataOnlySet};
+const dataOnlySnapshot=dataOnlySource.getState({dataOnlyHostMetadata:true}),
+  dataOnlyEvent=dataOnlySnapshot.events[0].details,
+  dataOnlyCargo=dataOnlySnapshot.entities.find(e=>e.id==='neutral-ref').cargo.host;
+assert(dataOnlyEvent.record===dataOnlyCargo.record &&
+  dataOnlyEvent.map===dataOnlyCargo.map &&
+  dataOnlyEvent.set===dataOnlyCargo.set &&
+  dataOnlyEvent.view===dataOnlyCargo.view,
+  'opt-in data-only descriptors preserve event/cargo cross-root references');
+assert(dataOnlyEvent.view.buffer===dataOnlyEvent.backing &&
+  dataOnlyEvent.map.get(dataOnlyEvent.record)===dataOnlyEvent.view &&
+  dataOnlyEvent.set.has(dataOnlyEvent.map),
+  'opt-in data-only graph preserves Map/Set members and native shared backing');
+assert(dataOnlyEvent.record!==dataOnlyRecord &&
+  dataOnlyEvent.backing!==dataOnlyBacking &&
+  dataOnlyEvent.record.level.value===1,
+  'opt-in data-only graph is detached from host and retains readonly data values');
+const dataOnlyTarget=hostReferenceFixture();
+dataOnlyTarget.setState(dataOnlySnapshot,{dataOnlyHostMetadata:true});
+assert(dataOnlyTarget.events[0].details.record===
+  dataOnlyTarget.entities.get('neutral-ref').cargo.host.record &&
+  dataOnlyTarget.events[0].details.view.buffer===
+  dataOnlyTarget.entities.get('neutral-ref').cargo.host.backing &&
+  dataOnlyTarget.events[0].details.record!==dataOnlyEvent.record,
+  'opt-in direct setState preserves data-only identity and caller detachment');
+const dataOnlyTrusted=hostReferenceFixture();
+restoreTrustedCivState(dataOnlyTrusted,dataOnlySnapshot,
+  civRoadGraphFingerprint(dataOnlySnapshot));
+assert(dataOnlyTrusted.events[0].details.map.get(
+  dataOnlyTrusted.events[0].details.record)===
+  dataOnlyTrusted.entities.get('neutral-ref').cargo.host.view,
+  'trusted direct restore inherits intact Map and view metadata graph');
+
+const dataOnlyAccessorSource=hostReferenceFixture();
+let optInGetterReads=0;
+Object.defineProperty(dataOnlyAccessorSource.events[0].details,'bad',{
+  enumerable:true,get(){
+    optInGetterReads++;
+    dataOnlyAccessorSource.entities.get('neutral-ref').morale=0.2;
+    return 1;
+  }});
+throws(()=>dataOnlyAccessorSource.getState({dataOnlyHostMetadata:true}),
+  /host metadata must have own data properties/,
+  'opt-in direct getState refuses event accessor before getter execution');
+equal(optInGetterReads,0,'opt-in event accessor has no getter reads');
+equal(dataOnlyAccessorSource.entities.get('neutral-ref').morale,1,
+  'opt-in event accessor rejection leaves host morale unchanged');
+const dataOnlyCargoAccessor=hostReferenceFixture();
+let optInCargoReads=0;
+Object.defineProperty(dataOnlyCargoAccessor.entities.get('neutral-ref').cargo.host,'bad',{
+  enumerable:true,get(){optInCargoReads++;return 1;}});
+throws(()=>dataOnlyCargoAccessor.getState({dataOnlyHostMetadata:true}),
+  /host metadata must have own data properties/,
+  'opt-in direct getState refuses nontrade cargo accessor');
+equal(optInCargoReads,0,'opt-in cargo accessor never executes');
+const dataOnlyRestoreSnapshot=hostReferenceFixture().getState(),
+  dataOnlyRestoreTarget=hostReferenceFixture();
+let optInRestoreReads=0;
+Object.defineProperty(dataOnlyRestoreSnapshot.events[0].details,'bad',{
+  enumerable:true,get(){optInRestoreReads++;throw Error('untrusted getter');}});
+throws(()=>dataOnlyRestoreTarget.setState(dataOnlyRestoreSnapshot,{
+  dataOnlyHostMetadata:true}),
+  /host metadata must have own data properties/,
+  'opt-in direct setState preflights accessor before destination writes');
+equal(optInRestoreReads,0,'opt-in setState does not execute rejected getter');
+equal(dataOnlyRestoreTarget.events[0].type,'host_note',
+  'rejected opt-in direct restore leaves destination journal in place');
+const dataOnlyMapAccessor=hostReferenceFixture(), mapBad={};
+Object.defineProperty(mapBad,'bad',{enumerable:true,get(){throw Error('map getter');}});
+dataOnlyMapAccessor.events[0].details.map=new Map([['key',mapBad]]);
+throws(()=>dataOnlyMapAccessor.getState({dataOnlyHostMetadata:true}),
+  /host metadata must have own data properties/,
+  'data-only Map values are checked for ordinary accessors');
+const dataOnlyNonfinite=hostReferenceFixture();
+dataOnlyNonfinite.events[0].details.map=new Map([['host',{numeric:NaN}]]);
+throws(()=>dataOnlyNonfinite.getState({dataOnlyHostMetadata:true}),
+  /invalid simulation event numeric payload/,
+  'opt-in nested Map numeric values refuse silent JSON NaN loss');
+let legacyGetterReads=0;const legacyGetterHost=hostReferenceFixture();
+Object.defineProperty(legacyGetterHost.events[0].details,'legacy',{
+  enumerable:true,get(){legacyGetterReads++;return 'valid';}});
+equal(legacyGetterHost.getState().events[0].details.legacy,'valid',
+  'legacy direct snapshots still support intentionally valid accessors');
+assert(legacyGetterReads>0,
+  'default metadata getter semantics remain opt-out-compatible');
+// A Proxy can mutate through ownKeys/getOwnPropertyDescriptor even in opt-in
+// mode. The contract never calls this a hostile-object sandbox.
+let proxyTrapReads=0;const dataOnlyProxy=hostReferenceFixture();
+dataOnlyProxy.events[0].details.proxy=new Proxy({flag:1},{
+  ownKeys(target){proxyTrapReads++;return Reflect.ownKeys(target);}});
+dataOnlyProxy.getState({dataOnlyHostMetadata:true});
+assert(proxyTrapReads>0,
+  'scientific negative: opt-in descriptor capture still invokes Proxy traps');
+if (typeof SharedArrayBuffer !== 'undefined') {
+  const sharedMemoryHost=hostReferenceFixture(),sharedMemory=new SharedArrayBuffer(8);
+  sharedMemoryHost.events[0].details.sharedMemory=sharedMemory;
+  throws(()=>sharedMemoryHost.getState(),/unsupported shared host memory metadata/,
+    'unsupported SharedArrayBuffer is refused instead of fabricating native slots');
+  const sharedViewHost=hostReferenceFixture();
+  sharedViewHost.events[0].details.view=new Uint8Array(sharedMemory);
+  throws(()=>sharedViewHost.getState(),/unsupported shared host memory metadata/,
+    'typed view backed by shared memory cannot escape into detached direct snapshots');
+}
+const nodeBufferHost=hostReferenceFixture(),nodeBuffer=Buffer.from([3,4,5]);
+nodeBufferHost.events[0].details.buffer=nodeBuffer;
+const nodeBytes=nodeBufferHost.getState().events[0].details.buffer;
+assert(nodeBytes instanceof Uint8Array && !Buffer.isBuffer(nodeBytes) &&
+  nodeBytes[0]===3 && nodeBytes[1]===4 && nodeBytes[2]===5,
+  'scientific negative: Node Buffer metadata retains bytes but not Buffer subclass API');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
