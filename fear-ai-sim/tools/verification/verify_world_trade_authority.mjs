@@ -242,4 +242,28 @@ throws(() => restoreTrustedCivState(civ, badEntity, trusted), /invalid caravan s
   'trusted road graph does not permit negative entity time');
 equal(JSON.stringify(civ.getState()), pristine, 'invalid negative-time restore is atomic');
 
+// Protect the simulation clock, patrol hunger and delivery state from malformed
+// public reference-host fields before advanceSimulation begins.
+function assertTickRefusalWithoutMutation(authority, pattern, label) {
+  const before = JSON.stringify(authority.getState());
+  throws(() => authority.tick(), pattern, label);
+  equal(JSON.stringify(authority.getState()), before,
+    label + ': tick refusal preserves the full reference state');
+}
+const brokenPatrol = createWorld({ dispatch: false });
+brokenPatrol.authority.patrols.patrol.routeIds = null;
+assertTickRefusalWithoutMutation(brokenPatrol.authority, /invalid restored or live patrol/,
+  'null patrol routes cannot crash after advancing the clock');
+
+const brokenEncounter = createWorld();
+brokenEncounter.authority.shipments.shipment.encounterDone = 'false';
+assertTickRefusalWithoutMutation(brokenEncounter.authority, /invalid live shipment/,
+  'a string encounter flag cannot silently skip the planned encounter');
+
+const brokenArrival = createWorld();
+for(let i=0;i<39;i++) brokenArrival.authority.tick();
+brokenArrival.authority.shipments.shipment.targetNodeId = 'A';
+assertTickRefusalWithoutMutation(brokenArrival.authority, /live shipment route disagreement/,
+  'tampered destination cannot fail after route arrival advanced the clock');
+
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

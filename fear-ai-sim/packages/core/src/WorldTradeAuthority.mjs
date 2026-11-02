@@ -83,6 +83,19 @@ function sameGoods(a,b) {
   return keys.every(k => (a[k] || 0) === (b[k] || 0));
 }
 function clamp(v) { return Math.max(0, Math.min(1, v)); }
+function assertPatrolShape(patrolId,p,sim) {
+  id(patrolId);
+  if(!isRecord(p) || p.id!==patrolId || typeof p.passive!=='boolean' ||
+    !Array.isArray(p.routeIds) || p.routeIds.length===0 ||
+    !p.routeIds.every(r=>sim.routes.has(r)) ||
+    !p.routeIds.includes(p.currentRouteId) ||
+    ![p.hunger,p.threat,p.grievance].every(x=>Number.isFinite(x)&&x>=0&&x<=1) ||
+    !Number.isSafeInteger(p.lastRoamTick) || p.lastRoamTick<0 ||
+    p.lastRoamTick>sim.tickCount)throw Error('invalid restored or live patrol');
+  id(p.faction);
+  amount(p.toll,'patrol toll');
+  if(amount(p.roamEvery,'roam period')===0)throw Error('invalid roam period');
+}
 
 export class WorldTradeAuthority {
   constructor(sim = new CivilizationSimulationSystem({ distanceAwareTravel: true })) {
@@ -209,9 +222,31 @@ export class WorldTradeAuthority {
     this.events.push({type:'arrival_committed',shipmentId:ship.id,tick});
     return true;
   }
+  _assertTickReferences() {
+    // These reference-host objects are public and can be altered independently.
+    // Reject malformed patrols and escrow routing before advanceSimulation(1),
+    // not after time, roaming, or encounters have already changed live state.
+    for(const [patrolId,p] of Object.entries(this.patrols))
+      assertPatrolShape(patrolId,p,this.sim);
+    for(const [shipmentId,ship] of Object.entries(this.shipments)){
+      id(shipmentId);
+      if(!isRecord(ship) || ship.id!==shipmentId ||
+        ship.entityId!=='trade:'+shipmentId ||
+        typeof ship.encounterDone!=='boolean' ||
+        ![ship.threat,ship.guard].every(x=>Number.isFinite(x)&&x>=0&&x<=1) ||
+        !['enroute','completed'].includes(ship.status))
+        throw Error('invalid live shipment');
+      const route=this.sim.routes.get(ship.routeId);
+      if(!route || route.fromNodeId!==ship.fromNodeId ||
+        route.toNodeId!==ship.targetNodeId ||
+        !this.sim.entities.has(ship.entityId))
+        throw Error('live shipment route disagreement');
+    }
+  }
   tick() {
     if (this.initial === null) throw Error('genesis not sealed');
     this.assertConservation();
+    this._assertTickReferences();
     const intents=this.sim.advanceSimulation(1).arrivalIntents;
     const tick=this.sim.tickCount;
     const roaming=[];
@@ -304,18 +339,8 @@ export class WorldTradeAuthority {
       id(faction);amount(gold,'faction gold');
     }
     staged.relations=restoredRelations(staged.relations);
-    for(const [patrolId,p] of Object.entries(staged.patrols)){
-      id(patrolId);
-      if(!isRecord(p) || p.id!==patrolId || typeof p.passive!=='boolean' ||
-        !Array.isArray(p.routeIds) || p.routeIds.length===0 ||
-        !p.routeIds.every(r=>stagedSim.routes.has(r)) ||
-        !p.routeIds.includes(p.currentRouteId) ||
-        ![p.hunger,p.threat,p.grievance].every(x=>Number.isFinite(x)&&x>=0&&x<=1) ||
-        !Number.isSafeInteger(p.lastRoamTick) || p.lastRoamTick<0 ||
-        p.lastRoamTick>stagedSim.tickCount)throw Error('invalid restored patrol');
-      id(p.faction);amount(p.toll,'patrol toll');
-      if(amount(p.roamEvery,'roam period')===0)throw Error('invalid roam period');
-    }
+    for(const [patrolId,p] of Object.entries(staged.patrols))
+      assertPatrolShape(patrolId,p,stagedSim);
     if(!Array.isArray(staged.events))throw Error('malformed event journal');
     let previousTick=-1;
     for(const event of staged.events){
