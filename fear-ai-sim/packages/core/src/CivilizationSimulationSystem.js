@@ -79,6 +79,14 @@ function cloneHostSnapshotMetadata(root) {
             copies.set(value, date);
             return date;
         }
+        // WHATWG URL is a host-defined value with internal private slots.
+        // Object.create(URL.prototype) fabricates an instanceof URL whose
+        // href getter throws. Reconstruct the URL rather than its prototype.
+        if (value instanceof URL) {
+            const url = new URL(value.href);
+            copies.set(value, url);
+            return url;
+        }
         // Preserve built-in internal slots rather than fabricating objects
         // with Map/Set/RegExp/typed-array prototypes but no usable internals.
         if (value instanceof Map || value instanceof Set ||
@@ -100,7 +108,12 @@ function cloneHostSnapshotMetadata(root) {
     const result = copy(root);
     while (pending.length) {
         const [source, target] = pending.pop();
-        for (const key of Object.keys(source)) {
+        // Object.keys omits enumerable symbol metadata even though direct
+        // snapshots are permitted to carry it (authority JSON is separate).
+        const keys = [...Object.keys(source),
+            ...Object.getOwnPropertySymbols(source).filter(
+                key => Object.getOwnPropertyDescriptor(source, key)?.enumerable)];
+        for (const key of keys) {
             Object.defineProperty(target, key, {
                 value: copy(source[key]), writable: true, enumerable: true,
                 configurable: true
@@ -124,6 +137,10 @@ function assertFiniteNestedNumbers(root, errorMessage) {
         }
         if (!value || typeof value !== 'object' || visited.has(value)) continue;
         visited.add(value);
+        // Invalid Date#toJSON returns null. This is the same silent numeric
+        // loss as a nonfinite number in host event/cargo checkpoint metadata.
+        if (value instanceof Date && !Number.isFinite(value.getTime()))
+            throw new Error(errorMessage);
         for (const child of Object.values(value)) pending.push(child);
     }
 }

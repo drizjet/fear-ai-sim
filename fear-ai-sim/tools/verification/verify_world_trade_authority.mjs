@@ -1005,4 +1005,62 @@ assert(builtinExport.events[0].details.map instanceof Map &&
   'direct event metadata preserves valid Map internal slots without alias');
 assert(builtinExport.entities.find(e=>e.id==='neutral-ref').cargo.host.set instanceof Set,
   'direct cargo metadata preserves valid Set internal slots');
+
+// Known nonplain metadata must not be fabricated with an unusable URL
+// prototype, while a malformed Date must not silently JSON-null a checkpoint.
+const validUrlHost=hostReferenceFixture();
+validUrlHost.events[0].details.url=new URL('https://example.org/path?q=1');
+const directUrl=validUrlHost.getState().events[0].details.url;
+assert(directUrl instanceof URL && directUrl.href==='https://example.org/path?q=1' &&
+  directUrl!==validUrlHost.events[0].details.url,
+  'direct event URL clone preserves internal slots and detaches source');
+directUrl.searchParams.set('q','other');
+equal(validUrlHost.events[0].details.url.searchParams.get('q'),'1',
+  'changing exported URL search parameters does not modify host source');
+const validDateHost=hostReferenceFixture();
+validDateHost.events[0].details.date=new Date('2026-09-01T00:00:00.000Z');
+equal(validDateHost.getState().events[0].details.date.getUTCFullYear(),2026,
+  'valid host Date still survives direct snapshot boundary');
+const invalidEventDate=hostReferenceFixture(),badEventDate=new Date(NaN);
+invalidEventDate.events[0].details.date=badEventDate;
+throws(()=>invalidEventDate.getState(),/invalid simulation event numeric payload/,
+  'invalid host event Date refuses before silent JSON null conversion');
+assert(Number.isNaN(badEventDate.getTime()),
+  'refused event Date export leaves live host Date unchanged');
+const invalidCargoDate=hostReferenceFixture(),badCargoDate=new Date(NaN);
+invalidCargoDate.entities.get('neutral-ref').cargo.host.date=badCargoDate;
+throws(()=>invalidCargoDate.getState(),/invalid civilization cargo numeric metadata/,
+  'invalid host cargo Date refuses before silent JSON null conversion');
+assert(Number.isNaN(badCargoDate.getTime()),
+  'refused cargo Date export leaves live host Date unchanged');
+assertMalformedRestore(sim=>{
+  sim.events.push({type:'host_custom',tick:0,details:{date:new Date(NaN)}});
+},/invalid simulation event numeric payload/,
+  'trusted restore refuses invalid event Date before staging');
+assertMalformedRestore(sim=>{
+  sim.entities[0].cargo={host:{date:new Date(NaN)}};
+},/invalid civilization cargo numeric metadata/,
+  'trusted restore refuses invalid cargo Date before staging');
+const symbolicHost=hostReferenceFixture(),hostSymbol=Symbol('host-owned');
+symbolicHost.events[0].details[hostSymbol]={label:'keep'};
+const symbolicDirect=symbolicHost.getState().events[0].details;
+equal(symbolicDirect[hostSymbol],{label:'keep'},
+  'direct snapshot retains enumerable host-defined symbol-key metadata');
+assert(symbolicDirect[hostSymbol]!==symbolicHost.events[0].details[hostSymbol],
+  'host symbol-key nested value is detached from source');
+const symbolicTarget=hostReferenceFixture();
+symbolicTarget.setState(symbolicHost.getState());
+equal(symbolicTarget.events[0].details[hostSymbol],{label:'keep'},
+  'direct setState preserves enumerable host symbol-key metadata');
+// Scientific negative: JSON checkpoints omit symbols by design; never claim
+// their identity is part of the authority JSON format.
+assert(!Object.hasOwn(symbolicHost.getState().events[0].details,'host-owned') &&
+  Object.getOwnPropertySymbols(symbolicHost.getState().events[0].details).length===1,
+  'direct symbol preservation does not invent string keys');
+class PrivateHostMetadata {#secret=7; getSecret(){return this.#secret;}}
+const privateSlotHost=hostReferenceFixture(),privateObj=new PrivateHostMetadata();
+privateSlotHost.events[0].details.custom=privateObj;
+const privateDirect=privateSlotHost.getState().events[0].details.custom;
+throws(()=>privateDirect.getSecret(),/private member|class did not declare/,
+  'scientific negative: arbitrary class private slots cannot be cloned by prototype copy');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
