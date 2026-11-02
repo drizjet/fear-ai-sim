@@ -552,4 +552,71 @@ equal(preCorruptedLiveJournal.tick().tick,liveTickBefore+1,
 throws(()=>preCorruptedLiveJournal.getState(),/invalid simulation event journal/,
   'export rejects an already malformed historical simulation event');
 
+// Restore admission must check writable destination methods and properties
+// before applying even the first field from an otherwise valid checkpoint.
+function assertBlockedRestore(change, pattern, label, direct = false) {
+  const source=createWorld().authority, target=createWorld().authority;
+  source.tick();
+  const snapshot=source.getState();
+  const before=JSON.stringify(target.getState());
+  change(target);
+  throws(()=>direct
+    ? restoreTrustedCivState(target.sim,snapshot.sim,civRoadGraphFingerprint(snapshot.sim))
+    : target.restore(snapshot,civRoadGraphFingerprint(snapshot.sim)),pattern,label);
+  equal(JSON.stringify(target.getState()),before,label+': leaves target unchanged');
+}
+assertBlockedRestore(target=>Object.defineProperty(target.sim.entities,'set',
+  {value:null,writable:false,configurable:true}),
+  /invalid writable civilization restore target/,
+  'shadowed destination entity Map.set refuses before any restore');
+assertBlockedRestore(target=>Object.defineProperty(target.sim.routes,'clear',
+  {value:null,writable:false,configurable:true}),
+  /invalid writable civilization restore target/,
+  'shadowed destination route Map.clear refuses before clearing nodes');
+assertBlockedRestore(target=>Object.defineProperty(target.sim,'events',
+  {value:target.sim.events,writable:false,enumerable:true,configurable:true}),
+  /invalid writable civilization restore target/,
+  'readonly destination simulation journal refuses before map changes');
+assertBlockedRestore(target=>Object.defineProperty(target,'rng',
+  {value:target.rng,writable:false,enumerable:true,configurable:true}),
+  /invalid writable authority restore target/,
+  'readonly destination RNG refuses before the simulation transfer');
+assertBlockedRestore(target=>Object.defineProperty(target.sim.entities,'set',
+  {value:null,writable:false,configurable:true}),
+  /invalid writable civilization restore target/,
+  'direct trusted simulator restore preflights destination Map.set',true);
+
+// Staged setState previously silently normalized malformed public snapshot data.
+function assertMalformedRestore(change,pattern,label) {
+  const source=createWorld().authority, target=createWorld().authority;
+  const snapshot=source.getState();
+  change(snapshot.sim);
+  const before=JSON.stringify(target.getState());
+  throws(()=>target.restore(snapshot,civRoadGraphFingerprint(snapshot.sim)),pattern,label);
+  equal(JSON.stringify(target.getState()),before,label+': leaves target unchanged');
+}
+assertMalformedRestore(sim=>{sim.routes[0].waypoints=null;},
+  /invalid civilization route waypoints/,
+  'null route waypoints cannot silently become an empty array');
+assertMalformedRestore(sim=>{sim.nodes[0].market=null;},
+  /invalid civilization node state/,
+  'null node market cannot silently become an empty object');
+assertMalformedRestore(sim=>{sim.nodes[0].position=null;},
+  /invalid civilization node state/,
+  'null node position cannot silently become an empty object');
+
+const validStructuredSource=createWorld().authority;
+const validStructuredSnapshot=validStructuredSource.getState();
+validStructuredSnapshot.sim.routes[0].waypoints=[{x:4,y:0,z:0}];
+validStructuredSnapshot.sim.nodes[0].market={ORE:3};
+const validStructuredTarget=createWorld().authority;
+Object.defineProperty(validStructuredTarget.sim,'nodes',
+  {value:validStructuredTarget.sim.nodes,writable:false,enumerable:true,configurable:true});
+validStructuredTarget.restore(validStructuredSnapshot,
+  civRoadGraphFingerprint(validStructuredSnapshot.sim));
+equal(validStructuredTarget.sim.routes.get('R').waypoints,[{x:4,y:0,z:0}],
+  'valid custom waypoints survive restore');
+equal(validStructuredTarget.sim.nodes.get('A').market,{ORE:3},
+  'valid custom market survives restore');
+validStructuredTarget.assertConservation();
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

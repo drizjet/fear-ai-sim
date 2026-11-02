@@ -82,6 +82,25 @@ export function assertCivilizationEventJournal(events, tickCount) {
     }
 }
 
+// Admission for this reference simulator's existing restore target, not a
+// general transactional rollback. setState writes these fields and calls the
+// three maps' clear/set methods; a host may replace any of them publicly.
+export function assertCivilizationRestoreTarget(system) {
+    if (!(system instanceof CivilizationSimulationSystem))
+        throw new Error('invalid writable civilization restore target');
+    for (const field of ['tickCount', 'focusOrigin', 'events']) {
+        const descriptor = Object.getOwnPropertyDescriptor(system, field);
+        if (!descriptor || !Object.hasOwn(descriptor, 'value') || !descriptor.writable)
+            throw new Error('invalid writable civilization restore target');
+    }
+    for (const field of ['nodes', 'routes', 'entities']) {
+        const map = system[field];
+        if (!(map instanceof Map) || map.clear !== Map.prototype.clear ||
+            map.set !== Map.prototype.set)
+            throw new Error('invalid writable civilization restore target');
+    }
+}
+
 export class CivilizationSimulationSystem {
     /**
      * @param {object} [config={}]

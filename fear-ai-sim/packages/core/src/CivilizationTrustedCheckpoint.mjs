@@ -1,5 +1,5 @@
 import { fingerprintGraph, verifyTrustedGraph } from './RoadGraphFingerprint.mjs';
-import { CivilizationSimulationSystem, assertCivilizationEventJournal } from './CivilizationSimulationSystem.js';
+import { CivilizationSimulationSystem, assertCivilizationEventJournal, assertCivilizationRestoreTarget } from './CivilizationSimulationSystem.js';
 export function civRoadGraph(state) {
   if (!state || !Array.isArray(state.nodes) || !Array.isArray(state.routes)) throw new Error('malformed civilization road graph');
   return {
@@ -15,6 +15,19 @@ export function restoreTrustedCivState(system, snapshot, independentlyTrustedFin
   if (!Number.isSafeInteger(snapshot.tickCount) || snapshot.tickCount < 0 ||
     !Array.isArray(snapshot.entities) || !Array.isArray(snapshot.events)) throw new Error('invalid snapshot');
   assertCivilizationEventJournal(snapshot.events, snapshot.tickCount);
+  // setState otherwise treats a null market/position or waypoint list as an
+  // empty object/array. Registered nodes always have object fields, and
+  // registered routes always have an array, even when that array is empty.
+  const record = value => value !== null && typeof value === 'object' &&
+    !Array.isArray(value);
+  for (const node of snapshot.nodes) {
+    if (!record(node) || !record(node.market) || !record(node.position))
+      throw new Error('invalid civilization node state');
+  }
+  for (const route of snapshot.routes) {
+    if (!record(route) || !Array.isArray(route.waypoints))
+      throw new Error('invalid civilization route waypoints');
+  }
   const ids = new Set();
   for (const e of snapshot.entities) {
     // CivilizationSimulationSystem.setState silently skips falsy entity IDs.
@@ -29,6 +42,7 @@ export function restoreTrustedCivState(system, snapshot, independentlyTrustedFin
   }
   const staged = new CivilizationSimulationSystem(system.config);
   staged.setState(snapshot);
+  assertCivilizationRestoreTarget(system);
   system.setState(staged.getState());
   return system;
 }

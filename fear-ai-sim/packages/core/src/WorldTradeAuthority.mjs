@@ -1,4 +1,4 @@
-import { CivilizationSimulationSystem, LOD_CADENCES } from './CivilizationSimulationSystem.js';
+import { CivilizationSimulationSystem, LOD_CADENCES, assertCivilizationRestoreTarget } from './CivilizationSimulationSystem.js';
 import { restoreTrustedCivState } from './CivilizationTrustedCheckpoint.mjs';
 
 // Host-authoritative ledger: middleware proposes path progress; this layer is the
@@ -518,6 +518,16 @@ export class WorldTradeAuthority {
     staged.assertConservation();
     // Transfer to the original simulator only after independent map trust
     // and all ledger validation succeeds.
+    assertCivilizationRestoreTarget(this.sim);
+    // All of these fields are assigned after the simulation transfer.
+    // Reject an existing readonly/accessor-backed field before that first
+    // transfer; this does not attempt arbitrary Proxy/getter guarantees.
+    for(const k of ['stocks','vaults','factionLoot','factionGold','shipments',
+      'relations','patrols','events','initial','rng']) {
+      const descriptor=Object.getOwnPropertyDescriptor(this,k);
+      if(!descriptor || !Object.hasOwn(descriptor,'value') || !descriptor.writable)
+        throw Error('invalid writable authority restore target');
+    }
     this.sim.setState(stagedSim.getState());
     for(const k of ['stocks','vaults','factionLoot','factionGold','shipments',
       'relations','patrols','events','initial','rng'])this[k]=staged[k];
