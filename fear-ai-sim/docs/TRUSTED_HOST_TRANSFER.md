@@ -30,23 +30,65 @@ remain intended for trusted, in-process callers and do not promise Proxy
 isolation. Do not feed untrusted objects into `getState`,
 `setState`, `registerEntity`, or `sim.events` directly.
 
-## Version 1 wire frames
+## Authenticated Node child-process IPC (recommended)
 
-Send a JSON string over an IPC or network transport. On Node, the trusted
-parent can receive the child-process `message` event and pass the received
-primitive string straight to the simulator:
+Use `AuthenticatedHostIpcGateway.mjs` in the **trusted parent only**. The
+gateway seals the simulator against direct unsigned transfer calls. It
+authenticates each incoming message using the owned ChildProcess object
+reference, a fresh random session ID, HMAC-SHA256 and a strictly increasing
+message sequence. Peer IDs or PIDs are not trusted identity.
 
 ```js
-child.on('message', message => {
-  if (typeof message !== 'string') return;
-  try {
-    const receipt = sim.acceptHostTransferFrame(message);
-    // Send a receipt through an authenticated host-owned channel.
-  } catch (error) {
-    // Reject; do not retry malformed or unauthorized frames blindly.
-  }
+import { fork } from 'node:child_process';
+import { createAuthenticatedHostIpcGateway, createHostIpcCredential } from './packages/core/src/AuthenticatedHostIpcGateway.mjs';
+
+const child = fork('./isolated-host-child.mjs', [], {
+  stdio: ['ignore', 'pipe', 'pipe', 'ipc']
 });
+const credential = createHostIpcCredential(); // fresh on every launch
+const gateway = createAuthenticatedHostIpcGateway(sim);
+gateway.attachChildProcess(child, {
+  peerId: 'neutral-plugin', ...credential,
+  allowedEventTypes: ['host_signal'],
+  allowedEntityIds: ['neutral'],
+  maxMessagesPerWindow: 32, windowMs: 1000
+});
+child.send(credential); // trusted bootstrap on this exact child handle
 ```
+
+The authorized child calls `makeAuthenticatedHostMessage({frame,sequence,
+sessionId,secret})` with a primitive JSON frame string. It begins at sequence
+1 and increments on authenticated admission. Authenticated messages denied
+by data/policy validation still consume their sequence to prevent replay.
+Rate-limited messages do not, and can be retried when capacity returns.
+Both event and cargo allowlists default to **deny-all**.
+
+The default rate is 32 admitted messages per 1,000 ms per peer (configurable
+and bounded), plus a bound on pre-authentication attempts. Counters use a
+trusted monotonic clock, never a timestamp supplied by the sender. Peer
+registration is revoked on exit/disconnect, and all credentials must be
+replaced on restart. Do not log or echo shared session secrets.
+
+Signatures cover exact base64url-encoded UTF-8 frame bytes, session ID and
+sequence; well-formed digests are compared constant-time. Holding a key grants
+only the specified event/entity permissions, not movement or inventory.
+Unknown peer handles, altered MACs, old sessions, duplicated/gapped
+sequences and unauthorized event/entity requests fail closed.
+
+**This is an opt-in Node child-process integration, not an automatic
+retrofit of browser, Unity, Godot or Unreal adapters.** Keep the simulator,
+authority, gateway and opaque ingress capability inside trusted parent code.
+Hostile code already executing in the trusted process can mutate public
+simulator fields independently of this gateway. A child with session
+credentials can sign messages in its limited permitted scope, and must be
+isolated further using OS permissions. HMAC does not create an OS sandbox.
+
+## Version 1 wire frames
+
+These are **inner JSON payloads**, not authenticated envelopes. After
+installing the gateway, they must be signed and sent through its owned
+child-process channel, not passed directly to `sim.acceptHostTransferFrame`.
+An unsealed simulator retains the old trusted in-process primitive API.
 
 Host event metadata, at the *current* simulation tick:
 
@@ -71,8 +113,9 @@ depth/breadth and oversized frames are refused **before any mutation**.
 The frame limit is 262,144 UTF-16 code units, depth 32, at most 4,096 JSON
 value nodes, 256 fields per record, 2,048 array entries, and 16,384 code
 units per string. The native JSON parser uses normal last-wins duplicate-key
-semantics, so this contract is not a canonical signed JSON format; sender
-authentication/replay protection belongs to the trusted transport.
+semantics, so this contract is not a canonical signed JSON format. The
+optional Node gateway authenticates exact encoded bytes and maintains
+replay protection for each registered peer.
 
 JSON intentionally has **value semantics**: Map/Set, cycles, typed arrays,
 Buffer subclasses, shared backing references and executable metadata are not
@@ -92,8 +135,15 @@ event/cargo restore and 40-tick deterministic replay. The separate off-Git
 executes a hostile callback in the child, while its trusted parent accepts only
 primitive frames and retains unchanged fear/morale state.
 
+The authenticated gateway's named probes cover forged signatures, peer
+impersonation, sequence replay/gaps, rate throttling and refill, allowlist
+denial, revoked handles, raw ingress bypass rejection, and identical 40-tick
+trade replay/conservation. Off-Git `authenticated_child_ipc.mjs` verifies a
+real owned child process with signed, replayed, forged, over-limit and
+nonstring messages.
+
 Out-of-band direct access to the simulator, ambient global monkeypatching
-inside the trusted process, forged authenticated senders, resource exhaustion
+inside the trusted process, leaked authorized credentials, resource exhaustion
 outside the bounded parser, and hostile code with host OS privileges remain
 outside this boundary. An OS process does not, by itself, provide strong
 filesystem/network containment; use platform sandboxing for untrusted plugins.

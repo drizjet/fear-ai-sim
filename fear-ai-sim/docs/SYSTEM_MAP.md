@@ -31,7 +31,10 @@ This is the durable map for humans and agents. It does **not** store volatile te
 Trusted cross-process host metadata ingress is documented in
 [`docs/TRUSTED_HOST_TRANSFER.md`](TRUSTED_HOST_TRANSFER.md): untrusted host
 objects never cross as live JS references; only opt-in primitive JSON frames
-enter the simulator. This is **not** an in-process Proxy sandbox.
+enter the simulator. For Node IPC, use
+`AuthenticatedHostIpcGateway.mjs` with fresh HMAC sessions, owned child
+handles, event/entity allowlists, per-peer rate bounds, replay protection
+and sealed direct ingress. This is **not** an in-process Proxy sandbox.
 
 Build the **best fear AI in the world that plugs into any game**.
 

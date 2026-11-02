@@ -15,6 +15,8 @@
 
 import { decodeHostTransferFrame } from './HostTransferFrame.mjs';
 
+const guardedHostIngress = new WeakMap();
+
 export const COGNITIVE_LOD_TIERS = Object.freeze({
     LOD0_IMMEDIATE: 0,   // Immediate vicinity (<30m): Full per-tick affective simulation (cadence = 1)
     LOD1_TACTICAL: 1,    // Tactical range (30-80m): Amortized group simulation (cadence = 5)
@@ -473,6 +475,16 @@ export class CivilizationSimulationSystem {
         this.events = [];
     }
 
+    // Trusted parent calls this once when installing an authenticated IPC
+    // gateway. The opaque in-memory capability never crosses the IPC wire.
+    sealHostTransferIngress() {
+        if (guardedHostIngress.has(this))
+            throw new Error('trusted host ingress already sealed');
+        const token = Symbol('trusted host ingress');
+        guardedHostIngress.set(this, token);
+        return token;
+    }
+
     /**
      * Opt-in ingress for a primitive JSON string received through a trusted
      * transport (for example, a child-process IPC message). This method never
@@ -486,7 +498,10 @@ export class CivilizationSimulationSystem {
      * @param {string} wire - Primitive, bounded, JSON-encoded v1 frame
      * @returns {{kind:string, tick?:number, entityId?:string}}
      */
-    acceptHostTransferFrame(wire) {
+    acceptHostTransferFrame(wire, capability) {
+        if (guardedHostIngress.has(this) &&
+            guardedHostIngress.get(this) !== capability)
+            throw new Error('authenticated host ingress required');
         const frame = decodeHostTransferFrame(wire);
         if (frame.kind === 'event') {
             if (frame.tick !== this.tickCount)

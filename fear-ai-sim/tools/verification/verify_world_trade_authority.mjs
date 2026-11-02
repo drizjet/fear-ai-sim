@@ -11,6 +11,8 @@ import { WorldTradeAuthority } from '../../packages/core/src/WorldTradeAuthority
 import { civRoadGraphFingerprint, restoreTrustedCivState } from '../../packages/core/src/CivilizationTrustedCheckpoint.mjs';
 import { createContext, runInContext } from 'node:vm';
 import { decodeHostTransferFrame, HOST_TRANSFER_MAX_CODE_UNITS } from '../../packages/core/src/HostTransferFrame.mjs';
+import { createAuthenticatedHostIpcGateway, createHostIpcCredential,
+  makeAuthenticatedHostMessage } from '../../packages/core/src/AuthenticatedHostIpcGateway.mjs';
 
 let assertions = 0;
 function assert(condition, label) {
@@ -1644,4 +1646,153 @@ authorityTransferOne.authority.assertConservation();
 authorityTransferTwo.authority.assertConservation();
 assert(authorityTransferOne.sim.events.some(e=>e.type==='host_signal'),
   'trusted wire event remains in authority replay journal');
+
+// Authenticated owned-peer ingress. No caller-controlled PID or peer name is
+// accepted as ownership; only a registered ChildProcess identity will match.
+const authenticatedWorld=hostReferenceFixture(), ownedChild={},
+  impersonator={}, secret='1a'.repeat(32), sessionId='2b'.repeat(16);
+let hostClock=0;
+const authGateway=createAuthenticatedHostIpcGateway(authenticatedWorld,{
+  clock:()=>hostClock});
+const registration=authGateway.registerPeer(ownedChild,{
+  peerId:'neutral-plugin',secret,sessionId,allowedEventTypes:['host_signal'],
+  allowedEntityIds:['neutral-ref'],maxMessagesPerWindow:2,windowMs:1000
+});
+equal(registration,{peerId:'neutral-plugin',sessionId},
+  'trusted owner registers exact peer identity and session');
+const signedFrame='{"version":1,"kind":"event","type":"host_signal","tick":0,"details":{"risk":0.4}}';
+const sign=(sequence,frame=signedFrame,key=secret,id=sessionId)=>
+  makeAuthenticatedHostMessage({sequence,frame,secret:key,sessionId:id});
+const signedOne=sign(1),signedTwo=sign(2),signedThree=sign(3);
+equal(authGateway.receiveFrom(ownedChild,signedOne).accepted,true,
+  'valid signed allowed child message accepted');
+equal(authGateway.receiveFrom(ownedChild,signedOne).reason,'replay_or_sequence',
+  'exact signed message cannot be replayed');
+equal(authGateway.receiveFrom(ownedChild,sign(1)).reason,'replay_or_sequence',
+  'newly signed duplicate sequence cannot be replayed');
+equal(authGateway.receiveFrom(impersonator,signedTwo).reason,'unknown_peer',
+  'unregistered child handle cannot spoof authorized peer');
+equal(authGateway.receiveFrom(ownedChild,sign(2,signedFrame,'3c'.repeat(32))).reason,
+  'unauthenticated','correct session with wrong MAC secret is refused');
+equal(authGateway.receiveFrom(ownedChild,sign(2,signedFrame,secret,'4d'.repeat(16))).reason,
+  'invalid_envelope','old or foreign session is refused before signature');
+equal(authGateway.receiveFrom(ownedChild,sign(3)).reason,'replay_or_sequence',
+  'valid signed out-of-order sequence cannot jump past next expected');
+equal(authGateway.receiveFrom(ownedChild,signedTwo).accepted,true,
+  'failed forgery and replay do not consume expected valid sequence');
+equal(authGateway.receiveFrom(ownedChild,signedThree).reason,'rate_limited',
+  'authenticated rate capacity refuses third event in same window');
+equal(authenticatedWorld.events.filter(e=>e.type==='host_signal').length,2,
+  'replay, forgery and rate failures do not mutate event journal');
+hostClock=1000;
+equal(authGateway.receiveFrom(ownedChild,signedThree).accepted,true,
+  'new token window admits expected sequence after throttle');
+equal(authGateway.getPeerStats(ownedChild).lastSequence,3,
+  'accepted sequence is tracked independently of host simulation tick');
+throws(()=>authenticatedWorld.acceptHostTransferFrame(signedFrame),
+  /authenticated host ingress required/,'sealed simulator refuses raw bypass');
+throws(()=>authenticatedWorld.acceptHostTransferFrame(signedFrame,Symbol()),
+  /authenticated host ingress required/,'invented local symbol cannot bypass raw ingress');
+throws(()=>createAuthenticatedHostIpcGateway(authenticatedWorld),
+  /already sealed/,'second gateway cannot obtain an independent raw ingress capability');
+let badProxyCalls=0;
+const proxyWire=new Proxy({},{
+  ownKeys(t){badProxyCalls++;authenticatedWorld.entities.get('neutral-ref').fear=.88;
+    return Reflect.ownKeys(t);},
+  getOwnPropertyDescriptor(t,k){badProxyCalls++;return Reflect.getOwnPropertyDescriptor(t,k);},
+  get(){badProxyCalls++;throw Error('host access denied');}
+});
+equal(authGateway.receiveFrom(ownedChild,proxyWire).reason,'invalid_envelope',
+  'gateway rejects raw Proxy without attempting to serialize');
+equal(badProxyCalls,0,'gateway does not execute hostile Proxy traps');
+equal(authenticatedWorld.entities.get('neutral-ref').fear,0,
+  'malicious raw input leaves simulator fear untouched');
+equal(authGateway.receiveFrom(ownedChild,{toJSON(){throw Error('host toJSON executed')}}).reason,
+  'invalid_envelope','gateway never serializes callback-bearing input');
+hostClock=2000;
+equal(authGateway.receiveFrom(ownedChild,sign(4,
+  '{"version":1,"kind":"event","type":"unauthorized","tick":0,"details":{}}')).reason,
+  'forbidden_event','authenticated child cannot submit unallowlisted event type');
+equal(authGateway.receiveFrom(ownedChild,sign(4,
+  '{"version":1,"kind":"cargo","entityId":"missing","cargo":{}}')).reason,
+  'replay_or_sequence','invalid sequence after policy refusal is not accepted');
+equal(authGateway.getPeerStats(ownedChild).lastSequence,4,
+  'authenticated denied policy request consumes sequence against replay');
+const deniedEntity='{"version":1,"kind":"cargo","entityId":"other","cargo":{}}';
+equal(authGateway.receiveFrom(ownedChild,sign(5,deniedEntity)).reason,
+  'forbidden_entity','authenticated host cannot alter unallowlisted cargo identity');
+equal(authGateway.getPeerStats(ownedChild).lastSequence,5,
+  'disallowed cargo message consumes authenticated sequence');
+equal(authGateway.receiveFrom(ownedChild,sign(6,
+  '{"version":1,"kind":"cargo","entityId":"neutral-ref","cargo":{"host":{"note":"authenticated"}}}')).reason,
+  'rate_limited','valid cargo frame also obeys admission rate limit');
+hostClock=3000;
+equal(authGateway.receiveFrom(ownedChild,sign(6,
+  '{"version":1,"kind":"cargo","entityId":"neutral-ref","cargo":{"host":{"note":"authenticated"}}}')).accepted,
+  true,'allowed authenticated cargo admitted after window refill');
+equal(authenticatedWorld.entities.get('neutral-ref').cargo.host.note,
+  'authenticated','authorized child cargo metadata retains value');
+const stat=authGateway.getPeerStats(ownedChild);
+assert(stat.accepted===4 && stat.lastSequence===6 &&
+  !Object.hasOwn(stat,'secret'),'rate/replay stats never expose secret');
+equal(authGateway.revokePeer(ownedChild),true,
+  'owner can revoke compromised IPC child handle');
+equal(authGateway.receiveFrom(ownedChild,sign(7)).reason,'unknown_peer',
+  'revoked child cannot submit once-valid session packets');
+const secondPeer={},secondCredential='ac'.repeat(32),secondSession='bd'.repeat(16);
+authGateway.registerPeer(secondPeer,{peerId:'separate-host',secret:secondCredential,
+  sessionId:secondSession,allowedEventTypes:['host_signal'],
+  maxMessagesPerWindow:1,windowMs:1000});
+equal(authGateway.receiveFrom(secondPeer,sign(1,signedFrame,
+  secondCredential,secondSession)).accepted,true,
+  'separate authorized peer owns its own sequence and rate budget');
+equal(authGateway.receiveFrom(secondPeer,sign(2,signedFrame,
+  secondCredential,secondSession)).reason,'rate_limited',
+  'second peer independently enforces its smaller rate capacity');
+equal(authGateway.receiveFrom(secondPeer,signedOne).reason,'invalid_envelope',
+  'other peer session cannot replay first peer authenticated packet');
+const differentChild={};
+authGateway.registerPeer(differentChild,{peerId:'rotated-host',secret:'ce'.repeat(32),
+  sessionId:'df'.repeat(16),allowedEventTypes:['host_signal']});
+equal(authGateway.receiveFrom(differentChild,sign(1)).reason,'invalid_envelope',
+  'old signed session cannot be reused after child replacement');
+let limited=false;
+for(let i=0;i<270;i++){
+  const result=authGateway.receiveFrom(differentChild,'x'.repeat(250));
+  if(result.reason==='rate_limited')limited=true;
+}
+assert(limited,'forged unauthenticated message floods are bounded before HMAC');
+equal(authGateway.getPeerStats(differentChild).lastSequence,0,
+  'unauthenticated flood does not consume authenticated sequence');
+equal(authGateway.getPeerStats(differentChild).accepted,0,
+  'malicious flood cannot create accepted frames');
+const issued=createHostIpcCredential();
+assert(/^[a-f0-9]{32}$/.test(issued.sessionId) &&
+  /^[a-f0-9]{64}$/.test(issued.secret),
+  'session and HMAC secret use secure random lengths');
+
+const signedReplayOne=createWorld(),signedReplayTwo=createWorld(),
+  credentialOne='7e'.repeat(32),nonceOne='8f'.repeat(16),
+  replayChildOne={},replayChildTwo={};
+const replayGatewayOne=createAuthenticatedHostIpcGateway(signedReplayOne.authority),
+  replayGatewayTwo=createAuthenticatedHostIpcGateway(signedReplayTwo.authority);
+for(const [gateway,child] of [[replayGatewayOne,replayChildOne],
+  [replayGatewayTwo,replayChildTwo]]){
+  gateway.registerPeer(child,{peerId:'caravan-host',secret:credentialOne,
+    sessionId:nonceOne,allowedEventTypes:['host_signal']});
+  equal(gateway.receiveFrom(child,makeAuthenticatedHostMessage({
+    sequence:1,frame:signedFrame,secret:credentialOne,sessionId:nonceOne})).accepted,
+    true,'fresh signed event accepted by deterministic authority pair');
+}
+for(let step=0;step<40;step++){
+  signedReplayOne.authority.tick();
+  signedReplayTwo.authority.tick();
+  equal(signedReplayOne.authority.getState(),signedReplayTwo.authority.getState(),
+    'authenticated IPC maintains deterministic 40-tick replay '+step);
+}
+signedReplayOne.authority.assertConservation();
+signedReplayTwo.authority.assertConservation();
+throws(()=>signedReplayOne.authority.acceptHostTransferFrame(signedFrame),
+  /authenticated host ingress required/,
+  'sealed authority cannot bypass owned authenticated transport');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

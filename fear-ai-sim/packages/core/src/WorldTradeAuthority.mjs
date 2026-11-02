@@ -124,10 +124,13 @@ export class WorldTradeAuthority {
     this.shipments = {}; this.relations = {}; this.patrols = {}; this.events = [];
     this.initial = null; this.rng = 0xBADC0FFE;
   }
+  sealHostTransferIngress() {
+    return this.sim.sealHostTransferIngress();
+  }
   // Only receives primitive wire strings. Host-only signal and nontrade
   // metadata are delegated to the simulator; escrow stays authority-owned.
-  acceptHostTransferFrame(wire) {
-    return this.sim.acceptHostTransferFrame(wire);
+  acceptHostTransferFrame(wire, capability) {
+    return this.sim.acceptHostTransferFrame(wire, capability);
   }
   seedNode(node, goods, gold = 0) {
     if (this.initial !== null) throw Error('genesis sealed');
