@@ -406,4 +406,61 @@ equal(validPair.shipments.S1.status,'completed','first simultaneous arrival comp
 equal(validPair.shipments.S2.status,'completed','second simultaneous arrival completes');
 validPair.assertConservation();
 
+// A host can shadow the array's push method without freezing its length.
+// Reject before the simulation clock advances or the first escrow commits.
+const brokenSimulationPush=createSimultaneousArrivals();
+Object.defineProperty(brokenSimulationPush.sim.events,'push',
+  {value:undefined,writable:false,configurable:true});
+assertTickRefusalWithoutMutation(brokenSimulationPush,
+  /invalid live writable simulation journal/,
+  'shadowed simulation event append refuses before any arrival intent');
+
+const brokenAuthorityPush=createSimultaneousArrivals();
+Object.defineProperty(brokenAuthorityPush.events,'push',
+  {value:null,writable:false,configurable:true});
+assertTickRefusalWithoutMutation(brokenAuthorityPush,
+  /invalid live writable event journal/,
+  'shadowed authority append refuses before a first shipment can settle');
+
+const brokenDangerHalfLife=createSimultaneousArrivals();
+brokenDangerHalfLife.sim.config.routeDangerHalfLifeTicks=NaN;
+brokenDangerHalfLife.sim.routes.get('R').perceivedDanger=0.6;
+assertTickRefusalWithoutMutation(brokenDangerHalfLife,
+  /invalid live simulation travel or danger configuration/,
+  'a NaN danger half-life cannot silently erase road danger');
+
+const overflowCoarseStep=createSimultaneousArrivals();
+overflowCoarseStep.sim.registerRoute('R2',
+  {fromNodeId:'A',toNodeId:'B',distance:80,baseSecurity:0.99});
+const overflowNeutral=overflowCoarseStep.sim.registerEntity('neutral',
+  {type:'CARAVAN',currentRouteId:'R2',position:{x:150,y:0,z:0},
+    routeProgress:0.2,wealth:0});
+overflowNeutral.lastUpdateTick=20;
+overflowCoarseStep.sim.config.caravanUnitsPerTick=1e308;
+assertTickRefusalWithoutMutation(overflowCoarseStep,
+  /invalid live simulation caravan step/,
+  'finite speed cannot overflow coarse-LOD travel and reset progress to zero');
+
+const sparsePatrolRoute=createSimultaneousArrivals();
+sparsePatrolRoute.patrols.patrol.routeIds=[,'R'];
+assertTickRefusalWithoutMutation(sparsePatrolRoute,
+  /invalid restored or live patrol/,
+  'roaming must reject sparse route IDs instead of writing undefined');
+
+const densePatrolRoute=createSimultaneousArrivals();
+densePatrolRoute.patrols.patrol.routeIds=['R','R'];
+equal(densePatrolRoute.tick().settled,2,
+  'dense repeated patrol routes still permit both arrivals');
+equal(densePatrolRoute.patrols.patrol.currentRouteId,'R',
+  'dense patrol roaming chooses a real route');
+
+const unknownNeutralLod=createSimultaneousArrivals();
+const unknownLodEntity=unknownNeutralLod.sim.registerEntity('neutral',
+  {type:'SCOUT',currentRouteId:'R',wealth:0});
+unknownLodEntity.lodTier=5000;
+equal(unknownNeutralLod.tick().settled,2,
+  'existing unknown-LOD fallback remains allowed for neutral observers');
+equal(unknownLodEntity.routeProgress,0.01,
+  'existing unknown-LOD fallback advances with cadence one');
+
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

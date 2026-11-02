@@ -95,11 +95,17 @@ function sameGoods(a,b) {
   return keys.every(k => (a[k] || 0) === (b[k] || 0));
 }
 function clamp(v) { return Math.max(0, Math.min(1, v)); }
+function hasDensePatrolRoutes(routes,sim) {
+  // Array.every skips holes. Roaming samples indices, including missing ones.
+  for(let i=0;i<routes.length;i++)
+    if(!Object.hasOwn(routes,i) || !sim.routes.has(routes[i]))return false;
+  return true;
+}
 function assertPatrolShape(patrolId,p,sim) {
   id(patrolId);
   if(!isRecord(p) || p.id!==patrolId || typeof p.passive!=='boolean' ||
     !Array.isArray(p.routeIds) || p.routeIds.length===0 ||
-    !p.routeIds.every(r=>sim.routes.has(r)) ||
+    !hasDensePatrolRoutes(p.routeIds,sim) ||
     !p.routeIds.includes(p.currentRouteId) ||
     ![p.hunger,p.threat,p.grievance].every(x=>Number.isFinite(x)&&x>=0&&x<=1) ||
     !Number.isSafeInteger(p.lastRoamTick) || p.lastRoamTick<0 ||
@@ -254,10 +260,12 @@ export class WorldTradeAuthority {
     // Event writes and escrow/pressure mutations are part of the same tick;
     // their public containers must remain writable before advancing time.
     if (!Array.isArray(this.events) || !Object.isExtensible(this.events) ||
-      !Object.getOwnPropertyDescriptor(this.events,'length')?.writable)
+      !Object.getOwnPropertyDescriptor(this.events,'length')?.writable ||
+      this.events.push!==Array.prototype.push)
       throw Error('invalid live writable event journal');
     if (!Array.isArray(this.sim.events) || !Object.isExtensible(this.sim.events) ||
-      !Object.getOwnPropertyDescriptor(this.sim.events,'length')?.writable)
+      !Object.getOwnPropertyDescriptor(this.sim.events,'length')?.writable ||
+      this.sim.events.push!==Array.prototype.push)
       throw Error('invalid live writable simulation journal');
     for(const [patrolId,p] of Object.entries(this.patrols)){
       assertPatrolShape(patrolId,p,this.sim);
@@ -305,6 +313,10 @@ export class WorldTradeAuthority {
     // Preserve the original shipment-specific refusal diagnostics above.
     // advanceSimulation also decays every road and processes every entity,
     // including those outside this trade authority's shipment namespace.
+    if (!isRecord(this.sim.config) || this.sim.config.distanceAwareTravel!==true ||
+      !Number.isFinite(this.sim.config.routeDangerHalfLifeTicks) ||
+      this.sim.config.routeDangerHalfLifeTicks<=0)
+      throw Error('invalid live simulation travel or danger configuration');
     for(const [routeId,route] of this.sim.routes){
       if(!isRecord(route) || route.id!==routeId ||
         !Number.isFinite(route.baseSecurity) || route.baseSecurity<0 ||
@@ -334,6 +346,16 @@ export class WorldTradeAuthority {
           Number(this.sim.config.caravanUnitsPerTick)<=0 ||
           !Number.isFinite(route.distance) || route.distance<=0))
         throw Error('invalid live simulation caravan travel');
+      // A finite speed can still overflow for a coarse LOD catch-up. The
+      // simulator's clamp01(Infinity) returns zero rather than advancing.
+      if(this.sim.config.distanceAwareTravel===true && entity.type==='CARAVAN' &&
+        route.status!=='BLOCKED') {
+        const delta=Number(this.sim.config.caravanUnitsPerTick) *
+          (nextTick-entity.lastUpdateTick) *
+          (entity.fear>0.6?1.4:1.0) / route.distance;
+        if(!Number.isFinite(delta))
+          throw Error('invalid live simulation caravan step');
+      }
     }
   }
   tick() {
