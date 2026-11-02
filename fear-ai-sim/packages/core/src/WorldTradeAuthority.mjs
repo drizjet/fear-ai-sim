@@ -6,6 +6,18 @@ import { restoreTrustedCivState } from './CivilizationTrustedCheckpoint.mjs';
 const clone = v => JSON.parse(JSON.stringify(v));
 const isRecord = v => v !== null && typeof v === 'object' && !Array.isArray(v) &&
   (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+function assertWritableLedgerRecord(record, label) {
+  // A conservation-balanced primitive/array is not a usable transfer target.
+  // Frozen, accessor-backed and readonly dictionaries can also throw midway
+  // through a tick after the simulation clock or escrow has been mutated.
+  if (!isRecord(record) || !Object.isExtensible(record))
+    throw Error('invalid live writable ' + label);
+  for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(record))) {
+    id(key);
+    if (!Object.hasOwn(descriptor, 'value') || !descriptor.writable)
+      throw Error('invalid live writable ' + label);
+  }
+}
 function amount(v, label) {
   if (!Number.isSafeInteger(v) || v < 0) throw Error(label + ' must be a nonnegative safe integer');
   return v;
@@ -226,8 +238,22 @@ export class WorldTradeAuthority {
     // These reference-host objects are public and can be altered independently.
     // Reject malformed patrols and escrow routing before advanceSimulation(1),
     // not after time, roaming, or encounters have already changed live state.
-    for(const [patrolId,p] of Object.entries(this.patrols))
+    for (const name of ['stocks','factionLoot']) {
+      assertWritableLedgerRecord(this[name],name);
+      for (const record of Object.values(this[name]))
+        assertWritableLedgerRecord(record,name+' entry');
+    }
+    for (const name of ['vaults','factionGold'])
+      assertWritableLedgerRecord(this[name],name);
+    // Event writes and escrow/pressure mutations are part of the same tick;
+    // their public containers must remain writable before advancing time.
+    if (!Array.isArray(this.events) || !Object.isExtensible(this.events) ||
+      !Object.getOwnPropertyDescriptor(this.events,'length')?.writable)
+      throw Error('invalid live writable event journal');
+    for(const [patrolId,p] of Object.entries(this.patrols)){
       assertPatrolShape(patrolId,p,this.sim);
+      assertWritableLedgerRecord(p,'patrol');
+    }
     for(const [shipmentId,ship] of Object.entries(this.shipments)){
       id(shipmentId);
       if(!isRecord(ship) || ship.id!==shipmentId ||
@@ -236,6 +262,8 @@ export class WorldTradeAuthority {
         ![ship.threat,ship.guard].every(x=>Number.isFinite(x)&&x>=0&&x<=1) ||
         !['enroute','completed'].includes(ship.status))
         throw Error('invalid live shipment');
+      assertWritableLedgerRecord(ship,'shipment');
+      assertWritableLedgerRecord(ship.cargo,'shipment cargo');
       const route=this.sim.routes.get(ship.routeId);
       if(!route || route.fromNodeId!==ship.fromNodeId ||
         route.toNodeId!==ship.targetNodeId ||

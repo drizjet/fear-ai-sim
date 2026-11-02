@@ -266,4 +266,43 @@ brokenArrival.authority.shipments.shipment.targetNodeId = 'A';
 assertTickRefusalWithoutMutation(brokenArrival.authority, /live shipment route disagreement/,
   'tampered destination cannot fail after route arrival advanced the clock');
 
+// A malformed transfer target may preserve global conservation but reject
+// assignment only after the clock or encounter escrow has already changed.
+const malformedDestination = createWorld();
+for(let i=0;i<39;i++) malformedDestination.authority.tick();
+malformedDestination.authority.stocks.B = true;
+assertTickRefusalWithoutMutation(malformedDestination.authority, /invalid live writable stocks entry/,
+  'primitive destination stock cannot fail halfway through arrival');
+
+const malformedFactionLoot = createWorld({ passive: true, grievance: 1, relation: -1, threat: 0.9 });
+malformedFactionLoot.authority.factionLoot.orcs = true;
+assertTickRefusalWithoutMutation(malformedFactionLoot.authority, /invalid live writable factionLoot entry/,
+  'primitive faction loot cannot fail halfway through an attack');
+
+const frozenFactionGold = createWorld();
+Object.freeze(frozenFactionGold.authority.factionGold);
+assertTickRefusalWithoutMutation(frozenFactionGold.authority, /invalid live writable factionGold/,
+  'frozen gold destination cannot deduct toll escrow before throwing');
+
+const frozenRaidCargo = createWorld({ passive: true, grievance: 1, relation: -1, threat: 0.9 });
+Object.freeze(frozenRaidCargo.authority.shipments.shipment.cargo);
+assertTickRefusalWithoutMutation(frozenRaidCargo.authority, /invalid live writable shipment cargo/,
+  'readonly escrow cannot fail after faction loot has already increased');
+
+const readonlyEncounterFlag = createWorld({ passive: true, grievance: 1, relation: -1, threat: 0.9 });
+Object.defineProperty(readonlyEncounterFlag.authority.shipments.shipment,'encounterDone',
+  {value:false,writable:false,enumerable:true,configurable:true});
+assertTickRefusalWithoutMutation(readonlyEncounterFlag.authority, /invalid live writable shipment/,
+  'readonly encounter flag cannot fail after advancing the clock');
+
+const frozenPatrolState = createWorld();
+Object.freeze(frozenPatrolState.authority.patrols.patrol);
+assertTickRefusalWithoutMutation(frozenPatrolState.authority, /invalid live writable patrol/,
+  'frozen patrol cannot fail after route progress advances');
+
+const frozenEventJournal = createWorld();
+Object.freeze(frozenEventJournal.authority.events);
+assertTickRefusalWithoutMutation(frozenEventJournal.authority, /invalid live writable event journal/,
+  'frozen journal cannot reject an already committed delivery');
+
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
