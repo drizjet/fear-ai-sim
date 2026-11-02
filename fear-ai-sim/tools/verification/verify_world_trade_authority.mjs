@@ -619,4 +619,62 @@ equal(validStructuredTarget.sim.routes.get('R').waypoints,[{x:4,y:0,z:0}],
 equal(validStructuredTarget.sim.nodes.get('A').market,{ORE:3},
   'valid custom market survives restore');
 validStructuredTarget.assertConservation();
+
+// The road fingerprint covers topology and selected attributes, not nested
+// markets or waypoint metadata. Neither exported snapshots nor accepted
+// checkpoint objects may remain aliased to the reference world's live data.
+function nestedSnapshotWorld() {
+  const world=createWorld();
+  world.sim.nodes.get('A').market={ORE:{buyPrice:12,meta:{tier:1}}};
+  world.sim.routes.get('R').waypoints=[{x:3,y:0,z:0,meta:{label:'original'}}];
+  return world;
+}
+const nestedExport=nestedSnapshotWorld();
+const exportedNested=nestedExport.sim.getState();
+exportedNested.nodes[0].market.ORE.meta.tier=9;
+exportedNested.routes[0].waypoints[0].meta.label='edited';
+equal(nestedExport.sim.nodes.get('A').market.ORE.meta.tier,1,
+  'mutating exported nested market metadata cannot mutate the live market');
+equal(nestedExport.sim.routes.get('R').waypoints[0].meta.label,'original',
+  'mutating exported waypoint metadata cannot mutate the live route');
+const nestedDirectSource=nestedSnapshotWorld();
+const nestedDirectSnapshot=nestedDirectSource.sim.getState();
+const nestedDirectTarget=createWorld();
+restoreTrustedCivState(nestedDirectTarget.sim,nestedDirectSnapshot,
+  civRoadGraphFingerprint(nestedDirectSnapshot));
+equal(nestedDirectTarget.sim.nodes.get('A').market.ORE.meta.tier,1,
+  'trusted restore retains valid nested commodity metadata');
+equal(nestedDirectTarget.sim.routes.get('R').waypoints[0].meta.label,'original',
+  'trusted restore retains valid nested waypoint metadata');
+nestedDirectSnapshot.nodes[0].market.ORE.meta.tier=88;
+nestedDirectSnapshot.routes[0].waypoints[0].meta.label='later';
+equal(nestedDirectTarget.sim.nodes.get('A').market.ORE.meta.tier,1,
+  'trusted restore does not retain source nested market references');
+equal(nestedDirectTarget.sim.routes.get('R').waypoints[0].meta.label,'original',
+  'trusted restore does not retain source waypoint references');
+const nestedAuthoritySource=nestedSnapshotWorld();
+const nestedAuthoritySnapshot=nestedAuthoritySource.authority.getState();
+const nestedAuthorityFingerprint=civRoadGraphFingerprint(nestedAuthoritySnapshot.sim);
+const nestedAuthorityTarget=createWorld();
+nestedAuthorityTarget.authority.restore(nestedAuthoritySnapshot,nestedAuthorityFingerprint);
+const beforeNestedAuthority=JSON.stringify(nestedAuthorityTarget.authority.getState());
+nestedAuthoritySnapshot.sim.nodes[0].market.ORE.buyPrice=99;
+nestedAuthoritySnapshot.sim.routes[0].waypoints[0].x=99;
+equal(JSON.stringify(nestedAuthorityTarget.authority.getState()),beforeNestedAuthority,
+  'authority checkpoint mutation after restore cannot alter restored state');
+// Independent restored worlds must advance identically after the same valid
+// checkpoint and conserve escrow through the first tick and final arrival.
+const replayOne=createWorld(), replayTwo=createWorld();
+for(const w of [replayOne,replayTwo])
+  w.authority.restore(nestedAuthoritySource.authority.getState(),nestedAuthorityFingerprint);
+for(let i=0;i<40;i++){
+  equal(replayOne.authority.tick(),replayTwo.authority.tick(),
+    'restored twins return equal tick summaries '+i);
+}
+equal(replayOne.authority.getState(),replayTwo.authority.getState(),
+  'restored twins have identical deterministic shipment and journal states');
+equal(replayOne.authority.shipments.shipment.status,'completed',
+  'replayed shipment settles exactly once');
+replayOne.authority.assertConservation();
+replayTwo.authority.assertConservation();
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

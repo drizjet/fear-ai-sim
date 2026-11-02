@@ -470,12 +470,15 @@ export class CivilizationSimulationSystem {
             nodes: Array.from(this.nodes.values()).map(n => ({
                 ...n,
                 position: { ...n.position },
-                market: { ...n.market }
+                // Market commodity records may contain nested host metadata.
+                // Snapshots must not retain aliases to live market contents.
+                market: structuredClone(n.market)
             })),
             events: this.events.map(e => ({ ...e, cargo: e.cargo ? { ...e.cargo } : undefined })),
             routes: Array.from(this.routes.values()).map(r => ({
                 ...r,
-                waypoints: [...r.waypoints]
+                // Array spread alone retains live waypoint object references.
+                waypoints: structuredClone(r.waypoints)
             })),
             entities: Array.from(this.entities.values()).map(e => ({
                 ...e,
@@ -506,7 +509,7 @@ export class CivilizationSimulationSystem {
                 this.nodes.set(n.id, {
                     ...n,
                     position: { ...n.position },
-                    market: { ...n.market }
+                    market: structuredClone(n.market)
                 });
             }
         }
@@ -516,7 +519,7 @@ export class CivilizationSimulationSystem {
                 if (!r || !r.id) continue;
                 this.routes.set(r.id, {
                     ...r,
-                    waypoints: Array.isArray(r.waypoints) ? [...r.waypoints] : []
+                    waypoints: Array.isArray(r.waypoints) ? structuredClone(r.waypoints) : []
                 });
             }
         }
