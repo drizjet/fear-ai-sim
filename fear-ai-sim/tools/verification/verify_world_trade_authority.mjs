@@ -157,6 +157,64 @@ throws(() => reservedGoods.addPatrol({
   id: 'patrol', faction: '__proto__', routeIds: ['R']
 }), /reserved ID or goods key/, 'reserved faction identifier must be refused');
 
+// E04 follow-on: reject external public-map corruption *before* either
+// registration/withdrawal or simulation time advances.
+const externallyMutatedDispatch = freshAuthority();
+externallyMutatedDispatch.seedNode('A', { ORE: 20 }, 10);
+externallyMutatedDispatch.seedNode('B', { ORE: 0 }, 0);
+externallyMutatedDispatch.sealGenesis(5);
+externallyMutatedDispatch.stocks.A.ORE = 20.5;
+const beforeUnsafeDispatch = JSON.stringify(externallyMutatedDispatch.getState());
+throws(() => externallyMutatedDispatch.dispatch({
+  id: 'shipment', routeId: 'R', fromNodeId: 'A', faction: 'traders',
+  cargo: { ORE: 1 }, gold: 2
+}), /nonnegative safe integer/, 'mutated fractional origin cannot partially dispatch');
+equal(JSON.stringify(externallyMutatedDispatch.getState()), beforeUnsafeDispatch,
+  'unsafe dispatch rejection leaves all host reference state unchanged');
+throws(() => externallyMutatedDispatch.tick(), /nonnegative safe integer/,
+  'mutated origin cannot advance a simulation tick before rejection');
+equal(JSON.stringify(externallyMutatedDispatch.getState()), beforeUnsafeDispatch,
+  'unsafe tick rejection leaves simulation time and ledger untouched');
+
+const externallyDrained = freshAuthority();
+externallyDrained.seedNode('A', { ORE: 20 }, 10);
+externallyDrained.seedNode('B', { ORE: 0 }, 0);
+externallyDrained.sealGenesis(7);
+externallyDrained.stocks.A.ORE = 19;
+const beforeDrainedDispatch = JSON.stringify(externallyDrained.getState());
+throws(() => externallyDrained.dispatch({
+  id: 'shipment', routeId: 'R', fromNodeId: 'A', faction: 'traders',
+  cargo: { ORE: 1 }, gold: 2
+}), /resource conservation violated/, 'valid-sized but stolen host stock blocks dispatch');
+equal(JSON.stringify(externallyDrained.getState()), beforeDrainedDispatch,
+  'host stock corruption cannot trigger a partial dispatch');
+
+// The old "a|b" key format is ambiguous when either ID includes a bar.
+// JSON tuple keys preserve distinct relationships and the trusted restore
+// migrates only invertible legacy keys.
+const namespacedRelations = freshAuthority();
+namespacedRelations.setRelation('a|b', 'c', -0.75);
+namespacedRelations.setRelation('a', 'b|c', 0.9);
+assert(namespacedRelations.relations[JSON.stringify(['a|b', 'c'])] === -0.75,
+  'first relation with a delimiter-bearing ID stays intact');
+assert(namespacedRelations.relations[JSON.stringify(['a', 'b|c'])] === 0.9,
+  'second relation has an independent key');
+const legacyWorld = createWorld({ dispatch: false });
+const legacyCheckpoint = legacyWorld.authority.getState();
+legacyCheckpoint.relations = { 'orcs|traders': 0.2, 'traders|orcs': 0.2 };
+const fromLegacy = createWorld({ dispatch: false });
+fromLegacy.authority.restore(legacyCheckpoint, civRoadGraphFingerprint(legacyCheckpoint.sim));
+assert(fromLegacy.authority.relations[JSON.stringify(['orcs','traders'])] === 0.2,
+  'existing unambiguous legacy relation keys migrate on restore');
+const ambiguousCheckpoint = JSON.parse(JSON.stringify(legacyCheckpoint));
+ambiguousCheckpoint.relations = { 'a|b|c': -0.5 };
+const beforeAmbiguousRestore = JSON.stringify(fromLegacy.authority.getState());
+throws(() => fromLegacy.authority.restore(
+  ambiguousCheckpoint, civRoadGraphFingerprint(ambiguousCheckpoint.sim)
+), /ambiguous legacy relation key/, 'uninvertible legacy relation key must be rejected');
+equal(JSON.stringify(fromLegacy.authority.getState()), beforeAmbiguousRestore,
+  'ambiguous relation checkpoint rejection is atomic');
+
 const enrouteSnapshot = JSON.parse(JSON.stringify(toll.authority.getState()));
 snapshotEntity(enrouteSnapshot).wealth += 1;
 assertRejectedWithoutMutation(createWorld({ dispatch: false }), enrouteSnapshot,

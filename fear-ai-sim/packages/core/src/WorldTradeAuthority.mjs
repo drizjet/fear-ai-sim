@@ -23,6 +23,32 @@ function id(v) {
     throw Error('reserved ID or goods key: ' + v);
   return v;
 }
+// JSON tuples are injective for arbitrary strings, including "|" and
+// escaped characters; concatenation with a separator is not.
+const relationKey = (a,b) => JSON.stringify([id(a),id(b)]);
+function restoredRelations(entries) {
+  const out = {};
+  for (const [key,score] of Object.entries(entries)) {
+    if(!Number.isFinite(score) || score < -1 || score > 1)
+      throw Error('invalid restored relation');
+    let pair;
+    if(key.startsWith('[')) {
+      try { pair=JSON.parse(key); } catch { throw Error('invalid restored relation'); }
+      if(!Array.isArray(pair) || pair.length!==2 ||
+        typeof pair[0]!=='string' || typeof pair[1]!=='string' ||
+        relationKey(pair[0],pair[1])!==key)
+        throw Error('invalid restored relation');
+    }else{
+      // Old checkpoints stored "a|b"; only a single separator is invertible.
+      pair=key.split('|');
+      if(pair.length!==2)throw Error('ambiguous legacy relation key');
+    }
+    const encoded=relationKey(pair[0],pair[1]);
+    if(Object.hasOwn(out,encoded))throw Error('duplicate restored relation');
+    out[encoded]=score;
+  }
+  return out;
+}
 function sumInto(out, goods) {
   for (const [k, value] of Object.entries(goods)) {
     id(k);
@@ -88,8 +114,8 @@ export class WorldTradeAuthority {
     if (this.initial !== null) throw Error('genesis sealed');
     id(a);id(b);
     if (!Number.isFinite(score)||score < -1||score > 1)throw Error('bad relationship');
-    this.relations[a+'|'+b] = score;
-    this.relations[b+'|'+a] = score;
+    this.relations[relationKey(a,b)] = score;
+    this.relations[relationKey(b,a)] = score;
   }
   sealGenesis(seed=0xBADC0FFE) {
     if (this.initial !== null) throw Error('already sealed');
@@ -99,6 +125,9 @@ export class WorldTradeAuthority {
   }
   dispatch({id:shipmentId, routeId, fromNodeId, faction, cargo, gold = 0, threat = 0, guard = 0}) {
     if (this.initial === null) throw Error('genesis not sealed');
+    // Public reference-host inventories can be modified by callers. Refuse an
+    // already invalid ledger before withdrawing inventory or creating entities.
+    this.assertConservation();
     id(shipmentId);id(faction); id(routeId);id(fromNodeId);
     if (this.shipments[shipmentId]) throw Error('duplicate shipment');
     const route=this.sim.routes.get(routeId);
@@ -136,7 +165,7 @@ export class WorldTradeAuthority {
   }
   _random() { this.rng=(Math.imul(this.rng,1664525)+1013904223)>>>0; return this.rng; }
   _policy(p,ship) {
-    const relation=this.relations[p.faction+'|'+ship.faction] || 0;
+    const relation=this.relations[relationKey(p.faction,ship.faction)] || 0;
     const threatened=ship.threat >= 0.7 || p.threat >= 0.7;
     if (p.passive) {
       if (threatened && relation <= -0.5 && p.grievance >= 0.6) return 'attack';
@@ -182,6 +211,7 @@ export class WorldTradeAuthority {
   }
   tick() {
     if (this.initial === null) throw Error('genesis not sealed');
+    this.assertConservation();
     const intents=this.sim.advanceSimulation(1).arrivalIntents;
     const tick=this.sim.tickCount;
     const roaming=[];
@@ -273,10 +303,7 @@ export class WorldTradeAuthority {
     for(const [faction,gold] of Object.entries(staged.factionGold)){
       id(faction);amount(gold,'faction gold');
     }
-    for(const [relation,score] of Object.entries(staged.relations)){
-      if(typeof relation!=='string' || !Number.isFinite(score) || score < -1 || score > 1)
-        throw Error('invalid restored relation');
-    }
+    staged.relations=restoredRelations(staged.relations);
     for(const [patrolId,p] of Object.entries(staged.patrols)){
       id(patrolId);
       if(!isRecord(p) || p.id!==patrolId || typeof p.passive!=='boolean' ||
