@@ -305,4 +305,53 @@ Object.freeze(frozenEventJournal.authority.events);
 assertTickRefusalWithoutMutation(frozenEventJournal.authority, /invalid live writable event journal/,
   'frozen journal cannot reject an already committed delivery');
 
+// Simulation progress/arrival intents are computed before settlement and
+// must not encounter corrupted route geometry or stale entity routing late.
+const invalidRoadDistance = createWorld();
+invalidRoadDistance.sim.routes.get('R').distance = 0;
+assertTickRefusalWithoutMutation(invalidRoadDistance.authority, /invalid live caravan route/,
+  'a zero-distance caravan road cannot throw after advancing time');
+
+const invalidEntityProgress = createWorld();
+invalidEntityProgress.sim.entities.get('trade:shipment').routeProgress = 'bogus';
+assertTickRefusalWithoutMutation(invalidEntityProgress.authority, /invalid live caravan entity/,
+  'nonnumeric caravan route progress cannot be silently clamped');
+
+const foreignCaravanRoute = createWorld();
+foreignCaravanRoute.sim.registerNode('C');
+foreignCaravanRoute.sim.registerRoute('R2',
+  { fromNodeId:'A', toNodeId:'C', distance:80, baseSecurity:0.99 });
+for(let i=0;i<39;i++) foreignCaravanRoute.authority.tick();
+foreignCaravanRoute.sim.entities.get('trade:shipment').currentRouteId='R2';
+assertTickRefusalWithoutMutation(foreignCaravanRoute.authority, /invalid live caravan entity/,
+  'a shipment on another valid road cannot emit a wrong arrival');
+
+function createSimultaneousArrivals() {
+  const target = createWorld({ dispatch:false }).authority;
+  for(const shipmentId of ['S1','S2'])
+    target.dispatch({id:shipmentId, routeId:'R', fromNodeId:'A',
+      faction:'traders', cargo:{ORE:8}, gold:5});
+  for(let i=0;i<39;i++)target.tick();
+  return target;
+}
+const readOnlySecondArrival = createSimultaneousArrivals();
+const secondEntity = readOnlySecondArrival.sim.entities.get('trade:S2');
+Object.defineProperty(secondEntity, 'cargo',
+  {value:secondEntity.cargo,writable:false,enumerable:true,configurable:true});
+assertTickRefusalWithoutMutation(readOnlySecondArrival,
+  /invalid live writable caravan entity/,
+  'one readonly arriving caravan cannot partially commit both deliveries');
+
+const frozenSimulationJournal = createSimultaneousArrivals();
+Object.freeze(frozenSimulationJournal.sim.events);
+assertTickRefusalWithoutMutation(frozenSimulationJournal,
+  /invalid live writable simulation journal/,
+  'readonly simulation arrival journal cannot fail after advancing caravan progress');
+
+const validPair = createSimultaneousArrivals();
+equal(validPair.tick().settled,2,'two uncorrupted same-tick arrivals both settle');
+equal(validPair.shipments.S1.status,'completed','first simultaneous arrival completes');
+equal(validPair.shipments.S2.status,'completed','second simultaneous arrival completes');
+validPair.assertConservation();
+
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);

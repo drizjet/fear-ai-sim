@@ -250,6 +250,9 @@ export class WorldTradeAuthority {
     if (!Array.isArray(this.events) || !Object.isExtensible(this.events) ||
       !Object.getOwnPropertyDescriptor(this.events,'length')?.writable)
       throw Error('invalid live writable event journal');
+    if (!Array.isArray(this.sim.events) || !Object.isExtensible(this.sim.events) ||
+      !Object.getOwnPropertyDescriptor(this.sim.events,'length')?.writable)
+      throw Error('invalid live writable simulation journal');
     for(const [patrolId,p] of Object.entries(this.patrols)){
       assertPatrolShape(patrolId,p,this.sim);
       assertWritableLedgerRecord(p,'patrol');
@@ -269,6 +272,29 @@ export class WorldTradeAuthority {
         route.toNodeId!==ship.targetNodeId ||
         !this.sim.entities.has(ship.entityId))
         throw Error('live shipment route disagreement');
+      // advanceSimulation() changes tickCount and entity progress before
+      // checking caravan distance. A host can mutate these public objects
+      // without changing conserved inventory or mirrored escrow.
+      if (!isRecord(route) || route.id!==ship.routeId ||
+        !Number.isFinite(route.distance) || route.distance<=0 ||
+        ![route.baseSecurity,route.perceivedDanger].every(v=>
+          Number.isFinite(v)&&v>=0&&v<=1) ||
+        !['SAFE','WATCHFUL','CONTESTED','BLOCKED'].includes(route.status))
+        throw Error('invalid live caravan route');
+      assertWritableLedgerRecord(route,'caravan route');
+      const entity=this.sim.entities.get(ship.entityId);
+      if (!isRecord(entity) || entity.id!==ship.entityId ||
+        entity.type!=='CARAVAN' ||
+        (ship.status==='enroute' && entity.currentRouteId!==ship.routeId) ||
+        (ship.status==='completed' && entity.currentRouteId!==null) ||
+        typeof entity.routeProgress!=='number' ||
+        !Number.isFinite(entity.routeProgress) ||
+        entity.routeProgress<0 || entity.routeProgress>1 ||
+        !Number.isSafeInteger(entity.lastUpdateTick) ||
+        entity.lastUpdateTick<0 || entity.lastUpdateTick>this.sim.tickCount ||
+        !Number.isFinite(entity.fear) || entity.fear<0 || entity.fear>1)
+        throw Error('invalid live caravan entity');
+      assertWritableLedgerRecord(entity,'caravan entity');
     }
   }
   tick() {
