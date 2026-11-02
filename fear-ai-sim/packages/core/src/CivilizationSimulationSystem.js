@@ -63,6 +63,53 @@ function clamp01(v) {
     return Math.max(0.0, Math.min(1.0, v));
 }
 
+// Direct simulator snapshots must be detached from live host-defined event
+// and nontrade cargo objects, including nested arrays and Dates. Keep cycles,
+// sparse array holes and custom toJSON methods intact at this direct boundary;
+// the separate authority JSON protocol may still reject cycles. Explicitly
+// iterative to avoid blowing the JS call stack on deeply nested metadata.
+function cloneHostSnapshotMetadata(root) {
+    const copies = new WeakMap();
+    const pending = [];
+    const copy = value => {
+        if (value === null || typeof value !== 'object') return value;
+        if (copies.has(value)) return copies.get(value);
+        if (value instanceof Date) {
+            const date = new Date(value.getTime());
+            copies.set(value, date);
+            return date;
+        }
+        // Preserve built-in internal slots rather than fabricating objects
+        // with Map/Set/RegExp/typed-array prototypes but no usable internals.
+        if (value instanceof Map || value instanceof Set ||
+            value instanceof RegExp || value instanceof ArrayBuffer ||
+            ArrayBuffer.isView(value)) {
+            const nativeCopy = structuredClone(value);
+            copies.set(value, nativeCopy);
+            return nativeCopy;
+        }
+        // Existing host metadata is ordinary JSON-like records/arrays. Avoid
+        // assigning into inherited setters (including __proto__) when copying.
+        const result = Array.isArray(value)
+            ? new Array(value.length)
+            : Object.create(Object.getPrototypeOf(value));
+        copies.set(value, result);
+        pending.push([value, result]);
+        return result;
+    };
+    const result = copy(root);
+    while (pending.length) {
+        const [source, target] = pending.pop();
+        for (const key of Object.keys(source)) {
+            Object.defineProperty(target, key, {
+                value: copy(source[key]), writable: true, enumerable: true,
+                configurable: true
+            });
+        }
+    }
+    return result;
+}
+
 // Known JSON numeric-loss case only, not an arbitrary host data serializer.
 // Iteration instead of recursion bounds call-stack use for deeply nested
 // valid custom objects. No references escape the validation call.
@@ -567,7 +614,11 @@ export class CivilizationSimulationSystem {
                 // Snapshots must not retain aliases to live market contents.
                 market: structuredClone(n.market)
             })),
-            events: this.events.map(e => ({ ...e, cargo: e.cargo ? { ...e.cargo } : undefined })),
+            events: this.events.map(e => {
+                const event = cloneHostSnapshotMetadata(e);
+                if (!e.cargo) event.cargo = undefined;
+                return event;
+            }),
             routes: Array.from(this.routes.values()).map(r => ({
                 ...r,
                 // Array spread alone retains live waypoint object references.
@@ -576,7 +627,7 @@ export class CivilizationSimulationSystem {
             entities: Array.from(this.entities.values()).map(e => ({
                 ...e,
                 position: { ...e.position },
-                cargo: { ...e.cargo }
+                cargo: cloneHostSnapshotMetadata(e.cargo ?? {})
             }))
         };
         assertCivilizationReplayFields(snapshot);
@@ -595,7 +646,11 @@ export class CivilizationSimulationSystem {
         this.routes.clear();
         this.entities.clear();
         this.events = Array.isArray(snapshot.events)
-            ? snapshot.events.map(e => ({ ...e, cargo: e.cargo ? { ...e.cargo } : undefined }))
+            ? snapshot.events.map(e => {
+                const event = cloneHostSnapshotMetadata(e);
+                if (!e.cargo) event.cargo = undefined;
+                return event;
+            })
             : [];
 
         if (Array.isArray(snapshot.nodes)) {
@@ -625,7 +680,7 @@ export class CivilizationSimulationSystem {
                 this.entities.set(e.id, {
                     ...e,
                     position: { ...e.position },
-                    cargo: { ...e.cargo }
+                    cargo: cloneHostSnapshotMetadata(e.cargo ?? {})
                 });
             }
         }

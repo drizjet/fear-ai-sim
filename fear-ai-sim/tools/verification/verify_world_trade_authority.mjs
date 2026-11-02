@@ -915,4 +915,94 @@ assertMalformedRestore(sim=>{sim.entities.push({
   /invalid civilization cargo numeric metadata/,
   'trusted restore refuses nested nonfinite host cargo before destination transfer');
 
+
+// Direct snapshots and setState must not retain mutable live references for
+// nested host events or nontrade cargo. Unlike the authority JSON checkpoint,
+// the direct simulator contract may represent Dates, cycles and sparse arrays.
+function hostReferenceFixture() {
+  const sim=new CivilizationSimulationSystem();
+  sim.registerNode('X');sim.registerNode('Y');
+  sim.registerRoute('R_REF',{fromNodeId:'X',toNodeId:'Y',distance:80});
+  sim.registerEntity('neutral-ref',{type:'SCOUT',cargo:{
+    host:{nested:{label:'original'},date:new Date('2026-09-01T00:00:00.000Z')}
+  }});
+  sim.events.push({type:'host_note',tick:0,details:{
+    nested:{label:'original'},date:new Date('2026-09-01T00:00:00.000Z')
+  }});
+  return sim;
+}
+const directHostSource=hostReferenceFixture(),directHostExport=directHostSource.getState();
+const directHostEvent=directHostExport.events[0],
+  directHostCargo=directHostExport.entities.find(e=>e.id==='neutral-ref').cargo.host;
+directHostEvent.details.nested.label='changed';
+directHostCargo.nested.label='changed';
+directHostEvent.details.date.setUTCFullYear(2030);
+directHostCargo.date.setUTCFullYear(2030);
+equal(directHostSource.events[0].details.nested.label,'original',
+  'editing direct export nested event must not change live journal');
+equal(directHostSource.entities.get('neutral-ref').cargo.host.nested.label,'original',
+  'editing direct export nested nontrade cargo must not change live cargo');
+equal(directHostSource.events[0].details.date.getUTCFullYear(),2026,
+  'direct export Date object must not alias live host event Date');
+equal(directHostSource.entities.get('neutral-ref').cargo.host.date.getUTCFullYear(),2026,
+  'direct export Date object must not alias live cargo Date');
+const stateHostSource=hostReferenceFixture(),stateHostCopy=stateHostSource.getState(),
+  stateHostTarget=hostReferenceFixture();
+stateHostTarget.setState(stateHostCopy);
+stateHostCopy.events[0].details.nested.label='changed';
+stateHostCopy.entities.find(e=>e.id==='neutral-ref').cargo.host.nested.label='changed';
+stateHostCopy.events[0].details.date.setUTCFullYear(2030);
+stateHostCopy.entities.find(e=>e.id==='neutral-ref').cargo.host.date.setUTCFullYear(2030);
+equal(stateHostTarget.events[0].details.nested.label,'original',
+  'setState must not retain caller nested host journal references');
+equal(stateHostTarget.entities.get('neutral-ref').cargo.host.nested.label,'original',
+  'setState must not retain caller nested host cargo references');
+equal(stateHostTarget.events[0].details.date.getUTCFullYear(),2026,
+  'setState must not retain caller host event Date reference');
+equal(stateHostTarget.entities.get('neutral-ref').cargo.host.date.getUTCFullYear(),2026,
+  'setState must not retain caller host cargo Date reference');
+const trustedHostSource=hostReferenceFixture(),trustedHostSnapshot=trustedHostSource.getState(),
+  trustedHostTarget=hostReferenceFixture();
+restoreTrustedCivState(trustedHostTarget,trustedHostSnapshot,
+  civRoadGraphFingerprint(trustedHostSnapshot));
+trustedHostSnapshot.events[0].details.nested.label='changed';
+trustedHostSnapshot.entities.find(e=>e.id==='neutral-ref').cargo.host.nested.label='changed';
+equal(trustedHostTarget.events[0].details.nested.label,'original',
+  'trusted direct restore must not inherit caller nested event aliases');
+equal(trustedHostTarget.entities.get('neutral-ref').cargo.host.nested.label,'original',
+  'trusted direct restore must not inherit caller nested nontrade cargo aliases');
+const cyclicHostSource=hostReferenceFixture(),cyclicHost={name:'cycle'};
+cyclicHost.self=cyclicHost;
+cyclicHostSource.events[0].details.cyclic=cyclicHost;
+cyclicHostSource.entities.get('neutral-ref').cargo.host.cyclic=cyclicHost;
+const cyclicHostExport=cyclicHostSource.getState(),
+  exportedCycle=cyclicHostExport.events[0].details.cyclic,
+  exportedCargoCycle=cyclicHostExport.entities.find(e=>e.id==='neutral-ref').cargo.host.cyclic;
+assert(exportedCycle!==cyclicHost && exportedCycle.self===exportedCycle,
+  'direct export detaches cyclic host journal data without breaking cycle');
+assert(exportedCargoCycle!==cyclicHost && exportedCargoCycle.self===exportedCargoCycle,
+  'direct export detaches cyclic nontrade cargo without breaking cycle');
+const sparseHostSource=hostReferenceFixture(),sparseHostValues=[,'keep'];
+sparseHostSource.events[0].details.sparse=sparseHostValues;
+const sparseExport=sparseHostSource.getState().events[0].details.sparse;
+assert(sparseExport.length===2 && !Object.hasOwn(sparseExport,0) &&
+  sparseExport[1]==='keep' && sparseExport!==sparseHostValues,
+  'direct host metadata clone preserves sparse array holes without aliasing');
+const customJsonHostSource=hostReferenceFixture(),
+  customHost={label:'valid',toJSON(){return {label:this.label,type:'custom'}}};
+customJsonHostSource.events[0].details.custom=customHost;
+const customDirect=customJsonHostSource.getState().events[0].details.custom;
+assert(customDirect!==customHost && typeof customDirect.toJSON==='function',
+  'direct snapshot detaches host custom toJSON object without discarding method');
+equal(JSON.parse(JSON.stringify(customDirect)),{label:'valid',type:'custom'},
+  'custom host toJSON protocol remains functional on direct snapshot');
+const builtinHost=hostReferenceFixture();
+builtinHost.events[0].details.map=new Map([['host',{flag:true}]]);
+builtinHost.entities.get('neutral-ref').cargo.host.set=new Set(['keep']);
+const builtinExport=builtinHost.getState();
+assert(builtinExport.events[0].details.map instanceof Map &&
+  builtinExport.events[0].details.map!==builtinHost.events[0].details.map,
+  'direct event metadata preserves valid Map internal slots without alias');
+assert(builtinExport.entities.find(e=>e.id==='neutral-ref').cargo.host.set instanceof Set,
+  'direct cargo metadata preserves valid Set internal slots');
 console.log(`SUCCESS: ${assertions} shipment-mirror assertions passed.`);
