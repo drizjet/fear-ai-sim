@@ -2,6 +2,14 @@
 
 Read `docs/SYSTEM_MAP.md` before editing, testing, or writing status.
 
+Before creating another large private checkout or running a heavy Rust/Node
+build, also read `docs/STORAGE_RETENTION_POLICY.md` and run
+`pwsh -NoProfile -File tools/maintenance/inspect_storage.ps1 -FailOnRisk`.
+It is a read-only disk/workspace preflight, **not** authority to delete anything.
+If the check reports low space or an excessive number of workspaces, reuse a
+safe owned workspace/build target or first investigate owner-approved storage
+retirement; never prune another agent's work or unique unpushed commits.
+
 ## Goal
 
 The product is **engine-agnostic fear middleware** that a host game can plug into. It is not a Fear AI game, not a Godot title, and not “whatever the last milestone file marked VERIFIED.”
