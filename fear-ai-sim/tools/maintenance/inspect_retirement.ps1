@@ -72,13 +72,12 @@ try {
             }
         }
         $evidencePath = Join-Path $folder.FullName 'evidence'
-        $evidenceFiles = if (Test-Path -LiteralPath $evidencePath -PathType Container) {
-            @(Get-ChildItem -LiteralPath $evidencePath -File -Force -ErrorAction SilentlyContinue).Count
-        } else { 0 }
-        $evidenceManifests = if (Test-Path -LiteralPath $evidencePath -PathType Container) {
-            @(Get-ChildItem -LiteralPath $evidencePath -File -Force -ErrorAction SilentlyContinue |
-                Where-Object { $_.Name -match 'manifest|checkpoint' }).Count
-        } else { 0 }
+        $evidenceItems = @()
+        if (Test-Path -LiteralPath $evidencePath -PathType Container) {
+            $evidenceItems = @(Get-ChildItem -LiteralPath $evidencePath -File -Force -ErrorAction SilentlyContinue)
+        }
+        $evidenceFiles = $evidenceItems.Count
+        $evidenceManifests = @($evidenceItems | Where-Object { $_.Name -match 'manifest|checkpoint' }).Count
         $hints = @()
         if ($processScan -eq 'COMMAND_LINE_HINTS_ONLY') {
             $hints = @($processes | Where-Object { $_.CommandLine.Contains($folder.FullName) } |

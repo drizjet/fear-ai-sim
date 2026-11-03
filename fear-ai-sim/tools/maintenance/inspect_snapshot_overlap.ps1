@@ -53,14 +53,12 @@ $bytesMissing = [long]0
 $bytesDifferentSize = [long]0
 $eligible = @()
 $exceptionRows = @()
-$exceptionCount = 0
 foreach ($file in $files) {
     $rel = $file.FullName.Substring($source.Length + 1)
     $refPath = Join-Path $reference $rel
     if (!(Test-Path -LiteralPath $refPath -PathType Leaf)) {
         $countReferenceMissing++
         $bytesMissing += $file.Length
-        $exceptionCount++
         if ($exceptionRows.Count -lt $MaxExceptionPaths) {
             $exceptionRows += [pscustomobject]@{
                 status = 'NO_REFERENCE_FILE'
@@ -79,7 +77,6 @@ foreach ($file in $files) {
     if ($refFile.Length -ne $file.Length) {
         $countDifferentSize++
         $bytesDifferentSize += $file.Length
-        $exceptionCount++
         if ($exceptionRows.Count -lt $MaxExceptionPaths) {
             $exceptionRows += [pscustomobject]@{
                 status = 'REFERENCE_DIFFERENT_SIZE'
@@ -99,19 +96,18 @@ foreach ($file in $files) {
         reference_path = $refFile.FullName
     }
 }
+$exceptionCount = $countReferenceMissing + $countDifferentSize
 $limit = [long]$MaxHashInputMB * 1MB
 $inputUsed = [long]0
-$pairCount = 0
 $sameCount = 0
 $differentCount = 0
 $bytesVerifiedIdentical = [long]0
 $samples = @()
 foreach ($pair in @($eligible | Sort-Object -Property @{Expression='bytes';Descending=$true}, @{Expression='relative_path';Descending=$false})) {
-    if ($pairCount -ge $MaxHashPairs -or ($inputUsed + 2*$pair.bytes) -gt $limit) { continue }
+    if ($samples.Count -ge $MaxHashPairs -or ($inputUsed + 2*$pair.bytes) -gt $limit) { continue }
     $a = (Get-FileHash -LiteralPath $pair.source_path -Algorithm SHA256 -ErrorAction Stop).Hash
     $b = (Get-FileHash -LiteralPath $pair.reference_path -Algorithm SHA256 -ErrorAction Stop).Hash
     $inputUsed += 2*$pair.bytes
-    $pairCount++
     $same = ($a -ceq $b)
     if ($same) { $sameCount++;$bytesVerifiedIdentical += $pair.bytes }
     else { $differentCount++ }
@@ -144,14 +140,14 @@ $output = [ordered]@{
     exception_paths_truncated = ($exceptionCount -gt $exceptionRows.Count)
     exception_paths = @($exceptionRows | Sort-Object -Property @{Expression='snapshot_bytes';Descending=$true}, @{Expression='relative_path';Descending=$false})
     reference_reparse_file_count_excluded = $countReferenceReparse
-    sha256_pair_sample_count = $pairCount
+    sha256_pair_sample_count = $samples.Count
     sha256_identical_pair_count = $sameCount
     sha256_different_pair_count = $differentCount
     sha256_identical_sample_logical_bytes = $bytesVerifiedIdentical
     sha256_total_input_bytes = $inputUsed
-    sha256_unchecked_same_size_file_count = ($countMatchingSize - $pairCount)
+    sha256_unchecked_same_size_file_count = ($countMatchingSize - $samples.Count)
     sha256_sample = $samples
-    complete_hash_comparison = ($countMatchingSize -eq $pairCount)
+    complete_hash_comparison = ($countMatchingSize -eq $samples.Count)
     reference_is_mutable = $true
     historical_snapshot_preservation_proven = $false
     evidence_retention_proven = $false
@@ -163,6 +159,6 @@ if ($Json) { $output | ConvertTo-Json -Depth 7 }
 else {
     "Read-only snapshot comparison: $source"
     "Files=$($files.Count) logical MB=$([math]::Round($inventoryBytes/1MB,1)); same-size refs=$countMatchingSize; missing refs=$countReferenceMissing; size differences=$countDifferentSize"
-    "SHA-256 samples=$pairCount identical=$sameCount different=$differentCount; confirmed identical sample MB=$([math]::Round($bytesVerifiedIdentical/1MB,1))"
+    "SHA-256 samples=$($samples.Count) identical=$sameCount different=$differentCount; confirmed identical sample MB=$([math]::Round($bytesVerifiedIdentical/1MB,1))"
     'No files copied or deleted. Even exact matches do not establish archival/ownership approval.'
 }
