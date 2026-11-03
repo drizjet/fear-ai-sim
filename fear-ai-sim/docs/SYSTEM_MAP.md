@@ -306,6 +306,18 @@ Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\re
 - **Confirmed Anchor NEXT-84:** confirmation renews belief as of adjudication tick (one line); vindicated truth outlives hearsay without immortality. Pinned in world-sim battery.
 - **Hearsay Reroute NEXT-85:** group-level belief reaches the trade network - non-combat threat hearings raise advisory danger (0.10) on the nearest route; combat skips (no double count); decays without reinforcement. First meso-level behavioral consequence of belief. Pinned in world-sim + valley batteries.
 - **Config Conformance NEXT-86:** repo-wide dead-key sweep finds zero live instances (both historical bugs fixed); canary shows spread-merge is universal except EpistemicBeliefEngine. Permanent lint-as-test names file+line of offenders; validated against reintroduced rngSeed. Gap: new systems must opt into the table.
+
+  **2026-11-02 scope clarification (historical entry retained):** NEXT-83's
+  “no repo-wide dead-config-key lint” described the state *at NEXT-83*, not
+  an unfixed blanket absence today. The current
+  `tools/verification/verify_release_claim_boundaries.mjs` enumerates tracked
+  JS/TS files and refuses the specific executable `rngSeed:` option pattern
+  after filtering source comments. This is a real, automated, repository-wide
+  **known-pattern** check, not an exhaustive dead-config-key validator: it
+  does not prove constructor schema compatibility, computed-property safety,
+  every possible unknown option, or non-JS language coverage. NEXT-86's
+  configuration table remains opt-in for new systems. Preserve both historical
+  findings rather than upgrading them to general configuration correctness.
 - **Trust-Gated Acceptance NEXT-87:** earned distrust (< 0.4) rejects corrections without marking awareness (retry later); no reputation means neutral stranger; host-direct always applies; reads never create entries. Closes the longest-open gap (7 milestones). Pinned in world-sim battery.
 - **Truth Adjudication NEXT-88:** one host truth resolution fans out to every rumor citing its truthEventId through the standard correction path; unknown ids are safe empties. truthEventId graduates from decorative metadata to functional link. Pinned in world-sim battery.
 - **Frontier Audit CCI-23:** second arc batch closed (5 chunks, both longest-flagged gaps shut). Red-team hit proven live: distrust is a one-way ratchet - vindication from a distrusted source never lands, trust frozen, no same-source rehabilitation. 21 ranked candidates (3 NOW, 16 NEXT, 2 LATER). Next: rehabilitation path (NEXT-89).

@@ -1,15 +1,19 @@
 /**
- * FearCore — explicit normalized fear-band transition contract.
+ * FearCore — historical ROOT RESEARCH-SIM state machine, not the middleware
+ * `packages/core/src/FearCore.js` release implementation.
  *
- * The §260 single-owner rule. The §261 contract: "The latest project
- * history indicates Brain/FearCore ownership remains an active risk.
- * Resolve before building deep new systems that depend on fear state."
+ * This is a frozen pre-fix twin and must not be described as behaviorally
+ * equivalent to the production core. Known differences include extended-band
+ * raw/normalized scale handling, an ambient Math.random fallback, legacy
+ * recovery/force branches and a `tick` versus `tickCount` snapshot field.
+ * See docs/DECISIONS.md (DEC-0002) and the release certification dossier.
+ * Its root `Brain` consumer is still present, but no current behavioral
+ * verification of that consumer is established. An older header cited
+ * `tests/brain-fearcore-authority.test.js`; that file does not exist in this
+ * checkout, so it must not be represented as test evidence.
  *
- * This module is the SOLE authoritative owner of fear-band state.
- * Brain.js no longer maintains a parallel `this.state` field; it
- * reads `this.fearCore.state` after each `update()` call. Inline
- * state mutations in brain.js have been removed (see
- * `tests/brain-fearcore-authority.test.js`).
+ * Within the historical Brain/FearCore pairing, Brain reads this instance's
+ * state. This is not a claim of sole authority across the whole repository.
  *
  * The band vocabulary has 11 states:
  *
