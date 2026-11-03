@@ -73,7 +73,7 @@
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.10.0",
-    "electron": "^41.10.6",
+    "electron": "^42.11.16",
     "vite": "^8.3.4"
   },
   "overrides": {
