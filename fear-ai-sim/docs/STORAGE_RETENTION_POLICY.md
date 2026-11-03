@@ -58,6 +58,29 @@ any later mutation. A warning does not authorize terminating builds.
 
 ## Safe storage retirement is a separate authorized operation
 
+Use the **read-only retirement triage** to inspect potential old checkouts
+without touching them:
+
+```powershell
+pwsh -NoProfile -File tools/maintenance/inspect_retirement.ps1
+pwsh -NoProfile -File tools/maintenance/inspect_retirement.ps1 -Json
+```
+
+This report checks a fixed set of known checkout layouts, records Git HEAD,
+tracked/untracked status, linked worktree counts, evidence-manifest name
+candidates and process-command-line *hints*. It requests `GIT_OPTIONAL_LOCKS=0`
+for the status reads. It does **not** inspect all ignored files, prove unique
+commits are retained elsewhere, identify the owner, or validate hashes of
+every evidence file. A process command line can omit a workspace even when
+it is in use. Therefore every row reports `eligible_for_deletion=false`.
+
+After an owner reviews one candidate, preserve its unique history with
+verified Git references or a checked `git bundle` stored **outside** that
+candidate, and separately retain/have another process validate important
+evidence hashes. Verify no active job, handle, linked checkout, or unrelated
+agent still relies on the target. Only then undertake a separately authorized
+exact-path retirement. There is intentionally **no deletion command** here.
+
 Treat low free space as a signal to **stop creating fresh bulky clones**, not
 as permission to delete the oldest ones. Inventory candidate size, Git heads,
 dirty/untracked/ignored content, linked worktrees, child jobs/process handles,
@@ -69,3 +92,44 @@ bypass, force push or `git gc` to conceal or destroy unpushed work.
 
 This file describes a **manual discipline with a diagnostic tool**, not a
 scheduled task or evidence that any past checkout has been safely removed.
+
+## Recommended ongoing lifecycle (not yet automatically enforced)
+
+**Opening an owned workspace:** Prefer resuming the existing private checkout
+and reusing its owned Rust target directory. If isolation truly requires a
+new one, assign a unique workspace path, branch, owner/session identifier and
+evidence folder first. Record its source HEAD, the exact dependency lockfile,
+its build-target path and whether other agents may read it. Never infer ownership
+from the current terminal or folder title. Avoid symlinking mutable
+`node_modules` or `target` trees across concurrent writers.
+
+**During work:** Run the preflight before a large build; use a stable
+`CARGO_TARGET_DIR` belonging to that workstream, not the machine-wide shared
+Cargo `target`. Save failed and successful test logs with their exit status and
+SHA-256, and include precise limitations in the engineering register. Do not
+create a complete clone for each individual change or checkpoint.
+
+**After a verified local commit:** Prefer preserving Git history and the
+minimal off-Git manifest/evidence, not another full checkout. An owner can
+mark the workspace `ACTIVE`, `PARKED` or `RETIREMENT_REVIEW` in their own
+manifest; this is a *proposal*, not permission for another agent to delete it.
+
+**Weekly and when disk is pressured:** Run both read-only scripts, saving
+their JSON output in the current owner's evidence folder with hashes. Review
+the largest isolated **generated** targets first, followed by idle duplicate
+checkouts. Never run unattended retirement; even a clean repository can hold
+unpublished commits and ignored artifacts. If available space remains below
+the minimum after documented safe cleanup, pause new costly build work and
+investigate other disk consumers rather than declaring Fear AI to be the
+whole cause. A future OS scheduler could run these **read-only scans** with
+a dedicated account, bounded rotating reports and an alert; no scheduler or
+OS-owned inventory registry is installed by this change.
+
+**2026-11-02 initial retirement scan:** 50 named workspace folders were
+inspected in read-only mode; 25 reported clean Git snapshots, two reported
+tracked/untracked changes, and 23 did not expose a repository at the limited
+recognized layouts (they require manual inspection, not classification as
+empty). At least one snapshot showed linked worktrees. **Zero folders were
+approved for retirement and zero files were removed.** The reported folder
+footprint was approximately 25.73 GB of logical file sizes, not a guarantee
+of reclaimable physical disk space.

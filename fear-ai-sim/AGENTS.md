@@ -9,6 +9,11 @@ It is a read-only disk/workspace preflight, **not** authority to delete anything
 If the check reports low space or an excessive number of workspaces, reuse a
 safe owned workspace/build target or first investigate owner-approved storage
 retirement; never prune another agent's work or unique unpushed commits.
+For read-only retirement triage of old workspace checkouts, run
+`pwsh -NoProfile -File tools/maintenance/inspect_retirement.ps1 -Json`.
+Its snapshot checks Git and evidence hints, but cannot authorize deletion:
+all rows deliberately remain on hold until their owner and preservation of
+unique commits/evidence have been independently verified.
 
 ## Goal
 
