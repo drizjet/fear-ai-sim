@@ -18,6 +18,10 @@ When a workspace lacks a Git checkout at recognized paths, use the bounded
 single-workspace `tools/maintenance/inspect_candidate_retention.ps1` to look
 for nested repositories, copied source and alternate Git object stores, but
 do not treat missing Git metadata or clean status as disposal authorization.
+To examine the overlap of a historical copied source snapshot against a
+current tree, use `tools/maintenance/inspect_snapshot_overlap.ps1` with explicit
+source/reference paths. Same-size file counts alone do not prove identity;
+even matching SHA-256 samples do not authorize deleting historical custody.
 For newly owned private workspaces, preview then explicitly create a
 `workspace_owner_receipt.json` using `tools/maintenance/write_workspace_receipt.ps1`
 and the full expected Git HEAD (see `docs/STORAGE_RETENTION_POLICY.md`).

@@ -95,6 +95,38 @@ object storage: its independence is **not proven**. Even when it finds no
 repository within the bounded scan, the inspector never authorizes deletion,
 never validates evidence continuity, and does not change anyone's workspace.
 
+**To quantify old source-snapshot overlap without altering either tree**, run
+the bounded SHA-256 comparator with explicitly discovered paths:
+
+```powershell
+pwsh -NoProfile -File tools/maintenance/inspect_snapshot_overlap.ps1 `
+  -SnapshotRoot 'C:\tools\05-Output\EXACT_WORKSPACE\game_snapshot' `
+  -ReferenceRoot 'C:\tools\03-Projects\lains Tools\New Master Game' `
+  -MaxHashPairs 40 -MaxHashInputMB 500 -Json
+```
+
+This inventories *logical* snapshot sizes and reference-file presence/size,
+records up to 500 missing or different-size paths by default, and hashes a
+bounded largest-file sample for exact matching. Results include both the
+explicit un-hashed file count and exception truncation flag. A file that
+matches in size is not necessarily byte-identical; a matching hash against a
+**mutable** reference tree is still not proof of independent historical
+preservation. The tool cannot certify duplicate physical disk usage, a stable
+archive, owner permission or deletion eligibility. Neither tree is edited.
+
+**2026-11-03 Cycle 29 measured example:** The 676.99 MiB `game_snapshot`
+contained 13,047 files: 12,909 matched reference sizes, 136 differed in
+size, and two Rust historical files were absent from today's canonical game
+tree (`cycle21_layout_interpreter_pre_cache_fix.rs` and
+`cycle20_movement_original_backup.rs`). The 40 largest hashed same-size
+pairs matched SHA-256 (250 MiB of snapshot content), but another 12,869
+same-size files remain un-hashed and no historical custody has been proved.
+The 138 exception paths and independent source hashes for the two missing
+files were saved **outside** the candidate in the auditor's evidence folder.
+No workspace or historical file was deleted. C: had roughly 19.49 GiB free
+at the initial check, so avoid creating more full clones or costly build
+outputs until capacity is managed with explicit owners and survival proof.
+
 **2026-11-03 limited candidate findings:** The current owned foundation checkout
 has a Git alternate pointing at the canonical SDK object store and ignored
 dependency output; it is not self-contained merely because its worktree can
