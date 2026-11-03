@@ -74,6 +74,37 @@ commits are retained elsewhere, identify the owner, or validate hashes of
 every evidence file. A process command line can omit a workspace even when
 it is in use. Therefore every row reports `eligible_for_deletion=false`.
 
+**For one specific workspace whose structure is unclear**, use the bounded
+read-only candidate inspector. It walks existing directories to a limited depth,
+does not traverse `node_modules`, Rust `target/`, `.git`, reparse points or other
+large/generated directory names, and reports nested Git checkouts, ignored
+entries, Git object-store alternates and historical snapshot/evidence folder
+hints. The target must be an existing direct child of the declared output root:
+
+```powershell
+pwsh -NoProfile -File tools/maintenance/inspect_candidate_retention.ps1 `
+  -WorkspacePath 'C:\tools\05-Output\EXACT_EXISTING_WORKSPACE' -Json
+```
+
+The report explicitly identifies directory/depth caps and skipped subtrees.
+An unrecognized folder is **not** proof of an empty repository or disposable
+backup; its nested `game_snapshot`, `sdk_snapshot`, cleanrooms and review
+bundles may hold unique source or evidence. Likewise, a *clean* Git checkout
+with an `objects/info/alternates` file may depend on another repository's Git
+object storage: its independence is **not proven**. Even when it finds no
+repository within the bounded scan, the inspector never authorizes deletion,
+never validates evidence continuity, and does not change anyone's workspace.
+
+**2026-11-03 limited candidate findings:** The current owned foundation checkout
+has a Git alternate pointing at the canonical SDK object store and ignored
+dependency output; it is not self-contained merely because its worktree can
+be clean. The older Cycle 29 `FEAR_AI_CYCLE29_OWNED_20261025` workspace contained
+at least 11 snapshot/evidence directory hints in the bounded scan; no `.git`
+repository was found *within that depth*, and a deeper scan would be needed
+before any completeness claim. Both were inspected read-only; neither is an
+approved retirement candidate. C: space had fallen to approximately 23.6 GB
+free at the start of this continuation, so avoid new bulky clones/builds.
+
 After an owner reviews one candidate, preserve its unique history with
 verified Git references or a checked `git bundle` stored **outside** that
 candidate, and separately retain/have another process validate important
