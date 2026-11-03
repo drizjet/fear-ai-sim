@@ -84,8 +84,58 @@ try {
             $hints = @($processes | Where-Object { $_.CommandLine.Contains($folder.FullName) } |
                 ForEach-Object { [pscustomobject]@{name=$_.Name;pid=$_.ProcessId} })
         }
+        $receiptPath = Join-Path $evidencePath 'workspace_owner_receipt.json'
+        $receiptState = 'MISSING'
+        $receiptOwnerClaim = $null
+        $receiptRegisteredHead = $null
+        $receiptSha256 = $null
+        if (Test-Path -LiteralPath $receiptPath -PathType Leaf) {
+            try {
+                $receipt = Get-Content -LiteralPath $receiptPath -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+                $receiptSha256 = (Get-FileHash -LiteralPath $receiptPath -Algorithm SHA256 -ErrorAction Stop).Hash
+                if ($receipt.schema -ne 'fear-ai-workspace-owner-receipt-v1' -or
+                    $receipt.owner_authentication -ne 'SELF_DECLARED_NOT_VERIFIED' -or
+                    $receipt.deletion_authorized -ne $false -or
+                    $receipt.retention_proven -ne $false -or
+                    $receipt.owner_label -isnot [string] -or
+                    [string]::IsNullOrWhiteSpace($receipt.owner_label) -or
+                    $receipt.git_head_at_registration -notmatch '^[0-9a-f]{40}$' -or
+                    ![string]::Equals([string]$receipt.workspace_path, $folder.FullName,
+                        [System.StringComparison]::OrdinalIgnoreCase) -or
+                    $null -eq $gitPath -or
+                    ![string]::Equals([string]$receipt.git_path, [string]$gitPath,
+                        [System.StringComparison]::OrdinalIgnoreCase)) {
+                    $receiptState = 'INVALID_OR_MISMATCHED_HOLD'
+                } else {
+                    $receiptOwnerClaim = [string]$receipt.owner_label
+                    $receiptRegisteredHead = [string]$receipt.git_head_at_registration
+                    $checkpointValid = $true
+                    if ($null -ne $receipt.checkpoint_manifest_name) {
+                        $name = [string]$receipt.checkpoint_manifest_name
+                        if ($name -notmatch '^[a-zA-Z0-9_.-]+\.json$' -or
+                            $receipt.checkpoint_manifest_sha256 -notmatch '^[A-F0-9]{64}$') {
+                            $checkpointValid = $false
+                        } else {
+                            $checkpointPath = Join-Path $evidencePath $name
+                            if (!(Test-Path -LiteralPath $checkpointPath -PathType Leaf) -or
+                                ((Get-FileHash -LiteralPath $checkpointPath -Algorithm SHA256).Hash -cne
+                                 [string]$receipt.checkpoint_manifest_sha256)) {
+                                $checkpointValid = $false
+                            }
+                        }
+                    }
+                    $receiptState = if (!$checkpointValid) { 'CHECKPOINT_DIGEST_MISMATCH_HOLD' }
+                        elseif ($receiptRegisteredHead -ne $head) { 'HEAD_CHANGED_SINCE_RECEIPT_HOLD' }
+                        else { 'SELF_DECLARED_MATCHES_HEAD_UNVERIFIED' }
+                }
+            } catch {
+                $receiptState = 'INVALID_OR_UNREADABLE_HOLD'
+            }
+        }
         $reasons = @('OWNER_NOT_VERIFIED', 'UNPUSHED_OR_UNREFERENCED_COMMITS_NOT_VERIFIED',
             'IGNORED_FILES_AND_OPEN_HANDLES_NOT_VERIFIED', 'EVIDENCE_NOT_RETAINED_OR_REHASHED')
+        if ($receiptState -ne 'SELF_DECLARED_MATCHES_HEAD_UNVERIFIED') { $reasons += "OWNER_RECEIPT_$receiptState" }
+        else { $reasons += 'RECEIPT_IS_SELF_DECLARED_NOT_OWNERSHIP_PROOF' }
         if ($gitState -ne 'CLEAN_SNAPSHOT_ONLY') { $reasons += $gitState }
         if ($null -ne $worktrees -and $worktrees -gt 1) { $reasons += 'MULTIPLE_LINKED_WORKTREES' }
         if ($hints.Count -gt 0) { $reasons += 'MATCHING_RUNNING_COMMAND_LINE_HINT' }
@@ -101,6 +151,10 @@ try {
             linked_worktree_count = $worktrees
             evidence_top_level_files = $evidenceFiles
             evidence_manifest_name_candidates = $evidenceManifests
+            owner_receipt_state = $receiptState
+            owner_receipt_self_declared_label = $receiptOwnerClaim
+            owner_receipt_registered_head = $receiptRegisteredHead
+            owner_receipt_sha256 = $receiptSha256
             running_command_line_hints = $hints
             unique_commit_verified_elsewhere = $false
             owner_approval_verified = $false

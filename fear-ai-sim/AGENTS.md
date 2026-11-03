@@ -14,6 +14,11 @@ For read-only retirement triage of old workspace checkouts, run
 Its snapshot checks Git and evidence hints, but cannot authorize deletion:
 all rows deliberately remain on hold until their owner and preservation of
 unique commits/evidence have been independently verified.
+For newly owned private workspaces, preview then explicitly create a
+`workspace_owner_receipt.json` using `tools/maintenance/write_workspace_receipt.ps1`
+and the full expected Git HEAD (see `docs/STORAGE_RETENTION_POLICY.md`).
+Never create a receipt in another agent's checkout: it is only a self-declared
+ownership hint and never permission to delete or overwrite that checkout.
 
 ## Goal
 

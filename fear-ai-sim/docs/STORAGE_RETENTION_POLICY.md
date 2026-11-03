@@ -103,6 +103,35 @@ its build-target path and whether other agents may read it. Never infer ownershi
 from the current terminal or folder title. Avoid symlinking mutable
 `node_modules` or `target` trees across concurrent writers.
 
+**Create a per-workspace ownership receipt once:** An explicitly identified
+owner of an already isolated workspace can preview a receipt, then create it
+only after supplying the exact Git HEAD. The workspace must be a direct child
+of the declared output root with an existing `repo/.git` and `evidence/` folder:
+
+```powershell
+$ws = 'C:\tools\05-Output\YOUR_OWN_ISOLATED_WORKSPACE'
+$head = git -C "$ws\repo" rev-parse HEAD
+# Preview is the default; use only an owner-approved workspace and label.
+pwsh -NoProfile -File tools/maintenance/write_workspace_receipt.ps1 `
+  -WorkspacePath $ws -OwnerLabel 'your-session-id' -Purpose 'your-task' -ExpectedHead $head
+# Opt-in creation: requires the same explicit full HEAD; never overwrites.
+pwsh -NoProfile -File tools/maintenance/write_workspace_receipt.ps1 `
+  -WorkspacePath $ws -OwnerLabel 'your-session-id' -Purpose 'your-task' `
+  -ExpectedHead $head -Write
+```
+
+The receipt is `evidence/workspace_owner_receipt.json`, created with
+`CreateNew` (no overwrites). It records a self-declared owner label and purpose,
+Git branch/HEAD, optional SHA-256 of a separately specified checkpoint
+manifest, package-lock digest if present, and proposed owned Rust target. It
+**cannot authenticate the agent**, grant exclusive access, establish that
+the checkout is idle, or approve deletion. Its recorded HEAD is a creation
+snapshot, not a rolling current-state certificate. `inspect_retirement.ps1`
+reports matching receipt fields, changes to HEAD, invalid receipts and
+checkpoint-hash mismatches as separate states while holding all entries.
+Absence of a receipt in earlier workspaces remains an unknown, not permission
+to assume their owners are gone. Never fabricate receipts for other agents.
+
 **During work:** Run the preflight before a large build; use a stable
 `CARGO_TARGET_DIR` belonging to that workstream, not the machine-wide shared
 Cargo `target`. Save failed and successful test logs with their exit status and

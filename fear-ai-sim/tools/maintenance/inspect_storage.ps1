@@ -44,6 +44,7 @@ foreach ($folder in $folders) {
     }
     $nodeModules = Test-Path -LiteralPath (Join-Path $folder.FullName 'repo\fear-ai-sim\node_modules')
     $rustTarget = Test-Path -LiteralPath (Join-Path $folder.FullName 'evidence\rust_target')
+    $receiptPresent = Test-Path -LiteralPath (Join-Path $folder.FullName 'evidence\workspace_owner_receipt.json') -PathType Leaf
     $approxMB = $null
     if ($DeepMeasure) {
         # This is a metadata estimate; inaccessible files may be omitted. Do not
@@ -59,6 +60,7 @@ foreach ($folder in $folders) {
         repo_detected = $gitRepoVisible
         node_modules_detected = $nodeModules
         rust_target_detected = $rustTarget
+        owner_receipt_present = $receiptPresent
         approximate_mb = $approxMB
         deletion_authorized = $false
         owner_and_git_state = 'NOT_CHECKED'
