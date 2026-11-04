@@ -108,7 +108,8 @@ pwsh -NoProfile -File tools/maintenance/inspect_snapshot_overlap.ps1 `
 This inventories *logical* snapshot sizes and reference-file presence/size,
 records up to 500 missing or different-size paths by default, and hashes a
 bounded largest-file sample for exact matching. Results include both the
-explicit un-hashed file count and exception truncation flag. A file that
+explicit un-hashed file count and exception truncation flag. An existing,
+empty source tree reports zero logical bytes and no SHA-256 pairs. A file that
 matches in size is not necessarily byte-identical; a matching hash against a
 **mutable** reference tree is still not proof of independent historical
 preservation. Reference files reached through symlink/junction directory

@@ -34,15 +34,18 @@ foreach ($path in @($source,$reference)) {
 
 # Get-ChildItem without -FollowSymlink never descends directory symlinks.
 # The result is a logical-file inventory, not a physical allocated-size audit.
-$rawFiles = @(Get-ChildItem -LiteralPath $source -Recurse -File -Force -ErrorAction Stop)
+$sourceEntries = @(Get-ChildItem -LiteralPath $source -Recurse -Force -ErrorAction Stop)
+$rawFiles = @($sourceEntries | Where-Object { $_ -is [System.IO.FileInfo] })
 $fileSymlinks = @($rawFiles | Where-Object {
     ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0
 })
 $files = @($rawFiles | Where-Object {
     ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -eq 0
 })
-$directorySymlinks = @(Get-ChildItem -LiteralPath $source -Directory -Recurse -Force -ErrorAction Stop |
-    Where-Object { ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0 })
+$directorySymlinks = @($sourceEntries | Where-Object {
+    $_ -is [System.IO.DirectoryInfo] -and
+    ($_.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0
+})
 
 $countMatchingSize = 0
 $countReferenceMissing = 0
@@ -149,7 +152,11 @@ foreach ($pair in @($eligible | Sort-Object -Property @{Expression='bytes';Desce
         reference_sha256 = $b
     }
 }
-$inventoryBytes = [long](($files|Measure-Object Length -Sum).Sum)
+$inventoryBytes = if ($files.Count -eq 0) {
+    [long]0
+} else {
+    [long](($files|Measure-Object Length -Sum).Sum)
+}
 $output = [ordered]@{
     schema = 'fear-ai-snapshot-overlap-readonly-v1'
     inspected_at_utc = (Get-Date).ToUniversalTime().ToString('o')
