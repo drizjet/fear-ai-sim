@@ -77,7 +77,7 @@ if (((Get-Item -LiteralPath $evidence -Force).Attributes -band [System.IO.FileAt
 }
 $checkpointSha = $null
 if ($CheckpointManifestName) {
-    if ($CheckpointManifestName -notmatch '^[a-zA-Z0-9_.-]+\.json$' -or $CheckpointManifestName -in @('.', '..')) {
+    if ($CheckpointManifestName -notmatch '^[a-zA-Z0-9_.-]+\.json$') {
         throw 'CheckpointManifestName must be a single .json file name'
     }
     $checkpoint = Join-Path $evidence $CheckpointManifestName
