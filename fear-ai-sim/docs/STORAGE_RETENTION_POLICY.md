@@ -111,8 +111,12 @@ bounded largest-file sample for exact matching. Results include both the
 explicit un-hashed file count and exception truncation flag. A file that
 matches in size is not necessarily byte-identical; a matching hash against a
 **mutable** reference tree is still not proof of independent historical
-preservation. The tool cannot certify duplicate physical disk usage, a stable
-archive, owner permission or deletion eligibility. Neither tree is edited.
+preservation. Reference files reached through symlink/junction directory
+ancestors are excluded from size/hash comparisons and counted among excluded
+reference reparse paths. This is a point-in-time check, not an atomic
+filesystem snapshot or defense against concurrent replacement. The tool
+cannot certify duplicate physical disk usage, a stable archive, owner
+permission or deletion eligibility. Neither tree is edited.
 
 **2026-11-03 Cycle 29 measured example:** The 676.99 MiB `game_snapshot`
 contained 13,047 files: 12,909 matched reference sizes, 136 differed in

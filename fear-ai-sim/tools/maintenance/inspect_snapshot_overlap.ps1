@@ -53,6 +53,8 @@ $bytesMissing = [long]0
 $bytesDifferentSize = [long]0
 $eligible = @()
 $exceptionRows = @()
+$referenceDirectoryReparseCache = [System.Collections.Generic.Dictionary[string,bool]]::new(
+    [System.StringComparer]::OrdinalIgnoreCase)
 foreach ($file in $files) {
     $rel = $file.FullName.Substring($source.Length + 1)
     $refPath = Join-Path $reference $rel
@@ -67,6 +69,36 @@ foreach ($file in $files) {
                 reference_bytes = $null
             }
         }
+        continue
+    }
+    # A normal leaf inside a junctioned parent is still outside ReferenceRoot.
+    # Memoize ancestry checks so neighboring files do not repeatedly stat it.
+    $directory = [System.IO.Path]::GetDirectoryName($refPath)
+    $checkedDirectories = [System.Collections.Generic.List[string]]::new()
+    $reparseAncestor = $false
+    while ($null -ne $directory -and
+            ![string]::Equals($directory.TrimEnd('\'), $reference,
+            [System.StringComparison]::OrdinalIgnoreCase)) {
+        if ($referenceDirectoryReparseCache.ContainsKey($directory)) {
+            $reparseAncestor = $referenceDirectoryReparseCache[$directory]
+            break
+        }
+        $checkedDirectories.Add($directory)
+        if (((Get-Item -LiteralPath $directory -Force -ErrorAction Stop).Attributes -band
+                [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            $reparseAncestor = $true
+            break
+        }
+        $directory = [System.IO.Path]::GetDirectoryName($directory)
+    }
+    if ($null -eq $directory) {
+        throw 'Reference directory ancestry escaped the reference root'
+    }
+    foreach ($checked in $checkedDirectories) {
+        $referenceDirectoryReparseCache[$checked] = $reparseAncestor
+    }
+    if ($reparseAncestor) {
+        $countReferenceReparse++
         continue
     }
     $refFile = Get-Item -LiteralPath $refPath -Force -ErrorAction Stop
