@@ -44,6 +44,9 @@ foreach ($folder in $folders) {
     }
     $nodeModules = Test-Path -LiteralPath (Join-Path $folder.FullName 'repo\fear-ai-sim\node_modules')
     $rustTarget = Test-Path -LiteralPath (Join-Path $folder.FullName 'evidence\rust_target')
+    $distOutput = Test-Path -LiteralPath (Join-Path $folder.FullName 'repo\fear-ai-sim\dist') -PathType Container
+    $sdkRustTarget = Test-Path -LiteralPath (Join-Path $folder.FullName 'repo\fear-ai-sim\packages\adapters\rust\target') -PathType Container
+    $tauriRustTarget = Test-Path -LiteralPath (Join-Path $folder.FullName 'repo\fear-ai-sim\src-tauri\target') -PathType Container
     $receiptPresent = Test-Path -LiteralPath (Join-Path $folder.FullName 'evidence\workspace_owner_receipt.json') -PathType Leaf
     $approxMB = $null
     if ($DeepMeasure) {
@@ -60,6 +63,9 @@ foreach ($folder in $folders) {
         repo_detected = $gitRepoVisible
         node_modules_detected = $nodeModules
         rust_target_detected = $rustTarget
+        dist_detected = $distOutput
+        sdk_rust_target_detected = $sdkRustTarget
+        tauri_rust_target_detected = $tauriRustTarget
         owner_receipt_present = $receiptPresent
         approximate_mb = $approxMB
         deletion_authorized = $false
@@ -67,6 +73,16 @@ foreach ($folder in $folders) {
     }
 }
 $oldCount = @($rows | Where-Object { $_.older_than_cutoff }).Count
+$generatedWorkspaceCount = @($rows | Where-Object {
+    $_.node_modules_detected -or $_.dist_detected -or
+    $_.sdk_rust_target_detected -or $_.tauri_rust_target_detected
+}).Count
+$generatedDirectoryCount = 0
+foreach ($row in $rows) {
+    $generatedDirectoryCount += [int]$row.node_modules_detected +
+        [int]$row.dist_detected + [int]$row.sdk_rust_target_detected +
+        [int]$row.tauri_rust_target_detected
+}
 $risks = @()
 if ($freeGB -lt $WarnBelowFreeGB) {
     $risks += "LOW_FREE_SPACE: ${freeGB}GB below ${WarnBelowFreeGB}GB"
@@ -81,6 +97,8 @@ $report = [ordered]@{
     drive_total_gb = $totalGB
     drive_free_gb = $freeGB
     workspace_count = $rows.Count
+    generated_build_workspace_count = $generatedWorkspaceCount
+    generated_build_directory_count = $generatedDirectoryCount
     workspaces_older_than_days = $oldCount
     age_days_threshold = $OlderThanDays
     deep_measure = [bool]$DeepMeasure
@@ -95,6 +113,7 @@ if ($Json) {
     Write-Output 'Fear AI storage inspection (read-only)'
     Write-Output "Drive: $driveName | $freeGB GB free / $totalGB GB total"
     Write-Output "Fear AI workspace folders: $($rows.Count) | older than $OlderThanDays days: $oldCount"
+    Write-Output "Generated build/dependency directory hints: $generatedDirectoryCount across $generatedWorkspaceCount workspaces (not deletion authority)"
     if ($risks.Count -gt 0) {
         foreach ($risk in $risks) { Write-Output "RISK: $risk" }
     } else {

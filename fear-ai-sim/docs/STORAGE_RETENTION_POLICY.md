@@ -22,6 +22,11 @@ Default alerts: **under 100 GB free** on the workspace drive or **over 12**
 named Fear AI workspaces. These are operational early warnings, not universal
 capacity requirements. The tool is read-only, does not look into canonical or
 protected worktree history, and marks all deletion decisions unauthorized.
+Its fast presence-only report also counts recognized `node_modules`, `dist`,
+SDK Rust `target` and Tauri Rust `target` directories across workspaces;
+the legacy `rust_target_detected` field separately denotes only
+`evidence/rust_target`. These flags do not measure recoverable physical
+space, inspect active handles or prove any generated directory is disposable.
 Names, ages and size estimates are **not proof that a directory is idle**.
 Recheck actual live processes/jobs, worktrees, Git state and ownership before
 any later mutation. A warning does not authorize terminating builds.
