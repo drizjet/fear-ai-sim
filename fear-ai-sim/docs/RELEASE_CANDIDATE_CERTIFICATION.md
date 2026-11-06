@@ -372,13 +372,13 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 - `verify_trade_chain_causal_edges.mjs`
 - `verify_trade_runtime_contracts.mjs`
 
-**Across the ledger of recorded repeated runs (24 night(s), 3852 probe attempts):**
+**Across the ledger of recorded repeated runs (25 night(s), 4032 probe attempts):**
 
-No probe has ever disagreed with itself in the ledger. That is a statement about 3852 recorded attempts across 24 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **13.8%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
+No probe has ever disagreed with itself in the ledger. That is a statement about 4032 recorded attempts across 25 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **13.3%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
 **Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment).
 
-**Timing drift — no probe is creeping** (46 probe(s) had enough pooled samples across 6 comparable night(s); none reached 1.5x its earlier median while also exceeding its own p90).
+**Timing drift — no probe is creeping** (46 probe(s) had enough pooled samples across 7 comparable night(s); none reached 1.5x its earlier median while also exceeding its own p90).
 
 The timing baseline restarts at 2026-10-29 for `github-hosted`: 8 earlier comparable night(s) are not pooled into any probe's distribution, because the host level moved while the code did not (first nightly at the slower host level; 10-28 and 10-29 both ran b8fd013 and the runtime-graph probes stepped up together while the spawn-floor probes did not). A ratio across two machines measures the machines, whether or not the two machines declare the same environment name.
 
