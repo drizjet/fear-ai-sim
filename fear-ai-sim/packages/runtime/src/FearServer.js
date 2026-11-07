@@ -22,14 +22,9 @@ import { dispatchHttpRequest } from './HttpRequestDispatcher.js';
 import { dispatchHttpPackPost } from './HttpPackRoutes.js';
 import { preflightWsMessage } from './WsMessagePreflight.js';
 import { dispatchWsPackMessage } from './WsPackRoutes.js';
-import { ValleyChainScenario } from '../../core/index.js';
-import {
-    HostCapabilityNegotiator,
-    HOST_CAPABILITIES,
-    INTENT_CAPABILITY_REQUIREMENTS,
-    RUNTIME_SAFE_FALLBACKS,
-    HostFeedbackLoop
-} from '../../core/index.js';
+import { ValleyChainScenario } from '../../core/src/ValleyChainScenario.js';
+import { HostCapabilityNegotiator, HOST_CAPABILITIES, INTENT_CAPABILITY_REQUIREMENTS, RUNTIME_SAFE_FALLBACKS } from '../../core/src/HostCapabilityNegotiator.js';
+import { HostFeedbackLoop } from '../../core/src/HostFeedbackLoop.js';
 import {
     PROTOCOL_VERSION,
     MESSAGE_TYPES,
