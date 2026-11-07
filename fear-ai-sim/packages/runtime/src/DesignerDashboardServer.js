@@ -12,21 +12,6 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-    AffectiveAgent,
-    FactionSystem,
-    INCIDENT_TYPES,
-    DiagnosticExplainabilityInspector,
-    LayeredMemorySystem,
-    RumorMemory,
-    MemoryRelevanceScorer,
-    RelationshipTensorSystem,
-    INTERACTION_TYPES,
-    CausalEventGraph,
-    CharacterIdentityArchitecture,
-    GoalArbitrationEngine
-} from '../../core/index.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../..');
@@ -556,6 +541,7 @@ export class DesignerDashboardServer {
     }
 
     _handleExplain(body, res) {
+        return import('../../core/index.js').then(({ AffectiveAgent, DiagnosticExplainabilityInspector }) => {
         const neuroticism = Number(body.neuroticism ?? 0.8);
         const resilience = Number(body.resilience ?? 0.2);
         const distance = Number(body.distance ?? 4.0);
@@ -593,9 +579,11 @@ export class DesignerDashboardServer {
 
         const report = DiagnosticExplainabilityInspector.explainAgentDecision(agent, obs, context);
         this._sendJson(res, 200, report);
+        }).catch((err) => this._sendJson(res, 500, { error: err.message }));
     }
 
     _handleExplainFaction(body, res) {
+        return import('../../core/index.js').then(({ FactionSystem, INCIDENT_TYPES, DiagnosticExplainabilityInspector }) => {
         const factionA = body.factionA || 'KingdomOfIron';
         const factionB = body.factionB || 'NomadHorde';
         const incidentCount = Number(body.incidents ?? 3);
@@ -612,6 +600,7 @@ export class DesignerDashboardServer {
 
         const report = DiagnosticExplainabilityInspector.explainFactionDecision(factionSys, factionA, factionB);
         this._sendJson(res, 200, report);
+        }).catch((err) => this._sendJson(res, 500, { error: err.message }));
     }
 
     _handleSimStep(body, res) {
@@ -625,6 +614,7 @@ export class DesignerDashboardServer {
     // deterministic vignette (ambush episodic + sanctuary semantic + one
     // heard rumor) and returns the relevance-ranked recall list.
     _handleMemory(body, res) {
+        return import('../../core/index.js').then(({ LayeredMemorySystem, RumorMemory, MemoryRelevanceScorer }) => {
         const ticks = Math.max(1, Math.min(50, Math.floor(Number(body.ticks) || 8)));
         const mem = new LayeredMemorySystem();
         mem.recordEpisodic({ type: 'SURVIVED_AMBUSH', valence: -0.9, arousal: 0.9, salience: 0.85, participants: ['orc-7'], tick: 90 });
@@ -644,11 +634,13 @@ export class DesignerDashboardServer {
             evaluated: out.evaluated,
             topRecall: out.ranked.length > 0 ? out.ranked[0].type : null
         });
+        }).catch((err) => this._sendJson(res, 500, { error: err.message }));
     }
 
     // NEXT-122: Relationship Graph. Directed edges prove A->B != B->A:
     // shared survival builds A->B trust while betrayal craters B->A.
     _handleRelationships(body, res) {
+        return import('../../core/index.js').then(({ RelationshipTensorSystem, INTERACTION_TYPES }) => {
         const rel = new RelationshipTensorSystem();
         const kindness = Math.max(1, Math.min(5, Math.floor(Number(body.kindActs) || 2)));
         for (let i = 0; i < kindness; i++) {
@@ -663,11 +655,13 @@ export class DesignerDashboardServer {
             asymmetric: forward.trust !== backward.trust,
             contagionGuardFromCaptain: rel.getContagionSusceptibility('guard', 'captain', 0.5)
         });
+        }).catch((err) => this._sendJson(res, 500, { error: err.message }));
     }
 
     // NEXT-122: Causal Graph. Fixed caravan-loss chain with root-cause
     // trace and narrative for the terminal outcome.
     _handleCausal(body, res) {
+        return import('../../core/index.js').then(({ CausalEventGraph }) => {
         const graph = new CausalEventGraph();
         const chain = [
             { id: 'monster_attack', tick: 1, type: 'RAID', severity: 0.8, description: 'Monster attack destroys caravan' },
@@ -687,6 +681,7 @@ export class DesignerDashboardServer {
             topWeight: roots.rankedRootCauses?.[0]?.maxCompoundWeight ?? null,
             narrative
         });
+        }).catch((err) => this._sendJson(res, 500, { error: err.message }));
     }
 
     // NEXT-122: Trade Map. Live closed-world slice: bandit attack on road-a,
@@ -701,6 +696,7 @@ export class DesignerDashboardServer {
     // subsystem (fixed N, seeded): affect ticks, CIA decisions,
     // arbitration, vault cycle, trauma ticks.
     _handlePerformance(res) {
+        return import('../../core/index.js').then(({ AffectiveAgent, CharacterIdentityArchitecture, GoalArbitrationEngine }) => {
         const now = () => Number(process.hrtime.bigint()) / 1e6;
         const N = 200;
         let t0 = now();
@@ -733,6 +729,7 @@ export class DesignerDashboardServer {
             ciaMsPerDecision: Number((ciaMs / N).toFixed(4)),
             arbitrationMsPerDecision: Number((arbMs / N).toFixed(4))
         });
+        }).catch((err) => this._sendJson(res, 500, { error: err.message }));
     }
 
     _serveDashboardHtml(res) {
