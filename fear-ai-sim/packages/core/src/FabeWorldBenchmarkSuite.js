@@ -26,7 +26,6 @@
  * Evaluates semantic living-world intelligence without mutating host transforms, physics, or entity ownership.
  */
 
-import { DeterministicRng } from './DeterministicRng.js';
 import {
     FrontierValleySimulation,
     FRONTIER_VALLEY_SETTLEMENTS,

@@ -26,7 +26,6 @@
  * Pure behavioral evaluation oracle; never mutates external game state.
  */
 
-import { ACTION_INTENTS } from './IntentResolver.js';
 import { AffectiveAgent } from './AffectiveAgent.js';
 import { CANONICAL_PRESETS } from './PresetLibrary.js';
 import { DeterministicRng } from './DeterministicRng.js';
