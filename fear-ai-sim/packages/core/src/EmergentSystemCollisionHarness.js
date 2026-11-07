@@ -30,11 +30,11 @@
  * EmergentSystemCollisionHarness evaluates compound stress propagation and resilience offline/advisory.
  */
 
-import { CivilizationSimulationSystem, ROUTE_STATUS, COMMODITY_TYPES } from './CivilizationSimulationSystem.js';
+import { CivilizationSimulationSystem, COMMODITY_TYPES } from './CivilizationSimulationSystem.js';
 import { FactionSystem, ESCALATION_STAGES, INCIDENT_TYPES } from './FactionSystem.js';
 import { EconomicFeedbackSystem } from './EconomicFeedbackSystem.js';
-import { SettlementMigrationSystem, MIGRATION_DRIVERS } from './SettlementMigrationSystem.js';
-import { RoamingBandSystem, BAND_ARCHETYPES, BAND_STATES } from './RoamingBandSystem.js';
+import { SettlementMigrationSystem } from './SettlementMigrationSystem.js';
+import { RoamingBandSystem, BAND_ARCHETYPES } from './RoamingBandSystem.js';
 import { ScenarioInterventionSystem, INTERVENTION_TYPES } from './ScenarioInterventionSystem.js';
 import { MultiFeedbackCascadeSystem, COUPLING_VARIABLES } from './MultiFeedbackCascadeSystem.js';
 import { DeterministicRng } from './DeterministicRng.js';
