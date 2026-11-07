@@ -19,6 +19,7 @@ import { admitHostClaim, registerHostSigningKey, establishHostRequestIdentity, a
 import { RequestSigning, SIGNATURE_FAILURES } from './RequestSigning.js';
 import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGate.js';
 import { dispatchHttpRequest } from './HttpRequestDispatcher.js';
+import { dispatchHttpPackPost } from './HttpPackRoutes.js';
 import { preflightWsMessage } from './WsMessagePreflight.js';
 import { ValleyChainScenario } from '../../core/index.js';
 import {
@@ -749,138 +750,12 @@ export class FearServer {
                 });
             }
 
-            case '/api/v1/pack/create': {
-                const val = ProtocolValidator.validatePackCreate(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    const pack = this.simulation.createPack(val.value.packId, val.value.options);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PACK_CREATE_RESPONSE,
-                        status: 'CREATED',
-                        packId: pack.id,
-                        phase: pack.phase,
-                        pattern: pack.pattern
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/pack/assign': {
-                const val = ProtocolValidator.validatePackAssignMember(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    const member = this.simulation.registerPackMember(
-                        val.value.packId,
-                        val.value.agentId,
-                        val.value.traits,
-                        val.value.position,
-                        val.value.role
-                    );
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_RESPONSE,
-                        status: 'ASSIGNED',
-                        packId: val.value.packId,
-                        agentId: val.value.agentId,
-                        role: member.role
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/pack/remove': {
-                const val = ProtocolValidator.validatePackRemoveMember(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    const ok = this.simulation.removePackMember(val.value.packId, val.value.agentId);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_RESPONSE,
-                        status: ok ? 'REMOVED' : 'NOT_FOUND',
-                        packId: val.value.packId,
-                        agentId: val.value.agentId
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/pack/update': {
-                const val = ProtocolValidator.validatePackUpdate(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    if (val.value.phase) this.simulation.setPackPhase(val.value.packId, val.value.phase);
-                    if (val.value.pattern) this.simulation.setPackPattern(val.value.packId, val.value.pattern);
-                    if (val.value.targetThreat) this.simulation.setPackTargetThreat(val.value.packId, val.value.targetThreat);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PACK_UPDATE_RESPONSE,
-                        status: 'UPDATED',
-                        packId: val.value.packId
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/pack/query': {
-                const val = ProtocolValidator.validatePackQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    if (val.value.packId) {
-                        const advisories = this.simulation.getPackAdvisories(val.value.packId);
-                        if (!advisories) {
-                            return this._sendJson(res, 404, {
-                                error: `UNKNOWN_PACK: pack ${val.value.packId} does not exist.`,
-                                code: ERROR_CODES.UNKNOWN_PACK
-                            });
-                        }
-                        return this._sendJson(res, 200, {
-                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
-                            packId: val.value.packId,
-                            advisories
-                        });
-                    } else {
-                        const allAdvisories = this.simulation.getAllPackAdvisories();
-                        return this._sendJson(res, 200, {
-                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
-                            packId: null,
-                            packs: allAdvisories
-                        });
-                    }
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
+            case '/api/v1/pack/create':
+            case '/api/v1/pack/assign':
+            case '/api/v1/pack/remove':
+            case '/api/v1/pack/update':
+            case '/api/v1/pack/query':
+                return dispatchHttpPackPost(this, path, body, res);
 
             case '/api/v1/economy/market/register': {
                 const val = ProtocolValidator.validateEconomyRegisterMarket(body || {});
