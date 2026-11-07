@@ -12,11 +12,8 @@ import {
     CLAIM_OUTCOMES,
     TEARDOWN_OUTCOMES
 } from './ClaimArbitration.js';
-import {
-    RequestSigning,
-    SIGNATURE_FAILURES,
-    readSignatureHeaders
-} from './RequestSigning.js';
+import { RequestSigning, SIGNATURE_FAILURES } from './RequestSigning.js';
+import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGate.js';
 import { ValleyChainScenario } from '../../core/index.js';
 import {
     HostCapabilityNegotiator,
@@ -1606,48 +1603,12 @@ export class FearServer {
      * than a bare 401.
      */
     _gateSignature({ method, target, rawBody, headers, sessionIdHint = null }) {
-        if (!this.signing.enabled) return { ok: true, reason: null };
-        const presented = readSignatureHeaders(headers);
-        const named = presented.sessionId || (sessionIdHint ? String(sessionIdHint) : null);
-        const verdict = this.signing.verifyHttpRequest({
-            method,
-            target,
-            rawBody,
-            headers,
-            sessionRecord: named ? this.claims.signingRecord(named) : null,
-            sessionIdHint
-        });
-        if (!verdict.ok) {
-            this.claims.recordSignatureRefusal({
-                verb: `${String(method).toUpperCase()} ${String(target)}`,
-                sessionId: named,
-                reason: verdict.reason
-            });
-        }
-        return verdict;
+        return verifyHttpSignatureGate(this.signing, this.claims, { method, target, rawBody, headers, sessionIdHint });
     }
 
     /** Explain a refused signature. The reason strings are stable protocol values. */
     _sendSignatureRefusal(res, gate, target, body = null) {
-        const hints = {
-            [SIGNATURE_FAILURES.MISSING]: 'this session has a signing key, so its token alone is not sufficient: sign the request with the session private key',
-            [SIGNATURE_FAILURES.INVALID]: 'the signature does not cover this method, target and body, or it was not made with the registered key',
-            [SIGNATURE_FAILURES.REPLAY]: 'this nonce has already been accepted; every request needs a fresh one',
-            [SIGNATURE_FAILURES.STALE]: 'issued_at is outside the accepted clock skew',
-            [SIGNATURE_FAILURES.UNKNOWN_KEY]: 'no key is registered for this session, or the key id does not match',
-            [SIGNATURE_FAILURES.MALFORMED]: 'the signature header set is incomplete or not base64',
-            [SIGNATURE_FAILURES.UNSUPPORTED_ALG]: 'this server verifies RS256 only'
-        };
-        this._sendJson(res, 401, {
-            status: 'REFUSED',
-            error: 'Request signature refused',
-            code: gate.reason,
-            policy: this.signing.policy,
-            signature_required: gate.required === true,
-            target: String(target),
-            session_id: body && typeof body.session_id === 'string' ? body.session_id : null,
-            hint: hints[gate.reason] || 'see RequestSigning.js for the canonical signing input'
-        });
+        this._sendJson(res, 401, signatureRefusalBody(this.signing, gate, target, body));
     }
 
     _readJsonBody(req, res, callback) {
