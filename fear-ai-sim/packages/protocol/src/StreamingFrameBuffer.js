@@ -28,13 +28,9 @@
 import {
     BINARY_MAGIC,
     BINARY_PROTOCOL_VERSION,
-    FRAME_TYPES,
     INTENT_CODES,
     POSTURE_CODES,
-    BAND_CODES,
-    HEADER_SIZE_BYTES,
-    RECORD_SIZE_BYTES,
-    BinaryWireProtocol
+    BAND_CODES
 } from './BinaryWireProtocol.js';
 
 export const STREAMING_MAGIC = 0x5053; // "SP" (Streaming Packet) in little-endian uint16
