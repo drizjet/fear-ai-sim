@@ -27,7 +27,6 @@
  */
 
 import { AffectiveAgent } from './AffectiveAgent.js';
-import { CANONICAL_PRESETS } from './PresetLibrary.js';
 import { DeterministicRng } from './DeterministicRng.js';
 
 export const SITUATION_STRENGTH_LEVELS = Object.freeze({
