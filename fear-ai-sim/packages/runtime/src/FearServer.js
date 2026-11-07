@@ -1696,20 +1696,23 @@ export class FearServer {
         // preserved so a reconnect can recover its crowd. If configured with
         // autoCleanupAbandonedAgents=true, detached agents are retired immediately.
         ws.on('close', () => {
-            this.connectedClients.delete(ws);
-            const detached = this.claims.detach(ws);
-            if (this.autoCleanupAbandonedAgents) {
-                this._cleanupAbandonedSessions(detached);
-            }
+            this._detachWsConnection(ws);
         });
 
         ws.on('error', () => {
-            this.connectedClients.delete(ws);
-            const detached = this.claims.detach(ws);
-            if (this.autoCleanupAbandonedAgents) {
-                this._cleanupAbandonedSessions(detached);
-            }
+            this._detachWsConnection(ws);
         });
+    }
+
+    // Shared disconnect boundary: a transport event must detach liveness before
+    // optionally retiring abandoned agents. Heartbeat accounting and socket
+    // termination remain outside this method in their original order.
+    _detachWsConnection(ws) {
+        this.connectedClients.delete(ws);
+        const detached = this.claims.detach(ws);
+        if (this.autoCleanupAbandonedAgents) {
+            this._cleanupAbandonedSessions(detached);
+        }
     }
 
     _startHeartbeat() {
@@ -1719,11 +1722,7 @@ export class FearServer {
             for (const ws of this.connectedClients) {
                 if (ws.isAlive === false) {
                     this.heartbeatFailures++;
-                    this.connectedClients.delete(ws);
-                    const detached = this.claims.detach(ws);
-                    if (this.autoCleanupAbandonedAgents) {
-                        this._cleanupAbandonedSessions(detached);
-                    }
+                    this._detachWsConnection(ws);
                     try {
                         ws.terminate();
                     } catch { /* ignore */ }
