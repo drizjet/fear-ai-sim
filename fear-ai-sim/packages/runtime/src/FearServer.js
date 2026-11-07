@@ -15,7 +15,7 @@ import {
     authorizeHostTeardown, authorizeHostReset,
     teardownRefusal, batchTeardownRefusal, resetRefusal
 } from './HostTeardownPolicy.js';
-import { admitHostClaim, registerHostSigningKey, establishHostRequestIdentity } from './HostClaimPolicy.js';
+import { admitHostClaim, registerHostSigningKey, establishHostRequestIdentity, arbitrateHostBatchAgent } from './HostClaimPolicy.js';
 import { RequestSigning, SIGNATURE_FAILURES } from './RequestSigning.js';
 import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGate.js';
 import { dispatchHttpRequest } from './HttpRequestDispatcher.js';
@@ -369,37 +369,25 @@ export class FearServer {
                 const takeover = (val.value.claim || 'join') === 'takeover';
                 for (let i = 0; i < val.value.agents.length; i++) {
                     const entry = val.value.agents[i];
-                    if (identity.session_id) {
-                        if (!identity.established) {
-                            // The request could not prove it may act as this
-                            // session. Every entry is refused and NOTHING is
-                            // mutated, with the owner named once per entry.
-                            refused.push({
-                                index: i,
-                                agent_id: entry.agent_id,
-                                reason: identity.claim,
-                                owner_session_id: identity.owner_session_id
-                            });
-                            continue;
-                        }
-                        const taken = this.claims.claimUnder(entry.agent_id, identity.session_id, { takeover });
+                    const decision = arbitrateHostBatchAgent(this.claims, identity, entry.agent_id, takeover);
+                    if (decision.attempted) {
                         claims.push({
                             agent_id: entry.agent_id,
-                            claim: taken.granted
-                                ? ClaimArbitration.mergeOutcome(identity.claim, taken.outcome)
-                                : taken.outcome
+                            claim: decision.granted
+                                ? ClaimArbitration.mergeOutcome(identity.claim, decision.outcome)
+                                : decision.outcome
                         });
-                        if (!taken.granted) {
-                            refused.push({
-                                index: i,
-                                agent_id: entry.agent_id,
-                                reason: taken.outcome,
-                                owner_session_id: taken.ownerSessionId
-                            });
-                            continue;
-                        }
-                    } else {
+                    } else if (decision.granted) {
                         claims.push({ agent_id: entry.agent_id, claim: CLAIM_OUTCOMES.GRANTED });
+                    }
+                    if (!decision.granted) {
+                        refused.push({
+                            index: i,
+                            agent_id: entry.agent_id,
+                            reason: decision.outcome,
+                            owner_session_id: decision.owner_session_id
+                        });
+                        continue;
                     }
                     const agent = this.simulation.registerAgent(entry.agent_id, entry.traits, {
                         name: entry.name,
@@ -2051,24 +2039,14 @@ export class FearServer {
                 const refused = [];
                 const takeover = (payload.claim || 'join') === 'takeover';
                 for (const entry of payload.agents) {
-                    if (identity.session_id) {
-                        if (!identity.established) {
-                            refused.push({
-                                agent_id: entry.agent_id,
-                                reason: identity.claim,
-                                owner_session_id: identity.owner_session_id
-                            });
-                            continue;
-                        }
-                        const taken = this.claims.claimUnder(entry.agent_id, identity.session_id, { takeover });
-                        if (!taken.granted) {
-                            refused.push({
-                                agent_id: entry.agent_id,
-                                reason: taken.outcome,
-                                owner_session_id: taken.ownerSessionId
-                            });
-                            continue;
-                        }
+                    const decision = arbitrateHostBatchAgent(this.claims, identity, entry.agent_id, takeover);
+                    if (!decision.granted) {
+                        refused.push({
+                            agent_id: entry.agent_id,
+                            reason: decision.outcome,
+                            owner_session_id: decision.owner_session_id
+                        });
+                        continue;
                     }
                     const agent = this.simulation.registerAgent(entry.agent_id, entry.traits, {
                         name: entry.name,

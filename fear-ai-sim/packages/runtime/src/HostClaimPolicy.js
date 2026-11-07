@@ -76,3 +76,29 @@ export function establishHostRequestIdentity(claims, envelope, firstEntry = {}, 
         token_expired: identity.tokenExpired === true
     };
 }
+
+/**
+ * Per-entry decision shared by HTTP and WebSocket batch registration.
+ * Response shaping (HTTP indexes/claim list vs WebSocket acknowledgements)
+ * and simulation registration deliberately remain with each transport.
+ */
+export function arbitrateHostBatchAgent(claims, identity, agentId, takeover) {
+    if (!identity.session_id) {
+        return { granted: true, outcome: CLAIM_OUTCOMES.GRANTED, attempted: false };
+    }
+    if (!identity.established) {
+        return {
+            granted: false,
+            outcome: identity.claim,
+            owner_session_id: identity.owner_session_id,
+            attempted: false
+        };
+    }
+    const decision = claims.claimUnder(agentId, identity.session_id, { takeover });
+    return {
+        granted: decision.granted,
+        outcome: decision.outcome,
+        owner_session_id: decision.ownerSessionId,
+        attempted: true
+    };
+}
