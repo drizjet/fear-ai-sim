@@ -21,6 +21,7 @@ import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGa
 import { dispatchHttpRequest } from './HttpRequestDispatcher.js';
 import { dispatchHttpPackPost } from './HttpPackRoutes.js';
 import { preflightWsMessage } from './WsMessagePreflight.js';
+import { dispatchWsPackMessage } from './WsPackRoutes.js';
 import { ValleyChainScenario } from '../../core/index.js';
 import {
     HostCapabilityNegotiator,
@@ -2151,146 +2152,13 @@ export class FearServer {
                 break;
             }
 
-            case MESSAGE_TYPES.PACK_CREATE_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const pack = this.simulation.createPack(payload.packId, payload.options);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PACK_CREATE_RESPONSE,
-                        status: 'CREATED',
-                        packId: pack.id,
-                        phase: pack.phase,
-                        pattern: pack.pattern
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
+            case MESSAGE_TYPES.PACK_CREATE_REQUEST:
+            case MESSAGE_TYPES.PACK_ASSIGN_MEMBER_REQUEST:
+            case MESSAGE_TYPES.PACK_REMOVE_MEMBER_REQUEST:
+            case MESSAGE_TYPES.PACK_UPDATE_REQUEST:
+            case MESSAGE_TYPES.PACK_QUERY_REQUEST:
+                dispatchWsPackMessage(this, ws, payload, correlationId);
                 break;
-            }
-
-            case MESSAGE_TYPES.PACK_ASSIGN_MEMBER_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const member = this.simulation.registerPackMember(
-                        payload.packId,
-                        payload.agentId,
-                        payload.traits,
-                        payload.position,
-                        payload.role
-                    );
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_RESPONSE,
-                        status: 'ASSIGNED',
-                        packId: payload.packId,
-                        agentId: payload.agentId,
-                        role: member.role
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.PACK_REMOVE_MEMBER_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const ok = this.simulation.removePackMember(payload.packId, payload.agentId);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_RESPONSE,
-                        status: ok ? 'REMOVED' : 'NOT_FOUND',
-                        packId: payload.packId,
-                        agentId: payload.agentId
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.PACK_UPDATE_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    if (payload.phase) this.simulation.setPackPhase(payload.packId, payload.phase);
-                    if (payload.pattern) this.simulation.setPackPattern(payload.packId, payload.pattern);
-                    if (payload.targetThreat) this.simulation.setPackTargetThreat(payload.packId, payload.targetThreat);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PACK_UPDATE_RESPONSE,
-                        status: 'UPDATED',
-                        packId: payload.packId
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.PACK_QUERY_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    if (payload.packId) {
-                        const advisories = this.simulation.getPackAdvisories(payload.packId);
-                        if (!advisories) {
-                            this._sendWsError(ws, `UNKNOWN_PACK: pack ${payload.packId} does not exist.`, ERROR_CODES.UNKNOWN_PACK, correlationId);
-                            break;
-                        }
-                        this._sendWs(ws, {
-                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
-                            packId: payload.packId,
-                            advisories
-                        }, correlationId);
-                    } else {
-                        const allAdvisories = this.simulation.getAllPackAdvisories();
-                        this._sendWs(ws, {
-                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
-                            packId: null,
-                            packs: allAdvisories
-                        }, correlationId);
-                    }
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
 
             case MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_REQUEST: {
                 if (!this.simulation.economicFeedback) {
