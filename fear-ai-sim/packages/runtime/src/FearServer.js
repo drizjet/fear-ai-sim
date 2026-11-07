@@ -15,6 +15,7 @@ import {
     authorizeHostTeardown, authorizeHostReset,
     teardownRefusal, batchTeardownRefusal, resetRefusal
 } from './HostTeardownPolicy.js';
+import { admitHostClaim, registerHostSigningKey, establishHostRequestIdentity } from './HostClaimPolicy.js';
 import { RequestSigning, SIGNATURE_FAILURES } from './RequestSigning.js';
 import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGate.js';
 import { dispatchHttpRequest } from './HttpRequestDispatcher.js';
@@ -1609,33 +1610,7 @@ export class FearServer {
      * @param {string} [envelopeSessionId] batch-level session id, used when the entry omits one
      */
     _admitClaim(entry, envelope = {}, connection = null) {
-        const sessionId = entry.session_id || envelope.session_id || null;
-        if (!sessionId) {
-            return {
-                granted: true, claim: CLAIM_OUTCOMES.GRANTED,
-                session_id: null, owner_session_id: null, session_token: null
-            };
-        }
-        const result = this.claims.claim(entry.agent_id, {
-            sessionId,
-            token: entry.session_token || envelope.session_token,
-            claim: entry.claim || envelope.claim || 'join',
-            rotate: entry.rotate_token === true || envelope.rotate_token === true,
-            connection
-        });
-        return {
-            granted: result.granted,
-            claim: result.outcome,
-            session_id: String(sessionId),
-            owner_session_id: result.ownerSessionId,
-            // Non-null only when a NEW session was established (fresh, adopted,
-            // taken over) OR when a fresh credential replaced an old one. The
-            // host must store it: it is the only thing that proves continuity
-            // next time, and after a rotation it is the ONLY valid value.
-            session_token: result.sessionToken,
-            token_rotated: result.rotated === true,
-            token_expired: result.tokenExpired === true
-        };
+        return admitHostClaim(this.claims, entry, envelope, connection);
     }
 
     /**
@@ -1648,17 +1623,7 @@ export class FearServer {
      * in a response it never asked for.
      */
     _maybeRegisterSigningKey(envelope, sessionId) {
-        const pem = envelope && typeof envelope.signing_public_key === 'string' ? envelope.signing_public_key : null;
-        if (!pem || !sessionId) return null;
-        const result = this.claims.registerSigningKey(sessionId, pem, {
-            token: envelope.session_token || null
-        });
-        return {
-            outcome: result.outcome,
-            registered: result.registered,
-            replaced: result.replaced,
-            key_id: result.key_id
-        };
+        return registerHostSigningKey(this.claims, envelope, sessionId);
     }
 
     /**
@@ -1674,29 +1639,7 @@ export class FearServer {
      *            session_token: string|null, owner_session_id: string|null}}
      */
     _establishRequestIdentity(envelope, firstEntry = {}, connection = null) {
-        const sessionId = envelope.session_id || firstEntry.session_id || null;
-        if (!sessionId) {
-            return {
-                established: true, claim: CLAIM_OUTCOMES.GRANTED,
-                session_id: null, session_token: null, owner_session_id: null
-            };
-        }
-        const identity = this.claims.establishIdentity(
-            sessionId,
-            envelope.session_token || firstEntry.session_token,
-            envelope.claim || firstEntry.claim || 'join',
-            connection,
-            { rotate: envelope.rotate_token === true || firstEntry.rotate_token === true }
-        );
-        return {
-            established: identity.established,
-            claim: identity.outcome,
-            session_id: String(sessionId),
-            session_token: identity.sessionToken,
-            owner_session_id: identity.ownerSessionId,
-            token_rotated: identity.rotated === true,
-            token_expired: identity.tokenExpired === true
-        };
+        return establishHostRequestIdentity(this.claims, envelope, firstEntry, connection);
     }
 
     /**
