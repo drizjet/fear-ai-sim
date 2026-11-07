@@ -18,6 +18,7 @@ import {
 import { RequestSigning, SIGNATURE_FAILURES } from './RequestSigning.js';
 import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGate.js';
 import { dispatchHttpRequest } from './HttpRequestDispatcher.js';
+import { preflightWsMessage } from './WsMessagePreflight.js';
 import { ValleyChainScenario } from '../../core/index.js';
 import {
     HostCapabilityNegotiator,
@@ -2036,40 +2037,9 @@ export class FearServer {
     }
 
     _handleWsMessage(ws, msg) {
-        const correlationId = msg && typeof msg === 'object'
-            ? (msg.message_id || msg.id || null)
-            : null;
-        // Bind liveness to the socket for any message that names a session AND
-        // proves it with the token. Provenance matters: if merely speaking a
-        // session's name could bind a socket or refresh its liveness, a rival
-        // could keep a dead session alive indefinitely, or attach itself to a
-        // live one, just by repeating a name it guessed.
-        this._bindWsIdentity(ws, msg);
-
-        // The signing gate. Same single choke point as HTTP: it runs before the
-        // dispatcher, so no WS verb can be reached by a caller that failed it.
-        const wsGate = this._gateWsEnvelope(ws, msg);
-        if (!wsGate.ok) {
-            return this._sendWsError(
-                ws,
-                wsGate.detail,
-                ERROR_CODES.VALIDATION_FAILED,
-                correlationId,
-                { code: wsGate.reason, session_id: wsGate.sessionId }
-            );
-        }
-
-        const validated = ProtocolValidator.validateIncomingMessage(msg);
-        if (!validated.valid) {
-            return this._sendWsError(
-                ws,
-                validated.errors?.join(', ') || 'Validation failed',
-                validated.code,
-                correlationId
-            );
-        }
-
-        const payload = validated.value;
+        const ingress = preflightWsMessage(this, ws, msg);
+        if (!ingress.ok) return ingress.response;
+        const { payload, correlationId } = ingress;
 
         switch (payload.type) {
             case MESSAGE_TYPES.AUTH_RESPONSE: {
