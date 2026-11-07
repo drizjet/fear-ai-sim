@@ -10,14 +10,11 @@ import { RuntimeSimulation } from './RuntimeSimulation.js';
 import {
     ClaimArbitration,
     CLAIM_OUTCOMES,
-    TEARDOWN_OUTCOMES,
-    SIGNING_KEY_OUTCOMES
+    TEARDOWN_OUTCOMES
 } from './ClaimArbitration.js';
 import {
     RequestSigning,
     SIGNATURE_FAILURES,
-    SIGNATURE_HEADERS,
-    isUsablePublicKey,
     readSignatureHeaders
 } from './RequestSigning.js';
 import { ValleyChainScenario } from '../../core/index.js';
@@ -36,7 +33,6 @@ import {
     BinaryWireProtocol,
     BINARY_MAGIC,
     FRAME_TYPES,
-    INTENT_CODES,
     SUPPORTED_OBSERVATION_FIELDS,
     SUPPORTED_SOCIAL_EVENT_FIELDS,
     SUPPORTED_PACING_METRICS
