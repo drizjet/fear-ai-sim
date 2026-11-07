@@ -20,23 +20,17 @@ import {
     EconomicFeedbackSystem,
     EconomicPathologyDetector,
     SettlementMigrationSystem,
-    MIGRATION_DRIVERS,
-    MIGRANT_PARTY_STATUS,
     EpistemicBeliefEngine,
-    EPISTEMIC_PROVENANCE,
     BELIEF_CATEGORIES,
     MoralDissonanceEngine,
-    MORAL_FOUNDATIONS,
     DEFAULT_MORAL_PROFILES,
     TRANSGRESSION_TYPES,
     ATONEMENT_TYPES,
     FunctionalPersonaSignatures,
-    SIGNATURE_FUNCTIONS,
     DEFAULT_PROBE_GRID,
     evaluateResponseFunctions,
     FactionGovernanceSystem,
     GOVERNANCE_ARCHETYPES,
-    FACTION_DIRECTIVES,
     governanceComposure
 } from '../../core/index.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
