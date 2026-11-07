@@ -9,9 +9,12 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { RuntimeSimulation } from './RuntimeSimulation.js';
 import {
     ClaimArbitration,
-    CLAIM_OUTCOMES,
-    TEARDOWN_OUTCOMES
+    CLAIM_OUTCOMES
 } from './ClaimArbitration.js';
+import {
+    authorizeHostTeardown, authorizeHostReset,
+    teardownRefusal, batchTeardownRefusal, resetRefusal
+} from './HostTeardownPolicy.js';
 import { RequestSigning, SIGNATURE_FAILURES } from './RequestSigning.js';
 import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGate.js';
 import { ValleyChainScenario } from '../../core/index.js';
@@ -512,11 +515,7 @@ export class FearServer {
                 const permit = this._authorizeTeardown(val.value.agent_id, val.value);
                 if (!permit.allowed) {
                     return this._sendJson(res, 409, {
-                        status: 'REFUSED',
-                        agent_id: val.value.agent_id,
-                        code: TEARDOWN_OUTCOMES.REFUSED_NOT_OWNER,
-                        owner_session_id: permit.owner_session_id,
-                        retry_after_ms: this.claims.retryAfterFor(permit.owner_session_id),
+                        ...teardownRefusal(this.claims, val.value.agent_id, permit),
                         hint: 'this agent is owned by a live session; present that session\'s session_token, or retry once it is not live'
                     });
                 }
@@ -551,11 +550,7 @@ export class FearServer {
                         // believes it retired while the server still holds it is
                         // the failure mode this whole control plane exists to
                         // make visible.
-                        refusedTeardown.push({
-                            agent_id: agentId,
-                            reason: permit.outcome,
-                            owner_session_id: permit.owner_session_id
-                        });
+                        refusedTeardown.push(batchTeardownRefusal(agentId, permit));
                         continue;
                     }
                     this.claims.release(agentId);
@@ -749,19 +744,9 @@ export class FearServer {
                 // restart is the deliberate way past a live owner's objection -
                 // restored sessions are unbound and therefore not live.
                 if (clearAgents) {
-                    const permit = this.claims.authorizeReset({
-                        sessionId: body?.session_id || null,
-                        token: body?.session_token || null
-                    });
+                    const permit = authorizeHostReset(this.claims, body);
                     if (!permit.allowed) {
-                        return this._sendJson(res, 409, {
-                            status: 'REFUSED',
-                            code: TEARDOWN_OUTCOMES.REFUSED_NOT_OWNER,
-                            agent_id: null,
-                            blocked_by: permit.blocked_by,
-                            blocked_sessions: permit.blocked_agents,
-                            hint: 'a live session owns agents; unregister them first, or present that session\'s session_token'
-                        });
+                        return this._sendJson(res, 409, resetRefusal(permit));
                     }
                 }
                 this.simulation.reset({ clearAgents });
@@ -1798,10 +1783,7 @@ export class FearServer {
      * than merely intended.
      */
     _authorizeTeardown(agentId, envelope = {}) {
-        return this.claims.authorizeTeardown(agentId, {
-            sessionId: envelope.session_id || null,
-            token: envelope.session_token || null
-        });
+        return authorizeHostTeardown(this.claims, agentId, envelope);
     }
 
     // -------------------------------------------------------------------------
@@ -2281,11 +2263,7 @@ export class FearServer {
                 if (!permit.allowed) {
                     this._sendWs(ws, {
                         type: 'UNREGISTER_AGENT_ACK',
-                        status: 'REFUSED',
-                        agent_id: payload.agent_id,
-                        code: TEARDOWN_OUTCOMES.REFUSED_NOT_OWNER,
-                        owner_session_id: permit.owner_session_id,
-                        retry_after_ms: this.claims.retryAfterFor(permit.owner_session_id)
+                        ...teardownRefusal(this.claims, payload.agent_id, permit)
                     }, correlationId);
                     break;
                 }
@@ -2307,11 +2285,7 @@ export class FearServer {
                 for (const agentId of payload.agent_ids) {
                     const permit = this._authorizeTeardown(agentId, payload);
                     if (!permit.allowed) {
-                        refusedTeardown.push({
-                            agent_id: agentId,
-                            reason: permit.outcome,
-                            owner_session_id: permit.owner_session_id
-                        });
+                        refusedTeardown.push(batchTeardownRefusal(agentId, permit));
                         continue;
                     }
                     this.claims.release(agentId);
