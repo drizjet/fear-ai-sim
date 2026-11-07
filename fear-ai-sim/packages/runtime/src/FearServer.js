@@ -17,6 +17,7 @@ import {
 } from './HostTeardownPolicy.js';
 import { RequestSigning, SIGNATURE_FAILURES } from './RequestSigning.js';
 import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGate.js';
+import { dispatchHttpRequest } from './HttpRequestDispatcher.js';
 import { ValleyChainScenario } from '../../core/index.js';
 import {
     HostCapabilityNegotiator,
@@ -201,85 +202,7 @@ export class FearServer {
     // -------------------------------------------------------------------------
 
     _handleHttpRequest(req, res) {
-        // Universal CORS headers for WebGL / browser engine integrations
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Fear-Signature, X-Fear-Signature-Issued-At, X-Fear-Signature-Nonce, X-Fear-Signature-Key-Id, *');
-
-        if (req.method === 'OPTIONS') {
-            res.writeHead(204);
-            res.end();
-            return;
-        }
-
-        const url = new URL(req.url, `http://${this.host}:${this.port}`);
-        const path = url.pathname;
-
-        if (req.method === 'GET') {
-            // A signed read is verified like anything else: ownership state is
-            // information worth protecting even when the verb is not destructive.
-            const gate = this._gateSignature({ method: req.method, target: req.url, rawBody: '', headers: req.headers, sessionIdHint: null });
-            if (!gate.ok) return this._sendSignatureRefusal(res, gate, req.url);
-            if (path === '/' || path === '/health' || path === '/api/v1/status') {
-                this._sendJson(res, 200, {
-                    status: 'ok',
-                    protocol_version: PROTOCOL_VERSION,
-                    server: 'Fear AI Middleware Server',
-                    simulation: this.simulation.getStatus()
-                });
-                return;
-            }
-            // Who owns what. This is the host-visible answer to "what happened
-            // to the connection that dropped": its agents are still registered
-            // and still owned, the session reads `attached: false`, and once it
-            // is not live a different session may adopt them.
-            if (path === '/api/v1/sessions') {
-                // `signing` rides along so a host can see the policy it is being
-                // judged under, whether its key is registered, and how many
-                // requests have been refused for what reason.
-                this._sendJson(res, 200, { ...this.claims.summary(), signing: this.signing.summary() });
-                return;
-            }
-            this._sendJson(res, 404, { error: 'Not found' });
-            return;
-        }
-
-        if (req.method === 'POST') {
-            this._readJsonBody(req, res, (err, body, raw) => {
-                if (err) {
-                    this._sendJson(res, 400, {
-                        error: 'Malformed JSON payload',
-                        code: ERROR_CODES.MALFORMED_MESSAGE
-                    });
-                    return;
-                }
-
-                // The signature covers the RAW bytes, so it is verified here,
-                // before the body is interpreted, and the session a request is
-                // about is read from the body because that is where a token-only
-                // caller names itself.
-                const gate = this._gateSignature({
-                    method: req.method,
-                    target: req.url,
-                    rawBody: raw === undefined ? '' : raw,
-                    headers: req.headers,
-                    sessionIdHint: body && typeof body.session_id === 'string' ? body.session_id : null
-                });
-                if (!gate.ok) return this._sendSignatureRefusal(res, gate, req.url, body);
-
-                try {
-                    this._routeHttpPost(path, body, res);
-                } catch (dispatchErr) {
-                    this._sendJson(res, 500, {
-                        error: dispatchErr.message,
-                        code: ERROR_CODES.SIMULATION_ERROR
-                    });
-                }
-            });
-            return;
-        }
-
-        this._sendJson(res, 405, { error: 'Method not allowed' });
+        return dispatchHttpRequest(this, req, res);
     }
 
     /**
