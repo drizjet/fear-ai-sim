@@ -400,11 +400,11 @@ async function handleServer(options) {
     console.log(`[FearAI-CLI] Starting server on ${host}:${port} (Seed: ${seed})...`);
 
     const server = new FearServer({ host, port, seed });
-    await server.start();
+    const bound = await server.start();
 
     console.log(`[FearAI-CLI] Server ready!`);
-    console.log(`  • HTTP Status: http://${host}:${port}/api/v1/status`);
-    console.log(`  • WebSocket:   ws://${host}:${port}`);
+    console.log(`  • HTTP Status: http://${bound.host}:${bound.port}/api/v1/status`);
+    console.log(`  • WebSocket:   ws://${bound.host}:${bound.port}`);
     console.log(`  • Press Ctrl+C to gracefully shutdown.\n`);
 
     const shutdown = async () => {
