@@ -193,7 +193,6 @@ import {
     OVERFLOW_STRATEGIES
 } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
-import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
 import { runAllAdversarialStressTests } from '../benchmarks/behavioral-evaluation/adversarial_world_stress.mjs';
 import { runAllCounterfactualExperiments } from '../benchmarks/behavioral-evaluation/counterfactual_world_validation.mjs';
 
@@ -567,7 +566,7 @@ function handleBenchmark(options) {
     console.log(`Status:                 PASS (Sub-millisecond scalable LOD)\n`);
 }
 
-function handleVerify() {
+async function handleVerify() {
     console.log(BANNER);
     console.log(`[FearAI-CLI] Running verification suite...`);
 
@@ -582,6 +581,7 @@ function handleVerify() {
     const check2 = (rThreat.fear_band === 'PANIC' || rThreat.fear_band === 'ANXIOUS');
 
     const check3 = typeof DiagnosticExplainabilityInspector.explainAgentDecision === 'function';
+    const { runDungeonSimulation } = await import('../examples/reference-game/simulation_runner.js');
     const check4 = typeof runDungeonSimulation === 'function';
 
     console.log(`  ✓ Check 1: Resting baseline maintains CALM band: ${check1 ? 'PASS' : 'FAIL'}`);
@@ -4152,7 +4152,7 @@ async function main() {
             handleExplainFaction(options);
             break;
         case 'sim':
-            runDungeonSimulation();
+            (await import('../examples/reference-game/simulation_runner.js')).runDungeonSimulation();
             break;
         case 'benchmark':
             handleBenchmark(options);
@@ -4169,7 +4169,7 @@ async function main() {
             handleCounterfactual(options);
             break;
         case 'verify':
-            handleVerify();
+            await handleVerify();
             break;
         default:
             console.error(`Unknown command: "${command}". Run 'fear-ai help' for usage.`);

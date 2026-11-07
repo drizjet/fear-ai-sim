@@ -26,8 +26,6 @@ import {
     CharacterIdentityArchitecture,
     GoalArbitrationEngine
 } from '../../core/index.js';
-import { runDungeonSimulation } from '../../../examples/reference-game/simulation_runner.js';
-import { createClosedWorldScenario, tickClosedWorld, appendWorldEvent } from '../../../closed-world.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -617,15 +615,11 @@ export class DesignerDashboardServer {
     }
 
     _handleSimStep(body, res) {
-        const simResult = runDungeonSimulation();
-        this._sendJson(res, 200, {
-            turnsExecuted: simResult.turns_executed,
-            meanMsPerTurn: simResult.average_latency_ms,
-            totalMs: Number((simResult.average_latency_ms * simResult.turns_executed).toFixed(2)),
-            combatLog: simResult.authoritative_combat_log,
-            milestones: simResult.milestone_snapshots,
-            status: simResult.status
-        });
+        // Demo imports are intentionally deferred: live inspection needs neither
+        // a dungeon runner nor the closed-world simulation module graph.
+        return import('./DashboardDemoScenarios.js')
+            .then(({ runReferenceReplayScenario }) => this._sendJson(res, 200, runReferenceReplayScenario()))
+            .catch((err) => this._sendJson(res, 500, { error: err.message }));
     }
     // NEXT-122 (CCI-28 frontier 6): Memory Explorer. Records a fixed
     // deterministic vignette (ambush episodic + sanctuary semantic + one
@@ -698,23 +692,9 @@ export class DesignerDashboardServer {
     // NEXT-122: Trade Map. Live closed-world slice: bandit attack on road-a,
     // three ticks, merchant route beliefs with rumor/observation sources.
     _handleTradeMap(res) {
-        const world = createClosedWorldScenario();
-        const merchant = world.merchants[0];
-        merchant.perceptionAccuracy = 1;
-        merchant.selectedRoute = 'road-a';
-        merchant.lastRoute = 'road-a';
-        world.bandits[0].perceptionAccuracy = 0;
-        world.bandits[0].roadId = 'road-a';
-        appendWorldEvent(world, { type: 'BANDIT_ATTACK', roadId: 'road-a', tick: 1, banditId: 'bandit-1', merchantId: merchant.id });
-        for (let tick = 1; tick <= 3; tick++) {
-            tickClosedWorld(world, { tick, perceivedDanger: 0.0, relationshipGate: true });
-        }
-        const roads = {};
-        for (const id of ['road-a', 'road-b', 'road-c']) {
-            const b = merchant.routeBeliefs[id] || {};
-            roads[id] = { perceivedDanger: b.perceivedDanger ?? null, confidence: b.confidence ?? null, source: b.source ?? 'none' };
-        }
-        this._sendJson(res, 200, { selectedRoute: merchant.selectedRoute, roads });
+        return import('./DashboardDemoScenarios.js')
+            .then(({ runTradeMapScenario }) => this._sendJson(res, 200, runTradeMapScenario()))
+            .catch((err) => this._sendJson(res, 500, { error: err.message }));
     }
 
     // NEXT-122: Performance page. Deterministic micro-benchmarks per
