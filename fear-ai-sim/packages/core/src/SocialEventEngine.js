@@ -147,8 +147,7 @@ export class SocialEventEngine {
             const reporterCred = clamp01((trustInReporter + 1) / 2);
             const wWeight = clampWeight(weight * 0.5 * reporterCred);
             let wRel = null;
-            const positive = ['RESCUE', 'AID', 'LEADERSHIP_SUCCESS', 'SHARED_DANGER', 'WARNING', 'TRADE'].includes(event)
-                && !(event === 'DECEPTION' && !exposed);
+            const positive = ['RESCUE', 'AID', 'LEADERSHIP_SUCCESS', 'SHARED_DANGER', 'WARNING', 'TRADE'].includes(event);
             if (event === 'DECEPTION' && exposed) {
                 wRel = tensor.recordInteraction(w, actor, INTERACTION_TYPES.BETRAYAL, { weight: wWeight });
             } else if (event === 'BETRAYAL' || event === 'ABANDONMENT' || event === 'LEADERSHIP_FAILURE') {
