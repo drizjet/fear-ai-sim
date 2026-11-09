@@ -254,10 +254,11 @@ export class FearServer {
                 ? output.action_intent.type
                 : type;
             if (current && this.feedbackLoop.isUnavailable(output.agent_id, current)) {
-                output.action_intent = { ...(output.action_intent || {}), type: this.feedbackLoop.fallbackFor(current) };
+                const fallback = this.feedbackLoop.fallbackFor(current);
+                output.action_intent = { ...(output.action_intent || {}), type: fallback };
                 output.affordance_downgrade = {
                     original_intent: current,
-                    fallback: this.feedbackLoop.fallbackFor(current),
+                    fallback,
                     reason: 'HOST_REPORTED_UNAVAILABLE'
                 };
             }
