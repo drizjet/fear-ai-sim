@@ -1,5 +1,28 @@
 # Fear AI - Unreal Engine 5 Plugin
 
+## Optional authenticated FEAR-IPC-1 receiving channel (UE 5.5+ source)
+
+`FFearHostIpcReceiver` is a separate receiving verifier for a
+trusted host-owned local transport. It uses Unreal PlatformCrypto's
+SHA-256 support to check HMAC-SHA256 signatures, exact per-session
+sequence, quotas, metadata schema, current tick, allowed event types and
+nontrade entity IDs. A game-side trusted C++ controller can call
+`UFearAgentComponent::ConfigureHostMetadataReceiver(...)` once for its
+owned connection, then
+`ReceiveAuthenticatedHostMetadata(signedEnvelope, currentTick,
+outJson, reason)`. Never call this from the regular middleware
+`WebSocket->OnMessage` handler: it still processes the original advisory
+server protocol, not FEAR-IPC-1. Never expose the secret in Blueprint
+properties, logs, actor replication, or public host asset files. EndPlay
+closes and clears the session.
+
+This source requires the PlatformCrypto module/plugin (UE 5.5+ API), now
+declared in the module descriptor; Unreal Editor is not installed, so
+the C++ plugin **has not been compiled or tested in UE Editor/PIE**.
+It has only independent source contract checks and cross-language
+wire-format review. The game must own the transport and apply only
+validated metadata, never delegate movement/physics/inventory authority.
+
 **Deferred, not abandoned.** This plugin is how an Unreal game would connect to Fear AI (same loopback protocol as Unity/Godot/Python). Keep it.
 
 Do **not** install Unreal Engine unless you have an Unreal host to wire. You do not need Unreal to use Unity or any other engine.

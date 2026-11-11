@@ -28,7 +28,9 @@ public class FearAI : ModuleRules
                 "Engine",
                 "WebSockets",
                 "Json",
-                "JsonUtilities"
+                "JsonUtilities",
+                "PlatformCrypto",
+                "PlatformCryptoContext"
             }
         );
 

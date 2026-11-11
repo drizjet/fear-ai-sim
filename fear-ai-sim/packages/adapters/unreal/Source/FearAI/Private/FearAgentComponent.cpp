@@ -24,11 +24,26 @@ void UFearAgentComponent::BeginPlay()
 
 void UFearAgentComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    HostMetadataReceiver.Close();
     if (WebSocket.IsValid() && WebSocket->IsConnected())
     {
         WebSocket->Close();
     }
     Super::EndPlay(EndPlayReason);
+}
+
+bool UFearAgentComponent::ConfigureHostMetadataReceiver(
+    const FString& Session, const FString& SecretHex,
+    const TSet<FString>& AllowedEvents, const TSet<FString>& AllowedEntities)
+{
+    return HostMetadataReceiver.Configure(Session, SecretHex, AllowedEvents, AllowedEntities);
+}
+
+bool UFearAgentComponent::ReceiveAuthenticatedHostMetadata(
+    const FString& SignedEnvelope, int64 CurrentTick,
+    TSharedPtr<FJsonObject>& OutMetadata, FString& OutReason)
+{
+    return HostMetadataReceiver.Receive(SignedEnvelope, CurrentTick, OutMetadata, OutReason);
 }
 
 void UFearAgentComponent::ConnectWebSocket()

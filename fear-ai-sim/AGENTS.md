@@ -2,6 +2,32 @@
 
 Read `docs/SYSTEM_MAP.md` before editing, testing, or writing status.
 
+Before creating another large private checkout or running a heavy Rust/Node
+build, also read `docs/STORAGE_RETENTION_POLICY.md` and run
+`pwsh -NoProfile -File tools/maintenance/inspect_storage.ps1 -FailOnRisk`.
+It is a read-only disk/workspace preflight, **not** authority to delete anything.
+If the check reports low space or an excessive number of workspaces, reuse a
+safe owned workspace/build target or first investigate owner-approved storage
+retirement; never prune another agent's work or unique unpushed commits.
+For read-only retirement triage of old workspace checkouts, run
+`pwsh -NoProfile -File tools/maintenance/inspect_retirement.ps1 -Json`.
+Its snapshot checks Git and evidence hints, but cannot authorize deletion:
+all rows deliberately remain on hold until their owner and preservation of
+unique commits/evidence have been independently verified.
+When a workspace lacks a Git checkout at recognized paths, use the bounded
+single-workspace `tools/maintenance/inspect_candidate_retention.ps1` to look
+for nested repositories, copied source and alternate Git object stores, but
+do not treat missing Git metadata or clean status as disposal authorization.
+To examine the overlap of a historical copied source snapshot against a
+current tree, use `tools/maintenance/inspect_snapshot_overlap.ps1` with explicit
+source/reference paths. Same-size file counts alone do not prove identity;
+even matching SHA-256 samples do not authorize deleting historical custody.
+For newly owned private workspaces, preview then explicitly create a
+`workspace_owner_receipt.json` using `tools/maintenance/write_workspace_receipt.ps1`
+and the full expected Git HEAD (see `docs/STORAGE_RETENTION_POLICY.md`).
+Never create a receipt in another agent's checkout: it is only a self-declared
+ownership hint and never permission to delete or overwrite that checkout.
+
 ## Goal
 
 The product is **engine-agnostic fear middleware** that a host game can plug into. It is not a Fear AI game, not a Godot title, and not “whatever the last milestone file marked VERIFIED.”
