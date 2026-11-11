@@ -1,0 +1,802 @@
+{
+  "algorithm": "sha256",
+  "domain_prefix_utf8_hex": "666561722d61692d726f61642d67726170682d763100",
+  "encoding": "compact UTF-8 JSON, sorted object keys, NFC text, typed metadata, decimal numerics",
+  "vectors": [
+    {
+      "id": "baseline",
+      "graph": {
+        "nodes": {
+          "a": {
+            "elevation": 2
+          },
+          "b": {
+            "elevation": 0
+          }
+        },
+        "edges": [
+          {
+            "id": "r1",
+            "source": "a",
+            "target": "b",
+            "distance": 4,
+            "attributes": {
+              "toll": 2,
+              "risk": 0.25
+            }
+          }
+        ],
+        "metadata": {
+          "era": "medieval",
+          "blocked": false
+        }
+      },
+      "canonical_graph": {
+        "nodes": [
+          [
+            "a",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "b",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "0"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "edges": [
+          [
+            "a",
+            "b",
+            false,
+            "4",
+            "r1",
+            [
+              "map",
+              [
+                [
+                  "risk",
+                  [
+                    "number",
+                    "0.25"
+                  ]
+                ],
+                [
+                  "toll",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "metadata": [
+          "map",
+          [
+            [
+              "blocked",
+              [
+                "bool",
+                false
+              ]
+            ],
+            [
+              "era",
+              [
+                "str",
+                "medieval"
+              ]
+            ]
+          ]
+        ]
+      },
+      "fingerprint": "sha256:3b846cda1ac89f38b648dc6de403509b0b6ec894badc74aa409bb445c0241a4f"
+    },
+    {
+      "id": "reordered_undirected_equivalent",
+      "graph": {
+        "nodes": {
+          "b": {
+            "elevation": 0
+          },
+          "a": {
+            "elevation": 2
+          }
+        },
+        "edges": [
+          {
+            "id": "r1",
+            "source": "b",
+            "target": "a",
+            "distance": 4.0,
+            "attributes": {
+              "toll": 2,
+              "risk": 0.25
+            }
+          }
+        ],
+        "metadata": {
+          "era": "medieval",
+          "blocked": false
+        }
+      },
+      "canonical_graph": {
+        "nodes": [
+          [
+            "a",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "b",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "0"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "edges": [
+          [
+            "a",
+            "b",
+            false,
+            "4",
+            "r1",
+            [
+              "map",
+              [
+                [
+                  "risk",
+                  [
+                    "number",
+                    "0.25"
+                  ]
+                ],
+                [
+                  "toll",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "metadata": [
+          "map",
+          [
+            [
+              "blocked",
+              [
+                "bool",
+                false
+              ]
+            ],
+            [
+              "era",
+              [
+                "str",
+                "medieval"
+              ]
+            ]
+          ]
+        ]
+      },
+      "fingerprint": "sha256:3b846cda1ac89f38b648dc6de403509b0b6ec894badc74aa409bb445c0241a4f"
+    },
+    {
+      "id": "directed_edge_distinct",
+      "graph": {
+        "nodes": {
+          "a": {
+            "elevation": 2
+          },
+          "b": {
+            "elevation": 0
+          }
+        },
+        "edges": [
+          {
+            "id": "r1",
+            "source": "a",
+            "target": "b",
+            "distance": 4,
+            "attributes": {
+              "toll": 2,
+              "risk": 0.25
+            },
+            "directed": true
+          }
+        ],
+        "metadata": {
+          "era": "medieval",
+          "blocked": false
+        }
+      },
+      "canonical_graph": {
+        "nodes": [
+          [
+            "a",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "b",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "0"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "edges": [
+          [
+            "a",
+            "b",
+            true,
+            "4",
+            "r1",
+            [
+              "map",
+              [
+                [
+                  "risk",
+                  [
+                    "number",
+                    "0.25"
+                  ]
+                ],
+                [
+                  "toll",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "metadata": [
+          "map",
+          [
+            [
+              "blocked",
+              [
+                "bool",
+                false
+              ]
+            ],
+            [
+              "era",
+              [
+                "str",
+                "medieval"
+              ]
+            ]
+          ]
+        ]
+      },
+      "fingerprint": "sha256:55482036e500153568dc1e519f3accde0628495ec5864e17c0991631d2a7cf33"
+    },
+    {
+      "id": "different_distance",
+      "graph": {
+        "nodes": {
+          "a": {
+            "elevation": 2
+          },
+          "b": {
+            "elevation": 0
+          }
+        },
+        "edges": [
+          {
+            "id": "r1",
+            "source": "a",
+            "target": "b",
+            "distance": 4.5,
+            "attributes": {
+              "toll": 2,
+              "risk": 0.25
+            }
+          }
+        ],
+        "metadata": {
+          "era": "medieval",
+          "blocked": false
+        }
+      },
+      "canonical_graph": {
+        "nodes": [
+          [
+            "a",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "b",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "0"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "edges": [
+          [
+            "a",
+            "b",
+            false,
+            "4.5",
+            "r1",
+            [
+              "map",
+              [
+                [
+                  "risk",
+                  [
+                    "number",
+                    "0.25"
+                  ]
+                ],
+                [
+                  "toll",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "metadata": [
+          "map",
+          [
+            [
+              "blocked",
+              [
+                "bool",
+                false
+              ]
+            ],
+            [
+              "era",
+              [
+                "str",
+                "medieval"
+              ]
+            ]
+          ]
+        ]
+      },
+      "fingerprint": "sha256:6d82b4ec40f25f3212bcb4c0937fb1b710c4c55a789f8ce8363b89291028be52"
+    },
+    {
+      "id": "numeric_metadata_vs_string",
+      "graph": {
+        "nodes": {
+          "a": {
+            "elevation": 2
+          },
+          "b": {
+            "elevation": 0
+          }
+        },
+        "edges": [
+          {
+            "id": "r1",
+            "source": "a",
+            "target": "b",
+            "distance": 4,
+            "attributes": {
+              "toll": 2,
+              "risk": "0.25"
+            }
+          }
+        ],
+        "metadata": {
+          "era": "medieval",
+          "blocked": false
+        }
+      },
+      "canonical_graph": {
+        "nodes": [
+          [
+            "a",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "b",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "0"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "edges": [
+          [
+            "a",
+            "b",
+            false,
+            "4",
+            "r1",
+            [
+              "map",
+              [
+                [
+                  "risk",
+                  [
+                    "str",
+                    "0.25"
+                  ]
+                ],
+                [
+                  "toll",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "metadata": [
+          "map",
+          [
+            [
+              "blocked",
+              [
+                "bool",
+                false
+              ]
+            ],
+            [
+              "era",
+              [
+                "str",
+                "medieval"
+              ]
+            ]
+          ]
+        ]
+      },
+      "fingerprint": "sha256:ccf2dbedfda6a8e72adaade813325406b5bd10d59fbafa6b5620e55b95d74825"
+    },
+    {
+      "id": "unicode_nfc",
+      "graph": {
+        "nodes": {
+          "a": {
+            "elevation": 2,
+            "glyph": "é"
+          },
+          "b": {
+            "elevation": 0
+          }
+        },
+        "edges": [
+          {
+            "id": "r1",
+            "source": "a",
+            "target": "b",
+            "distance": 4,
+            "attributes": {
+              "toll": 2,
+              "risk": 0.25
+            }
+          }
+        ],
+        "metadata": {
+          "era": "medieval",
+          "blocked": false
+        }
+      },
+      "canonical_graph": {
+        "nodes": [
+          [
+            "a",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ],
+                [
+                  "glyph",
+                  [
+                    "str",
+                    "é"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "b",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "0"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "edges": [
+          [
+            "a",
+            "b",
+            false,
+            "4",
+            "r1",
+            [
+              "map",
+              [
+                [
+                  "risk",
+                  [
+                    "number",
+                    "0.25"
+                  ]
+                ],
+                [
+                  "toll",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "metadata": [
+          "map",
+          [
+            [
+              "blocked",
+              [
+                "bool",
+                false
+              ]
+            ],
+            [
+              "era",
+              [
+                "str",
+                "medieval"
+              ]
+            ]
+          ]
+        ]
+      },
+      "fingerprint": "sha256:c604d1309b603137dc855269b481d593c6d16b89601760a4270653085358dd4c"
+    },
+    {
+      "id": "unicode_nfd_equivalent",
+      "graph": {
+        "nodes": {
+          "a": {
+            "elevation": 2,
+            "glyph": "é"
+          },
+          "b": {
+            "elevation": 0
+          }
+        },
+        "edges": [
+          {
+            "id": "r1",
+            "source": "a",
+            "target": "b",
+            "distance": 4,
+            "attributes": {
+              "toll": 2,
+              "risk": 0.25
+            }
+          }
+        ],
+        "metadata": {
+          "era": "medieval",
+          "blocked": false
+        }
+      },
+      "canonical_graph": {
+        "nodes": [
+          [
+            "a",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ],
+                [
+                  "glyph",
+                  [
+                    "str",
+                    "é"
+                  ]
+                ]
+              ]
+            ]
+          ],
+          [
+            "b",
+            [
+              "map",
+              [
+                [
+                  "elevation",
+                  [
+                    "number",
+                    "0"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "edges": [
+          [
+            "a",
+            "b",
+            false,
+            "4",
+            "r1",
+            [
+              "map",
+              [
+                [
+                  "risk",
+                  [
+                    "number",
+                    "0.25"
+                  ]
+                ],
+                [
+                  "toll",
+                  [
+                    "number",
+                    "2"
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "metadata": [
+          "map",
+          [
+            [
+              "blocked",
+              [
+                "bool",
+                false
+              ]
+            ],
+            [
+              "era",
+              [
+                "str",
+                "medieval"
+              ]
+            ]
+          ]
+        ]
+      },
+      "fingerprint": "sha256:c604d1309b603137dc855269b481d593c6d16b89601760a4270653085358dd4c"
+    }
+  ],
+  "scope": "Python-generated contract vectors only; independently implement and validate in Rust"
+}

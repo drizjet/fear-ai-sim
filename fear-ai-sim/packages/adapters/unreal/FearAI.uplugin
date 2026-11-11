@@ -14,7 +14,8 @@
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
 	"Installed": false,
-	"Modules": [
+    "Plugins": [{"Name": "PlatformCrypto", "Enabled": true}],
+    "Modules": [
 		{
 			"Name": "FearAI",
 			"Type": "Runtime",

@@ -37,3 +37,16 @@ response = client.tick(observations, dt=0.016)
 for res in response["results"]:
     print(f"Agent {res['agent_id']}: Band={res['fear_band']}, Intent={res['action_intent']['type']}")
 ```
+
+## Opt-in trusted child-process metadata signing
+
+`fear_host_ipc.py` adds `FearHostIpcSigner(session_id, secret)` for a Python
+host producer connected through an externally managed **authenticated local
+IPC** channel to the Node simulation gateway. Call `sign(frame_json_string)`
+with primitive JSON text; advance the signer once for each submitted packet
+and call `close()` when the owned child exits. Every host-process launch
+requires a fresh, parent-issued session/secret. The signer never sends over
+the network and does not replace this adapter's existing HTTP session or
+request-signing protocol. The trusted parent must bind peer ownership,
+event/entity allowlists, replay and rate limits; Python's signer alone is
+not an authentication server or sandbox.

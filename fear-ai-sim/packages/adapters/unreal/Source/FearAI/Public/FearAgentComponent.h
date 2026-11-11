@@ -4,6 +4,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "IWebSocket.h"
+#include "FearHostIpcReceiver.h"
 #include "FearAgentComponent.generated.h"
 
 UENUM(BlueprintType)
@@ -110,6 +111,14 @@ public:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+    // Trusted C++ host-only metadata channel. Never bind this to the
+    // middleware server's ordinary WebSocket message event. Both functions
+    // are intentionally NOT Blueprint-callable to avoid exposing secrets.
+    bool ConfigureHostMetadataReceiver(const FString& Session, const FString& SecretHex,
+        const TSet<FString>& AllowedEvents, const TSet<FString>& AllowedEntities);
+    bool ReceiveAuthenticatedHostMetadata(const FString& SignedEnvelope, int64 CurrentTick,
+        TSharedPtr<FJsonObject>& OutMetadata, FString& OutReason);
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Fear AI|Identity")
     FString AgentId;
 
@@ -150,6 +159,7 @@ public:
     FFearAffordanceDowngrade CurrentAffordanceDowngrade;
 
 private:
+    FFearHostIpcReceiver HostMetadataReceiver;
     TSharedPtr<IWebSocket> WebSocket;
     void ConnectWebSocket();
     void ProcessStateJson(const FString& Message);

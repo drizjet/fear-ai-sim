@@ -571,6 +571,69 @@ includes('docs/SYSTEM_MAP.md', 'npm run evidence:report');
 includes('docs/PROVENANCE.md', 'npm run evidence:report');
 console.log('  * The retired evidence-ledger gate refuses, its report makes no verdict claim, and the generated map section matches the ledger: PASS');
 
-console.log('\nScope: this probe audits release-claim document boundaries only.');
+// NEXT-83: the source-facing option is `seed`, never `rngSeed`. A typo in
+// another harness must not silently restore the fixed 1337 default stream.
+// Scan every tracked JS/TS source, not only the two previously repaired files.
+const sourcePaths = spawnSync('git', ['ls-files', '-z', '--', '*.js', '*.mjs', '*.cjs', '*.jsx', '*.ts', '*.tsx'], {
+    cwd: repoRoot,
+    encoding: 'buffer'
+});
+assert(sourcePaths.status === 0, 'cannot enumerate tracked source files for NEXT-83 guard');
+const staleSeedKey = /\brngSeed\s*:/g;
+const staleSources = [];
+for (const filename of sourcePaths.stdout.toString('utf8').split('\0').filter(Boolean)) {
+    const source = read(filename);
+    // Historical comments explain the old defect; only executable keys count.
+    const withoutComments = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\r\n]*/g, '');
+    if (staleSeedKey.test(withoutComments)) staleSources.push(filename);
+    staleSeedKey.lastIndex = 0;
+}
+assert(staleSources.length === 0,
+    `NEXT-83 dead rngSeed option can silently freeze world randomness; use seed: ${staleSources.join(', ')}`);
+console.log(`  * NEXT-83 dead seed-key pattern absent across ${sourcePaths.stdout.toString('utf8').split('\0').filter(Boolean).length} tracked JS/TS sources: PASS`);
+
+console.log('\nScope: this probe audits release-claim document boundaries and the NEXT-83 source-key tripwire only.');
+// Scope consistency: previously an RC1 table simultaneously included and
+// excluded the eight promoted opt-in services. Compare against the live source
+// flags, not an outdated enumeration in a prose paragraph.
+{
+const releaseSurface = read('docs/RELEASE_SURFACE.md');
+const dossier = read('docs/RELEASE_CANDIDATE_CERTIFICATION.md');
+const startIn = releaseSurface.indexOf('## 1. In scope');
+const startOut = releaseSurface.indexOf('## 2. Out of scope');
+const endOut = releaseSurface.indexOf('## 3. How this boundary is enforced');
+assert(startIn >= 0 && startOut > startIn && endOut > startOut,
+    'RC1 scope sections are missing or out of order');
+const inRows = releaseSurface.slice(startIn, startOut).split(/\r?\n/).filter(line => line.startsWith('|'));
+const outRows = releaseSurface.slice(startOut, endOut).split(/\r?\n/).filter(line => line.startsWith('|'));
+const runtimeConstructor = read('packages/runtime/src/RuntimeSimulation.js');
+const promotedServices = [
+    ['InformationPropagationEngine', 'enableInformationPropagation'],
+    ['PackCoordinationEngine', 'enablePackCoordination'],
+    ['EconomicFeedbackSystem', 'enableEconomicFeedback'],
+    ['SettlementMigrationSystem', 'enableSettlementMigration'],
+    ['EpistemicBeliefEngine', 'enableEpistemicBelief'],
+    ['MoralDissonanceEngine', 'enableMoralDissonance'],
+    ['FunctionalPersonaSignatures', 'enablePersonaSignatures'],
+    ['FactionGovernanceSystem', 'enableFactionGovernance']
+];
+for (const [name, flag] of promotedServices) {
+    const quoted = String.fromCharCode(96) + name + String.fromCharCode(96);
+    assert(inRows.some(line => line.includes(quoted)),
+        'promoted service missing from in-scope RC1 table: ' + name);
+    assert(!outRows.some(line => line.includes(quoted)),
+        'promoted service incorrectly remains in out-of-scope RC1 table: ' + name);
+    assert(runtimeConstructor.includes('options.' + flag + ' ?? false'),
+        'promoted service lacks an explicit default-off constructor guard: ' + flag);
+}
+assert(!releaseSurface.includes('constructs **none** of the optional modules'),
+    'RC1 doc still denies the promoted opt-in constructors');
+assert(!releaseSurface.includes('covered by neither probe') && !dossier.includes('being covered by neither probe'),
+    'RC1 docs deny the already executed Unity Agent/HUD outside-Editor check');
+assert(dossier.includes('eight default-off opt-in advisory services') &&
+    read('docs/CURRENT_TRUTH_LEDGER.md').includes('Eight default-off opt-in services explicitly named'),
+    'dossier and truth ledger must distinguish opt-in wiring from external research validity');
+console.log('  * Eight promoted default-off services agree across live runtime and RC1 scope tables: PASS');
+}
 console.log('It does not certify runtime behavior, external hosts, adapters, or research semantics.');
 console.log('\nSUCCESS: Release-claim document boundaries are explicit.');

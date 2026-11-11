@@ -49,3 +49,13 @@ foreach (var state in response.Results) {
     Console.WriteLine($"Agent {state.AgentId}: Band={state.FearBand}, Intent={state.ActionIntent.Type}");
 }
 ```
+
+## Opt-in trusted child IPC wire signer
+
+`FearHostIpcSigner` creates FEAR-IPC-1 HMAC-SHA256 envelopes from **primitive
+JSON strings** for an explicitly configured trusted Node-side child IPC
+gateway. Construct with the parent-issued fresh `sessionId` and `secret`,
+call `Sign(jsonText)` in sequence, and `Dispose()` on session end to erase
+the owned key buffer. It is **not** the regular FearAI middleware request
+signer and does not alter the existing HTTP transport. Use the receiving
+gateway to enforce peer identity, rate, byte budget and replay protection.

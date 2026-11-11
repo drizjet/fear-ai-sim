@@ -23,6 +23,13 @@ Read in this order:
 
 For the current release decision, read [`CURRENT_TRUTH_LEDGER.md`](CURRENT_TRUTH_LEDGER.md), [`RELEASE_SURFACE.md`](RELEASE_SURFACE.md), [`CLAIM_TO_CODE_AUDIT_2026-09-19.md`](CLAIM_TO_CODE_AUDIT_2026-09-19.md), and [`RELEASE_CANDIDATE_CERTIFICATION.md`](RELEASE_CANDIDATE_CERTIFICATION.md) together. They are the authoritative current claim surfaces.
 
+For a **dated, prioritized map of known unfinished work** (large/medium/small/tiny,
+integration blockers, external evidence gaps, scientific limits, UX polish and
+explicit do-not-implement pins), see
+[`FEAR_AI_UNFINISHED_WORK_REGISTER_2026-11-01.md`](FEAR_AI_UNFINISHED_WORK_REGISTER_2026-11-01.md).
+This index is a triage aid, **not** a completion percentage, newer evidence
+claim or replacement for the four release authorities above.
+
 Everything else in this folder is **sim-era, closed-world, or dated**. Useful as history. Not the plug-in mission.
 
 The following documents are explicitly historical-superseded and must not be used as current release certification: `CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `NEW_MASTER_GAME_INTEGRATION_AUDIT_DOSSIER.md`, `NEW_MASTER_GAME_LOGIC_ANALYSIS_DOSSIER.md`, `NEW_MASTER_GAME_ROUND2_DEEP_CLAIMS_AUDIT.md`, `FAILURE_AND_LIFECYCLE_MATRIX.md`, `evidence/manual-source-code-audit-dossier.md`, and the `audit/v8-current/` candidate records. `evidence/middleware-progress-evidence.json` is a historical progress ledger with an explicit non-certification scope.
