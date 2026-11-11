@@ -15,7 +15,8 @@ let seed = 1337;
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '--port' && args[i + 1]) {
-        port = parseInt(args[i + 1], 10) || 8765;
+        const parsedPort = parseInt(args[i + 1], 10);
+        port = Number.isNaN(parsedPort) ? 8765 : parsedPort;
         i++;
     } else if (args[i] === '--host' && args[i + 1]) {
         host = args[i + 1];

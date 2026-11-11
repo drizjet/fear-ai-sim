@@ -86,6 +86,7 @@ async function main() {
   const unityClient = readRepo('packages/adapters/unity/FearAIClient.cs');
   const csharpClient = readRepo('packages/adapters/csharp/FearAIClient.cs');
   const fearServerSrc = readRepo('packages/runtime/src/FearServer.js');
+  const httpIngressSrc = readRepo('packages/runtime/src/HttpRequestDispatcher.js');
 
   check('Godot emits HANDSHAKE_REQUEST', godotClient.includes('HANDSHAKE_REQUEST'));
   check('Godot handshake pins protocol_version 1.0.0', godotClient.includes('"1.0.0"') || godotClient.includes("'1.0.0'"));
@@ -383,8 +384,12 @@ async function main() {
   check('Batch-registration cap is an ALIAS of the control cap, not a second limit',
     MAX_BATCH_REGISTRATION_AGENTS === MAX_BATCH_CONTROL_ITEMS);
   for (const route of ['/api/v1/register/batch', '/api/v1/unregister/batch', '/api/v1/trauma/batch', '/api/v1/sessions']) {
-    check(`Server exposes ${route}`, fearServerSrc.includes(route));
+    // GET ownership status now lives in the HTTP ingress; POST verbs remain
+    // in the server's directly callable simulation/ownership dispatcher.
+    check(`Server exposes ${route}`, (route === '/api/v1/sessions' ? httpIngressSrc : fearServerSrc).includes(route));
   }
+  check('Server HTTP ingress delegates to its route-ordered transport module',
+    fearServerSrc.includes('dispatchHttpRequest(this, req, res)'));
 
   const pythonClient = readRepo('packages/adapters/python/fear_ai_client.py');
   const PARITY_MATRIX = [

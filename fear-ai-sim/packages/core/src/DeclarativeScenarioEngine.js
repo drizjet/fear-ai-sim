@@ -29,8 +29,8 @@
  */
 
 import { DeterministicRng } from './DeterministicRng.js';
-import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES, INCIDENT_TYPES } from './FactionSystem.js';
-import { CivilizationSimulationSystem, ROUTE_STATUS } from './CivilizationSimulationSystem.js';
+import { FactionSystem, FACTION_CULTURES, ESCALATION_STAGES } from './FactionSystem.js';
+import { CivilizationSimulationSystem } from './CivilizationSimulationSystem.js';
 import { WorldSimulationSystem, ROAMING_PARTY_TYPES } from './WorldSimulationSystem.js';
 import { AffectiveAgent } from './AffectiveAgent.js';
 

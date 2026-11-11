@@ -9,25 +9,32 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { RuntimeSimulation } from './RuntimeSimulation.js';
 import {
     ClaimArbitration,
-    CLAIM_OUTCOMES,
-    TEARDOWN_OUTCOMES,
-    SIGNING_KEY_OUTCOMES
+    CLAIM_OUTCOMES
 } from './ClaimArbitration.js';
 import {
-    RequestSigning,
-    SIGNATURE_FAILURES,
-    SIGNATURE_HEADERS,
-    isUsablePublicKey,
-    readSignatureHeaders
-} from './RequestSigning.js';
-import { ValleyChainScenario } from '../../core/index.js';
-import {
-    HostCapabilityNegotiator,
-    HOST_CAPABILITIES,
-    INTENT_CAPABILITY_REQUIREMENTS,
-    RUNTIME_SAFE_FALLBACKS,
-    HostFeedbackLoop
-} from '../../core/index.js';
+    authorizeHostTeardown, authorizeHostReset,
+    teardownRefusal, batchTeardownRefusal, resetRefusal
+} from './HostTeardownPolicy.js';
+import { admitHostClaim, registerHostSigningKey, establishHostRequestIdentity, arbitrateHostBatchAgent } from './HostClaimPolicy.js';
+import { RequestSigning, SIGNATURE_FAILURES } from './RequestSigning.js';
+import { verifyHttpSignatureGate, signatureRefusalBody } from './HttpSignatureGate.js';
+import { dispatchHttpRequest } from './HttpRequestDispatcher.js';
+import { dispatchHttpPackPost } from './HttpPackRoutes.js';
+import { preflightWsMessage } from './WsMessagePreflight.js';
+import { dispatchWsPackMessage } from './WsPackRoutes.js';
+import { dispatchHttpMacroPost } from './HttpMacroRoutes.js';
+import { dispatchWsMacroMessage } from './WsMacroRoutes.js';
+import { dispatchHttpEpistemicPost } from './HttpEpistemicRoutes.js';
+import { dispatchWsEpistemicMessage } from './WsEpistemicRoutes.js';
+import { dispatchHttpMoralPost } from './HttpMoralRoutes.js';
+import { dispatchWsMoralMessage } from './WsMoralRoutes.js';
+import { dispatchHttpPersonaPost } from './HttpPersonaRoutes.js';
+import { dispatchWsPersonaMessage } from './WsPersonaRoutes.js';
+import { dispatchHttpFactionPost } from './HttpFactionRoutes.js';
+import { dispatchWsFactionMessage } from './WsFactionRoutes.js';
+import { ValleyChainScenario } from '../../core/src/ValleyChainScenario.js';
+import { HostCapabilityNegotiator, HOST_CAPABILITIES, INTENT_CAPABILITY_REQUIREMENTS, RUNTIME_SAFE_FALLBACKS } from '../../core/src/HostCapabilityNegotiator.js';
+import { HostFeedbackLoop } from '../../core/src/HostFeedbackLoop.js';
 import {
     PROTOCOL_VERSION,
     MESSAGE_TYPES,
@@ -36,7 +43,6 @@ import {
     BinaryWireProtocol,
     BINARY_MAGIC,
     FRAME_TYPES,
-    INTENT_CODES,
     SUPPORTED_OBSERVATION_FIELDS,
     SUPPORTED_SOCIAL_EVENT_FIELDS,
     SUPPORTED_PACING_METRICS
@@ -205,85 +211,7 @@ export class FearServer {
     // -------------------------------------------------------------------------
 
     _handleHttpRequest(req, res) {
-        // Universal CORS headers for WebGL / browser engine integrations
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Fear-Signature, X-Fear-Signature-Issued-At, X-Fear-Signature-Nonce, X-Fear-Signature-Key-Id, *');
-
-        if (req.method === 'OPTIONS') {
-            res.writeHead(204);
-            res.end();
-            return;
-        }
-
-        const url = new URL(req.url, `http://${this.host}:${this.port}`);
-        const path = url.pathname;
-
-        if (req.method === 'GET') {
-            // A signed read is verified like anything else: ownership state is
-            // information worth protecting even when the verb is not destructive.
-            const gate = this._gateSignature({ method: req.method, target: req.url, rawBody: '', headers: req.headers, sessionIdHint: null });
-            if (!gate.ok) return this._sendSignatureRefusal(res, gate, req.url);
-            if (path === '/' || path === '/health' || path === '/api/v1/status') {
-                this._sendJson(res, 200, {
-                    status: 'ok',
-                    protocol_version: PROTOCOL_VERSION,
-                    server: 'Fear AI Middleware Server',
-                    simulation: this.simulation.getStatus()
-                });
-                return;
-            }
-            // Who owns what. This is the host-visible answer to "what happened
-            // to the connection that dropped": its agents are still registered
-            // and still owned, the session reads `attached: false`, and once it
-            // is not live a different session may adopt them.
-            if (path === '/api/v1/sessions') {
-                // `signing` rides along so a host can see the policy it is being
-                // judged under, whether its key is registered, and how many
-                // requests have been refused for what reason.
-                this._sendJson(res, 200, { ...this.claims.summary(), signing: this.signing.summary() });
-                return;
-            }
-            this._sendJson(res, 404, { error: 'Not found' });
-            return;
-        }
-
-        if (req.method === 'POST') {
-            this._readJsonBody(req, res, (err, body, raw) => {
-                if (err) {
-                    this._sendJson(res, 400, {
-                        error: 'Malformed JSON payload',
-                        code: ERROR_CODES.MALFORMED_MESSAGE
-                    });
-                    return;
-                }
-
-                // The signature covers the RAW bytes, so it is verified here,
-                // before the body is interpreted, and the session a request is
-                // about is read from the body because that is where a token-only
-                // caller names itself.
-                const gate = this._gateSignature({
-                    method: req.method,
-                    target: req.url,
-                    rawBody: raw === undefined ? '' : raw,
-                    headers: req.headers,
-                    sessionIdHint: body && typeof body.session_id === 'string' ? body.session_id : null
-                });
-                if (!gate.ok) return this._sendSignatureRefusal(res, gate, req.url, body);
-
-                try {
-                    this._routeHttpPost(path, body, res);
-                } catch (dispatchErr) {
-                    this._sendJson(res, 500, {
-                        error: dispatchErr.message,
-                        code: ERROR_CODES.SIMULATION_ERROR
-                    });
-                }
-            });
-            return;
-        }
-
-        this._sendJson(res, 405, { error: 'Method not allowed' });
+        return dispatchHttpRequest(this, req, res);
     }
 
     /**
@@ -326,10 +254,11 @@ export class FearServer {
                 ? output.action_intent.type
                 : type;
             if (current && this.feedbackLoop.isUnavailable(output.agent_id, current)) {
-                output.action_intent = { ...(output.action_intent || {}), type: this.feedbackLoop.fallbackFor(current) };
+                const fallback = this.feedbackLoop.fallbackFor(current);
+                output.action_intent = { ...(output.action_intent || {}), type: fallback };
                 output.affordance_downgrade = {
                     original_intent: current,
-                    fallback: this.feedbackLoop.fallbackFor(current),
+                    fallback,
                     reason: 'HOST_REPORTED_UNAVAILABLE'
                 };
             }
@@ -448,37 +377,25 @@ export class FearServer {
                 const takeover = (val.value.claim || 'join') === 'takeover';
                 for (let i = 0; i < val.value.agents.length; i++) {
                     const entry = val.value.agents[i];
-                    if (identity.session_id) {
-                        if (!identity.established) {
-                            // The request could not prove it may act as this
-                            // session. Every entry is refused and NOTHING is
-                            // mutated, with the owner named once per entry.
-                            refused.push({
-                                index: i,
-                                agent_id: entry.agent_id,
-                                reason: identity.claim,
-                                owner_session_id: identity.owner_session_id
-                            });
-                            continue;
-                        }
-                        const taken = this.claims.claimUnder(entry.agent_id, identity.session_id, { takeover });
+                    const decision = arbitrateHostBatchAgent(this.claims, identity, entry.agent_id, takeover);
+                    if (decision.attempted) {
                         claims.push({
                             agent_id: entry.agent_id,
-                            claim: taken.granted
-                                ? ClaimArbitration.mergeOutcome(identity.claim, taken.outcome)
-                                : taken.outcome
+                            claim: decision.granted
+                                ? ClaimArbitration.mergeOutcome(identity.claim, decision.outcome)
+                                : decision.outcome
                         });
-                        if (!taken.granted) {
-                            refused.push({
-                                index: i,
-                                agent_id: entry.agent_id,
-                                reason: taken.outcome,
-                                owner_session_id: taken.ownerSessionId
-                            });
-                            continue;
-                        }
-                    } else {
+                    } else if (decision.granted) {
                         claims.push({ agent_id: entry.agent_id, claim: CLAIM_OUTCOMES.GRANTED });
+                    }
+                    if (!decision.granted) {
+                        refused.push({
+                            index: i,
+                            agent_id: entry.agent_id,
+                            reason: decision.outcome,
+                            owner_session_id: decision.owner_session_id
+                        });
+                        continue;
                     }
                     const agent = this.simulation.registerAgent(entry.agent_id, entry.traits, {
                         name: entry.name,
@@ -519,11 +436,7 @@ export class FearServer {
                 const permit = this._authorizeTeardown(val.value.agent_id, val.value);
                 if (!permit.allowed) {
                     return this._sendJson(res, 409, {
-                        status: 'REFUSED',
-                        agent_id: val.value.agent_id,
-                        code: TEARDOWN_OUTCOMES.REFUSED_NOT_OWNER,
-                        owner_session_id: permit.owner_session_id,
-                        retry_after_ms: this.claims.retryAfterFor(permit.owner_session_id),
+                        ...teardownRefusal(this.claims, val.value.agent_id, permit),
                         hint: 'this agent is owned by a live session; present that session\'s session_token, or retry once it is not live'
                     });
                 }
@@ -558,11 +471,7 @@ export class FearServer {
                         // believes it retired while the server still holds it is
                         // the failure mode this whole control plane exists to
                         // make visible.
-                        refusedTeardown.push({
-                            agent_id: agentId,
-                            reason: permit.outcome,
-                            owner_session_id: permit.owner_session_id
-                        });
+                        refusedTeardown.push(batchTeardownRefusal(agentId, permit));
                         continue;
                     }
                     this.claims.release(agentId);
@@ -756,19 +665,9 @@ export class FearServer {
                 // restart is the deliberate way past a live owner's objection -
                 // restored sessions are unbound and therefore not live.
                 if (clearAgents) {
-                    const permit = this.claims.authorizeReset({
-                        sessionId: body?.session_id || null,
-                        token: body?.session_token || null
-                    });
+                    const permit = authorizeHostReset(this.claims, body);
                     if (!permit.allowed) {
-                        return this._sendJson(res, 409, {
-                            status: 'REFUSED',
-                            code: TEARDOWN_OUTCOMES.REFUSED_NOT_OWNER,
-                            agent_id: null,
-                            blocked_by: permit.blocked_by,
-                            blocked_sessions: permit.blocked_agents,
-                            hint: 'a live session owns agents; unregister them first, or present that session\'s session_token'
-                        });
+                        return this._sendJson(res, 409, resetRefusal(permit));
                     }
                 }
                 this.simulation.reset({ clearAgents });
@@ -858,741 +757,47 @@ export class FearServer {
                 });
             }
 
-            case '/api/v1/pack/create': {
-                const val = ProtocolValidator.validatePackCreate(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    const pack = this.simulation.createPack(val.value.packId, val.value.options);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PACK_CREATE_RESPONSE,
-                        status: 'CREATED',
-                        packId: pack.id,
-                        phase: pack.phase,
-                        pattern: pack.pattern
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
+            case '/api/v1/pack/create':
+            case '/api/v1/pack/assign':
+            case '/api/v1/pack/remove':
+            case '/api/v1/pack/update':
+            case '/api/v1/pack/query':
+                return dispatchHttpPackPost(this, path, body, res);
 
-            case '/api/v1/pack/assign': {
-                const val = ProtocolValidator.validatePackAssignMember(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    const member = this.simulation.registerPackMember(
-                        val.value.packId,
-                        val.value.agentId,
-                        val.value.traits,
-                        val.value.position,
-                        val.value.role
-                    );
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_RESPONSE,
-                        status: 'ASSIGNED',
-                        packId: val.value.packId,
-                        agentId: val.value.agentId,
-                        role: member.role
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
+            case '/api/v1/economy/market/register':
+            case '/api/v1/economy/trade':
+            case '/api/v1/economy/raid/query':
+            case '/api/v1/settlement/register':
+            case '/api/v1/settlement/pressure/query':
+            case '/api/v1/settlement/migration/wave':
+                return dispatchHttpMacroPost(this, path, body, res);
 
-            case '/api/v1/pack/remove': {
-                const val = ProtocolValidator.validatePackRemoveMember(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    const ok = this.simulation.removePackMember(val.value.packId, val.value.agentId);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_RESPONSE,
-                        status: ok ? 'REMOVED' : 'NOT_FOUND',
-                        packId: val.value.packId,
-                        agentId: val.value.agentId
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
+            case '/api/v1/epistemic/observe':
+            case '/api/v1/epistemic/rumor':
+            case '/api/v1/epistemic/discrepancy/query':
+            case '/api/v1/epistemic/subjective/query':
+                return dispatchHttpEpistemicPost(this, path, body, res);
 
-            case '/api/v1/pack/update': {
-                const val = ProtocolValidator.validatePackUpdate(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    if (val.value.phase) this.simulation.setPackPhase(val.value.packId, val.value.phase);
-                    if (val.value.pattern) this.simulation.setPackPattern(val.value.packId, val.value.pattern);
-                    if (val.value.targetThreat) this.simulation.setPackTargetThreat(val.value.packId, val.value.targetThreat);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PACK_UPDATE_RESPONSE,
-                        status: 'UPDATED',
-                        packId: val.value.packId
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
+            case '/api/v1/moral/profile/register':
+            case '/api/v1/moral/dissonance/query':
+            case '/api/v1/moral/transgression':
+            case '/api/v1/moral/atonement':
+            case '/api/v1/moral/order/compliance':
+            case '/api/v1/moral/state/query':
+                return dispatchHttpMoralPost(this, path, body, res);
 
-            case '/api/v1/pack/query': {
-                const val = ProtocolValidator.validatePackQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.packCoordination) {
-                    return this._sendJson(res, 400, {
-                        error: 'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        code: ERROR_CODES.PACK_COORDINATION_DISABLED
-                    });
-                }
-                try {
-                    if (val.value.packId) {
-                        const advisories = this.simulation.getPackAdvisories(val.value.packId);
-                        if (!advisories) {
-                            return this._sendJson(res, 404, {
-                                error: `UNKNOWN_PACK: pack ${val.value.packId} does not exist.`,
-                                code: ERROR_CODES.UNKNOWN_PACK
-                            });
-                        }
-                        return this._sendJson(res, 200, {
-                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
-                            packId: val.value.packId,
-                            advisories
-                        });
-                    } else {
-                        const allAdvisories = this.simulation.getAllPackAdvisories();
-                        return this._sendJson(res, 200, {
-                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
-                            packId: null,
-                            packs: allAdvisories
-                        });
-                    }
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
+            case '/api/v1/persona/signature/query':
+            case '/api/v1/persona/reaction/query':
+            case '/api/v1/persona/distance/query':
+            case '/api/v1/persona/identify':
+            case '/api/v1/persona/collapse/query':
+                return dispatchHttpPersonaPost(this, path, body, res);
 
-            case '/api/v1/economy/market/register': {
-                const val = ProtocolValidator.validateEconomyRegisterMarket(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.economicFeedback) {
-                    return this._sendJson(res, 400, {
-                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
-                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
-                    });
-                }
-                try {
-                    const market = this.simulation.registerSettlementMarket(val.value.settlementId, val.value.options);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_RESPONSE,
-                        status: 'REGISTERED',
-                        settlementId: val.value.settlementId,
-                        market
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/economy/trade': {
-                const val = ProtocolValidator.validateEconomyTrade(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.economicFeedback) {
-                    return this._sendJson(res, 400, {
-                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
-                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
-                    });
-                }
-                try {
-                    const success = this.simulation.recordTradeTransaction(
-                        val.value.sourceId,
-                        val.value.destId,
-                        val.value.commodity,
-                        val.value.amount
-                    );
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.ECONOMY_TRADE_RESPONSE,
-                        status: success ? 'RECORDED' : 'FAILED',
-                        sourceId: val.value.sourceId,
-                        destId: val.value.destId,
-                        commodity: val.value.commodity,
-                        amount: val.value.amount,
-                        success
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/economy/raid/query': {
-                const val = ProtocolValidator.validateEconomyRaidQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.economicFeedback) {
-                    return this._sendJson(res, 400, {
-                        error: 'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
-                        code: ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED
-                    });
-                }
-                try {
-                    const raidDesirability = this.simulation.calculateRaidDesirability(val.value.settlementId);
-                    const marketSummary = this.simulation.getMarketSummary(val.value.settlementId);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.ECONOMY_RAID_QUERY_RESPONSE,
-                        settlementId: val.value.settlementId,
-                        raidDesirability,
-                        marketSummary
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/settlement/register': {
-                const val = ProtocolValidator.validateSettlementRegister(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.settlementMigration) {
-                    return this._sendJson(res, 400, {
-                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
-                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
-                    });
-                }
-                try {
-                    const settlement = this.simulation.registerSettlement(val.value.settlementId, val.value.data);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.SETTLEMENT_REGISTER_RESPONSE,
-                        status: 'REGISTERED',
-                        settlementId: val.value.settlementId,
-                        settlement
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/settlement/pressure/query': {
-                const val = ProtocolValidator.validateSettlementPressureQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.settlementMigration) {
-                    return this._sendJson(res, 400, {
-                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
-                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
-                    });
-                }
-                try {
-                    const state = this.simulation.getSettlementMigrationState(val.value.settlementId);
-                    if (!state) {
-                        return this._sendJson(res, 404, {
-                            error: `UNKNOWN_SETTLEMENT: settlement ${val.value.settlementId} does not exist.`,
-                            code: ERROR_CODES.UNKNOWN_SETTLEMENT
-                        });
-                    }
-                    const pushPressure = this.simulation.evaluatePushPressure(val.value.settlementId);
-                    const pullAttraction = this.simulation.evaluatePullAttraction(val.value.settlementId, val.value.corridorDanger);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_RESPONSE,
-                        settlementId: val.value.settlementId,
-                        pushPressure,
-                        pullAttraction,
-                        state
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/settlement/migration/wave': {
-                const val = ProtocolValidator.validateSettlementMigrationWave(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.settlementMigration) {
-                    return this._sendJson(res, 400, {
-                        error: 'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
-                        code: ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED
-                    });
-                }
-                try {
-                    const party = this.simulation.triggerMigrationWave(
-                        val.value.sourceId,
-                        val.value.destId,
-                        val.value.corridorDanger
-                    );
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_RESPONSE,
-                        status: party ? 'DISPATCHED' : 'NO_MIGRATION',
-                        sourceId: val.value.sourceId,
-                        destId: val.value.destId,
-                        party
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/epistemic/observe': {
-                const val = ProtocolValidator.validateEpistemicObserve(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableEpistemicBelief) {
-                    return this._sendJson(res, 400, {
-                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
-                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
-                    });
-                }
-                try {
-                    const engine = this.simulation.recordEpistemicObservation(val.value.agentId, val.value.observations);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.EPISTEMIC_OBSERVE_RESPONSE,
-                        status: 'OBSERVED',
-                        agentId: val.value.agentId,
-                        believedThreatsCount: engine.threatBeliefs.size,
-                        contradictionsCount: engine.contradictionLog.length
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/epistemic/rumor': {
-                const val = ProtocolValidator.validateEpistemicRumor(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableEpistemicBelief) {
-                    return this._sendJson(res, 400, {
-                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
-                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
-                    });
-                }
-                try {
-                    const engine = this.simulation.recordEpistemicRumor(val.value.agentId, val.value.message, val.value.senderTrust);
-                    const belief = engine.threatBeliefs.get(val.value.message.id)
-                        || engine.routeBeliefs.get(val.value.message.id)
-                        || engine.factionBeliefs.get(val.value.message.id)
-                        || engine.sanctuaryBeliefs.get(val.value.message.id)
-                        || null;
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.EPISTEMIC_RUMOR_RESPONSE,
-                        status: 'INGESTED',
-                        agentId: val.value.agentId,
-                        messageId: val.value.message.id,
-                        belief
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/epistemic/discrepancy/query': {
-                const val = ProtocolValidator.validateEpistemicDiscrepancyQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableEpistemicBelief) {
-                    return this._sendJson(res, 400, {
-                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
-                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
-                    });
-                }
-                try {
-                    const report = this.simulation.evaluateEpistemicDiscrepancy(val.value.agentId, val.value.worldGroundTruth);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_RESPONSE,
-                        agentId: val.value.agentId,
-                        discrepancy: report
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/epistemic/subjective/query': {
-                const val = ProtocolValidator.validateEpistemicSubjectiveQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableEpistemicBelief) {
-                    return this._sendJson(res, 400, {
-                        error: 'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
-                        code: ERROR_CODES.EPISTEMIC_BELIEF_DISABLED
-                    });
-                }
-                try {
-                    const subjective = this.simulation.getSubjectiveObservations(val.value.agentId);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_RESPONSE,
-                        agentId: val.value.agentId,
-                        subjectiveObservations: subjective
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/moral/profile/register': {
-                const val = ProtocolValidator.validateMoralProfileRegister(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableMoralDissonance) {
-                    return this._sendJson(res, 400, {
-                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
-                    });
-                }
-                try {
-                    const profile = this.simulation.registerAgentMoralProfile(val.value.agentId, val.value.profile);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.MORAL_PROFILE_REGISTER_RESPONSE,
-                        status: 'REGISTERED',
-                        agentId: val.value.agentId,
-                        profile
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/moral/dissonance/query': {
-                const val = ProtocolValidator.validateMoralDissonanceQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableMoralDissonance) {
-                    return this._sendJson(res, 400, {
-                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
-                    });
-                }
-                try {
-                    const evaluation = this.simulation.computeMoralDissonance(
-                        val.value.agentId,
-                        val.value.transgressionType,
-                        val.value.context
-                    );
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_RESPONSE,
-                        agentId: val.value.agentId,
-                        dissonance: evaluation
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/moral/transgression': {
-                const val = ProtocolValidator.validateMoralTransgression(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableMoralDissonance) {
-                    return this._sendJson(res, 400, {
-                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
-                    });
-                }
-                try {
-                    const report = this.simulation.recordMoralTransgression(
-                        val.value.agentId,
-                        val.value.transgressionType,
-                        val.value.context
-                    );
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.MORAL_TRANSGRESSION_RESPONSE,
-                        status: 'RECORDED',
-                        agentId: val.value.agentId,
-                        transgression: report
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/moral/atonement': {
-                const val = ProtocolValidator.validateMoralAtonement(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableMoralDissonance) {
-                    return this._sendJson(res, 400, {
-                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
-                    });
-                }
-                try {
-                    const report = this.simulation.recordMoralAtonement(
-                        val.value.agentId,
-                        val.value.atonementType,
-                        val.value.context
-                    );
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.MORAL_ATONEMENT_RESPONSE,
-                        status: 'RECORDED',
-                        agentId: val.value.agentId,
-                        atonement: report
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/moral/order/compliance': {
-                const val = ProtocolValidator.validateMoralOrderCompliance(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableMoralDissonance) {
-                    return this._sendJson(res, 400, {
-                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
-                    });
-                }
-                try {
-                    const compliance = this.simulation.evaluateMoralOrderCompliance(
-                        val.value.agentId,
-                        val.value.proposedTransgression,
-                        val.value.context
-                    );
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_RESPONSE,
-                        agentId: val.value.agentId,
-                        compliance
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/moral/state/query': {
-                const val = ProtocolValidator.validateMoralStateQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableMoralDissonance) {
-                    return this._sendJson(res, 400, {
-                        error: 'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        code: ERROR_CODES.MORAL_DISSONANCE_DISABLED
-                    });
-                }
-                try {
-                    const state = this.simulation.getAgentMoralState(val.value.agentId);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.MORAL_STATE_QUERY_RESPONSE,
-                        agentId: val.value.agentId,
-                        moralState: state
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/persona/signature/query': {
-                const val = ProtocolValidator.validatePersonaSignatureQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enablePersonaSignatures) {
-                    return this._sendJson(res, 400, {
-                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
-                    });
-                }
-                try {
-                    const result = this.simulation.computeAgentPersonaSignature(val.value.agentId);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_RESPONSE,
-                        ...result
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/persona/reaction/query': {
-                const val = ProtocolValidator.validatePersonaReactionQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enablePersonaSignatures) {
-                    return this._sendJson(res, 400, {
-                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
-                    });
-                }
-                try {
-                    const result = this.simulation.evaluateAgentReaction(val.value.agentId, val.value.probeValue);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PERSONA_REACTION_QUERY_RESPONSE,
-                        ...result
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/persona/distance/query': {
-                const val = ProtocolValidator.validatePersonaDistanceQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enablePersonaSignatures) {
-                    return this._sendJson(res, 400, {
-                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
-                    });
-                }
-                try {
-                    const result = this.simulation.computeAgentPersonaDistance(val.value.agentIdA, val.value.agentIdB);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_RESPONSE,
-                        ...result
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/persona/identify': {
-                const val = ProtocolValidator.validatePersonaIdentify(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enablePersonaSignatures) {
-                    return this._sendJson(res, 400, {
-                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
-                    });
-                }
-                try {
-                    const result = this.simulation.identifyAgentPersona(val.value.agentId, val.value.candidateIds);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PERSONA_IDENTIFY_RESPONSE,
-                        ...result
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/persona/collapse/query': {
-                const val = ProtocolValidator.validatePersonaCollapseQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enablePersonaSignatures) {
-                    return this._sendJson(res, 400, {
-                        error: 'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        code: ERROR_CODES.PERSONA_SIGNATURES_DISABLED
-                    });
-                }
-                try {
-                    const result = this.simulation.evaluateAgentPersonaCollapse(val.value.agentId, val.value.populationIds);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_RESPONSE,
-                        ...result
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/faction/register': {
-                const val = ProtocolValidator.validateFactionRegister(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableFactionGovernance) {
-                    return this._sendJson(res, 400, {
-                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
-                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
-                    });
-                }
-                try {
-                    const system = this.simulation.registerFaction(val.value.factionId, val.value.archetype, val.value.options);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.FACTION_REGISTER_RESPONSE,
-                        status: 'REGISTERED',
-                        factionId: val.value.factionId,
-                        archetype: system.archetype,
-                        currentDirective: system.currentDirective
-                    });
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/faction/deliberate': {
-                const val = ProtocolValidator.validateFactionDeliberate(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableFactionGovernance) {
-                    return this._sendJson(res, 400, {
-                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
-                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
-                    });
-                }
-                try {
-                    const deliberation = this.simulation.deliberateFactionIncident(val.value.factionId, val.value.incident, val.value.context);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.FACTION_DELIBERATE_RESPONSE,
-                        factionId: val.value.factionId,
-                        deliberation
-                    });
-                } catch (err) {
-                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
-                    return this._sendJson(res, isUnknown ? 404 : 400, {
-                        error: err.message,
-                        code: isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR
-                    });
-                }
-            }
-
-            case '/api/v1/faction/directives': {
-                const val = ProtocolValidator.validateFactionDirectivesQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableFactionGovernance) {
-                    return this._sendJson(res, 400, {
-                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
-                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
-                    });
-                }
-                try {
-                    if (val.value.factionId) {
-                        const gov = this.simulation.getFactionGovernance(val.value.factionId);
-                        if (!gov) {
-                            return this._sendJson(res, 404, {
-                                error: `UNKNOWN_FACTION: faction ${val.value.factionId} does not exist.`,
-                                code: ERROR_CODES.UNKNOWN_FACTION
-                            });
-                        }
-                        return this._sendJson(res, 200, {
-                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
-                            factionId: val.value.factionId,
-                            directive: gov.currentDirective,
-                            grievanceLevel: gov.grievanceLevel
-                        });
-                    } else {
-                        const directives = this.simulation.getAllFactionDirectives();
-                        return this._sendJson(res, 200, {
-                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
-                            factionId: null,
-                            directives
-                        });
-                    }
-                } catch (err) {
-                    return this._sendJson(res, 400, { error: err.message, code: ERROR_CODES.SIMULATION_ERROR });
-                }
-            }
-
-            case '/api/v1/faction/composure': {
-                const val = ProtocolValidator.validateFactionComposureQuery(body || {});
-                if (!val.valid) return this._sendJson(res, 400, { errors: val.errors, code: val.code });
-                if (!this.simulation.enableFactionGovernance) {
-                    return this._sendJson(res, 400, {
-                        error: 'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
-                        code: ERROR_CODES.FACTION_GOVERNANCE_DISABLED
-                    });
-                }
-                try {
-                    const composure = this.simulation.getFactionComposure(val.value.factionId, val.value.state);
-                    return this._sendJson(res, 200, {
-                        type: MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_RESPONSE,
-                        factionId: val.value.factionId,
-                        composure
-                    });
-                } catch (err) {
-                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
-                    return this._sendJson(res, isUnknown ? 404 : 400, {
-                        error: err.message,
-                        code: isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR
-                    });
-                }
-            }
+            case '/api/v1/faction/register':
+            case '/api/v1/faction/deliberate':
+            case '/api/v1/faction/directives':
+            case '/api/v1/faction/composure':
+                return dispatchHttpFactionPost(this, path, body, res);
 
             default:
                 return this._sendJson(res, 404, { error: `Endpoint ${path} not found` });
@@ -1610,48 +815,12 @@ export class FearServer {
      * than a bare 401.
      */
     _gateSignature({ method, target, rawBody, headers, sessionIdHint = null }) {
-        if (!this.signing.enabled) return { ok: true, reason: null };
-        const presented = readSignatureHeaders(headers);
-        const named = presented.sessionId || (sessionIdHint ? String(sessionIdHint) : null);
-        const verdict = this.signing.verifyHttpRequest({
-            method,
-            target,
-            rawBody,
-            headers,
-            sessionRecord: named ? this.claims.signingRecord(named) : null,
-            sessionIdHint
-        });
-        if (!verdict.ok) {
-            this.claims.recordSignatureRefusal({
-                verb: `${String(method).toUpperCase()} ${String(target)}`,
-                sessionId: named,
-                reason: verdict.reason
-            });
-        }
-        return verdict;
+        return verifyHttpSignatureGate(this.signing, this.claims, { method, target, rawBody, headers, sessionIdHint });
     }
 
     /** Explain a refused signature. The reason strings are stable protocol values. */
     _sendSignatureRefusal(res, gate, target, body = null) {
-        const hints = {
-            [SIGNATURE_FAILURES.MISSING]: 'this session has a signing key, so its token alone is not sufficient: sign the request with the session private key',
-            [SIGNATURE_FAILURES.INVALID]: 'the signature does not cover this method, target and body, or it was not made with the registered key',
-            [SIGNATURE_FAILURES.REPLAY]: 'this nonce has already been accepted; every request needs a fresh one',
-            [SIGNATURE_FAILURES.STALE]: 'issued_at is outside the accepted clock skew',
-            [SIGNATURE_FAILURES.UNKNOWN_KEY]: 'no key is registered for this session, or the key id does not match',
-            [SIGNATURE_FAILURES.MALFORMED]: 'the signature header set is incomplete or not base64',
-            [SIGNATURE_FAILURES.UNSUPPORTED_ALG]: 'this server verifies RS256 only'
-        };
-        this._sendJson(res, 401, {
-            status: 'REFUSED',
-            error: 'Request signature refused',
-            code: gate.reason,
-            policy: this.signing.policy,
-            signature_required: gate.required === true,
-            target: String(target),
-            session_id: body && typeof body.session_id === 'string' ? body.session_id : null,
-            hint: hints[gate.reason] || 'see RequestSigning.js for the canonical signing input'
-        });
+        this._sendJson(res, 401, signatureRefusalBody(this.signing, gate, target, body));
     }
 
     _readJsonBody(req, res, callback) {
@@ -1743,33 +912,7 @@ export class FearServer {
      * @param {string} [envelopeSessionId] batch-level session id, used when the entry omits one
      */
     _admitClaim(entry, envelope = {}, connection = null) {
-        const sessionId = entry.session_id || envelope.session_id || null;
-        if (!sessionId) {
-            return {
-                granted: true, claim: CLAIM_OUTCOMES.GRANTED,
-                session_id: null, owner_session_id: null, session_token: null
-            };
-        }
-        const result = this.claims.claim(entry.agent_id, {
-            sessionId,
-            token: entry.session_token || envelope.session_token,
-            claim: entry.claim || envelope.claim || 'join',
-            rotate: entry.rotate_token === true || envelope.rotate_token === true,
-            connection
-        });
-        return {
-            granted: result.granted,
-            claim: result.outcome,
-            session_id: String(sessionId),
-            owner_session_id: result.ownerSessionId,
-            // Non-null only when a NEW session was established (fresh, adopted,
-            // taken over) OR when a fresh credential replaced an old one. The
-            // host must store it: it is the only thing that proves continuity
-            // next time, and after a rotation it is the ONLY valid value.
-            session_token: result.sessionToken,
-            token_rotated: result.rotated === true,
-            token_expired: result.tokenExpired === true
-        };
+        return admitHostClaim(this.claims, entry, envelope, connection);
     }
 
     /**
@@ -1782,17 +925,7 @@ export class FearServer {
      * in a response it never asked for.
      */
     _maybeRegisterSigningKey(envelope, sessionId) {
-        const pem = envelope && typeof envelope.signing_public_key === 'string' ? envelope.signing_public_key : null;
-        if (!pem || !sessionId) return null;
-        const result = this.claims.registerSigningKey(sessionId, pem, {
-            token: envelope.session_token || null
-        });
-        return {
-            outcome: result.outcome,
-            registered: result.registered,
-            replaced: result.replaced,
-            key_id: result.key_id
-        };
+        return registerHostSigningKey(this.claims, envelope, sessionId);
     }
 
     /**
@@ -1808,29 +941,7 @@ export class FearServer {
      *            session_token: string|null, owner_session_id: string|null}}
      */
     _establishRequestIdentity(envelope, firstEntry = {}, connection = null) {
-        const sessionId = envelope.session_id || firstEntry.session_id || null;
-        if (!sessionId) {
-            return {
-                established: true, claim: CLAIM_OUTCOMES.GRANTED,
-                session_id: null, session_token: null, owner_session_id: null
-            };
-        }
-        const identity = this.claims.establishIdentity(
-            sessionId,
-            envelope.session_token || firstEntry.session_token,
-            envelope.claim || firstEntry.claim || 'join',
-            connection,
-            { rotate: envelope.rotate_token === true || firstEntry.rotate_token === true }
-        );
-        return {
-            established: identity.established,
-            claim: identity.outcome,
-            session_id: String(sessionId),
-            session_token: identity.sessionToken,
-            owner_session_id: identity.ownerSessionId,
-            token_rotated: identity.rotated === true,
-            token_expired: identity.tokenExpired === true
-        };
+        return establishHostRequestIdentity(this.claims, envelope, firstEntry, connection);
     }
 
     /**
@@ -1841,10 +952,7 @@ export class FearServer {
      * than merely intended.
      */
     _authorizeTeardown(agentId, envelope = {}) {
-        return this.claims.authorizeTeardown(agentId, {
-            sessionId: envelope.session_id || null,
-            token: envelope.session_token || null
-        });
+        return authorizeHostTeardown(this.claims, agentId, envelope);
     }
 
     // -------------------------------------------------------------------------
@@ -1902,20 +1010,23 @@ export class FearServer {
         // preserved so a reconnect can recover its crowd. If configured with
         // autoCleanupAbandonedAgents=true, detached agents are retired immediately.
         ws.on('close', () => {
-            this.connectedClients.delete(ws);
-            const detached = this.claims.detach(ws);
-            if (this.autoCleanupAbandonedAgents) {
-                this._cleanupAbandonedSessions(detached);
-            }
+            this._detachWsConnection(ws);
         });
 
         ws.on('error', () => {
-            this.connectedClients.delete(ws);
-            const detached = this.claims.detach(ws);
-            if (this.autoCleanupAbandonedAgents) {
-                this._cleanupAbandonedSessions(detached);
-            }
+            this._detachWsConnection(ws);
         });
+    }
+
+    // Shared disconnect boundary: a transport event must detach liveness before
+    // optionally retiring abandoned agents. Heartbeat accounting and socket
+    // termination remain outside this method in their original order.
+    _detachWsConnection(ws) {
+        this.connectedClients.delete(ws);
+        const detached = this.claims.detach(ws);
+        if (this.autoCleanupAbandonedAgents) {
+            this._cleanupAbandonedSessions(detached);
+        }
     }
 
     _startHeartbeat() {
@@ -1925,11 +1036,7 @@ export class FearServer {
             for (const ws of this.connectedClients) {
                 if (ws.isAlive === false) {
                     this.heartbeatFailures++;
-                    this.connectedClients.delete(ws);
-                    const detached = this.claims.detach(ws);
-                    if (this.autoCleanupAbandonedAgents) {
-                        this._cleanupAbandonedSessions(detached);
-                    }
+                    this._detachWsConnection(ws);
                     try {
                         ws.terminate();
                     } catch { /* ignore */ }
@@ -2174,40 +1281,9 @@ export class FearServer {
     }
 
     _handleWsMessage(ws, msg) {
-        const correlationId = msg && typeof msg === 'object'
-            ? (msg.message_id || msg.id || null)
-            : null;
-        // Bind liveness to the socket for any message that names a session AND
-        // proves it with the token. Provenance matters: if merely speaking a
-        // session's name could bind a socket or refresh its liveness, a rival
-        // could keep a dead session alive indefinitely, or attach itself to a
-        // live one, just by repeating a name it guessed.
-        this._bindWsIdentity(ws, msg);
-
-        // The signing gate. Same single choke point as HTTP: it runs before the
-        // dispatcher, so no WS verb can be reached by a caller that failed it.
-        const wsGate = this._gateWsEnvelope(ws, msg);
-        if (!wsGate.ok) {
-            return this._sendWsError(
-                ws,
-                wsGate.detail,
-                ERROR_CODES.VALIDATION_FAILED,
-                correlationId,
-                { code: wsGate.reason, session_id: wsGate.sessionId }
-            );
-        }
-
-        const validated = ProtocolValidator.validateIncomingMessage(msg);
-        if (!validated.valid) {
-            return this._sendWsError(
-                ws,
-                validated.errors?.join(', ') || 'Validation failed',
-                validated.code,
-                correlationId
-            );
-        }
-
-        const payload = validated.value;
+        const ingress = preflightWsMessage(this, ws, msg);
+        if (!ingress.ok) return ingress.response;
+        const { payload, correlationId } = ingress;
 
         switch (payload.type) {
             case MESSAGE_TYPES.AUTH_RESPONSE: {
@@ -2276,24 +1352,14 @@ export class FearServer {
                 const refused = [];
                 const takeover = (payload.claim || 'join') === 'takeover';
                 for (const entry of payload.agents) {
-                    if (identity.session_id) {
-                        if (!identity.established) {
-                            refused.push({
-                                agent_id: entry.agent_id,
-                                reason: identity.claim,
-                                owner_session_id: identity.owner_session_id
-                            });
-                            continue;
-                        }
-                        const taken = this.claims.claimUnder(entry.agent_id, identity.session_id, { takeover });
-                        if (!taken.granted) {
-                            refused.push({
-                                agent_id: entry.agent_id,
-                                reason: taken.outcome,
-                                owner_session_id: taken.ownerSessionId
-                            });
-                            continue;
-                        }
+                    const decision = arbitrateHostBatchAgent(this.claims, identity, entry.agent_id, takeover);
+                    if (!decision.granted) {
+                        refused.push({
+                            agent_id: entry.agent_id,
+                            reason: decision.outcome,
+                            owner_session_id: decision.owner_session_id
+                        });
+                        continue;
                     }
                     const agent = this.simulation.registerAgent(entry.agent_id, entry.traits, {
                         name: entry.name,
@@ -2324,11 +1390,7 @@ export class FearServer {
                 if (!permit.allowed) {
                     this._sendWs(ws, {
                         type: 'UNREGISTER_AGENT_ACK',
-                        status: 'REFUSED',
-                        agent_id: payload.agent_id,
-                        code: TEARDOWN_OUTCOMES.REFUSED_NOT_OWNER,
-                        owner_session_id: permit.owner_session_id,
-                        retry_after_ms: this.claims.retryAfterFor(permit.owner_session_id)
+                        ...teardownRefusal(this.claims, payload.agent_id, permit)
                     }, correlationId);
                     break;
                 }
@@ -2350,11 +1412,7 @@ export class FearServer {
                 for (const agentId of payload.agent_ids) {
                     const permit = this._authorizeTeardown(agentId, payload);
                     if (!permit.allowed) {
-                        refusedTeardown.push({
-                            agent_id: agentId,
-                            reason: permit.outcome,
-                            owner_session_id: permit.owner_session_id
-                        });
+                        refusedTeardown.push(batchTeardownRefusal(agentId, permit));
                         continue;
                     }
                     this.claims.release(agentId);
@@ -2532,794 +1590,53 @@ export class FearServer {
                 break;
             }
 
-            case MESSAGE_TYPES.PACK_CREATE_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const pack = this.simulation.createPack(payload.packId, payload.options);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PACK_CREATE_RESPONSE,
-                        status: 'CREATED',
-                        packId: pack.id,
-                        phase: pack.phase,
-                        pattern: pack.pattern
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
+            case MESSAGE_TYPES.PACK_CREATE_REQUEST:
+            case MESSAGE_TYPES.PACK_ASSIGN_MEMBER_REQUEST:
+            case MESSAGE_TYPES.PACK_REMOVE_MEMBER_REQUEST:
+            case MESSAGE_TYPES.PACK_UPDATE_REQUEST:
+            case MESSAGE_TYPES.PACK_QUERY_REQUEST:
+                dispatchWsPackMessage(this, ws, payload, correlationId);
                 break;
-            }
 
-            case MESSAGE_TYPES.PACK_ASSIGN_MEMBER_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const member = this.simulation.registerPackMember(
-                        payload.packId,
-                        payload.agentId,
-                        payload.traits,
-                        payload.position,
-                        payload.role
-                    );
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PACK_ASSIGN_MEMBER_RESPONSE,
-                        status: 'ASSIGNED',
-                        packId: payload.packId,
-                        agentId: payload.agentId,
-                        role: member.role
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
+            case MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_REQUEST:
+            case MESSAGE_TYPES.ECONOMY_TRADE_REQUEST:
+            case MESSAGE_TYPES.ECONOMY_RAID_QUERY_REQUEST:
+            case MESSAGE_TYPES.SETTLEMENT_REGISTER_REQUEST:
+            case MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_REQUEST:
+            case MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_REQUEST:
+                dispatchWsMacroMessage(this, ws, payload, correlationId);
                 break;
-            }
 
-            case MESSAGE_TYPES.PACK_REMOVE_MEMBER_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const ok = this.simulation.removePackMember(payload.packId, payload.agentId);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PACK_REMOVE_MEMBER_RESPONSE,
-                        status: ok ? 'REMOVED' : 'NOT_FOUND',
-                        packId: payload.packId,
-                        agentId: payload.agentId
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
+            case MESSAGE_TYPES.EPISTEMIC_OBSERVE_REQUEST:
+            case MESSAGE_TYPES.EPISTEMIC_RUMOR_REQUEST:
+            case MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_REQUEST:
+            case MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_REQUEST:
+                dispatchWsEpistemicMessage(this, ws, payload, correlationId);
                 break;
-            }
 
-            case MESSAGE_TYPES.PACK_UPDATE_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    if (payload.phase) this.simulation.setPackPhase(payload.packId, payload.phase);
-                    if (payload.pattern) this.simulation.setPackPattern(payload.packId, payload.pattern);
-                    if (payload.targetThreat) this.simulation.setPackTargetThreat(payload.packId, payload.targetThreat);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PACK_UPDATE_RESPONSE,
-                        status: 'UPDATED',
-                        packId: payload.packId
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
+            case MESSAGE_TYPES.MORAL_PROFILE_REGISTER_REQUEST:
+            case MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_REQUEST:
+            case MESSAGE_TYPES.MORAL_TRANSGRESSION_REQUEST:
+            case MESSAGE_TYPES.MORAL_ATONEMENT_REQUEST:
+            case MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_REQUEST:
+            case MESSAGE_TYPES.MORAL_STATE_QUERY_REQUEST:
+                dispatchWsMoralMessage(this, ws, payload, correlationId);
                 break;
-            }
 
-            case MESSAGE_TYPES.PACK_QUERY_REQUEST: {
-                if (!this.simulation.packCoordination) {
-                    this._sendWsError(
-                        ws,
-                        'PACK_COORDINATION_DISABLED: Server simulation constructed without enablePackCoordination: true.',
-                        ERROR_CODES.PACK_COORDINATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    if (payload.packId) {
-                        const advisories = this.simulation.getPackAdvisories(payload.packId);
-                        if (!advisories) {
-                            this._sendWsError(ws, `UNKNOWN_PACK: pack ${payload.packId} does not exist.`, ERROR_CODES.UNKNOWN_PACK, correlationId);
-                            break;
-                        }
-                        this._sendWs(ws, {
-                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
-                            packId: payload.packId,
-                            advisories
-                        }, correlationId);
-                    } else {
-                        const allAdvisories = this.simulation.getAllPackAdvisories();
-                        this._sendWs(ws, {
-                            type: MESSAGE_TYPES.PACK_QUERY_RESPONSE,
-                            packId: null,
-                            packs: allAdvisories
-                        }, correlationId);
-                    }
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
+            case MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_REQUEST:
+            case MESSAGE_TYPES.PERSONA_REACTION_QUERY_REQUEST:
+            case MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_REQUEST:
+            case MESSAGE_TYPES.PERSONA_IDENTIFY_REQUEST:
+            case MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_REQUEST:
+                dispatchWsPersonaMessage(this, ws, payload, correlationId);
                 break;
-            }
 
-            case MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_REQUEST: {
-                if (!this.simulation.economicFeedback) {
-                    this._sendWsError(
-                        ws,
-                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
-                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const market = this.simulation.registerSettlementMarket(payload.settlementId, payload.options);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.ECONOMY_REGISTER_MARKET_RESPONSE,
-                        status: 'REGISTERED',
-                        settlementId: payload.settlementId,
-                        market
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
+            case MESSAGE_TYPES.FACTION_REGISTER_REQUEST:
+            case MESSAGE_TYPES.FACTION_DELIBERATE_REQUEST:
+            case MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_REQUEST:
+            case MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_REQUEST:
+                dispatchWsFactionMessage(this, ws, payload, correlationId);
                 break;
-            }
-
-            case MESSAGE_TYPES.ECONOMY_TRADE_REQUEST: {
-                if (!this.simulation.economicFeedback) {
-                    this._sendWsError(
-                        ws,
-                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
-                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const success = this.simulation.recordTradeTransaction(
-                        payload.sourceId,
-                        payload.destId,
-                        payload.commodity,
-                        payload.amount
-                    );
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.ECONOMY_TRADE_RESPONSE,
-                        status: success ? 'RECORDED' : 'FAILED',
-                        sourceId: payload.sourceId,
-                        destId: payload.destId,
-                        commodity: payload.commodity,
-                        amount: payload.amount,
-                        success
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.ECONOMY_RAID_QUERY_REQUEST: {
-                if (!this.simulation.economicFeedback) {
-                    this._sendWsError(
-                        ws,
-                        'ECONOMIC_FEEDBACK_DISABLED: Server simulation constructed without enableEconomicFeedback: true.',
-                        ERROR_CODES.ECONOMIC_FEEDBACK_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const raidDesirability = this.simulation.calculateRaidDesirability(payload.settlementId);
-                    const marketSummary = this.simulation.getMarketSummary(payload.settlementId);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.ECONOMY_RAID_QUERY_RESPONSE,
-                        settlementId: payload.settlementId,
-                        raidDesirability,
-                        marketSummary
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.SETTLEMENT_REGISTER_REQUEST: {
-                if (!this.simulation.settlementMigration) {
-                    this._sendWsError(
-                        ws,
-                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
-                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const settlement = this.simulation.registerSettlement(payload.settlementId, payload.data);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.SETTLEMENT_REGISTER_RESPONSE,
-                        status: 'REGISTERED',
-                        settlementId: payload.settlementId,
-                        settlement
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_REQUEST: {
-                if (!this.simulation.settlementMigration) {
-                    this._sendWsError(
-                        ws,
-                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
-                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const state = this.simulation.getSettlementMigrationState(payload.settlementId);
-                    if (!state) {
-                        this._sendWsError(
-                            ws,
-                            `UNKNOWN_SETTLEMENT: settlement ${payload.settlementId} does not exist.`,
-                            ERROR_CODES.UNKNOWN_SETTLEMENT,
-                            correlationId
-                        );
-                        break;
-                    }
-                    const pushPressure = this.simulation.evaluatePushPressure(payload.settlementId);
-                    const pullAttraction = this.simulation.evaluatePullAttraction(payload.settlementId, payload.corridorDanger);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.SETTLEMENT_PRESSURE_QUERY_RESPONSE,
-                        settlementId: payload.settlementId,
-                        pushPressure,
-                        pullAttraction,
-                        state
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_REQUEST: {
-                if (!this.simulation.settlementMigration) {
-                    this._sendWsError(
-                        ws,
-                        'SETTLEMENT_MIGRATION_DISABLED: Server simulation constructed without enableSettlementMigration: true.',
-                        ERROR_CODES.SETTLEMENT_MIGRATION_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const party = this.simulation.triggerMigrationWave(
-                        payload.sourceId,
-                        payload.destId,
-                        payload.corridorDanger
-                    );
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.SETTLEMENT_MIGRATION_WAVE_RESPONSE,
-                        status: party ? 'DISPATCHED' : 'NO_MIGRATION',
-                        sourceId: payload.sourceId,
-                        destId: payload.destId,
-                        party
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.EPISTEMIC_OBSERVE_REQUEST: {
-                if (!this.simulation.enableEpistemicBelief) {
-                    this._sendWsError(
-                        ws,
-                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
-                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const engine = this.simulation.recordEpistemicObservation(payload.agentId, payload.observations);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.EPISTEMIC_OBSERVE_RESPONSE,
-                        status: 'OBSERVED',
-                        agentId: payload.agentId,
-                        believedThreatsCount: engine.threatBeliefs.size,
-                        contradictionsCount: engine.contradictionLog.length
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.EPISTEMIC_RUMOR_REQUEST: {
-                if (!this.simulation.enableEpistemicBelief) {
-                    this._sendWsError(
-                        ws,
-                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
-                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const engine = this.simulation.recordEpistemicRumor(payload.agentId, payload.message, payload.senderTrust);
-                    const belief = engine.threatBeliefs.get(payload.message.id)
-                        || engine.routeBeliefs.get(payload.message.id)
-                        || engine.factionBeliefs.get(payload.message.id)
-                        || engine.sanctuaryBeliefs.get(payload.message.id)
-                        || null;
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.EPISTEMIC_RUMOR_RESPONSE,
-                        status: 'INGESTED',
-                        agentId: payload.agentId,
-                        messageId: payload.message.id,
-                        belief
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_REQUEST: {
-                if (!this.simulation.enableEpistemicBelief) {
-                    this._sendWsError(
-                        ws,
-                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
-                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const report = this.simulation.evaluateEpistemicDiscrepancy(payload.agentId, payload.worldGroundTruth);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.EPISTEMIC_DISCREPANCY_QUERY_RESPONSE,
-                        agentId: payload.agentId,
-                        discrepancy: report
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_REQUEST: {
-                if (!this.simulation.enableEpistemicBelief) {
-                    this._sendWsError(
-                        ws,
-                        'EPISTEMIC_BELIEF_DISABLED: Server simulation constructed without enableEpistemicBelief: true.',
-                        ERROR_CODES.EPISTEMIC_BELIEF_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const subjective = this.simulation.getSubjectiveObservations(payload.agentId);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.EPISTEMIC_SUBJECTIVE_QUERY_RESPONSE,
-                        agentId: payload.agentId,
-                        subjectiveObservations: subjective
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.MORAL_PROFILE_REGISTER_REQUEST: {
-                if (!this.simulation.enableMoralDissonance) {
-                    this._sendWsError(
-                        ws,
-                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const profile = this.simulation.registerAgentMoralProfile(payload.agentId, payload.profile);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.MORAL_PROFILE_REGISTER_RESPONSE,
-                        status: 'REGISTERED',
-                        agentId: payload.agentId,
-                        profile
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_REQUEST: {
-                if (!this.simulation.enableMoralDissonance) {
-                    this._sendWsError(
-                        ws,
-                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const evaluation = this.simulation.computeMoralDissonance(
-                        payload.agentId,
-                        payload.transgressionType,
-                        payload.context
-                    );
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.MORAL_DISSONANCE_QUERY_RESPONSE,
-                        agentId: payload.agentId,
-                        dissonance: evaluation
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.MORAL_TRANSGRESSION_REQUEST: {
-                if (!this.simulation.enableMoralDissonance) {
-                    this._sendWsError(
-                        ws,
-                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const report = this.simulation.recordMoralTransgression(
-                        payload.agentId,
-                        payload.transgressionType,
-                        payload.context
-                    );
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.MORAL_TRANSGRESSION_RESPONSE,
-                        status: 'RECORDED',
-                        agentId: payload.agentId,
-                        transgression: report
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.MORAL_ATONEMENT_REQUEST: {
-                if (!this.simulation.enableMoralDissonance) {
-                    this._sendWsError(
-                        ws,
-                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const report = this.simulation.recordMoralAtonement(
-                        payload.agentId,
-                        payload.atonementType,
-                        payload.context
-                    );
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.MORAL_ATONEMENT_RESPONSE,
-                        status: 'RECORDED',
-                        agentId: payload.agentId,
-                        atonement: report
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_REQUEST: {
-                if (!this.simulation.enableMoralDissonance) {
-                    this._sendWsError(
-                        ws,
-                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const compliance = this.simulation.evaluateMoralOrderCompliance(
-                        payload.agentId,
-                        payload.proposedTransgression,
-                        payload.context
-                    );
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.MORAL_ORDER_COMPLIANCE_RESPONSE,
-                        agentId: payload.agentId,
-                        compliance
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.MORAL_STATE_QUERY_REQUEST: {
-                if (!this.simulation.enableMoralDissonance) {
-                    this._sendWsError(
-                        ws,
-                        'MORAL_DISSONANCE_DISABLED: Server simulation constructed without enableMoralDissonance: true.',
-                        ERROR_CODES.MORAL_DISSONANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const state = this.simulation.getAgentMoralState(payload.agentId);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.MORAL_STATE_QUERY_RESPONSE,
-                        agentId: payload.agentId,
-                        moralState: state
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_REQUEST: {
-                if (!this.simulation.enablePersonaSignatures) {
-                    this._sendWsError(
-                        ws,
-                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const result = this.simulation.computeAgentPersonaSignature(payload.agentId);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PERSONA_SIGNATURE_QUERY_RESPONSE,
-                        ...result
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.PERSONA_REACTION_QUERY_REQUEST: {
-                if (!this.simulation.enablePersonaSignatures) {
-                    this._sendWsError(
-                        ws,
-                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const result = this.simulation.evaluateAgentReaction(payload.agentId, payload.probeValue);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PERSONA_REACTION_QUERY_RESPONSE,
-                        ...result
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_REQUEST: {
-                if (!this.simulation.enablePersonaSignatures) {
-                    this._sendWsError(
-                        ws,
-                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const result = this.simulation.computeAgentPersonaDistance(payload.agentIdA, payload.agentIdB);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PERSONA_DISTANCE_QUERY_RESPONSE,
-                        ...result
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.PERSONA_IDENTIFY_REQUEST: {
-                if (!this.simulation.enablePersonaSignatures) {
-                    this._sendWsError(
-                        ws,
-                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const result = this.simulation.identifyAgentPersona(payload.agentId, payload.candidateIds);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PERSONA_IDENTIFY_RESPONSE,
-                        ...result
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_REQUEST: {
-                if (!this.simulation.enablePersonaSignatures) {
-                    this._sendWsError(
-                        ws,
-                        'PERSONA_SIGNATURES_DISABLED: Server simulation constructed without enablePersonaSignatures: true.',
-                        ERROR_CODES.PERSONA_SIGNATURES_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const result = this.simulation.evaluateAgentPersonaCollapse(payload.agentId, payload.populationIds);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.PERSONA_COLLAPSE_QUERY_RESPONSE,
-                        ...result
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.FACTION_REGISTER_REQUEST: {
-                if (!this.simulation.enableFactionGovernance) {
-                    this._sendWsError(
-                        ws,
-                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
-                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const system = this.simulation.registerFaction(payload.factionId, payload.archetype, payload.options);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.FACTION_REGISTER_RESPONSE,
-                        status: 'REGISTERED',
-                        factionId: payload.factionId,
-                        archetype: system.archetype,
-                        currentDirective: system.currentDirective
-                    }, correlationId);
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.FACTION_DELIBERATE_REQUEST: {
-                if (!this.simulation.enableFactionGovernance) {
-                    this._sendWsError(
-                        ws,
-                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
-                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const deliberation = this.simulation.deliberateFactionIncident(payload.factionId, payload.incident, payload.context);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.FACTION_DELIBERATE_RESPONSE,
-                        factionId: payload.factionId,
-                        deliberation
-                    }, correlationId);
-                } catch (err) {
-                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
-                    this._sendWsError(ws, err.message, isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_REQUEST: {
-                if (!this.simulation.enableFactionGovernance) {
-                    this._sendWsError(
-                        ws,
-                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
-                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    if (payload.factionId) {
-                        const gov = this.simulation.getFactionGovernance(payload.factionId);
-                        if (!gov) {
-                            this._sendWsError(ws, `UNKNOWN_FACTION: faction ${payload.factionId} does not exist.`, ERROR_CODES.UNKNOWN_FACTION, correlationId);
-                            break;
-                        }
-                        this._sendWs(ws, {
-                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
-                            factionId: payload.factionId,
-                            directive: gov.currentDirective,
-                            grievanceLevel: gov.grievanceLevel
-                        }, correlationId);
-                    } else {
-                        const directives = this.simulation.getAllFactionDirectives();
-                        this._sendWs(ws, {
-                            type: MESSAGE_TYPES.FACTION_DIRECTIVES_QUERY_RESPONSE,
-                            factionId: null,
-                            directives
-                        }, correlationId);
-                    }
-                } catch (err) {
-                    this._sendWsError(ws, err.message, ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
-
-            case MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_REQUEST: {
-                if (!this.simulation.enableFactionGovernance) {
-                    this._sendWsError(
-                        ws,
-                        'FACTION_GOVERNANCE_DISABLED: Server simulation constructed without enableFactionGovernance: true.',
-                        ERROR_CODES.FACTION_GOVERNANCE_DISABLED,
-                        correlationId
-                    );
-                    break;
-                }
-                try {
-                    const composure = this.simulation.getFactionComposure(payload.factionId, payload.state);
-                    this._sendWs(ws, {
-                        type: MESSAGE_TYPES.FACTION_COMPOSURE_QUERY_RESPONSE,
-                        factionId: payload.factionId,
-                        composure
-                    }, correlationId);
-                } catch (err) {
-                    const isUnknown = err.message && err.message.includes('UNKNOWN_FACTION');
-                    this._sendWsError(ws, err.message, isUnknown ? ERROR_CODES.UNKNOWN_FACTION : ERROR_CODES.SIMULATION_ERROR, correlationId);
-                }
-                break;
-            }
 
             default:
                 this._sendWsError(ws, `Unhandled message type: ${payload.type}`, ERROR_CODES.MALFORMED_MESSAGE, correlationId);
