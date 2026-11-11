@@ -24,7 +24,7 @@
  */
 
 import { DeterministicRng } from './DeterministicRng.js';
-import { ESCALATION_STAGES, FACTION_CULTURES, INCIDENT_TYPES } from './FactionSystem.js';
+import { FACTION_CULTURES, INCIDENT_TYPES } from './FactionSystem.js';
 import { TradeDependencyEngine, resolveLedgerNowTick } from './TradeDependencyEngine.js';
 
 export const TREATY_TYPES = Object.freeze({

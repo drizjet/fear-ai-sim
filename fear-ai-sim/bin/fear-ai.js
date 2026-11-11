@@ -193,9 +193,6 @@ import {
     OVERFLOW_STRATEGIES
 } from '../packages/protocol/index.js';
 import { FearServer, DesignerDashboardServer } from '../packages/runtime/index.js';
-import { runDungeonSimulation } from '../examples/reference-game/simulation_runner.js';
-import { runAllAdversarialStressTests } from '../benchmarks/behavioral-evaluation/adversarial_world_stress.mjs';
-import { runAllCounterfactualExperiments } from '../benchmarks/behavioral-evaluation/counterfactual_world_validation.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -400,11 +397,11 @@ async function handleServer(options) {
     console.log(`[FearAI-CLI] Starting server on ${host}:${port} (Seed: ${seed})...`);
 
     const server = new FearServer({ host, port, seed });
-    await server.start();
+    const bound = await server.start();
 
     console.log(`[FearAI-CLI] Server ready!`);
-    console.log(`  • HTTP Status: http://${host}:${port}/api/v1/status`);
-    console.log(`  • WebSocket:   ws://${host}:${port}`);
+    console.log(`  • HTTP Status: http://${bound.host}:${bound.port}/api/v1/status`);
+    console.log(`  • WebSocket:   ws://${bound.host}:${bound.port}`);
     console.log(`  • Press Ctrl+C to gracefully shutdown.\n`);
 
     const shutdown = async () => {
@@ -567,7 +564,7 @@ function handleBenchmark(options) {
     console.log(`Status:                 PASS (Sub-millisecond scalable LOD)\n`);
 }
 
-function handleVerify() {
+async function handleVerify() {
     console.log(BANNER);
     console.log(`[FearAI-CLI] Running verification suite...`);
 
@@ -582,6 +579,7 @@ function handleVerify() {
     const check2 = (rThreat.fear_band === 'PANIC' || rThreat.fear_band === 'ANXIOUS');
 
     const check3 = typeof DiagnosticExplainabilityInspector.explainAgentDecision === 'function';
+    const { runDungeonSimulation } = await import('../examples/reference-game/simulation_runner.js');
     const check4 = typeof runDungeonSimulation === 'function';
 
     console.log(`  ✓ Check 1: Resting baseline maintains CALM band: ${check1 ? 'PASS' : 'FAIL'}`);
@@ -591,9 +589,10 @@ function handleVerify() {
     console.log(`\nAll pre-flight verification checks PASS (this CLI pre-flight only).\nThe automated suites were retired under Hard Rule 9 (2026-09-15); the test\nentry point is a tombstone that refuses with a non-zero exit, so nothing here\nruns a suite. Use the standalone probes in tools/verification/ for evidence.\n`);
 }
 
-function handleAdversarial(options) {
+async function handleAdversarial(options) {
     console.log(BANNER);
     console.log(`[FearAI-CLI] Running 11 Adversarial Stress Regimes (Section XXV)...\n`);
+    const { runAllAdversarialStressTests } = await import('../benchmarks/behavioral-evaluation/adversarial_world_stress.mjs');
     const results = runAllAdversarialStressTests();
     let allPassed = true;
 
@@ -610,9 +609,10 @@ function handleAdversarial(options) {
     }
 }
 
-function handleCounterfactual(options) {
+async function handleCounterfactual(options) {
     console.log(BANNER);
     console.log(`[FearAI-CLI] Running 8 Causal Counterfactual Experiments (Section XL)...\n`);
+    const { runAllCounterfactualExperiments } = await import('../benchmarks/behavioral-evaluation/counterfactual_world_validation.mjs');
     const results = runAllCounterfactualExperiments();
     let allPassed = true;
 
@@ -4152,7 +4152,7 @@ async function main() {
             handleExplainFaction(options);
             break;
         case 'sim':
-            runDungeonSimulation();
+            (await import('../examples/reference-game/simulation_runner.js')).runDungeonSimulation();
             break;
         case 'benchmark':
             handleBenchmark(options);
@@ -4163,13 +4163,13 @@ async function main() {
             handleCompare(options);
             break;
         case 'adversarial':
-            handleAdversarial(options);
+            await handleAdversarial(options);
             break;
         case 'counterfactual':
-            handleCounterfactual(options);
+            await handleCounterfactual(options);
             break;
         case 'verify':
-            handleVerify();
+            await handleVerify();
             break;
         default:
             console.error(`Unknown command: "${command}". Run 'fear-ai help' for usage.`);

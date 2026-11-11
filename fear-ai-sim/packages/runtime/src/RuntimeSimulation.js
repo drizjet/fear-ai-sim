@@ -3,42 +3,23 @@
  * Manages registered agents, spatial contagion, trauma memory, pacing, and determinism.
  */
 
-import {
-    DeterministicRng,
-    AffectiveAgent,
-    TraumaZoneSystem,
-    TraumaCrystallizationEngine,
-    TRAUMA_TYPES,
-    ContagionGraph,
-    PacingDirector,
-    RelationshipTensorSystem,
-    SocialEventEngine,
-    SOCIAL_EVENTS,
-    HostTimeDiscipline,
-    InformationPropagationEngine,
-    PackCoordinationEngine,
-    EconomicFeedbackSystem,
-    EconomicPathologyDetector,
-    SettlementMigrationSystem,
-    MIGRATION_DRIVERS,
-    MIGRANT_PARTY_STATUS,
-    EpistemicBeliefEngine,
-    EPISTEMIC_PROVENANCE,
-    BELIEF_CATEGORIES,
-    MoralDissonanceEngine,
-    MORAL_FOUNDATIONS,
-    DEFAULT_MORAL_PROFILES,
-    TRANSGRESSION_TYPES,
-    ATONEMENT_TYPES,
-    FunctionalPersonaSignatures,
-    SIGNATURE_FUNCTIONS,
-    DEFAULT_PROBE_GRID,
-    evaluateResponseFunctions,
-    FactionGovernanceSystem,
-    GOVERNANCE_ARCHETYPES,
-    FACTION_DIRECTIVES,
-    governanceComposure
-} from '../../core/index.js';
+import { DeterministicRng } from '../../core/src/DeterministicRng.js';
+import { AffectiveAgent } from '../../core/src/AffectiveAgent.js';
+import { TraumaZoneSystem } from '../../core/src/TraumaZoneSystem.js';
+import { TraumaCrystallizationEngine, TRAUMA_TYPES } from '../../core/src/TraumaCrystallizationEngine.js';
+import { ContagionGraph } from '../../core/src/ContagionGraph.js';
+import { PacingDirector } from '../../core/src/PacingDirector.js';
+import { RelationshipTensorSystem } from '../../core/src/RelationshipTensorSystem.js';
+import { SocialEventEngine, SOCIAL_EVENTS } from '../../core/src/SocialEventEngine.js';
+import { HostTimeDiscipline } from '../../core/src/HostTimeDiscipline.js';
+import { InformationPropagationEngine } from '../../core/src/InformationPropagationEngine.js';
+import { PackCoordinationEngine } from '../../core/src/PackCoordinationEngine.js';
+import { EconomicFeedbackSystem, EconomicPathologyDetector } from '../../core/src/EconomicFeedbackSystem.js';
+import { SettlementMigrationSystem } from '../../core/src/SettlementMigrationSystem.js';
+import { EpistemicBeliefEngine, BELIEF_CATEGORIES } from '../../core/src/EpistemicBeliefEngine.js';
+import { MoralDissonanceEngine, DEFAULT_MORAL_PROFILES, TRANSGRESSION_TYPES, ATONEMENT_TYPES } from '../../core/src/MoralDissonanceEngine.js';
+import { FunctionalPersonaSignatures, DEFAULT_PROBE_GRID, evaluateResponseFunctions } from '../../core/src/FunctionalPersonaSignatures.js';
+import { FactionGovernanceSystem, GOVERNANCE_ARCHETYPES, governanceComposure } from '../../core/src/FactionGovernanceSystem.js';
 // NEXT-139: normalized crystallized-trauma load for contagion sourcing.
 // Severity sums across crystallized traumas, halved into [0,1] so a
 // single full-severity trauma reads 0.5 and two read as saturated.

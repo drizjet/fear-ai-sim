@@ -22,8 +22,6 @@
  */
 
 import { AffectiveAgent } from './AffectiveAgent.js';
-import { DeterministicRng } from './DeterministicRng.js';
-import { FrontierValleySimulation } from './FrontierValleySimulation.js';
 import { WorldSimulationSystem, ROAMING_PARTY_TYPES } from './WorldSimulationSystem.js';
 
 export const METAMORPHIC_RELATIONS = Object.freeze({
