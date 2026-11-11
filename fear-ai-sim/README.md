@@ -9,7 +9,7 @@ This repository is **one of three live trees**. Start here: [`docs/SYSTEM_MAP.md
 | Canonical fear bands / hysteresis / panic lock | Rust `fear.rs` in Pixel Pets (see system map) |
 | BEAM server + Rust NIF | `fear-ai-elixir` |
 | Local middleware server + engine adapters | **this repo** (`packages/`) |
-| 2000-agent horror research sim | this repo’s root JS (`simulation.js`, Electron/Tauri) |
+| 2000-agent horror research sim | this repo’s root JS (`simulation.js`, Tauri desktop shell) |
 
 ## Middleware (plug-in)
 
@@ -81,9 +81,9 @@ and known open advisories: [`../SECURITY.md`](../SECURITY.md).
 ## Research sim (not the SDK)
 
 ```bash
-npm run start-app    # Electron
-# or
-.\Launch-FearAI.ps1
+.\Launch-FearAI.ps1             # builds the Tauri app once, then launches it
+.\Launch-FearAI.ps1 -Rebuild    # after code changes
+npm run desktop                 # Tauri dev mode with hot reload
 ```
 
 ## Docs agents and humans should actually read

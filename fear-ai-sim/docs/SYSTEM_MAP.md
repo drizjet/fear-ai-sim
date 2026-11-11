@@ -77,13 +77,13 @@ The older `CUSTOM_ENGINE_INTEGRATION_SPEC.md`, `NEW_MASTER_GAME_INTEGRATION_AUDI
 |---|---|---|---|
 | **Rust fear core** | `C:\tools\03-Projects\lains Tools\New Master Game\pixel-pets\src\engine\ai\fear.rs` | Original hysteresis / panic-lock / `FearSourceBreakdown` model, wired into Pixel Pets | **Canonical fear-band model** (0–5 score, dual thresholds, 10-tick panic lock) |
 | **Elixir + Rust NIF** | `C:\tools\03-Projects\lains Tools\lainself\fear-ai-elixir` | BEAM backend, OTP agents, Phoenix, Rustler NIF (`native/fear_ai_nif`) for spatial/forces/diffusion/neural | **Server / scale research.** Not a game plugin. No `mix.lock` in tree → not a reproducible release. |
-| **JS sim + middleware** | `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim` | Browser/Electron/Tauri research sim **and** later `@fear-ai/core` + protocol + local server + engine adapters | **Plug-in packaging lane.** Not bit-identical to Rust unless a parity vector says so. |
+| **JS sim + middleware** | `C:\tools\03-Projects\lains Tools\lainself\fear-ai-sim\fear-ai-sim` | Browser/Tauri research sim **and** later `@fear-ai/core` + protocol + local server + engine adapters | **Plug-in packaging lane.** Not bit-identical to Rust unless a parity vector says so. |
 
 Vault archive (read-only copies, 2026-08-25): `C:\Text vault\clusters\fear-ai\research-collection\lainself-fear-ai-runtime\`
 
 ## What is in this JS repo
 
-- **Research sim (old surface):** `simulation.js`, `brain.js`, `closed-world.js`, Pixi/Electron/Tauri. Useful, not the shippable SDK.
+- **Research sim (old surface):** `simulation.js`, `brain.js`, `closed-world.js`, Pixi/Tauri. Useful, not the shippable SDK.
 - **Middleware (plug-in surface):** `packages/core`, `packages/protocol`, `packages/runtime`, `packages/adapters/*`
 - **Unified CLI:** `bin/fear-ai.js` (`npm run cli -- <cmd>`), providing `server`, `dashboard`, `explain`, `explain-faction`, `presets`, `validate-safety`, `frontier-valley`, `fabe-world`, `scenario`, `metamorphic`, `coalition`, `parallel-batch`, `stepper`, `moral`, `counterfactual-world`, `economy`, `diff-replay`, `sim`, `benchmark`, `adversarial`, `counterfactual`, `godot`, `verify`, `governance`, `spatial-3d`, `runaway-loops`, `budget`, `migration`, `memory`, `compactor`, `roaming`, `intervene`, `pareto`, `collision`, `stream`, `trauma`, `trade-chains`, `epistemic-fog`, `audio`, `pack`.
 - **Multi-Agent Pack Coordination & Collective Tactical Swarm Engine (Frontiers C & D / Round 44):** `PackCoordinationEngine` delivers deterministic spatial swarm coordination and encirclement geometry (`CIRCULAR_PINCER`, `V_FORMATION`, `CRESCENT_SURROUND`, `STAGGERED_LINE`), role attribution (`ALPHA_LEADER`, `FLANKER_LEFT`, `FLANKER_RIGHT`, `CHASER`, `REAR_GUARD`, `BAIT`, `HARASSER`), dynamic tactical phase transitions (`STALKING`, `ENCIRCLING`, `FEINT_PROBE`, `SYNCHRONIZED_STRIKE`, `SCATTER_DISPERSE`, `REGROUPING`), Alpha morale damping, and Alpha Fall Catastrophe collapse dynamics while strictly adhering to host game authority (`fear-ai pack`).

@@ -15,7 +15,7 @@ status: partially_verified
 **Related documents:** `BASELINE.md`, `PROVENANCE.md`, `mvp-plan.md`  
 **Current navigation:** `../AGENTS.md`, `SYSTEM_MAP.md`
 
-> This document maps the **browser/Electron/Tauri research sim** as of 2026-08-26.
+> This document maps the **browser/Tauri research sim** as of 2026-08-26 (the Electron wrapper was removed on 2026-11-11).
 > It does not describe `@fear-ai/core`, the protocol server, or engine adapters.
 > It does not replace Pixel Pets `fear.rs` or the Elixir backend.
 
@@ -34,7 +34,7 @@ The target architecture can guide refactoring, but current behavior must be esta
 ## 2. System surfaces
 
 ```text
-Browser / Electron HTML
+Browser / Tauri HTML
         ↓
       main.js
         ↓
@@ -47,7 +47,7 @@ Brain / perception / social / trauma / learning systems
 Metrics / replay / DataBridge / exports
 ```
 
-Tauri is a separate native wrapper around the built frontend and Rust command boundary. Electron is another desktop wrapper with its own security/runtime behavior.
+Tauri is the native desktop wrapper around the built frontend and Rust command boundary. (An Electron wrapper existed until 2026-11-11; it was removed so there is one desktop shell.)
 
 ## 3. Current entry points
 
@@ -56,13 +56,6 @@ Tauri is a separate native wrapper around the built frontend and Rust command bo
 - `index.html` is the document shell.
 - `main.js` is loaded as the application module.
 - `vite.config.js` builds the frontend with relative asset paths.
-
-### Electron
-
-- `electron-main.cjs` creates a sandboxed BrowserWindow.
-- It loads the built `dist/index.html` when present.
-- It disables Node integration and enables context isolation.
-- It prevents normal navigation through a `will-navigate` handler.
 
 ### Tauri
 
@@ -92,7 +85,7 @@ Tauri is a separate native wrapper around the built frontend and Rust command bo
 | Metrics | `metrics.js`, `databridge.js`, analytics/dashboard modules | Present; schema compatibility needs formal contract |
 | Replay | `replay.js` and related files | Present; reproducibility contract needs verification |
 | Data generation | `feardatagen.js` and related modules | Present; export and headless workflows need an end-to-end run |
-| Native wrappers | `src-tauri/`, `electron-main.cjs` | Configured; packaged release not verified |
+| Native wrapper | `src-tauri/` (launched by `Launch-FearAI.ps1`) | Configured; packaged release not verified |
 
 ## 5. Current versus target pipeline
 
@@ -152,7 +145,7 @@ Do not delete or revive modules from filename inspection alone.
 
 ## 7. Known architecture conflicts
 
-1. The project has browser, Electron, and Tauri surfaces with different security and packaging constraints.
+1. The project has browser and Tauri surfaces with different security and packaging constraints.
 2. The build reports modules that are both dynamically and statically imported.
 3. Tauri configuration has a different CSP posture than `index.html`.
 4. Existing documents describe broad feature completion that this baseline has not independently re-established.

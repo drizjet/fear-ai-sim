@@ -1,45 +1,47 @@
 # Launch-FearAI.ps1
+# Starts the Fear AI research desktop sim (Tauri). This is NOT the middleware
+# server; for that use Launch-FearAI-Server.ps1 in the repository root.
+#
+#   .\Launch-FearAI.ps1            build once if needed, then launch
+#   .\Launch-FearAI.ps1 -Rebuild   force a fresh frontend + native build
+param([switch]$Rebuild)
 
 $ErrorActionPreference = "Stop"
-# Resolve the project directory relative to this script so it works on any machine.
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-
 Set-Location $ProjectDir
 
-Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "      Fear AI Simulation - Native Software  " -ForegroundColor Cyan
-Write-Host "============================================" -ForegroundColor Cyan
-Write-Host ""
+$Exe = Join-Path $ProjectDir "src-tauri\target\release\fear-ai-omniverse.exe"
 
-Write-Host "[1/4] Cleaning up old instances..." -ForegroundColor Yellow
-# Stop any running electron processes related to this app
-$electronProcesses = Get-Process electron -ErrorAction SilentlyContinue
-foreach ($process in $electronProcesses) {
-    if ($process.Path -match "fear-ai-sim") {
-        Write-Host "Stopping old software instance (PID: $($process.Id))..." -ForegroundColor Gray
-        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host "      Fear AI Simulation - Desktop (Tauri)  " -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan
+
+Write-Host "`n[1/3] Closing old instances of this app..." -ForegroundColor Yellow
+Get-Process fear-ai-omniverse -ErrorAction SilentlyContinue |
+    Where-Object { $_.Path -eq $Exe } |
+    ForEach-Object {
+        Write-Host "Stopping PID $($_.Id)" -ForegroundColor Gray
+        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
     }
-}
 
-Write-Host "`n[2/4] Checking dependencies..." -ForegroundColor Yellow
+Write-Host "`n[2/3] Checking dependencies..." -ForegroundColor Yellow
 if (-not (Test-Path "node_modules")) {
-    Write-Host "Installing missing dependencies. This might take a minute..." -ForegroundColor Gray
-    cmd /c "npm install"
+    Write-Host "Installing dependencies (npm ci)..." -ForegroundColor Gray
+    cmd /c "npm ci"
+    if ($LASTEXITCODE -ne 0) { Write-Host "npm ci failed." -ForegroundColor Red; exit 1 }
+}
+
+if ($Rebuild -or -not (Test-Path $Exe)) {
+    Write-Host "`n[3/3] Building the desktop app (first run takes a few minutes)..." -ForegroundColor Yellow
+    # --no-bundle: compile the exe only; installers (MSI/NSIS) are not needed to run it.
+    cmd /c "npm run tauri:build -- --no-bundle"
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $Exe)) {
+        Write-Host "Desktop build failed. See the output above." -ForegroundColor Red
+        exit 1
+    }
 } else {
-    Write-Host "Dependencies found." -ForegroundColor DarkGray
+    Write-Host "`n[3/3] Using existing build (pass -Rebuild after code changes)." -ForegroundColor DarkGray
 }
 
-Write-Host "`n[3/4] Compiling software core..." -ForegroundColor Yellow
-Write-Host "Building optimized production files..." -ForegroundColor Gray
-cmd /c "npm run build"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Error compiling the application. Please check the logs." -ForegroundColor Red
-    Pause
-    exit 1
-}
-
-Write-Host "`n[4/4] Launching Fear AI Desktop Software..." -ForegroundColor Green
-Write-Host "----------------------------------------------------------------------" -ForegroundColor Gray
-
-# Launch electron directly
-cmd /c "npm run start-app"
+Write-Host "`nLaunching Fear AI..." -ForegroundColor Green
+Start-Process -FilePath $Exe -WorkingDirectory (Split-Path $Exe)

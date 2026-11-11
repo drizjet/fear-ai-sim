@@ -23,7 +23,7 @@ Statuses are deliberately evidence-based:
 | Area | Status | Evidence | Remaining verification/work |
 |---|---|---|---|
 | Repository grounding and baseline | IMPLEMENTED_AND_VERIFIED | Current checkout, package scripts, 13 Jest suites/540 tests, Vite build, audit all reproduced | Keep baseline current after changes |
-| Browser/Electron/Tauri entry surfaces | PARTIALLY_IMPLEMENTED | `index.html` → `main.js` → `simulation.js`; wrappers/config present | Verify packaged runtime paths and native release builds |
+| Browser/Tauri entry surfaces | PARTIALLY_IMPLEMENTED | `index.html` → `main.js` → `simulation.js`; wrappers/config present | Verify packaged runtime paths and native release builds |
 | FearCore transition contract | PARTIALLY_IMPLEMENTED | `fearcore.js`, unit tests, Brain integration for reactive path | Establish authoritative scale/source, migrate all fear paths, add parity vectors |
 | Hysteresis ownership | PARTIALLY_IMPLEMENTED | FearCore owns one reactive transition path; legacy `hysteresis.js` exists and is tested | Prove no production duplicate ownership and document migration |
 | Habituation ownership | PARTIALLY_IMPLEMENTED | Brain has inline habituation; standalone `habituation.js` exists/tests | Select one runtime owner and test deterministic stimulus/session semantics |
