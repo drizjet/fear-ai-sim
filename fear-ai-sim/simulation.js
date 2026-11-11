@@ -620,7 +620,7 @@ export class Simulation {
                 }
             }
         } else if (this.workerPhysicsEnabled) {
-            // Option B: Multithreaded Web Workers (Electron/Browser)
+            // Option B: Multithreaded Web Workers (Tauri/Browser)
             // Parallelize movement and basic threat avoidance across 4 CPU cores
             await this.physicsWorkerManager.updateParallel(
                 this.agents, 

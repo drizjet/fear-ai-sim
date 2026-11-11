@@ -36,7 +36,7 @@
  *   * NOT rendering correctness — that agents are drawn where the sim says;
  *   * NOT GPU behaviour (the probe pins SwiftShader software GL for determinism);
  *   * NOT long-run stability (seconds of ticks, not hours);
- *   * NOT the Electron/Tauri shells, only the browser bundle.
+ *   * NOT the Tauri shell, only the browser bundle.
  *
  * WHY IT IS ALLOWED TO SKIP, AND WHY THAT IS NOT A PASS
  * A machine without Chrome/Chromium/Edge cannot run this. Failing there would
@@ -538,7 +538,7 @@ async function main() {
             console.log('Scope: boot + construction + real-canvas PIXI init + rAF progression +');
             console.log('error-free console, on this machine and this build. NOT rendering');
             console.log('correctness, NOT GPU fidelity (software GL pinned for determinism), NOT long-run');
-            console.log('stability, NOT the Electron/Tauri shells.');
+            console.log('stability, NOT the Tauri shell.');
             if (KEEP) console.log(`Artifacts kept at ${userDataDir} (FEAR_AI_BROWSER_KEEP=1).`);
             console.log(`All ${passed.length} runtime-real-browser assertions PASSED.`);
         } else {

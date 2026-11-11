@@ -77,7 +77,7 @@ npm run evidence:report        # what the CLOSED evidence ledger still re-proves
 
 Middleware server: `node packages/runtime/bin/fear-ai-server.js --port 8765`
 
-Desktop **sim** launcher (Electron/Tauri research app, not the SDK): `Launch-FearAI.ps1`
+Desktop **sim** launcher (Tauri research app, not the SDK): `Launch-FearAI.ps1`
 
 ## If the user asks for “best fear AI / plug into any game”
 

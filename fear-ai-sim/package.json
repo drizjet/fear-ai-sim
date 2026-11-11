@@ -41,7 +41,6 @@
     "evidence:migrate": "node evidence/migrate.mjs",
     "evidence:seed": "node evidence/seed-slice-coverage.mjs",
     "guardian:check": "node tools/guardian/authority-check.mjs --verify",
-    "start-app": "electron .",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
@@ -61,9 +60,8 @@
   "bin": {
     "fear-ai": "./bin/fear-ai.js"
   },
-  "main": "electron-main.cjs",
   "dependencies": {
-    "@tauri-apps/api": "^2.10.1",
+    "@tauri-apps/api": "^2.12.4",
     "@tensorflow/tfjs": "^4.22.0",
     "@tensorflow/tfjs-backend-webgl": "^4.22.0",
     "pixi.js": "^8.16.0",
@@ -72,8 +70,7 @@
     "ws": "^8.16.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.10.0",
-    "electron": "^41.10.6",
+    "@tauri-apps/cli": "^2.12.4",
     "vite": "^8.3.4"
   },
   "overrides": {

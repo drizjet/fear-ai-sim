@@ -55,7 +55,7 @@ server was bound to loopback or a public interface.
 
 ## Scope
 
-This policy covers the JavaScript middleware, the Tauri/Electron shells, the
+This policy covers the JavaScript middleware, the Tauri shell, the
 engine adapters, and the packaging scripts in this repository. The Unity adapter
 has not been executed inside the Unity Editor, and the Unreal adapter is
 deferred and source-only; no engine-level security guarantee is made for either.
