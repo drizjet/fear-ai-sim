@@ -287,101 +287,127 @@ rather than invented, and each probe's own last line is quoted beside it.
 
 ### Determinism (recorded repeated run, generated)
 
-**Recorded 2026-10-18T08:38:55.103Z — up to 3× per probe, on Node v20.20.2 / win32.**
+**Recorded 2026-11-12T12:19:29.954Z — up to 3× per probe, on Node v24.22.2 / win32.**
 Engine: FEAR_AI_GODOT=D:\a\_temp\godot-4.6-stable\Godot_v4.6-stable_win64_console.exe
 
 This is **repeatability on that machine at that date, not determinism in general**. `--repeat 3` bounds the observation: a defect that fires once in ten will usually survive three runs, so the value here is catching the expensive kind — intermittency frequent enough to be seen, which is exactly the kind that teaches a reader to re-run until green. A probe that repeated cleanly is still only a probe that repeated cleanly; repetition does not create evidence it did not have.
 
-**Repeatable on the recorded machine: 60 of 60 repeated probes gave the same verdict on every run** — 58 of them proving their claim, and 2 reporting a declared skip on every run. Both are repeatable; only the first is proof, because repeating a skip does not turn it into a pass. The probes in the second group are named under *Repeatable but still not proven* below.
+**Repeatable on the recorded machine: 73 of 73 repeated probes gave the same verdict on every run** — 71 of them proving their claim, and 2 reporting a declared skip on every run. Both are repeatable; only the first is proof, because repeating a skip does not turn it into a pass. The probes in the second group are named under *Repeatable but still not proven* below.
 
-> **Machine note:** the repeated run and the recorded single run above were taken on different environments (Node v20.20.2 / win32 versus Node v24.20.0 / win32), so the two are not directly comparable row for row.
+> **Machine note:** the repeated run and the recorded single run above were taken on different environments (Node v24.22.2 / win32 versus Node v24.20.0 / win32), so the two are not directly comparable row for row.
 
 | Probe | Runs | Verdicts | Assertions | Total time |
 |---|---|---|---|---|
-| `verify_adapter_conformance.mjs` | 3 | 3× PASSED | 230 | 70.7s |
+| `verify_adapter_conformance.mjs` | 3 | 3× PASSED | 231 | 61.2s |
 | `verify_advisory_numeric_hygiene.mjs` | 3 | 3× PASSED | 128 | 0.2s |
-| `verify_all_systems_runtime.mjs` | 3 | 3× PASSED | 266 | 0.5s |
-| `verify_backpressure_failure_telemetry.mjs` | 3 | 3× PASSED | 25 | 0.1s |
+| `verify_all_systems_runtime.mjs` | 3 | 3× PASSED | 266 | 0.6s |
+| `verify_backpressure_failure_telemetry.mjs` | 3 | 3× PASSED | 25 | 0.2s |
 | `verify_compound_collisions.mjs` | 3 | 3× PASSED | — | 0.4s |
 | `verify_contagion_transmission.mjs` | 3 | 3× PASSED | 57 | 2.1s |
-| `verify_counterfactual_world.mjs` | 3 | 3× PASSED | — | 0.4s |
+| `verify_counterfactual_world.mjs` | 3 | 3× PASSED | — | 0.6s |
 | `verify_cross_tree_parity.mjs` | 3 | 3× PARTIAL | — | 0.2s |
-| `verify_dashboard_endpoints.mjs` | 3 | 3× PASSED | — | 0.6s |
+| `verify_cycle22_world_journal_tamper.mjs` | 3 | 3× PASSED | — | 0.3s |
+| `verify_cycle22_world_trade_authority.mjs` | 3 | 3× PASSED | — | 16.7s |
+| `verify_dashboard_endpoints.mjs` | 3 | 3× PASSED | — | 0.9s |
 | `verify_dead_code_sweep.mjs` | 3 | 3× PASSED | 52 | 0.2s |
 | `verify_determinism_contract.mjs` | 3 | 3× PASSED | 55 | 0.3s |
-| `verify_dotnet_adapters_compile.mjs` | 3 | 3× PASSED | — | 16.9s |
-| `verify_epistemic_belief_optin.mjs` | 3 | 3× PASSED | 46 | 0.4s |
-| `verify_evidence_seed_idempotency.mjs` | 3 | 3× PASSED | 18 | 3.6s |
-| `verify_examples_inventory.mjs` | 3 | 3× PASSED | 23 | 2.2s |
+| `verify_dotnet_adapters_compile.mjs` | 3 | 3× PASSED | — | 30.3s |
+| `verify_entrypoint_assets.mjs` | 3 | 3× PASSED | — | 0.3s |
+| `verify_epistemic_belief_optin.mjs` | 3 | 3× PASSED | 46 | 0.3s |
+| `verify_epistemic_route_boundary.mjs` | 3 | 3× PASSED | — | 0.4s |
+| `verify_evidence_seed_idempotency.mjs` | 3 | 3× PASSED | 18 | 5.3s |
+| `verify_examples_inventory.mjs` | 3 | 3× PASSED | 23 | 3.0s |
 | `verify_fabe_personas.mjs` | 3 | 3× PASSED | 53 | 0.3s |
 | `verify_faction_governance_optin.mjs` | 3 | 3× PASSED | 94 | 0.3s |
+| `verify_faction_route_boundary.mjs` | 3 | 3× PASSED | — | 0.4s |
 | `verify_fearcore_extended_scale.mjs` | 3 | 3× PASSED | 57 | 0.2s |
-| `verify_fuzz_arbitration.mjs` | 3 | 3× PASSED | 16 | 3.0s |
+| `verify_fuzz_arbitration.mjs` | 3 | 3× PASSED | 16 | 3.5s |
 | `verify_godot_fallback_parity.mjs` | 3 | 3× PASSED | 37 | 0.2s |
-| `verify_godot_live_pipeline.mjs` | 3 | 3× PASSED | 128 | 0.1s |
-| `verify_godot_stations.mjs` | 3 | 3× PASSED | 169 | 0.5s |
-| `verify_host_feedback_bounds.mjs` | 3 | 3× PASSED | 38 | 0.1s |
-| `verify_host_provenance.mjs` | 3 | 3× PASSED | — | 0.1s |
-| `verify_host_token_persistence.mjs` | 3 | 3× PASSED | 44 | 17.9s |
+| `verify_godot_live_pipeline.mjs` | 3 | 3× PASSED | 128 | 0.2s |
+| `verify_godot_stations.mjs` | 3 | 3× PASSED | 169 | 0.6s |
+| `verify_host_contract_fallback_boundary.mjs` | 3 | 3× PASSED | — | 0.5s |
+| `verify_host_feedback_bounds.mjs` | 3 | 3× PASSED | 38 | 0.2s |
+| `verify_host_provenance.mjs` | 3 | 3× PASSED | — | 0.2s |
+| `verify_host_token_persistence.mjs` | 3 | 3× PASSED | 44 | 23.0s |
 | `verify_information_propagation_optin.mjs` | 3 | 3× PASSED | 41 | 0.3s |
-| `verify_long_horizon_lifecycle.mjs` | 3 | 3× PASSED | — | 1.0s |
+| `verify_k16_wire_compatibility.mjs` | 3 | 3× PASSED | — | 0.7s |
+| `verify_long_horizon_lifecycle.mjs` | 3 | 3× PASSED | — | 1.2s |
+| `verify_macro_route_dispatch_boundary.mjs` | 3 | 3× PASSED | — | 0.4s |
 | `verify_macro_settlement_optin.mjs` | 3 | 3× PASSED | 54 | 0.3s |
-| `verify_moral_dissonance.mjs` | 3 | 3× PASSED | 110 | 0.1s |
+| `verify_moral_dissonance.mjs` | 3 | 3× PASSED | 110 | 0.2s |
 | `verify_moral_dissonance_optin.mjs` | 3 | 3× PASSED | 48 | 0.3s |
-| `verify_night_fold_rehearsal.mjs` | 3 | 3× PASSED | 29 | 21.9s |
+| `verify_moral_route_boundary.mjs` | 3 | 3× PASSED | — | 0.4s |
+| `verify_night_fold_rehearsal.mjs` | 3 | 3× PASSED | 29 | 35.0s |
 | `verify_nonfinite_context_hygiene.mjs` | 3 | 3× PASSED | 218 | 0.2s |
 | `verify_nonfinite_position_hygiene.mjs` | 3 | 3× PASSED | 113 | 0.3s |
-| `verify_observation_acceptance.mjs` | 3 | 3× PASSED | 29 | 0.4s |
+| `verify_observation_acceptance.mjs` | 3 | 3× PASSED | 29 | 0.5s |
 | `verify_optin_engine_lifecycle.mjs` | 3 | 3× PASSED | 85 | 0.3s |
 | `verify_pack_coordination_optin.mjs` | 3 | 3× PASSED | 38 | 0.3s |
 | `verify_persistence_roundtrip.mjs` | 3 | 3× PASSED | — | 0.4s |
+| `verify_persona_route_boundary.mjs` | 3 | 3× PASSED | — | 0.5s |
 | `verify_persona_signatures_optin.mjs` | 3 | 3× PASSED | 233 | 0.3s |
-| `verify_protocol_abuse.mjs` | 3 | 3× PASSED | — | 0.8s |
-| `verify_quarantine_reach.mjs` | 3 | 3× PASSED | 28 | 0.2s |
-| `verify_release_claim_boundaries.mjs` | 3 | 3× PASSED | — | 1.5s |
-| `verify_runtime_real_browser.mjs` | 3 | 3× PASSED | 11 | 199.7s |
+| `verify_protocol_abuse.mjs` | 3 | 3× PASSED | — | 0.9s |
+| `verify_quarantine_reach.mjs` | 3 | 3× PASSED | 28 | 0.3s |
+| `verify_release_claim_boundaries.mjs` | 3 | 3× PASSED | — | 2.2s |
+| `verify_runtime_core_import_boundary.mjs` | 3 | 3× PASSED | — | 0.6s |
+| `verify_runtime_real_browser.mjs` | 3 | 3× PASSED | 11 | 319.6s |
 | `verify_runtime_wiring.mjs` | 3 | 3× PASSED | — | 0.5s |
-| `verify_scenario_differentiation.mjs` | 3 | 3× PASSED | 18 | 0.6s |
-| `verify_server_epistemic_belief.mjs` | 3 | 3× PASSED | — | 0.4s |
-| `verify_server_faction_governance.mjs` | 3 | 3× PASSED | 101 | 0.4s |
-| `verify_server_lifecycle.mjs` | 3 | 3× PASSED | — | 0.8s |
-| `verify_server_macro_settlement.mjs` | 3 | 3× PASSED | — | 0.4s |
+| `verify_scenario_differentiation.mjs` | 3 | 3× PASSED | 18 | 0.8s |
+| `verify_server_epistemic_belief.mjs` | 3 | 3× PASSED | — | 0.5s |
+| `verify_server_faction_governance.mjs` | 3 | 3× PASSED | 101 | 0.5s |
+| `verify_server_lifecycle.mjs` | 3 | 3× PASSED | — | 1.0s |
+| `verify_server_macro_settlement.mjs` | 3 | 3× PASSED | — | 0.7s |
 | `verify_server_moral_dissonance.mjs` | 3 | 3× PASSED | — | 0.5s |
-| `verify_server_pack_coordination.mjs` | 3 | 3× PASSED | — | 0.5s |
+| `verify_server_pack_coordination.mjs` | 3 | 3× PASSED | — | 0.7s |
 | `verify_server_persona_signatures.mjs` | 3 | 3× PASSED | — | 0.5s |
-| `verify_server_reconnect.mjs` | 3 | 3× PASSED | — | 1.2s |
-| `verify_simulation_contracts.mjs` | 3 | 3× PASSED | 108 | 0.2s |
-| `verify_store_encryption.mjs` | 3 | 3× PASSED | 46 | 6.2s |
-| `verify_trade_chain_causal_edges.mjs` | 3 | 3× PASSED | 730 | 0.5s |
-| `verify_trade_runtime_contracts.mjs` | 3 | 3× PASSED | 64 | 0.5s |
-| `verify_transport_signing.mjs` | 3 | 3× PASSED | 61 | 8.2s |
-| `verify_unity_adapter_behavior.mjs` | 3 | 3× PASSED | 37 | 6.9s |
-| `verify_unity_editor_tests.mjs` | 3 | 3× PARTIAL | — | 0.1s |
-| `verify_wire_numeric_boundary.mjs` | 3 | 3× PASSED | 81 | 0.1s |
+| `verify_server_reconnect.mjs` | 3 | 3× PASSED | — | 1.3s |
+| `verify_simulation_contracts.mjs` | 3 | 3× PASSED | 108 | 0.3s |
+| `verify_store_encryption.mjs` | 3 | 3× PASSED | 46 | 14.5s |
+| `verify_trade_chain_causal_edges.mjs` | 3 | 3× PASSED | 730 | 0.8s |
+| `verify_trade_runtime_contracts.mjs` | 3 | 3× PASSED | 64 | 0.8s |
+| `verify_transport_signing.mjs` | 3 | 3× PASSED | 61 | 11.4s |
+| `verify_unity_adapter_behavior.mjs` | 3 | 3× PASSED | 37 | 13.8s |
+| `verify_unity_editor_tests.mjs` | 3 | 3× PARTIAL | — | 0.2s |
+| `verify_wire_numeric_boundary.mjs` | 3 | 3× PASSED | 81 | 0.2s |
+| `verify_world_trade_authority.mjs` | 3 | 3× PASSED | 586 | 1.0s |
+| `verify_ws_pack_dispatch_contract.mjs` | 3 | 3× PASSED | — | 0.4s |
 
 The `Runs` column can be lower than the repeat count: a disagreement ends that probe early, because a verdict that already differs needs no further samples.
 
-**No probe disagreed with itself across the recorded runs.** That is a statement about these 60 probes on this machine over up to 3 attempts each, not about determinism in general, and not about any machine but the recorded one.
+**No probe disagreed with itself across the recorded runs.** That is a statement about these 73 probes on this machine over up to 3 attempts each, not about determinism in general, and not about any machine but the recorded one.
 
 **Every probe in the recorded single run also appears in the repeated run**, so no probe in the roster above is left without a repetition result.
 
-**Repeated but not in the recorded single run (7) — added to the suite after that run was taken:**
+**Repeated but not in the recorded single run (20) — added to the suite after that run was taken:**
 
 - `verify_all_systems_runtime.mjs`
+- `verify_cycle22_world_journal_tamper.mjs`
+- `verify_cycle22_world_trade_authority.mjs`
+- `verify_entrypoint_assets.mjs`
+- `verify_epistemic_route_boundary.mjs`
 - `verify_evidence_seed_idempotency.mjs`
+- `verify_faction_route_boundary.mjs`
+- `verify_host_contract_fallback_boundary.mjs`
+- `verify_k16_wire_compatibility.mjs`
+- `verify_macro_route_dispatch_boundary.mjs`
+- `verify_moral_route_boundary.mjs`
+- `verify_persona_route_boundary.mjs`
+- `verify_runtime_core_import_boundary.mjs`
 - `verify_runtime_real_browser.mjs`
 - `verify_scenario_differentiation.mjs`
 - `verify_simulation_contracts.mjs`
 - `verify_trade_chain_causal_edges.mjs`
 - `verify_trade_runtime_contracts.mjs`
+- `verify_world_trade_authority.mjs`
+- `verify_ws_pack_dispatch_contract.mjs`
 
-**Across the ledger of recorded repeated runs (31 night(s), 5112 probe attempts):**
+**Across the ledger of recorded repeated runs (32 night(s), 5331 probe attempts):**
 
-No probe has ever disagreed with itself in the ledger. That is a statement about 5112 recorded attempts across 31 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **11.0%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
+No probe has ever disagreed with itself in the ledger. That is a statement about 5331 recorded attempts across 32 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **10.7%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
-**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment).
+**Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment; 13 probe(s) had no comparable baseline, because a ratio across two machines measures the machines).
 
-**Timing drift — no probe is creeping** (46 probe(s) had enough pooled samples across 13 comparable night(s); none reached 1.5x its earlier median while also exceeding its own p90).
+**Timing drift — no probe is creeping** (46 probe(s) had enough pooled samples across 14 comparable night(s); none reached 1.5x its earlier median while also exceeding its own p90).
 
 The timing baseline restarts at 2026-10-29 for `github-hosted`: 8 earlier comparable night(s) are not pooled into any probe's distribution, because the host level moved while the code did not (first nightly at the slower host level; 10-28 and 10-29 both ran b8fd013 and the runtime-graph probes stepped up together while the spawn-floor probes did not). A ratio across two machines measures the machines, whether or not the two machines declare the same environment name.
 
