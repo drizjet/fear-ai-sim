@@ -135,6 +135,21 @@ const TIMING_EPOCHS = [
         from: '2026-10-29T00:00:00.000Z',
         why: 'first nightly at the slower host level; 10-28 and 10-29 both ran b8fd013 '
             + 'and the runtime-graph probes stepped up together while the spawn-floor probes did not'
+    },
+    {
+        // The second boundary is not a new level: it is the end of a transient one. On
+        // 2026-11-11 and 11-12 verify_store_encryption measured 1.6x its pooled median,
+        // and both nights share their code with a fast night (11-10 vs 11-11 and
+        // 11-12 vs 11-13 differ only in docs and the ledger). The level therefore moved
+        // without the code moving, then moved back, and the pre-11-13 pool holds both
+        // levels - so it cannot serve as a distribution for any probe. Nights before
+        // this boundary still count for verdicts and for the flake rate; they are not
+        // pooled into timing. The drift gate rebuilds from 11-13 and is measurable
+        // again at MIN_NIGHTS_FOR_DRIFT_GATE.
+        environment: 'github-hosted',
+        from: '2026-11-13T00:00:00.000Z',
+        why: 'a two-night host excursion (11-11, 11-12) on code shared with fast nights either side; '
+            + 'the pooled history before 11-13 mixes levels rather than describing one'
     }
 ];
 
