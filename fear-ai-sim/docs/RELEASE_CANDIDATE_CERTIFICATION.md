@@ -401,13 +401,13 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 - `verify_world_trade_authority.mjs`
 - `verify_ws_pack_dispatch_contract.mjs`
 
-**Across the ledger of recorded repeated runs (34 night(s), 5769 probe attempts):**
+**Across the ledger of recorded repeated runs (35 night(s), 5988 probe attempts):**
 
-No probe has ever disagreed with itself in the ledger. That is a statement about 5769 recorded attempts across 34 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **10.2%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
+No probe has ever disagreed with itself in the ledger. That is a statement about 5988 recorded attempts across 35 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **9.9%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
 **Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment).
 
-**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 1 of 24 do. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
+**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 2 of 25 do. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
 
 The timing baseline restarts at 2026-11-13 for `github-hosted`: 23 earlier comparable night(s) are not pooled into any probe's distribution, because the host level moved while the code did not (a two-night host excursion (11-11, 11-12) on code shared with fast nights either side; the pooled history before 11-13 mixes levels rather than describing one). A ratio across two machines measures the machines, whether or not the two machines declare the same environment name.
 
