@@ -401,15 +401,17 @@ The `Runs` column can be lower than the repeat count: a disagreement ends that p
 - `verify_world_trade_authority.mjs`
 - `verify_ws_pack_dispatch_contract.mjs`
 
-**Across the ledger of recorded repeated runs (36 night(s), 6207 probe attempts):**
+**Across the ledger of recorded repeated runs (37 night(s), 6426 probe attempts):**
 
-No probe has ever disagreed with itself in the ledger. That is a statement about 6207 recorded attempts across 36 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **9.6%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
+No probe has ever disagreed with itself in the ledger. That is a statement about 6426 recorded attempts across 37 repeated run(s), and over that many clean night(s) the 95% Wilson upper bound on any one probe's flake rate is still **9.4%** — which is the honest reason to keep extending the ledger: the same clean result over more nights is a smaller number, and none of them is a proof of determinism. A probe that has never disagreed may still be broken.
 
 **Timing — no probe is 3x slower than its baseline** (drawn from earlier nights on the same platform, Node major, and execution environment).
 
-**Timing drift — not yet measurable:** a drift needs 4 comparable nights that carry per-run durations, and 3 of 26 do. A probe that creeps 10% a night never trips a step threshold, which is why the check pools per-run samples instead of comparing single totals — and it stays silent until there is a history worth calling a distribution.
+**Timing drift — no probe is creeping** (44 probe(s) had enough pooled samples across 4 comparable night(s); none reached 1.5x its earlier median while also exceeding its own p90).
 
 The timing baseline restarts at 2026-11-13 for `github-hosted`: 23 earlier comparable night(s) are not pooled into any probe's distribution, because the host level moved while the code did not (a two-night host excursion (11-11, 11-12) on code shared with fast nights either side; the pooled history before 11-13 mixes levels rather than describing one). A ratio across two machines measures the machines, whether or not the two machines declare the same environment name.
+
+Reported, not gated: 15 probe(s) rose past 1.25x their earlier median without passing the drift gate (`verify_all_systems_runtime.mjs`, `verify_counterfactual_world.mjs`, `verify_cycle22_world_trade_authority.mjs`, `verify_dotnet_adapters_compile.mjs`, `verify_evidence_seed_idempotency.mjs`, `verify_fuzz_arbitration.mjs`, `verify_k16_wire_compatibility.mjs`, `verify_long_horizon_lifecycle.mjs`, `verify_macro_route_dispatch_boundary.mjs`, `verify_moral_route_boundary.mjs`, `verify_night_fold_rehearsal.mjs`, `verify_observation_acceptance.mjs`, `verify_runtime_core_import_boundary.mjs`, `verify_runtime_real_browser.mjs`, `verify_runtime_wiring.mjs`).
 
 **Every probe in the roster appears in the ledger**, so no probe is left without a cross-night result.
 
