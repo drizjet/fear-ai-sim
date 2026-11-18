@@ -150,6 +150,24 @@ const TIMING_EPOCHS = [
         from: '2026-11-13T00:00:00.000Z',
         why: 'a two-night host excursion (11-11, 11-12) on code shared with fast nights either side; '
             + 'the pooled history before 11-13 mixes levels rather than describing one'
+    },
+    {
+        // The third boundary is the mirror of the second: the START of a slower level, not
+        // the end of one. From 2026-11-16 the whole suite stepped up together - the median
+        // of per-probe medians went 115/103/120 ms on 11-13..11-15 and 146/155/150 ms on
+        // 11-16..11-18 - while tools/ and packages/ did not change at all (the 11-15, 11-16
+        // and 11-17 nights differ only in the folded ledger line and the dossier). The
+        // drift gate tripped on the 11-18 run for verify_counterfactual_world.mjs at 1.61x,
+        // because a ~148 ms probe has a p90 of 151 ms and the recent window (11-16, 11-17)
+        // is the slowest pair it has recorded. That is a host level, not a probe regression:
+        // pooling the fast nights with the slow ones makes every probe's distribution a
+        // mixture of two levels. Nights before this boundary still count for verdicts and
+        // for the flake rate; they are not pooled into timing. The drift gate rebuilds from
+        // 11-16 and is measurable again at MIN_NIGHTS_FOR_DRIFT_GATE.
+        environment: 'github-hosted',
+        from: '2026-11-16T00:00:00.000Z',
+        why: 'first nightly at a slower host level: the suite\'s median of per-probe medians stepped '
+            + '115-120 -> 146-155 ms across 11-16..11-18 with no change under tools/ or packages/'
     }
 ];
 
